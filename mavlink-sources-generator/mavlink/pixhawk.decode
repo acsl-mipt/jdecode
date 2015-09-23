@@ -1,0 +1,2777 @@
+namespace mavlink
+
+alias ^float float:32
+alias char uint:8
+alias uint16_t uint:16
+alias int16_t int:16
+alias uint8_t_mavlink_version uint:8
+alias uint64_t uint:64
+alias uint32_t uint:32
+alias uint8_t uint:8
+alias int64_t int:64
+alias int8_t int:8
+alias int32_t int:32
+
+type heartbeat struct info 'The heartbeat message shows that a system is present and responding. The type of the MAV and Autopilot hardware allow the receiving system to treat further messages from this system appropriate (e.g. by laying out the user interface based on the autopilot).'(
+  uint32_t            customMode          info 'A bitfield for use for autopilot-specific flags.',
+  uint8_t             ^type               info 'Type of the MAV (quadrotor, helicopter, etc., up to 15 types, defined in MAV_TYPE ENUM)',
+  uint8_t             autopilot           info 'Autopilot type / class. defined in MAV_AUTOPILOT ENUM',
+  uint8_t             baseMode            info 'System mode bitfield, see MAV_MODE_FLAG ENUM in mavlink/include/mavlink_types.h',
+  uint8_t             systemStatus        info 'System status flag, see MAV_STATE ENUM',
+  uint8_t_mavlink_version mavlinkVersion      info 'MAVLink version, not writable by user, gets added by protocol because of magic data type: uint8_t_mavlink_version',
+)
+
+type sys_status struct info 'The general system state. If the system is following the MAVLink standard, the system state is mainly defined by three orthogonal states/modes: The system mode, which is either LOCKED (motors shut down and locked), MANUAL (system under RC control), GUIDED (system with autonomous position control, position setpoint controlled manually) or AUTO (system guided by path/waypoint planner). The NAV_MODE defined the current flight state: LIFTOFF (often an open-loop maneuver), LANDING, WAYPOINTS or VECTOR. This represents the internal navigation state machine. The system status shows wether the system is currently active or not and if an emergency occured. During the CRITICAL and EMERGENCY states the MAV is still considered to be active, but should start emergency procedures autonomously. After a failure occured it should first move from active to critical to allow manual intervention and then move to emergency after a certain timeout.'(
+  uint32_t            onboardControlSensorsPresent info 'Bitmask showing which onboard controllers and sensors are present. Value of 0: not present. Value of 1: present. Indices defined by ENUM MAV_SYS_STATUS_SENSOR',
+  uint32_t            onboardControlSensorsEnabled info 'Bitmask showing which onboard controllers and sensors are enabled:  Value of 0: not enabled. Value of 1: enabled. Indices defined by ENUM MAV_SYS_STATUS_SENSOR',
+  uint32_t            onboardControlSensorsHealth info 'Bitmask showing which onboard controllers and sensors are operational or have an error:  Value of 0: not enabled. Value of 1: enabled. Indices defined by ENUM MAV_SYS_STATUS_SENSOR',
+  uint16_t            load                info 'Maximum usage in percent of the mainloop time, (0%: 0, 100%: 1000) should be always below 1000',
+  uint16_t            voltageBattery      info 'Battery voltage, in millivolts (1 = 1 millivolt)',
+  int16_t             currentBattery      info 'Battery current, in 10*milliamperes (1 = 10 milliampere), -1: autopilot does not measure the current',
+  uint16_t            dropRateComm        info 'Communication drops in percent, (0%: 0, 100%: 10\'000), (UART, I2C, SPI, CAN), dropped packets on all links (packets that were corrupted on reception on the MAV)',
+  uint16_t            errorsComm          info 'Communication errors (UART, I2C, SPI, CAN), dropped packets on all links (packets that were corrupted on reception on the MAV)',
+  uint16_t            errorsCount1        info 'Autopilot-specific errors',
+  uint16_t            errorsCount2        info 'Autopilot-specific errors',
+  uint16_t            errorsCount3        info 'Autopilot-specific errors',
+  uint16_t            errorsCount4        info 'Autopilot-specific errors',
+  int8_t              batteryRemaining    info 'Remaining battery energy: (0%: 0, 100%: 100), -1: autopilot estimate the remaining battery',
+)
+
+type system_time struct info 'The system time is the time of the master clock, typically the computer clock of the main onboard computer.'(
+  uint64_t            timeUnixUsec        info 'Timestamp of the master clock in microseconds since UNIX epoch.',
+  uint32_t            timeBootMs          info 'Timestamp of the component clock since boot time in milliseconds.',
+)
+
+type ping struct info 'A ping message either requesting or responding to a ping. This allows to measure the system latencies, including serial port, radio modem and UDP connections.'(
+  uint64_t            timeUsec            info 'Unix timestamp in microseconds or since system boot if smaller than MAVLink epoch (1.1.2009)',
+  uint32_t            seq                 info 'PING sequence',
+  uint8_t             targetSystem        info '0: request ping from all receiving systems, if greater than 0: message is a ping response and number is the system id of the requesting system',
+  uint8_t             targetComponent     info '0: request ping from all receiving components, if greater than 0: message is a ping response and number is the system id of the requesting system',
+)
+
+type change_operator_control struct info 'Request to control this MAV'(
+  uint8_t             targetSystem        info 'System the GCS requests control for',
+  uint8_t             controlRequest      info '0: request control of this MAV, 1: Release control of this MAV',
+  uint8_t             version             info '0: key as plaintext, 1-255: future, different hashing/encryption variants. The GCS should in general use the safest mode possible initially and then gradually move down the encryption level if it gets a NACK message indicating an encryption mismatch.',
+  [char, 25]          passkey             info 'Password / Key, depending on version plaintext or encrypted. 25 or less characters, NULL terminated. The characters may involve A-Z, a-z, 0-9, and "!?,.-"',
+)
+
+type change_operator_control_ack struct info 'Accept / deny control of this MAV'(
+  uint8_t             gcsSystemId         info 'ID of the GCS this message ',
+  uint8_t             controlRequest      info '0: request control of this MAV, 1: Release control of this MAV',
+  uint8_t             ack                 info '0: ACK, 1: NACK: Wrong passkey, 2: NACK: Unsupported passkey encryption method, 3: NACK: Already under control',
+)
+
+type auth_key struct info 'Emit an encrypted signature / key identifying this system. PLEASE NOTE: This protocol has been kept simple, so transmitting the key requires an encrypted channel for true safety.'(
+  [char, 32]          key                 info 'key',
+)
+
+type set_mode struct info 'Set the system mode, as defined by enum MAV_MODE. There is no target component id as the mode is by definition for the overall aircraft, not only for one component.'(
+  uint32_t            customMode          info 'The new autopilot-specific mode. This field can be ignored by an autopilot.',
+  uint8_t             targetSystem        info 'The system setting the mode',
+  mav_mode_uint8_t    baseMode            info 'The new base mode',
+)
+
+type param_request_read struct info 'Request to read the onboard parameter with the param_id string id. Onboard parameters are stored as key[const char*] -> value[float]. This allows to send a parameter to any other component (such as the GCS) without the need of previous knowledge of possible parameter names. Thus the same GCS can store different parameters for different autopilots. See also http://qgroundcontrol.org/parameter_interface for a full documentation of QGroundControl and IMU code.'(
+  int16_t             paramIndex          info 'Parameter index. Send -1 to use the param ID field as identifier (else the param id will be ignored)',
+  uint8_t             targetSystem        info 'System ID',
+  uint8_t             targetComponent     info 'Component ID',
+  [char, 16]          paramId             info 'Onboard parameter id, terminated by NULL if the length is less than 16 human-readable chars and WITHOUT null termination (NULL) byte if the length is exactly 16 chars - applications have to provide 16+1 bytes storage if the ID is stored as string',
+)
+
+type param_request_list struct info 'Request all parameters of this component. After his request, all parameters are emitted.'(
+  uint8_t             targetSystem        info 'System ID',
+  uint8_t             targetComponent     info 'Component ID',
+)
+
+type param_value struct info 'Emit the value of a onboard parameter. The inclusion of param_count and param_index in the message allows the recipient to keep track of received parameters and allows him to re-request missing parameters after a loss or timeout.'(
+  ^float              paramValue          info 'Onboard parameter value',
+  uint16_t            paramCount          info 'Total number of onboard parameters',
+  uint16_t            paramIndex          info 'Index of this onboard parameter',
+  [char, 16]          paramId             info 'Onboard parameter id, terminated by NULL if the length is less than 16 human-readable chars and WITHOUT null termination (NULL) byte if the length is exactly 16 chars - applications have to provide 16+1 bytes storage if the ID is stored as string',
+  mav_param_type_uint8_t paramType           info 'Onboard parameter type: see the MAV_PARAM_TYPE enum for supported data types.',
+)
+
+type param_set struct info 'Set a parameter value TEMPORARILY to RAM. It will be reset to default on system reboot. Send the ACTION MAV_ACTION_STORAGE_WRITE to PERMANENTLY write the RAM contents to EEPROM. IMPORTANT: The receiving component should acknowledge the new parameter value by sending a param_value message to all communication partners. This will also ensure that multiple GCS all have an up-to-date list of all parameters. If the sending GCS did not receive a PARAM_VALUE message within its timeout time, it should re-send the PARAM_SET message.'(
+  ^float              paramValue          info 'Onboard parameter value',
+  uint8_t             targetSystem        info 'System ID',
+  uint8_t             targetComponent     info 'Component ID',
+  [char, 16]          paramId             info 'Onboard parameter id, terminated by NULL if the length is less than 16 human-readable chars and WITHOUT null termination (NULL) byte if the length is exactly 16 chars - applications have to provide 16+1 bytes storage if the ID is stored as string',
+  mav_param_type_uint8_t paramType           info 'Onboard parameter type: see the MAV_PARAM_TYPE enum for supported data types.',
+)
+
+type gps_raw_int struct info 'The global position, as returned by the Global Positioning System (GPS). This is
+                NOT the global position estimate of the system, but rather a RAW sensor value. See message GLOBAL_POSITION for the global position estimate. Coordinate frame is right-handed, Z-axis up (GPS frame).'(
+  uint64_t            timeUsec            info 'Timestamp (microseconds since UNIX epoch or microseconds since system boot)',
+  int32_t             lat                 info 'Latitude (WGS84), in degrees * 1E7',
+  int32_t             lon                 info 'Longitude (WGS84), in degrees * 1E7',
+  int32_t             alt                 info 'Altitude (AMSL, NOT WGS84), in meters * 1000 (positive for up). Note that virtually all GPS modules provide the AMSL altitude in addition to the WGS84 altitude.',
+  uint16_t            eph                 info 'GPS HDOP horizontal dilution of position in cm (m*100). If unknown, set to: UINT16_MAX',
+  uint16_t            epv                 info 'GPS VDOP vertical dilution of position in cm (m*100). If unknown, set to: UINT16_MAX',
+  uint16_t            vel                 info 'GPS ground speed (m/s * 100). If unknown, set to: UINT16_MAX',
+  uint16_t            cog                 info 'Course over ground (NOT heading, but direction of movement) in degrees * 100, 0.0..359.99 degrees. If unknown, set to: UINT16_MAX',
+  uint8_t             fixType             info '0-1: no fix, 2: 2D fix, 3: 3D fix, 4: DGPS, 5: RTK. Some applications will not use the value of this field unless it is at least two, so always correctly fill in the fix.',
+  uint8_t             satellitesVisible   info 'Number of satellites visible. If unknown, set to 255',
+)
+
+type gps_status struct info 'The positioning status, as reported by GPS. This message is intended to display status information about each satellite visible to the receiver. See message GLOBAL_POSITION for the global position estimate. This message can contain information for up to 20 satellites.'(
+  uint8_t             satellitesVisible   info 'Number of satellites visible',
+  [uint8_t, 20]       satellitePrn        info 'Global satellite ID',
+  [uint8_t, 20]       satelliteUsed       info '0: Satellite not used, 1: used for localization',
+  [uint8_t, 20]       satelliteElevation  info 'Elevation (0: right on top of receiver, 90: on the horizon) of satellite',
+  [uint8_t, 20]       satelliteAzimuth    info 'Direction of satellite, 0: 0 deg, 255: 360 deg.',
+  [uint8_t, 20]       satelliteSnr        info 'Signal to noise ratio of satellite',
+)
+
+type scaled_imu struct info 'The RAW IMU readings for the usual 9DOF sensor setup. This message should contain the scaled values to the described units'(
+  uint32_t            timeBootMs          info 'Timestamp (milliseconds since system boot)',
+  int16_t             xacc                info 'X acceleration (mg)',
+  int16_t             yacc                info 'Y acceleration (mg)',
+  int16_t             zacc                info 'Z acceleration (mg)',
+  int16_t             xgyro               info 'Angular speed around X axis (millirad /sec)',
+  int16_t             ygyro               info 'Angular speed around Y axis (millirad /sec)',
+  int16_t             zgyro               info 'Angular speed around Z axis (millirad /sec)',
+  int16_t             xmag                info 'X Magnetic field (milli tesla)',
+  int16_t             ymag                info 'Y Magnetic field (milli tesla)',
+  int16_t             zmag                info 'Z Magnetic field (milli tesla)',
+)
+
+type raw_imu struct info 'The RAW IMU readings for the usual 9DOF sensor setup. This message should always contain the true raw values without any scaling to allow data capture and system debugging.'(
+  uint64_t            timeUsec            info 'Timestamp (microseconds since UNIX epoch or microseconds since system boot)',
+  int16_t             xacc                info 'X acceleration (raw)',
+  int16_t             yacc                info 'Y acceleration (raw)',
+  int16_t             zacc                info 'Z acceleration (raw)',
+  int16_t             xgyro               info 'Angular speed around X axis (raw)',
+  int16_t             ygyro               info 'Angular speed around Y axis (raw)',
+  int16_t             zgyro               info 'Angular speed around Z axis (raw)',
+  int16_t             xmag                info 'X Magnetic field (raw)',
+  int16_t             ymag                info 'Y Magnetic field (raw)',
+  int16_t             zmag                info 'Z Magnetic field (raw)',
+)
+
+type raw_pressure struct info 'The RAW pressure readings for the typical setup of one absolute pressure and one differential pressure sensor. The sensor values should be the raw, UNSCALED ADC values.'(
+  uint64_t            timeUsec            info 'Timestamp (microseconds since UNIX epoch or microseconds since system boot)',
+  int16_t             pressAbs            info 'Absolute pressure (raw)',
+  int16_t             pressDiff1          info 'Differential pressure 1 (raw)',
+  int16_t             pressDiff2          info 'Differential pressure 2 (raw)',
+  int16_t             temperature         info 'Raw Temperature measurement (raw)',
+)
+
+type scaled_pressure struct info 'The pressure readings for the typical setup of one absolute and differential pressure sensor. The units are as specified in each field.'(
+  uint32_t            timeBootMs          info 'Timestamp (milliseconds since system boot)',
+  ^float              pressAbs            info 'Absolute pressure (hectopascal)',
+  ^float              pressDiff           info 'Differential pressure 1 (hectopascal)',
+  int16_t             temperature         info 'Temperature measurement (0.01 degrees celsius)',
+)
+
+type attitude struct info 'The attitude in the aeronautical frame (right-handed, Z-down, X-front, Y-right).'(
+  uint32_t            timeBootMs          info 'Timestamp (milliseconds since system boot)',
+  ^float              roll                info 'Roll angle (rad, -pi..+pi)',
+  ^float              pitch               info 'Pitch angle (rad, -pi..+pi)',
+  ^float              yaw                 info 'Yaw angle (rad, -pi..+pi)',
+  ^float              rollspeed           info 'Roll angular speed (rad/s)',
+  ^float              pitchspeed          info 'Pitch angular speed (rad/s)',
+  ^float              yawspeed            info 'Yaw angular speed (rad/s)',
+)
+
+type attitude_quaternion struct info 'The attitude in the aeronautical frame (right-handed, Z-down, X-front, Y-right), expressed as quaternion. Quaternion order is w, x, y, z and a zero rotation would be expressed as (1 0 0 0).'(
+  uint32_t            timeBootMs          info 'Timestamp (milliseconds since system boot)',
+  ^float              q1                  info 'Quaternion component 1, w (1 in null-rotation)',
+  ^float              q2                  info 'Quaternion component 2, x (0 in null-rotation)',
+  ^float              q3                  info 'Quaternion component 3, y (0 in null-rotation)',
+  ^float              q4                  info 'Quaternion component 4, z (0 in null-rotation)',
+  ^float              rollspeed           info 'Roll angular speed (rad/s)',
+  ^float              pitchspeed          info 'Pitch angular speed (rad/s)',
+  ^float              yawspeed            info 'Yaw angular speed (rad/s)',
+)
+
+type local_position_ned struct info 'The filtered local position (e.g. fused computer vision and accelerometers). Coordinate frame is right-handed, Z-axis down (aeronautical frame, NED / north-east-down convention)'(
+  uint32_t            timeBootMs          info 'Timestamp (milliseconds since system boot)',
+  ^float              x                   info 'X Position',
+  ^float              y                   info 'Y Position',
+  ^float              z                   info 'Z Position',
+  ^float              vx                  info 'X Speed',
+  ^float              vy                  info 'Y Speed',
+  ^float              vz                  info 'Z Speed',
+)
+
+type global_position_int struct info 'The filtered global position (e.g. fused GPS and accelerometers). The position is in GPS-frame (right-handed, Z-up). It
+               is designed as scaled integer message since the resolution of float is not sufficient.'(
+  uint32_t            timeBootMs          info 'Timestamp (milliseconds since system boot)',
+  int32_t             lat                 info 'Latitude, expressed as * 1E7',
+  int32_t             lon                 info 'Longitude, expressed as * 1E7',
+  int32_t             alt                 info 'Altitude in meters, expressed as * 1000 (millimeters), AMSL (not WGS84 - note that virtually all GPS modules provide the AMSL as well)',
+  int32_t             relativeAlt         info 'Altitude above ground in meters, expressed as * 1000 (millimeters)',
+  int16_t             vx                  info 'Ground X Speed (Latitude), expressed as m/s * 100',
+  int16_t             vy                  info 'Ground Y Speed (Longitude), expressed as m/s * 100',
+  int16_t             vz                  info 'Ground Z Speed (Altitude), expressed as m/s * 100',
+  uint16_t            hdg                 info 'Compass heading in degrees * 100, 0.0..359.99 degrees. If unknown, set to: UINT16_MAX',
+)
+
+type rc_channels_scaled struct info 'The scaled values of the RC channels received. (-100%) -10000, (0%) 0, (100%) 10000. Channels that are inactive should be set to UINT16_MAX.'(
+  uint32_t            timeBootMs          info 'Timestamp (milliseconds since system boot)',
+  int16_t             chan1Scaled         info 'RC channel 1 value scaled, (-100%) -10000, (0%) 0, (100%) 10000, (invalid) INT16_MAX.',
+  int16_t             chan2Scaled         info 'RC channel 2 value scaled, (-100%) -10000, (0%) 0, (100%) 10000, (invalid) INT16_MAX.',
+  int16_t             chan3Scaled         info 'RC channel 3 value scaled, (-100%) -10000, (0%) 0, (100%) 10000, (invalid) INT16_MAX.',
+  int16_t             chan4Scaled         info 'RC channel 4 value scaled, (-100%) -10000, (0%) 0, (100%) 10000, (invalid) INT16_MAX.',
+  int16_t             chan5Scaled         info 'RC channel 5 value scaled, (-100%) -10000, (0%) 0, (100%) 10000, (invalid) INT16_MAX.',
+  int16_t             chan6Scaled         info 'RC channel 6 value scaled, (-100%) -10000, (0%) 0, (100%) 10000, (invalid) INT16_MAX.',
+  int16_t             chan7Scaled         info 'RC channel 7 value scaled, (-100%) -10000, (0%) 0, (100%) 10000, (invalid) INT16_MAX.',
+  int16_t             chan8Scaled         info 'RC channel 8 value scaled, (-100%) -10000, (0%) 0, (100%) 10000, (invalid) INT16_MAX.',
+  uint8_t             port                info 'Servo output port (set of 8 outputs = 1 port). Most MAVs will just use one, but this allows for more than 8 servos.',
+  uint8_t             rssi                info 'Receive signal strength indicator, 0: 0%, 100: 100%, 255: invalid/unknown.',
+)
+
+type rc_channels_raw struct info 'The RAW values of the RC channels received. The standard PPM modulation is as follows: 1000 microseconds: 0%, 2000 microseconds: 100%. Individual receivers/transmitters might violate this specification.'(
+  uint32_t            timeBootMs          info 'Timestamp (milliseconds since system boot)',
+  uint16_t            chan1Raw            info 'RC channel 1 value, in microseconds. A value of UINT16_MAX implies the channel is unused.',
+  uint16_t            chan2Raw            info 'RC channel 2 value, in microseconds. A value of UINT16_MAX implies the channel is unused.',
+  uint16_t            chan3Raw            info 'RC channel 3 value, in microseconds. A value of UINT16_MAX implies the channel is unused.',
+  uint16_t            chan4Raw            info 'RC channel 4 value, in microseconds. A value of UINT16_MAX implies the channel is unused.',
+  uint16_t            chan5Raw            info 'RC channel 5 value, in microseconds. A value of UINT16_MAX implies the channel is unused.',
+  uint16_t            chan6Raw            info 'RC channel 6 value, in microseconds. A value of UINT16_MAX implies the channel is unused.',
+  uint16_t            chan7Raw            info 'RC channel 7 value, in microseconds. A value of UINT16_MAX implies the channel is unused.',
+  uint16_t            chan8Raw            info 'RC channel 8 value, in microseconds. A value of UINT16_MAX implies the channel is unused.',
+  uint8_t             port                info 'Servo output port (set of 8 outputs = 1 port). Most MAVs will just use one, but this allows for more than 8 servos.',
+  uint8_t             rssi                info 'Receive signal strength indicator, 0: 0%, 100: 100%, 255: invalid/unknown.',
+)
+
+type servo_output_raw struct info 'The RAW values of the servo outputs (for RC input from the remote, use the RC_CHANNELS messages). The standard PPM modulation is as follows: 1000 microseconds: 0%, 2000 microseconds: 100%.'(
+  uint32_t            timeUsec            info 'Timestamp (microseconds since system boot)',
+  uint16_t            servo1Raw           info 'Servo output 1 value, in microseconds',
+  uint16_t            servo2Raw           info 'Servo output 2 value, in microseconds',
+  uint16_t            servo3Raw           info 'Servo output 3 value, in microseconds',
+  uint16_t            servo4Raw           info 'Servo output 4 value, in microseconds',
+  uint16_t            servo5Raw           info 'Servo output 5 value, in microseconds',
+  uint16_t            servo6Raw           info 'Servo output 6 value, in microseconds',
+  uint16_t            servo7Raw           info 'Servo output 7 value, in microseconds',
+  uint16_t            servo8Raw           info 'Servo output 8 value, in microseconds',
+  uint8_t             port                info 'Servo output port (set of 8 outputs = 1 port). Most MAVs will just use one, but this allows to encode more than 8 servos.',
+)
+
+type mission_request_partial_list struct info 'Request a partial list of mission items from the system/component. http://qgroundcontrol.org/mavlink/waypoint_protocol. If start and end index are the same, just send one waypoint.'(
+  int16_t             startIndex          info 'Start index, 0 by default',
+  int16_t             endIndex            info 'End index, -1 by default (-1: send list to end). Else a valid index of the list',
+  uint8_t             targetSystem        info 'System ID',
+  uint8_t             targetComponent     info 'Component ID',
+)
+
+type mission_write_partial_list struct info 'This message is sent to the MAV to write a partial list. If start index == end index, only one item will be transmitted / updated. If the start index is NOT 0 and above the current list size, this request should be REJECTED!'(
+  int16_t             startIndex          info 'Start index, 0 by default and smaller / equal to the largest index of the current onboard list.',
+  int16_t             endIndex            info 'End index, equal or greater than start index.',
+  uint8_t             targetSystem        info 'System ID',
+  uint8_t             targetComponent     info 'Component ID',
+)
+
+type mission_item struct info 'Message encoding a mission item. This message is emitted to announce
+                the presence of a mission item and to set a mission item on the system. The mission item can be either in x, y, z meters (type: LOCAL) or x:lat, y:lon, z:altitude. Local frame is Z-down, right handed (NED), global frame is Z-up, right handed (ENU). See also http://qgroundcontrol.org/mavlink/waypoint_protocol.'(
+  ^float              param1              info 'PARAM1, see MAV_CMD enum',
+  ^float              param2              info 'PARAM2, see MAV_CMD enum',
+  ^float              param3              info 'PARAM3, see MAV_CMD enum',
+  ^float              param4              info 'PARAM4, see MAV_CMD enum',
+  ^float              x                   info 'PARAM5 / local: x position, global: latitude',
+  ^float              y                   info 'PARAM6 / y position: global: longitude',
+  ^float              z                   info 'PARAM7 / z position: global: altitude (relative or absolute, depending on frame.',
+  uint16_t            seq                 info 'Sequence',
+  uint16_t            ^command            info 'The scheduled action for the MISSION. see MAV_CMD in common.xml MAVLink specs',
+  uint8_t             targetSystem        info 'System ID',
+  uint8_t             targetComponent     info 'Component ID',
+  uint8_t             frame               info 'The coordinate system of the MISSION. see MAV_FRAME in mavlink_types.h',
+  uint8_t             current             info 'false:0, true:1',
+  uint8_t             autocontinue        info 'autocontinue to next wp',
+)
+
+type mission_request struct info 'Request the information of the mission item with the sequence number seq. The response of the system to this message should be a MISSION_ITEM message. http://qgroundcontrol.org/mavlink/waypoint_protocol'(
+  uint16_t            seq                 info 'Sequence',
+  uint8_t             targetSystem        info 'System ID',
+  uint8_t             targetComponent     info 'Component ID',
+)
+
+type mission_set_current struct info 'Set the mission item with sequence number seq as current item. This means that the MAV will continue to this mission item on the shortest path (not following the mission items in-between).'(
+  uint16_t            seq                 info 'Sequence',
+  uint8_t             targetSystem        info 'System ID',
+  uint8_t             targetComponent     info 'Component ID',
+)
+
+type mission_current struct info 'Message that announces the sequence number of the current active mission item. The MAV will fly towards this mission item.'(
+  uint16_t            seq                 info 'Sequence',
+)
+
+type mission_request_list struct info 'Request the overall list of mission items from the system/component.'(
+  uint8_t             targetSystem        info 'System ID',
+  uint8_t             targetComponent     info 'Component ID',
+)
+
+type mission_count struct info 'This message is emitted as response to MISSION_REQUEST_LIST by the MAV and to initiate a write transaction. The GCS can then request the individual mission item based on the knowledge of the total number of MISSIONs.'(
+  uint16_t            count               info 'Number of mission items in the sequence',
+  uint8_t             targetSystem        info 'System ID',
+  uint8_t             targetComponent     info 'Component ID',
+)
+
+type mission_clear_all struct info 'Delete all mission items at once.'(
+  uint8_t             targetSystem        info 'System ID',
+  uint8_t             targetComponent     info 'Component ID',
+)
+
+type mission_item_reached struct info 'A certain mission item has been reached. The system will either hold this position (or circle on the orbit) or (if the autocontinue on the WP was set) continue to the next MISSION.'(
+  uint16_t            seq                 info 'Sequence',
+)
+
+type mission_ack struct info 'Ack message during MISSION handling. The type field states if this message is a positive ack (type=0) or if an error happened (type=non-zero).'(
+  uint8_t             targetSystem        info 'System ID',
+  uint8_t             targetComponent     info 'Component ID',
+  mav_mission_result_uint8_t ^type               info 'See MAV_MISSION_RESULT enum',
+)
+
+type set_gps_global_origin struct info 'As local waypoints exist, the global MISSION reference allows to transform between the local coordinate frame and the global (GPS) coordinate frame. This can be necessary when e.g. in- and outdoor settings are connected and the MAV should move from in- to outdoor.'(
+  int32_t             latitude            info 'Latitude (WGS84), in degrees * 1E7',
+  int32_t             longitude           info 'Longitude (WGS84, in degrees * 1E7',
+  int32_t             altitude            info 'Altitude (AMSL), in meters * 1000 (positive for up)',
+  uint8_t             targetSystem        info 'System ID',
+)
+
+type gps_global_origin struct info 'Once the MAV sets a new GPS-Local correspondence, this message announces the origin (0,0,0) position'(
+  int32_t             latitude            info 'Latitude (WGS84), in degrees * 1E7',
+  int32_t             longitude           info 'Longitude (WGS84), in degrees * 1E7',
+  int32_t             altitude            info 'Altitude (AMSL), in meters * 1000 (positive for up)',
+)
+
+type param_map_rc struct info 'Bind a RC channel to a parameter. The parameter should change accoding to the RC channel value.'(
+  ^float              paramValue0         info 'Initial parameter value',
+  ^float              scale               info 'Scale, maps the RC range [-1, 1] to a parameter value',
+  ^float              paramValueMin       info 'Minimum param value. The protocol does not define if this overwrites an onboard minimum value. (Depends on implementation)',
+  ^float              paramValueMax       info 'Maximum param value. The protocol does not define if this overwrites an onboard maximum value. (Depends on implementation)',
+  int16_t             paramIndex          info 'Parameter index. Send -1 to use the param ID field as identifier (else the param id will be ignored), send -2 to disable any existing map for this rc_channel_index.',
+  uint8_t             targetSystem        info 'System ID',
+  uint8_t             targetComponent     info 'Component ID',
+  [char, 16]          paramId             info 'Onboard parameter id, terminated by NULL if the length is less than 16 human-readable chars and WITHOUT null termination (NULL) byte if the length is exactly 16 chars - applications have to provide 16+1 bytes storage if the ID is stored as string',
+  uint8_t             parameterRcChannelIndex info 'Index of parameter RC channel. Not equal to the RC channel id. Typically correpsonds to a potentiometer-knob on the RC.',
+)
+
+type safety_set_allowed_area struct info 'Set a safety zone (volume), which is defined by two corners of a cube. This message can be used to tell the MAV which setpoints/MISSIONs to accept and which to reject. Safety areas are often enforced by national or competition regulations.'(
+  ^float              p1x                 info 'x position 1 / Latitude 1',
+  ^float              p1y                 info 'y position 1 / Longitude 1',
+  ^float              p1z                 info 'z position 1 / Altitude 1',
+  ^float              p2x                 info 'x position 2 / Latitude 2',
+  ^float              p2y                 info 'y position 2 / Longitude 2',
+  ^float              p2z                 info 'z position 2 / Altitude 2',
+  uint8_t             targetSystem        info 'System ID',
+  uint8_t             targetComponent     info 'Component ID',
+  mav_frame_uint8_t   frame               info 'Coordinate frame, as defined by MAV_FRAME enum in mavlink_types.h. Can be either global, GPS, right-handed with Z axis up or local, right handed, Z axis down.',
+)
+
+type safety_allowed_area struct info 'Read out the safety zone the MAV currently assumes.'(
+  ^float              p1x                 info 'x position 1 / Latitude 1',
+  ^float              p1y                 info 'y position 1 / Longitude 1',
+  ^float              p1z                 info 'z position 1 / Altitude 1',
+  ^float              p2x                 info 'x position 2 / Latitude 2',
+  ^float              p2y                 info 'y position 2 / Longitude 2',
+  ^float              p2z                 info 'z position 2 / Altitude 2',
+  mav_frame_uint8_t   frame               info 'Coordinate frame, as defined by MAV_FRAME enum in mavlink_types.h. Can be either global, GPS, right-handed with Z axis up or local, right handed, Z axis down.',
+)
+
+type attitude_quaternion_cov struct info 'The attitude in the aeronautical frame (right-handed, Z-down, X-front, Y-right), expressed as quaternion. Quaternion order is w, x, y, z and a zero rotation would be expressed as (1 0 0 0).'(
+  uint32_t            timeBootMs          info 'Timestamp (milliseconds since system boot)',
+  [^float, 4]         q                   info 'Quaternion components, w, x, y, z (1 0 0 0 is the null-rotation)',
+  ^float              rollspeed           info 'Roll angular speed (rad/s)',
+  ^float              pitchspeed          info 'Pitch angular speed (rad/s)',
+  ^float              yawspeed            info 'Yaw angular speed (rad/s)',
+  [^float, 9]         covariance          info 'Attitude covariance',
+)
+
+type nav_controller_output struct info 'Outputs of the APM navigation controller. The primary use of this message is to check the response and signs of the controller before actual flight and to assist with tuning controller parameters.'(
+  ^float              navRoll             info 'Current desired roll in degrees',
+  ^float              navPitch            info 'Current desired pitch in degrees',
+  ^float              altError            info 'Current altitude error in meters',
+  ^float              aspdError           info 'Current airspeed error in meters/second',
+  ^float              xtrackError         info 'Current crosstrack error on x-y plane in meters',
+  int16_t             navBearing          info 'Current desired heading in degrees',
+  int16_t             targetBearing       info 'Bearing to current MISSION/target in degrees',
+  uint16_t            wpDist              info 'Distance to active MISSION in meters',
+)
+
+type global_position_int_cov struct info 'The filtered global position (e.g. fused GPS and accelerometers). The position is in GPS-frame (right-handed, Z-up). It  is designed as scaled integer message since the resolution of float is not sufficient. NOTE: This message is intended for onboard networks / companion computers and higher-bandwidth links and optimized for accuracy and completeness. Please use the GLOBAL_POSITION_INT message for a minimal subset.'(
+  uint64_t            timeUtc             info 'Timestamp (microseconds since UNIX epoch) in UTC. 0 for unknown. Commonly filled by the precision time source of a GPS receiver.',
+  uint32_t            timeBootMs          info 'Timestamp (milliseconds since system boot)',
+  int32_t             lat                 info 'Latitude, expressed as degrees * 1E7',
+  int32_t             lon                 info 'Longitude, expressed as degrees * 1E7',
+  int32_t             alt                 info 'Altitude in meters, expressed as * 1000 (millimeters), above MSL',
+  int32_t             relativeAlt         info 'Altitude above ground in meters, expressed as * 1000 (millimeters)',
+  ^float              vx                  info 'Ground X Speed (Latitude), expressed as m/s',
+  ^float              vy                  info 'Ground Y Speed (Longitude), expressed as m/s',
+  ^float              vz                  info 'Ground Z Speed (Altitude), expressed as m/s',
+  [^float, 36]        covariance          info 'Covariance matrix (first six entries are the first ROW, next six entries are the second row, etc.)',
+  mav_estimator_type_uint8_t estimatorType       info 'Class id of the estimator this estimate originated from.',
+)
+
+type local_position_ned_cov struct info 'The filtered local position (e.g. fused computer vision and accelerometers). Coordinate frame is right-handed, Z-axis down (aeronautical frame, NED / north-east-down convention)'(
+  uint64_t            timeUtc             info 'Timestamp (microseconds since UNIX epoch) in UTC. 0 for unknown. Commonly filled by the precision time source of a GPS receiver.',
+  uint32_t            timeBootMs          info 'Timestamp (milliseconds since system boot). 0 for system without monotonic timestamp',
+  ^float              x                   info 'X Position',
+  ^float              y                   info 'Y Position',
+  ^float              z                   info 'Z Position',
+  ^float              vx                  info 'X Speed (m/s)',
+  ^float              vy                  info 'Y Speed (m/s)',
+  ^float              vz                  info 'Z Speed (m/s)',
+  ^float              ax                  info 'X Acceleration (m/s^2)',
+  ^float              ay                  info 'Y Acceleration (m/s^2)',
+  ^float              az                  info 'Z Acceleration (m/s^2)',
+  [^float, 45]        covariance          info 'Covariance matrix upper right triangular (first nine entries are the first ROW, next eight entries are the second row, etc.)',
+  mav_estimator_type_uint8_t estimatorType       info 'Class id of the estimator this estimate originated from.',
+)
+
+type rc_channels struct info 'The PPM values of the RC channels received. The standard PPM modulation is as follows: 1000 microseconds: 0%, 2000 microseconds: 100%. Individual receivers/transmitters might violate this specification.'(
+  uint32_t            timeBootMs          info 'Timestamp (milliseconds since system boot)',
+  uint16_t            chan1Raw            info 'RC channel 1 value, in microseconds. A value of UINT16_MAX implies the channel is unused.',
+  uint16_t            chan2Raw            info 'RC channel 2 value, in microseconds. A value of UINT16_MAX implies the channel is unused.',
+  uint16_t            chan3Raw            info 'RC channel 3 value, in microseconds. A value of UINT16_MAX implies the channel is unused.',
+  uint16_t            chan4Raw            info 'RC channel 4 value, in microseconds. A value of UINT16_MAX implies the channel is unused.',
+  uint16_t            chan5Raw            info 'RC channel 5 value, in microseconds. A value of UINT16_MAX implies the channel is unused.',
+  uint16_t            chan6Raw            info 'RC channel 6 value, in microseconds. A value of UINT16_MAX implies the channel is unused.',
+  uint16_t            chan7Raw            info 'RC channel 7 value, in microseconds. A value of UINT16_MAX implies the channel is unused.',
+  uint16_t            chan8Raw            info 'RC channel 8 value, in microseconds. A value of UINT16_MAX implies the channel is unused.',
+  uint16_t            chan9Raw            info 'RC channel 9 value, in microseconds. A value of UINT16_MAX implies the channel is unused.',
+  uint16_t            chan10Raw           info 'RC channel 10 value, in microseconds. A value of UINT16_MAX implies the channel is unused.',
+  uint16_t            chan11Raw           info 'RC channel 11 value, in microseconds. A value of UINT16_MAX implies the channel is unused.',
+  uint16_t            chan12Raw           info 'RC channel 12 value, in microseconds. A value of UINT16_MAX implies the channel is unused.',
+  uint16_t            chan13Raw           info 'RC channel 13 value, in microseconds. A value of UINT16_MAX implies the channel is unused.',
+  uint16_t            chan14Raw           info 'RC channel 14 value, in microseconds. A value of UINT16_MAX implies the channel is unused.',
+  uint16_t            chan15Raw           info 'RC channel 15 value, in microseconds. A value of UINT16_MAX implies the channel is unused.',
+  uint16_t            chan16Raw           info 'RC channel 16 value, in microseconds. A value of UINT16_MAX implies the channel is unused.',
+  uint16_t            chan17Raw           info 'RC channel 17 value, in microseconds. A value of UINT16_MAX implies the channel is unused.',
+  uint16_t            chan18Raw           info 'RC channel 18 value, in microseconds. A value of UINT16_MAX implies the channel is unused.',
+  uint8_t             chancount           info 'Total number of RC channels being received. This can be larger than 18, indicating that more channels are available but not given in this message. This value should be 0 when no RC channels are available.',
+  uint8_t             rssi                info 'Receive signal strength indicator, 0: 0%, 100: 100%, 255: invalid/unknown.',
+)
+
+type request_data_stream struct(
+  uint16_t            reqMessageRate      info 'The requested interval between two messages of this type',
+  uint8_t             targetSystem        info 'The target requested to send the message stream.',
+  uint8_t             targetComponent     info 'The target requested to send the message stream.',
+  uint8_t             reqStreamId         info 'The ID of the requested data stream',
+  uint8_t             startStop           info '1 to start sending, 0 to stop sending.',
+)
+
+type data_stream struct(
+  uint16_t            messageRate         info 'The requested interval between two messages of this type',
+  uint8_t             streamId            info 'The ID of the requested data stream',
+  uint8_t             onOff               info '1 stream is enabled, 0 stream is stopped.',
+)
+
+type manual_control struct info 'This message provides an API for manually controlling the vehicle using standard joystick axes nomenclature, along with a joystick-like input device. Unused axes can be disabled an buttons are also transmit as boolean values of their '(
+  int16_t             x                   info 'X-axis, normalized to the range [-1000,1000]. A value of INT16_MAX indicates that this axis is invalid. Generally corresponds to forward(1000)-backward(-1000) movement on a joystick and the pitch of a vehicle.',
+  int16_t             y                   info 'Y-axis, normalized to the range [-1000,1000]. A value of INT16_MAX indicates that this axis is invalid. Generally corresponds to left(-1000)-right(1000) movement on a joystick and the roll of a vehicle.',
+  int16_t             z                   info 'Z-axis, normalized to the range [-1000,1000]. A value of INT16_MAX indicates that this axis is invalid. Generally corresponds to a separate slider movement with maximum being 1000 and minimum being -1000 on a joystick and the thrust of a vehicle.',
+  int16_t             r                   info 'R-axis, normalized to the range [-1000,1000]. A value of INT16_MAX indicates that this axis is invalid. Generally corresponds to a twisting of the joystick, with counter-clockwise being 1000 and clockwise being -1000, and the yaw of a vehicle.',
+  uint16_t            buttons             info 'A bitfield corresponding to the joystick buttons\' current state, 1 for pressed, 0 for released. The lowest bit corresponds to Button 1.',
+  uint8_t             target              info 'The system to be controlled.',
+)
+
+type rc_channels_override struct info 'The RAW values of the RC channels sent to the MAV to override info received from the RC radio. A value of UINT16_MAX means no change to that channel. A value of 0 means control of that channel should be released back to the RC radio. The standard PPM modulation is as follows: 1000 microseconds: 0%, 2000 microseconds: 100%. Individual receivers/transmitters might violate this specification.'(
+  uint16_t            chan1Raw            info 'RC channel 1 value, in microseconds. A value of UINT16_MAX means to ignore this field.',
+  uint16_t            chan2Raw            info 'RC channel 2 value, in microseconds. A value of UINT16_MAX means to ignore this field.',
+  uint16_t            chan3Raw            info 'RC channel 3 value, in microseconds. A value of UINT16_MAX means to ignore this field.',
+  uint16_t            chan4Raw            info 'RC channel 4 value, in microseconds. A value of UINT16_MAX means to ignore this field.',
+  uint16_t            chan5Raw            info 'RC channel 5 value, in microseconds. A value of UINT16_MAX means to ignore this field.',
+  uint16_t            chan6Raw            info 'RC channel 6 value, in microseconds. A value of UINT16_MAX means to ignore this field.',
+  uint16_t            chan7Raw            info 'RC channel 7 value, in microseconds. A value of UINT16_MAX means to ignore this field.',
+  uint16_t            chan8Raw            info 'RC channel 8 value, in microseconds. A value of UINT16_MAX means to ignore this field.',
+  uint8_t             targetSystem        info 'System ID',
+  uint8_t             targetComponent     info 'Component ID',
+)
+
+type mission_item_int struct info 'Message encoding a mission item. This message is emitted to announce
+                the presence of a mission item and to set a mission item on the system. The mission item can be either in x, y, z meters (type: LOCAL) or x:lat, y:lon, z:altitude. Local frame is Z-down, right handed (NED), global frame is Z-up, right handed (ENU). See alsohttp://qgroundcontrol.org/mavlink/waypoint_protocol.'(
+  ^float              param1              info 'PARAM1, see MAV_CMD enum',
+  ^float              param2              info 'PARAM2, see MAV_CMD enum',
+  ^float              param3              info 'PARAM3, see MAV_CMD enum',
+  ^float              param4              info 'PARAM4, see MAV_CMD enum',
+  int32_t             x                   info 'PARAM5 / local: x position in meters * 1e4, global: latitude in degrees * 10^7',
+  int32_t             y                   info 'PARAM6 / y position: local: x position in meters * 1e4, global: longitude in degrees *10^7',
+  ^float              z                   info 'PARAM7 / z position: global: altitude in meters (relative or absolute, depending on frame.',
+  uint16_t            seq                 info 'Waypoint ID (sequence number). Starts at zero. Increases monotonically for each waypoint, no gaps in the sequence (0,1,2,3,4).',
+  uint16_t            ^command            info 'The scheduled action for the MISSION. see MAV_CMD in common.xml MAVLink specs',
+  uint8_t             targetSystem        info 'System ID',
+  uint8_t             targetComponent     info 'Component ID',
+  uint8_t             frame               info 'The coordinate system of the MISSION. see MAV_FRAME in mavlink_types.h',
+  uint8_t             current             info 'false:0, true:1',
+  uint8_t             autocontinue        info 'autocontinue to next wp',
+)
+
+type vfr_hud struct info 'Metrics typically displayed on a HUD for fixed wing aircraft'(
+  ^float              airspeed            info 'Current airspeed in m/s',
+  ^float              groundspeed         info 'Current ground speed in m/s',
+  ^float              alt                 info 'Current altitude (MSL), in meters',
+  ^float              climb               info 'Current climb rate in meters/second',
+  int16_t             heading             info 'Current heading in degrees, in compass units (0..360, 0=north)',
+  uint16_t            throttle            info 'Current throttle setting in integer percent, 0 to 100',
+)
+
+type command_int struct info 'Message encoding a command with parameters as scaled integers. Scaling depends on the actual command value.'(
+  ^float              param1              info 'PARAM1, see MAV_CMD enum',
+  ^float              param2              info 'PARAM2, see MAV_CMD enum',
+  ^float              param3              info 'PARAM3, see MAV_CMD enum',
+  ^float              param4              info 'PARAM4, see MAV_CMD enum',
+  int32_t             x                   info 'PARAM5 / local: x position in meters * 1e4, global: latitude in degrees * 10^7',
+  int32_t             y                   info 'PARAM6 / local: y position in meters * 1e4, global: longitude in degrees * 10^7',
+  ^float              z                   info 'PARAM7 / z position: global: altitude in meters (relative or absolute, depending on frame.',
+  uint16_t            ^command            info 'The scheduled action for the mission item. see MAV_CMD in common.xml MAVLink specs',
+  uint8_t             targetSystem        info 'System ID',
+  uint8_t             targetComponent     info 'Component ID',
+  uint8_t             frame               info 'The coordinate system of the COMMAND. see MAV_FRAME in mavlink_types.h',
+  uint8_t             current             info 'false:0, true:1',
+  uint8_t             autocontinue        info 'autocontinue to next wp',
+)
+
+type command_long struct info 'Send a command with up to seven parameters to the MAV'(
+  ^float              param1              info 'Parameter 1, as defined by MAV_CMD enum.',
+  ^float              param2              info 'Parameter 2, as defined by MAV_CMD enum.',
+  ^float              param3              info 'Parameter 3, as defined by MAV_CMD enum.',
+  ^float              param4              info 'Parameter 4, as defined by MAV_CMD enum.',
+  ^float              param5              info 'Parameter 5, as defined by MAV_CMD enum.',
+  ^float              param6              info 'Parameter 6, as defined by MAV_CMD enum.',
+  ^float              param7              info 'Parameter 7, as defined by MAV_CMD enum.',
+  mav_cmd_uint16_t    ^command            info 'Command ID, as defined by MAV_CMD enum.',
+  uint8_t             targetSystem        info 'System which should execute the command',
+  uint8_t             targetComponent     info 'Component which should execute the command, 0 for all components',
+  uint8_t             confirmation        info '0: First transmission of this command. 1-255: Confirmation transmissions (e.g. for kill command)',
+)
+
+type command_ack struct info 'Report status of a command. Includes feedback wether the command was executed.'(
+  mav_cmd_uint16_t    ^command            info 'Command ID, as defined by MAV_CMD enum.',
+  uint8_t             result              info 'See MAV_RESULT enum',
+)
+
+type manual_setpoint struct info 'Setpoint in roll, pitch, yaw and thrust from the operator'(
+  uint32_t            timeBootMs          info 'Timestamp in milliseconds since system boot',
+  ^float              roll                info 'Desired roll rate in radians per second',
+  ^float              pitch               info 'Desired pitch rate in radians per second',
+  ^float              yaw                 info 'Desired yaw rate in radians per second',
+  ^float              thrust              info 'Collective thrust, normalized to 0 .. 1',
+  uint8_t             modeSwitch          info 'Flight mode switch position, 0.. 255',
+  uint8_t             manualOverrideSwitch info 'Override mode switch position, 0.. 255',
+)
+
+type set_attitude_target struct info 'Set the vehicle attitude and body angular rates.'(
+  uint32_t            timeBootMs          info 'Timestamp in milliseconds since system boot',
+  [^float, 4]         q                   info 'Attitude quaternion (w, x, y, z order, zero-rotation is 1, 0, 0, 0)',
+  ^float              bodyRollRate        info 'Body roll rate in radians per second',
+  ^float              bodyPitchRate       info 'Body roll rate in radians per second',
+  ^float              bodyYawRate         info 'Body roll rate in radians per second',
+  ^float              thrust              info 'Collective thrust, normalized to 0 .. 1 (-1 .. 1 for vehicles capable of reverse trust)',
+  uint8_t             targetSystem        info 'System ID',
+  uint8_t             targetComponent     info 'Component ID',
+  uint8_t             typeMask            info 'Mappings: If any of these bits are set, the corresponding input should be ignored: bit 1: body roll rate, bit 2: body pitch rate, bit 3: body yaw rate. bit 4-bit 6: reserved, bit 7: throttle, bit 8: attitude',
+)
+
+type attitude_target struct info 'Set the vehicle attitude and body angular rates.'(
+  uint32_t            timeBootMs          info 'Timestamp in milliseconds since system boot',
+  [^float, 4]         q                   info 'Attitude quaternion (w, x, y, z order, zero-rotation is 1, 0, 0, 0)',
+  ^float              bodyRollRate        info 'Body roll rate in radians per second',
+  ^float              bodyPitchRate       info 'Body roll rate in radians per second',
+  ^float              bodyYawRate         info 'Body roll rate in radians per second',
+  ^float              thrust              info 'Collective thrust, normalized to 0 .. 1 (-1 .. 1 for vehicles capable of reverse trust)',
+  uint8_t             typeMask            info 'Mappings: If any of these bits are set, the corresponding input should be ignored: bit 1: body roll rate, bit 2: body pitch rate, bit 3: body yaw rate. bit 4-bit 7: reserved, bit 8: attitude',
+)
+
+type set_position_target_local_ned struct info 'Set vehicle position, velocity and acceleration setpoint in local frame.'(
+  uint32_t            timeBootMs          info 'Timestamp in milliseconds since system boot',
+  ^float              x                   info 'X Position in NED frame in meters',
+  ^float              y                   info 'Y Position in NED frame in meters',
+  ^float              z                   info 'Z Position in NED frame in meters (note, altitude is negative in NED)',
+  ^float              vx                  info 'X velocity in NED frame in meter / s',
+  ^float              vy                  info 'Y velocity in NED frame in meter / s',
+  ^float              vz                  info 'Z velocity in NED frame in meter / s',
+  ^float              afx                 info 'X acceleration or force (if bit 10 of type_mask is set) in NED frame in meter / s^2 or N',
+  ^float              afy                 info 'Y acceleration or force (if bit 10 of type_mask is set) in NED frame in meter / s^2 or N',
+  ^float              afz                 info 'Z acceleration or force (if bit 10 of type_mask is set) in NED frame in meter / s^2 or N',
+  ^float              yaw                 info 'yaw setpoint in rad',
+  ^float              yawRate             info 'yaw rate setpoint in rad/s',
+  uint16_t            typeMask            info 'Bitmask to indicate which dimensions should be ignored by the vehicle: a value of 0b0000000000000000 or 0b0000001000000000 indicates that none of the setpoint dimensions should be ignored. If bit 10 is set the floats afx afy afz should be interpreted as force instead of acceleration. Mapping: bit 1: x, bit 2: y, bit 3: z, bit 4: vx, bit 5: vy, bit 6: vz, bit 7: ax, bit 8: ay, bit 9: az, bit 10: is force setpoint, bit 11: yaw, bit 12: yaw rate',
+  uint8_t             targetSystem        info 'System ID',
+  uint8_t             targetComponent     info 'Component ID',
+  mav_frame_uint8_t   coordinateFrame     info 'Valid options are: MAV_FRAME_LOCAL_NED = 1, MAV_FRAME_LOCAL_OFFSET_NED = 7, MAV_FRAME_BODY_NED = 8, MAV_FRAME_BODY_OFFSET_NED = 9',
+)
+
+type position_target_local_ned struct info 'Set vehicle position, velocity and acceleration setpoint in local frame.'(
+  uint32_t            timeBootMs          info 'Timestamp in milliseconds since system boot',
+  ^float              x                   info 'X Position in NED frame in meters',
+  ^float              y                   info 'Y Position in NED frame in meters',
+  ^float              z                   info 'Z Position in NED frame in meters (note, altitude is negative in NED)',
+  ^float              vx                  info 'X velocity in NED frame in meter / s',
+  ^float              vy                  info 'Y velocity in NED frame in meter / s',
+  ^float              vz                  info 'Z velocity in NED frame in meter / s',
+  ^float              afx                 info 'X acceleration or force (if bit 10 of type_mask is set) in NED frame in meter / s^2 or N',
+  ^float              afy                 info 'Y acceleration or force (if bit 10 of type_mask is set) in NED frame in meter / s^2 or N',
+  ^float              afz                 info 'Z acceleration or force (if bit 10 of type_mask is set) in NED frame in meter / s^2 or N',
+  ^float              yaw                 info 'yaw setpoint in rad',
+  ^float              yawRate             info 'yaw rate setpoint in rad/s',
+  uint16_t            typeMask            info 'Bitmask to indicate which dimensions should be ignored by the vehicle: a value of 0b0000000000000000 or 0b0000001000000000 indicates that none of the setpoint dimensions should be ignored. If bit 10 is set the floats afx afy afz should be interpreted as force instead of acceleration. Mapping: bit 1: x, bit 2: y, bit 3: z, bit 4: vx, bit 5: vy, bit 6: vz, bit 7: ax, bit 8: ay, bit 9: az, bit 10: is force setpoint, bit 11: yaw, bit 12: yaw rate',
+  mav_frame_uint8_t   coordinateFrame     info 'Valid options are: MAV_FRAME_LOCAL_NED = 1, MAV_FRAME_LOCAL_OFFSET_NED = 7, MAV_FRAME_BODY_NED = 8, MAV_FRAME_BODY_OFFSET_NED = 9',
+)
+
+type set_position_target_global_int struct info 'Set vehicle position, velocity and acceleration setpoint in the WGS84 coordinate system.'(
+  uint32_t            timeBootMs          info 'Timestamp in milliseconds since system boot. The rationale for the timestamp in the setpoint is to allow the system to compensate for the transport delay of the setpoint. This allows the system to compensate processing latency.',
+  int32_t             latInt              info 'X Position in WGS84 frame in 1e7 * meters',
+  int32_t             lonInt              info 'Y Position in WGS84 frame in 1e7 * meters',
+  ^float              alt                 info 'Altitude in meters in AMSL altitude, not WGS84 if absolute or relative, above terrain if GLOBAL_TERRAIN_ALT_INT',
+  ^float              vx                  info 'X velocity in NED frame in meter / s',
+  ^float              vy                  info 'Y velocity in NED frame in meter / s',
+  ^float              vz                  info 'Z velocity in NED frame in meter / s',
+  ^float              afx                 info 'X acceleration or force (if bit 10 of type_mask is set) in NED frame in meter / s^2 or N',
+  ^float              afy                 info 'Y acceleration or force (if bit 10 of type_mask is set) in NED frame in meter / s^2 or N',
+  ^float              afz                 info 'Z acceleration or force (if bit 10 of type_mask is set) in NED frame in meter / s^2 or N',
+  ^float              yaw                 info 'yaw setpoint in rad',
+  ^float              yawRate             info 'yaw rate setpoint in rad/s',
+  uint16_t            typeMask            info 'Bitmask to indicate which dimensions should be ignored by the vehicle: a value of 0b0000000000000000 or 0b0000001000000000 indicates that none of the setpoint dimensions should be ignored. If bit 10 is set the floats afx afy afz should be interpreted as force instead of acceleration. Mapping: bit 1: x, bit 2: y, bit 3: z, bit 4: vx, bit 5: vy, bit 6: vz, bit 7: ax, bit 8: ay, bit 9: az, bit 10: is force setpoint, bit 11: yaw, bit 12: yaw rate',
+  uint8_t             targetSystem        info 'System ID',
+  uint8_t             targetComponent     info 'Component ID',
+  mav_frame_uint8_t   coordinateFrame     info 'Valid options are: MAV_FRAME_GLOBAL_INT = 5, MAV_FRAME_GLOBAL_RELATIVE_ALT_INT = 6, MAV_FRAME_GLOBAL_TERRAIN_ALT_INT = 11',
+)
+
+type position_target_global_int struct info 'Set vehicle position, velocity and acceleration setpoint in the WGS84 coordinate system.'(
+  uint32_t            timeBootMs          info 'Timestamp in milliseconds since system boot. The rationale for the timestamp in the setpoint is to allow the system to compensate for the transport delay of the setpoint. This allows the system to compensate processing latency.',
+  int32_t             latInt              info 'X Position in WGS84 frame in 1e7 * meters',
+  int32_t             lonInt              info 'Y Position in WGS84 frame in 1e7 * meters',
+  ^float              alt                 info 'Altitude in meters in AMSL altitude, not WGS84 if absolute or relative, above terrain if GLOBAL_TERRAIN_ALT_INT',
+  ^float              vx                  info 'X velocity in NED frame in meter / s',
+  ^float              vy                  info 'Y velocity in NED frame in meter / s',
+  ^float              vz                  info 'Z velocity in NED frame in meter / s',
+  ^float              afx                 info 'X acceleration or force (if bit 10 of type_mask is set) in NED frame in meter / s^2 or N',
+  ^float              afy                 info 'Y acceleration or force (if bit 10 of type_mask is set) in NED frame in meter / s^2 or N',
+  ^float              afz                 info 'Z acceleration or force (if bit 10 of type_mask is set) in NED frame in meter / s^2 or N',
+  ^float              yaw                 info 'yaw setpoint in rad',
+  ^float              yawRate             info 'yaw rate setpoint in rad/s',
+  uint16_t            typeMask            info 'Bitmask to indicate which dimensions should be ignored by the vehicle: a value of 0b0000000000000000 or 0b0000001000000000 indicates that none of the setpoint dimensions should be ignored. If bit 10 is set the floats afx afy afz should be interpreted as force instead of acceleration. Mapping: bit 1: x, bit 2: y, bit 3: z, bit 4: vx, bit 5: vy, bit 6: vz, bit 7: ax, bit 8: ay, bit 9: az, bit 10: is force setpoint, bit 11: yaw, bit 12: yaw rate',
+  mav_frame_uint8_t   coordinateFrame     info 'Valid options are: MAV_FRAME_GLOBAL_INT = 5, MAV_FRAME_GLOBAL_RELATIVE_ALT_INT = 6, MAV_FRAME_GLOBAL_TERRAIN_ALT_INT = 11',
+)
+
+type local_position_ned_system_global_offset struct info 'The offset in X, Y, Z and yaw between the LOCAL_POSITION_NED messages of MAV X and the global coordinate frame in NED coordinates. Coordinate frame is right-handed, Z-axis down (aeronautical frame, NED / north-east-down convention)'(
+  uint32_t            timeBootMs          info 'Timestamp (milliseconds since system boot)',
+  ^float              x                   info 'X Position',
+  ^float              y                   info 'Y Position',
+  ^float              z                   info 'Z Position',
+  ^float              roll                info 'Roll',
+  ^float              pitch               info 'Pitch',
+  ^float              yaw                 info 'Yaw',
+)
+
+type hil_state struct info 'DEPRECATED PACKET! Suffers from missing airspeed fields and singularities due to Euler angles. Please use HIL_STATE_QUATERNION instead. Sent from simulation to autopilot. This packet is useful for high throughput applications such as hardware in the loop simulations.'(
+  uint64_t            timeUsec            info 'Timestamp (microseconds since UNIX epoch or microseconds since system boot)',
+  ^float              roll                info 'Roll angle (rad)',
+  ^float              pitch               info 'Pitch angle (rad)',
+  ^float              yaw                 info 'Yaw angle (rad)',
+  ^float              rollspeed           info 'Body frame roll / phi angular speed (rad/s)',
+  ^float              pitchspeed          info 'Body frame pitch / theta angular speed (rad/s)',
+  ^float              yawspeed            info 'Body frame yaw / psi angular speed (rad/s)',
+  int32_t             lat                 info 'Latitude, expressed as * 1E7',
+  int32_t             lon                 info 'Longitude, expressed as * 1E7',
+  int32_t             alt                 info 'Altitude in meters, expressed as * 1000 (millimeters)',
+  int16_t             vx                  info 'Ground X Speed (Latitude), expressed as m/s * 100',
+  int16_t             vy                  info 'Ground Y Speed (Longitude), expressed as m/s * 100',
+  int16_t             vz                  info 'Ground Z Speed (Altitude), expressed as m/s * 100',
+  int16_t             xacc                info 'X acceleration (mg)',
+  int16_t             yacc                info 'Y acceleration (mg)',
+  int16_t             zacc                info 'Z acceleration (mg)',
+)
+
+type hil_controls struct info 'Sent from autopilot to simulation. Hardware in the loop control outputs'(
+  uint64_t            timeUsec            info 'Timestamp (microseconds since UNIX epoch or microseconds since system boot)',
+  ^float              rollAilerons        info 'Control output -1 .. 1',
+  ^float              pitchElevator       info 'Control output -1 .. 1',
+  ^float              yawRudder           info 'Control output -1 .. 1',
+  ^float              throttle            info 'Throttle 0 .. 1',
+  ^float              aux1                info 'Aux 1, -1 .. 1',
+  ^float              aux2                info 'Aux 2, -1 .. 1',
+  ^float              aux3                info 'Aux 3, -1 .. 1',
+  ^float              aux4                info 'Aux 4, -1 .. 1',
+  uint8_t             mode                info 'System mode (MAV_MODE)',
+  uint8_t             navMode             info 'Navigation mode (MAV_NAV_MODE)',
+)
+
+type hil_rc_inputs_raw struct info 'Sent from simulation to autopilot. The RAW values of the RC channels received. The standard PPM modulation is as follows: 1000 microseconds: 0%, 2000 microseconds: 100%. Individual receivers/transmitters might violate this specification.'(
+  uint64_t            timeUsec            info 'Timestamp (microseconds since UNIX epoch or microseconds since system boot)',
+  uint16_t            chan1Raw            info 'RC channel 1 value, in microseconds',
+  uint16_t            chan2Raw            info 'RC channel 2 value, in microseconds',
+  uint16_t            chan3Raw            info 'RC channel 3 value, in microseconds',
+  uint16_t            chan4Raw            info 'RC channel 4 value, in microseconds',
+  uint16_t            chan5Raw            info 'RC channel 5 value, in microseconds',
+  uint16_t            chan6Raw            info 'RC channel 6 value, in microseconds',
+  uint16_t            chan7Raw            info 'RC channel 7 value, in microseconds',
+  uint16_t            chan8Raw            info 'RC channel 8 value, in microseconds',
+  uint16_t            chan9Raw            info 'RC channel 9 value, in microseconds',
+  uint16_t            chan10Raw           info 'RC channel 10 value, in microseconds',
+  uint16_t            chan11Raw           info 'RC channel 11 value, in microseconds',
+  uint16_t            chan12Raw           info 'RC channel 12 value, in microseconds',
+  uint8_t             rssi                info 'Receive signal strength indicator, 0: 0%, 255: 100%',
+)
+
+type optical_flow struct info 'Optical flow from a flow sensor (e.g. optical mouse sensor)'(
+  uint64_t            timeUsec            info 'Timestamp (UNIX)',
+  ^float              flowCompMX          info 'Flow in meters in x-sensor direction, angular-speed compensated',
+  ^float              flowCompMY          info 'Flow in meters in y-sensor direction, angular-speed compensated',
+  ^float              groundDistance      info 'Ground distance in meters. Positive value: distance known. Negative value: Unknown distance',
+  int16_t             flowX               info 'Flow in pixels * 10 in x-sensor direction (dezi-pixels)',
+  int16_t             flowY               info 'Flow in pixels * 10 in y-sensor direction (dezi-pixels)',
+  uint8_t             sensorId            info 'Sensor ID',
+  uint8_t             quality             info 'Optical flow quality / confidence. 0: bad, 255: maximum quality',
+)
+
+type global_vision_position_estimate struct(
+  uint64_t            usec                info 'Timestamp (microseconds, synced to UNIX time or since system boot)',
+  ^float              x                   info 'Global X position',
+  ^float              y                   info 'Global Y position',
+  ^float              z                   info 'Global Z position',
+  ^float              roll                info 'Roll angle in rad',
+  ^float              pitch               info 'Pitch angle in rad',
+  ^float              yaw                 info 'Yaw angle in rad',
+)
+
+type vision_position_estimate struct(
+  uint64_t            usec                info 'Timestamp (microseconds, synced to UNIX time or since system boot)',
+  ^float              x                   info 'Global X position',
+  ^float              y                   info 'Global Y position',
+  ^float              z                   info 'Global Z position',
+  ^float              roll                info 'Roll angle in rad',
+  ^float              pitch               info 'Pitch angle in rad',
+  ^float              yaw                 info 'Yaw angle in rad',
+)
+
+type vision_speed_estimate struct(
+  uint64_t            usec                info 'Timestamp (microseconds, synced to UNIX time or since system boot)',
+  ^float              x                   info 'Global X speed',
+  ^float              y                   info 'Global Y speed',
+  ^float              z                   info 'Global Z speed',
+)
+
+type vicon_position_estimate struct(
+  uint64_t            usec                info 'Timestamp (microseconds, synced to UNIX time or since system boot)',
+  ^float              x                   info 'Global X position',
+  ^float              y                   info 'Global Y position',
+  ^float              z                   info 'Global Z position',
+  ^float              roll                info 'Roll angle in rad',
+  ^float              pitch               info 'Pitch angle in rad',
+  ^float              yaw                 info 'Yaw angle in rad',
+)
+
+type highres_imu struct info 'The IMU readings in SI units in NED body frame'(
+  uint64_t            timeUsec            info 'Timestamp (microseconds, synced to UNIX time or since system boot)',
+  ^float              xacc                info 'X acceleration (m/s^2)',
+  ^float              yacc                info 'Y acceleration (m/s^2)',
+  ^float              zacc                info 'Z acceleration (m/s^2)',
+  ^float              xgyro               info 'Angular speed around X axis (rad / sec)',
+  ^float              ygyro               info 'Angular speed around Y axis (rad / sec)',
+  ^float              zgyro               info 'Angular speed around Z axis (rad / sec)',
+  ^float              xmag                info 'X Magnetic field (Gauss)',
+  ^float              ymag                info 'Y Magnetic field (Gauss)',
+  ^float              zmag                info 'Z Magnetic field (Gauss)',
+  ^float              absPressure         info 'Absolute pressure in millibar',
+  ^float              diffPressure        info 'Differential pressure in millibar',
+  ^float              pressureAlt         info 'Altitude calculated from pressure',
+  ^float              temperature         info 'Temperature in degrees celsius',
+  uint16_t            fieldsUpdated       info 'Bitmask for fields that have updated since last message, bit 0 = xacc, bit 12: temperature',
+)
+
+type optical_flow_rad struct info 'Optical flow from an angular rate flow sensor (e.g. PX4FLOW or mouse sensor)'(
+  uint64_t            timeUsec            info 'Timestamp (microseconds, synced to UNIX time or since system boot)',
+  uint32_t            integrationTimeUs   info 'Integration time in microseconds. Divide integrated_x and integrated_y by the integration time to obtain average flow. The integration time also indicates the.',
+  ^float              integratedX         info 'Flow in radians around X axis (Sensor RH rotation about the X axis induces a positive flow. Sensor linear motion along the positive Y axis induces a negative flow.)',
+  ^float              integratedY         info 'Flow in radians around Y axis (Sensor RH rotation about the Y axis induces a positive flow. Sensor linear motion along the positive X axis induces a positive flow.)',
+  ^float              integratedXgyro     info 'RH rotation around X axis (rad)',
+  ^float              integratedYgyro     info 'RH rotation around Y axis (rad)',
+  ^float              integratedZgyro     info 'RH rotation around Z axis (rad)',
+  uint32_t            timeDeltaDistanceUs info 'Time in microseconds since the distance was sampled.',
+  ^float              distance            info 'Distance to the center of the flow field in meters. Positive value (including zero): distance known. Negative value: Unknown distance.',
+  int16_t             temperature         info 'Temperature * 100 in centi-degrees Celsius',
+  uint8_t             sensorId            info 'Sensor ID',
+  uint8_t             quality             info 'Optical flow quality / confidence. 0: no valid flow, 255: maximum quality',
+)
+
+type hil_sensor struct info 'The IMU readings in SI units in NED body frame'(
+  uint64_t            timeUsec            info 'Timestamp (microseconds, synced to UNIX time or since system boot)',
+  ^float              xacc                info 'X acceleration (m/s^2)',
+  ^float              yacc                info 'Y acceleration (m/s^2)',
+  ^float              zacc                info 'Z acceleration (m/s^2)',
+  ^float              xgyro               info 'Angular speed around X axis in body frame (rad / sec)',
+  ^float              ygyro               info 'Angular speed around Y axis in body frame (rad / sec)',
+  ^float              zgyro               info 'Angular speed around Z axis in body frame (rad / sec)',
+  ^float              xmag                info 'X Magnetic field (Gauss)',
+  ^float              ymag                info 'Y Magnetic field (Gauss)',
+  ^float              zmag                info 'Z Magnetic field (Gauss)',
+  ^float              absPressure         info 'Absolute pressure in millibar',
+  ^float              diffPressure        info 'Differential pressure (airspeed) in millibar',
+  ^float              pressureAlt         info 'Altitude calculated from pressure',
+  ^float              temperature         info 'Temperature in degrees celsius',
+  uint32_t            fieldsUpdated       info 'Bitmask for fields that have updated since last message, bit 0 = xacc, bit 12: temperature',
+)
+
+type sim_state struct info 'Status of simulation environment, if used'(
+  ^float              q1                  info 'True attitude quaternion component 1, w (1 in null-rotation)',
+  ^float              q2                  info 'True attitude quaternion component 2, x (0 in null-rotation)',
+  ^float              q3                  info 'True attitude quaternion component 3, y (0 in null-rotation)',
+  ^float              q4                  info 'True attitude quaternion component 4, z (0 in null-rotation)',
+  ^float              roll                info 'Attitude roll expressed as Euler angles, not recommended except for human-readable outputs',
+  ^float              pitch               info 'Attitude pitch expressed as Euler angles, not recommended except for human-readable outputs',
+  ^float              yaw                 info 'Attitude yaw expressed as Euler angles, not recommended except for human-readable outputs',
+  ^float              xacc                info 'X acceleration m/s/s',
+  ^float              yacc                info 'Y acceleration m/s/s',
+  ^float              zacc                info 'Z acceleration m/s/s',
+  ^float              xgyro               info 'Angular speed around X axis rad/s',
+  ^float              ygyro               info 'Angular speed around Y axis rad/s',
+  ^float              zgyro               info 'Angular speed around Z axis rad/s',
+  ^float              lat                 info 'Latitude in degrees',
+  ^float              lon                 info 'Longitude in degrees',
+  ^float              alt                 info 'Altitude in meters',
+  ^float              stdDevHorz          info 'Horizontal position standard deviation',
+  ^float              stdDevVert          info 'Vertical position standard deviation',
+  ^float              vn                  info 'True velocity in m/s in NORTH direction in earth-fixed NED frame',
+  ^float              ve                  info 'True velocity in m/s in EAST direction in earth-fixed NED frame',
+  ^float              vd                  info 'True velocity in m/s in DOWN direction in earth-fixed NED frame',
+)
+
+type radio_status struct info 'Status generated by radio and injected into MAVLink stream.'(
+  uint16_t            rxerrors            info 'Receive errors',
+  uint16_t            fixed               info 'Count of error corrected packets',
+  uint8_t             rssi                info 'Local signal strength',
+  uint8_t             remrssi             info 'Remote signal strength',
+  uint8_t             txbuf               info 'Remaining free buffer space in percent.',
+  uint8_t             noise               info 'Background noise level',
+  uint8_t             remnoise            info 'Remote background noise level',
+)
+
+type file_transfer_protocol struct info 'File transfer message'(
+  uint8_t             targetNetwork       info 'Network ID (0 for broadcast)',
+  uint8_t             targetSystem        info 'System ID (0 for broadcast)',
+  uint8_t             targetComponent     info 'Component ID (0 for broadcast)',
+  [uint8_t, 251]      payload             info 'Variable length payload. The length is defined by the remaining message length when subtracting the header and other fields.  The entire content of this block is opaque unless you understand any the encoding message_type.  The particular encoding used can be extension specific and might not always be documented as part of the mavlink specification.',
+)
+
+type timesync struct info 'Time synchronization message.'(
+  int64_t             tc1                 info 'Time sync timestamp 1',
+  int64_t             ts1                 info 'Time sync timestamp 2',
+)
+
+type camera_trigger struct info 'Camera-IMU triggering and synchronisation message.'(
+  uint64_t            timeUsec            info 'Timestamp for the image frame in microseconds',
+  uint32_t            seq                 info 'Image frame sequence',
+)
+
+type hil_gps struct info 'The global position, as returned by the Global Positioning System (GPS). This is
+                 NOT the global position estimate of the sytem, but rather a RAW sensor value. See message GLOBAL_POSITION for the global position estimate. Coordinate frame is right-handed, Z-axis up (GPS frame).'(
+  uint64_t            timeUsec            info 'Timestamp (microseconds since UNIX epoch or microseconds since system boot)',
+  int32_t             lat                 info 'Latitude (WGS84), in degrees * 1E7',
+  int32_t             lon                 info 'Longitude (WGS84), in degrees * 1E7',
+  int32_t             alt                 info 'Altitude (AMSL, not WGS84), in meters * 1000 (positive for up)',
+  uint16_t            eph                 info 'GPS HDOP horizontal dilution of position in cm (m*100). If unknown, set to: 65535',
+  uint16_t            epv                 info 'GPS VDOP vertical dilution of position in cm (m*100). If unknown, set to: 65535',
+  uint16_t            vel                 info 'GPS ground speed (m/s * 100). If unknown, set to: 65535',
+  int16_t             vn                  info 'GPS velocity in cm/s in NORTH direction in earth-fixed NED frame',
+  int16_t             ve                  info 'GPS velocity in cm/s in EAST direction in earth-fixed NED frame',
+  int16_t             vd                  info 'GPS velocity in cm/s in DOWN direction in earth-fixed NED frame',
+  uint16_t            cog                 info 'Course over ground (NOT heading, but direction of movement) in degrees * 100, 0.0..359.99 degrees. If unknown, set to: 65535',
+  uint8_t             fixType             info '0-1: no fix, 2: 2D fix, 3: 3D fix. Some applications will not use the value of this field unless it is at least two, so always correctly fill in the fix.',
+  uint8_t             satellitesVisible   info 'Number of satellites visible. If unknown, set to 255',
+)
+
+type hil_optical_flow struct info 'Simulated optical flow from a flow sensor (e.g. PX4FLOW or optical mouse sensor)'(
+  uint64_t            timeUsec            info 'Timestamp (microseconds, synced to UNIX time or since system boot)',
+  uint32_t            integrationTimeUs   info 'Integration time in microseconds. Divide integrated_x and integrated_y by the integration time to obtain average flow. The integration time also indicates the.',
+  ^float              integratedX         info 'Flow in radians around X axis (Sensor RH rotation about the X axis induces a positive flow. Sensor linear motion along the positive Y axis induces a negative flow.)',
+  ^float              integratedY         info 'Flow in radians around Y axis (Sensor RH rotation about the Y axis induces a positive flow. Sensor linear motion along the positive X axis induces a positive flow.)',
+  ^float              integratedXgyro     info 'RH rotation around X axis (rad)',
+  ^float              integratedYgyro     info 'RH rotation around Y axis (rad)',
+  ^float              integratedZgyro     info 'RH rotation around Z axis (rad)',
+  uint32_t            timeDeltaDistanceUs info 'Time in microseconds since the distance was sampled.',
+  ^float              distance            info 'Distance to the center of the flow field in meters. Positive value (including zero): distance known. Negative value: Unknown distance.',
+  int16_t             temperature         info 'Temperature * 100 in centi-degrees Celsius',
+  uint8_t             sensorId            info 'Sensor ID',
+  uint8_t             quality             info 'Optical flow quality / confidence. 0: no valid flow, 255: maximum quality',
+)
+
+type hil_state_quaternion struct info 'Sent from simulation to autopilot, avoids in contrast to HIL_STATE singularities. This packet is useful for high throughput applications such as hardware in the loop simulations.'(
+  uint64_t            timeUsec            info 'Timestamp (microseconds since UNIX epoch or microseconds since system boot)',
+  [^float, 4]         attitudeQuaternion  info 'Vehicle attitude expressed as normalized quaternion in w, x, y, z order (with 1 0 0 0 being the null-rotation)',
+  ^float              rollspeed           info 'Body frame roll / phi angular speed (rad/s)',
+  ^float              pitchspeed          info 'Body frame pitch / theta angular speed (rad/s)',
+  ^float              yawspeed            info 'Body frame yaw / psi angular speed (rad/s)',
+  int32_t             lat                 info 'Latitude, expressed as * 1E7',
+  int32_t             lon                 info 'Longitude, expressed as * 1E7',
+  int32_t             alt                 info 'Altitude in meters, expressed as * 1000 (millimeters)',
+  int16_t             vx                  info 'Ground X Speed (Latitude), expressed as m/s * 100',
+  int16_t             vy                  info 'Ground Y Speed (Longitude), expressed as m/s * 100',
+  int16_t             vz                  info 'Ground Z Speed (Altitude), expressed as m/s * 100',
+  uint16_t            indAirspeed         info 'Indicated airspeed, expressed as m/s * 100',
+  uint16_t            trueAirspeed        info 'True airspeed, expressed as m/s * 100',
+  int16_t             xacc                info 'X acceleration (mg)',
+  int16_t             yacc                info 'Y acceleration (mg)',
+  int16_t             zacc                info 'Z acceleration (mg)',
+)
+
+type scaled_imu2 struct info 'The RAW IMU readings for secondary 9DOF sensor setup. This message should contain the scaled values to the described units'(
+  uint32_t            timeBootMs          info 'Timestamp (milliseconds since system boot)',
+  int16_t             xacc                info 'X acceleration (mg)',
+  int16_t             yacc                info 'Y acceleration (mg)',
+  int16_t             zacc                info 'Z acceleration (mg)',
+  int16_t             xgyro               info 'Angular speed around X axis (millirad /sec)',
+  int16_t             ygyro               info 'Angular speed around Y axis (millirad /sec)',
+  int16_t             zgyro               info 'Angular speed around Z axis (millirad /sec)',
+  int16_t             xmag                info 'X Magnetic field (milli tesla)',
+  int16_t             ymag                info 'Y Magnetic field (milli tesla)',
+  int16_t             zmag                info 'Z Magnetic field (milli tesla)',
+)
+
+type log_request_list struct info 'Request a list of available logs. On some systems calling this may stop on-board logging until LOG_REQUEST_END is called.'(
+  uint16_t            start               info 'First log id (0 for first available)',
+  uint16_t            end                 info 'Last log id (0xffff for last available)',
+  uint8_t             targetSystem        info 'System ID',
+  uint8_t             targetComponent     info 'Component ID',
+)
+
+type log_entry struct info 'Reply to LOG_REQUEST_LIST'(
+  uint32_t            timeUtc             info 'UTC timestamp of log in seconds since 1970, or 0 if not available',
+  uint32_t            size                info 'Size of the log (may be approximate) in bytes',
+  uint16_t            id                  info 'Log id',
+  uint16_t            numLogs             info 'Total number of logs',
+  uint16_t            lastLogNum          info 'High log number',
+)
+
+type log_request_data struct info 'Request a chunk of a log'(
+  uint32_t            ofs                 info 'Offset into the log',
+  uint32_t            count               info 'Number of bytes',
+  uint16_t            id                  info 'Log id (from LOG_ENTRY reply)',
+  uint8_t             targetSystem        info 'System ID',
+  uint8_t             targetComponent     info 'Component ID',
+)
+
+type log_data struct info 'Reply to LOG_REQUEST_DATA'(
+  uint32_t            ofs                 info 'Offset into the log',
+  uint16_t            id                  info 'Log id (from LOG_ENTRY reply)',
+  uint8_t             count               info 'Number of bytes (zero for end of log)',
+  [uint8_t, 90]       data                info 'log data',
+)
+
+type log_erase struct info 'Erase all logs'(
+  uint8_t             targetSystem        info 'System ID',
+  uint8_t             targetComponent     info 'Component ID',
+)
+
+type log_request_end struct info 'Stop log transfer and resume normal logging'(
+  uint8_t             targetSystem        info 'System ID',
+  uint8_t             targetComponent     info 'Component ID',
+)
+
+type gps_inject_data struct info 'data for injecting into the onboard GPS (used for DGPS)'(
+  uint8_t             targetSystem        info 'System ID',
+  uint8_t             targetComponent     info 'Component ID',
+  uint8_t             len                 info 'data length',
+  [uint8_t, 110]      data                info 'raw data (110 is enough for 12 satellites of RTCMv2)',
+)
+
+type gps2_raw struct info 'Second GPS data. Coordinate frame is right-handed, Z-axis up (GPS frame).'(
+  uint64_t            timeUsec            info 'Timestamp (microseconds since UNIX epoch or microseconds since system boot)',
+  int32_t             lat                 info 'Latitude (WGS84), in degrees * 1E7',
+  int32_t             lon                 info 'Longitude (WGS84), in degrees * 1E7',
+  int32_t             alt                 info 'Altitude (AMSL, not WGS84), in meters * 1000 (positive for up)',
+  uint32_t            dgpsAge             info 'Age of DGPS info',
+  uint16_t            eph                 info 'GPS HDOP horizontal dilution of position in cm (m*100). If unknown, set to: UINT16_MAX',
+  uint16_t            epv                 info 'GPS VDOP vertical dilution of position in cm (m*100). If unknown, set to: UINT16_MAX',
+  uint16_t            vel                 info 'GPS ground speed (m/s * 100). If unknown, set to: UINT16_MAX',
+  uint16_t            cog                 info 'Course over ground (NOT heading, but direction of movement) in degrees * 100, 0.0..359.99 degrees. If unknown, set to: UINT16_MAX',
+  uint8_t             fixType             info '0-1: no fix, 2: 2D fix, 3: 3D fix, 4: DGPS fix, 5: RTK Fix. Some applications will not use the value of this field unless it is at least two, so always correctly fill in the fix.',
+  uint8_t             satellitesVisible   info 'Number of satellites visible. If unknown, set to 255',
+  uint8_t             dgpsNumch           info 'Number of DGPS satellites',
+)
+
+type power_status struct info 'Power supply status'(
+  uint16_t            vcc                 info '5V rail voltage in millivolts',
+  uint16_t            vservo              info 'servo rail voltage in millivolts',
+  uint16_t            flags               info 'power supply status flags (see MAV_POWER_STATUS enum)',
+)
+
+type serial_control struct info 'Control a serial port. This can be used for raw access to an onboard serial peripheral such as a GPS or telemetry radio. It is designed to make it possible to update the devices firmware via MAVLink messages or change the devices settings. A message with zero bytes can be used to change just the baudrate.'(
+  uint32_t            baudrate            info 'Baudrate of transfer. Zero means no change.',
+  uint16_t            timeout             info 'Timeout for reply data in milliseconds',
+  uint8_t             device              info 'See SERIAL_CONTROL_DEV enum',
+  uint8_t             flags               info 'See SERIAL_CONTROL_FLAG enum',
+  uint8_t             count               info 'how many bytes in this transfer',
+  [uint8_t, 70]       data                info 'serial data',
+)
+
+type gps_rtk struct info 'RTK GPS data. Gives information on the relative baseline calculation the GPS is reporting'(
+  uint32_t            timeLastBaselineMs  info 'Time since boot of last baseline message received in ms.',
+  uint32_t            tow                 info 'GPS Time of Week of last baseline',
+  int32_t             baselineAMm         info 'Current baseline in ECEF x or NED north component in mm.',
+  int32_t             baselineBMm         info 'Current baseline in ECEF y or NED east component in mm.',
+  int32_t             baselineCMm         info 'Current baseline in ECEF z or NED down component in mm.',
+  uint32_t            accuracy            info 'Current estimate of baseline accuracy.',
+  int32_t             iarNumHypotheses    info 'Current number of integer ambiguity hypotheses.',
+  uint16_t            wn                  info 'GPS Week Number of last baseline',
+  uint8_t             rtkReceiverId       info 'Identification of connected RTK receiver.',
+  uint8_t             rtkHealth           info 'GPS-specific health report for RTK data.',
+  uint8_t             rtkRate             info 'Rate of baseline messages being received by GPS, in HZ',
+  uint8_t             nsats               info 'Current number of sats used for RTK calculation.',
+  uint8_t             baselineCoordsType  info 'Coordinate system of baseline. 0 == ECEF, 1 == NED',
+)
+
+type gps2_rtk struct info 'RTK GPS data. Gives information on the relative baseline calculation the GPS is reporting'(
+  uint32_t            timeLastBaselineMs  info 'Time since boot of last baseline message received in ms.',
+  uint32_t            tow                 info 'GPS Time of Week of last baseline',
+  int32_t             baselineAMm         info 'Current baseline in ECEF x or NED north component in mm.',
+  int32_t             baselineBMm         info 'Current baseline in ECEF y or NED east component in mm.',
+  int32_t             baselineCMm         info 'Current baseline in ECEF z or NED down component in mm.',
+  uint32_t            accuracy            info 'Current estimate of baseline accuracy.',
+  int32_t             iarNumHypotheses    info 'Current number of integer ambiguity hypotheses.',
+  uint16_t            wn                  info 'GPS Week Number of last baseline',
+  uint8_t             rtkReceiverId       info 'Identification of connected RTK receiver.',
+  uint8_t             rtkHealth           info 'GPS-specific health report for RTK data.',
+  uint8_t             rtkRate             info 'Rate of baseline messages being received by GPS, in HZ',
+  uint8_t             nsats               info 'Current number of sats used for RTK calculation.',
+  uint8_t             baselineCoordsType  info 'Coordinate system of baseline. 0 == ECEF, 1 == NED',
+)
+
+type scaled_imu3 struct info 'The RAW IMU readings for 3rd 9DOF sensor setup. This message should contain the scaled values to the described units'(
+  uint32_t            timeBootMs          info 'Timestamp (milliseconds since system boot)',
+  int16_t             xacc                info 'X acceleration (mg)',
+  int16_t             yacc                info 'Y acceleration (mg)',
+  int16_t             zacc                info 'Z acceleration (mg)',
+  int16_t             xgyro               info 'Angular speed around X axis (millirad /sec)',
+  int16_t             ygyro               info 'Angular speed around Y axis (millirad /sec)',
+  int16_t             zgyro               info 'Angular speed around Z axis (millirad /sec)',
+  int16_t             xmag                info 'X Magnetic field (milli tesla)',
+  int16_t             ymag                info 'Y Magnetic field (milli tesla)',
+  int16_t             zmag                info 'Z Magnetic field (milli tesla)',
+)
+
+type data_transmission_handshake struct(
+  uint32_t            size                info 'total data size in bytes (set on ACK only)',
+  uint16_t            width               info 'Width of a matrix or image',
+  uint16_t            height              info 'Height of a matrix or image',
+  uint16_t            packets             info 'number of packets beeing sent (set on ACK only)',
+  uint8_t             ^type               info 'type of requested/acknowledged data (as defined in ENUM DATA_TYPES in mavlink/include/mavlink_types.h)',
+  uint8_t             payload             info 'payload size per packet (normally 253 byte, see DATA field size in message ENCAPSULATED_DATA) (set on ACK only)',
+  uint8_t             jpgQuality          info 'JPEG quality out of [1,100]',
+)
+
+type encapsulated_data struct(
+  uint16_t            seqnr               info 'sequence number (starting with 0 on every transmission)',
+  [uint8_t, 253]      data                info 'image data bytes',
+)
+
+type distance_sensor struct(
+  uint32_t            timeBootMs          info 'Time since system boot',
+  uint16_t            minDistance         info 'Minimum distance the sensor can measure in centimeters',
+  uint16_t            maxDistance         info 'Maximum distance the sensor can measure in centimeters',
+  uint16_t            currentDistance     info 'Current distance reading',
+  uint8_t             ^type               info 'Type from MAV_DISTANCE_SENSOR enum.',
+  uint8_t             id                  info 'Onboard ID of the sensor',
+  uint8_t             orientation         info 'Direction the sensor faces from FIXME enum.',
+  uint8_t             covariance          info 'Measurement covariance in centimeters, 0 for unknown / invalid readings',
+)
+
+type terrain_request struct info 'Request for terrain data and terrain status'(
+  uint64_t            mask                info 'Bitmask of requested 4x4 grids (row major 8x7 array of grids, 56 bits)',
+  int32_t             lat                 info 'Latitude of SW corner of first grid (degrees *10^7)',
+  int32_t             lon                 info 'Longitude of SW corner of first grid (in degrees *10^7)',
+  uint16_t            gridSpacing         info 'Grid spacing in meters',
+)
+
+type terrain_data struct info 'Terrain data sent from GCS. The lat/lon and grid_spacing must be the same as a lat/lon from a TERRAIN_REQUEST'(
+  int32_t             lat                 info 'Latitude of SW corner of first grid (degrees *10^7)',
+  int32_t             lon                 info 'Longitude of SW corner of first grid (in degrees *10^7)',
+  uint16_t            gridSpacing         info 'Grid spacing in meters',
+  [int16_t, 16]       data                info 'Terrain data in meters AMSL',
+  uint8_t             gridbit             info 'bit within the terrain request mask',
+)
+
+type terrain_check struct info 'Request that the vehicle report terrain height at the given location. Used by GCS to check if vehicle has all terrain data needed for a mission.'(
+  int32_t             lat                 info 'Latitude (degrees *10^7)',
+  int32_t             lon                 info 'Longitude (degrees *10^7)',
+)
+
+type terrain_report struct info 'Response from a TERRAIN_CHECK request'(
+  int32_t             lat                 info 'Latitude (degrees *10^7)',
+  int32_t             lon                 info 'Longitude (degrees *10^7)',
+  ^float              terrainHeight       info 'Terrain height in meters AMSL',
+  ^float              currentHeight       info 'Current vehicle height above lat/lon terrain height (meters)',
+  uint16_t            spacing             info 'grid spacing (zero if terrain at this location unavailable)',
+  uint16_t            pending             info 'Number of 4x4 terrain blocks waiting to be received or read from disk',
+  uint16_t            loaded              info 'Number of 4x4 terrain blocks in memory',
+)
+
+type scaled_pressure2 struct info 'Barometer readings for 2nd barometer'(
+  uint32_t            timeBootMs          info 'Timestamp (milliseconds since system boot)',
+  ^float              pressAbs            info 'Absolute pressure (hectopascal)',
+  ^float              pressDiff           info 'Differential pressure 1 (hectopascal)',
+  int16_t             temperature         info 'Temperature measurement (0.01 degrees celsius)',
+)
+
+type att_pos_mocap struct info 'Motion capture attitude and position'(
+  uint64_t            timeUsec            info 'Timestamp (micros since boot or Unix epoch)',
+  [^float, 4]         q                   info 'Attitude quaternion (w, x, y, z order, zero-rotation is 1, 0, 0, 0)',
+  ^float              x                   info 'X position in meters (NED)',
+  ^float              y                   info 'Y position in meters (NED)',
+  ^float              z                   info 'Z position in meters (NED)',
+)
+
+type set_actuator_control_target struct info 'Set the vehicle attitude and body angular rates.'(
+  uint64_t            timeUsec            info 'Timestamp (micros since boot or Unix epoch)',
+  [^float, 8]         controls            info 'Actuator controls. Normed to -1..+1 where 0 is neutral position. Throttle for single rotation direction motors is 0..1, negative range for reverse direction. Standard mapping for attitude controls (group 0): (index 0-7): roll, pitch, yaw, throttle, flaps, spoilers, airbrakes, landing gear. Load a pass-through mixer to repurpose them as generic outputs.',
+  uint8_t             groupMlx            info 'Actuator group. The "_mlx" indicates this is a multi-instance message and a MAVLink parser should use this field to difference between instances.',
+  uint8_t             targetSystem        info 'System ID',
+  uint8_t             targetComponent     info 'Component ID',
+)
+
+type actuator_control_target struct info 'Set the vehicle attitude and body angular rates.'(
+  uint64_t            timeUsec            info 'Timestamp (micros since boot or Unix epoch)',
+  [^float, 8]         controls            info 'Actuator controls. Normed to -1..+1 where 0 is neutral position. Throttle for single rotation direction motors is 0..1, negative range for reverse direction. Standard mapping for attitude controls (group 0): (index 0-7): roll, pitch, yaw, throttle, flaps, spoilers, airbrakes, landing gear. Load a pass-through mixer to repurpose them as generic outputs.',
+  uint8_t             groupMlx            info 'Actuator group. The "_mlx" indicates this is a multi-instance message and a MAVLink parser should use this field to difference between instances.',
+)
+
+type battery_status struct info 'Battery information'(
+  int32_t             currentConsumed     info 'Consumed charge, in milliampere hours (1 = 1 mAh), -1: autopilot does not provide mAh consumption estimate',
+  int32_t             energyConsumed      info 'Consumed energy, in 100*Joules (intergrated U*I*dt)  (1 = 100 Joule), -1: autopilot does not provide energy consumption estimate',
+  int16_t             temperature         info 'Temperature of the battery in centi-degrees celsius. INT16_MAX for unknown temperature.',
+  [uint16_t, 10]      voltages            info 'Battery voltage of cells, in millivolts (1 = 1 millivolt)',
+  int16_t             currentBattery      info 'Battery current, in 10*milliamperes (1 = 10 milliampere), -1: autopilot does not measure the current',
+  uint8_t             id                  info 'Battery ID',
+  mav_battery_function_uint8_t batteryFunction     info 'Function of the battery',
+  mav_battery_type_uint8_t ^type               info 'Type (chemistry) of the battery',
+  int8_t              batteryRemaining    info 'Remaining battery energy: (0%: 0, 100%: 100), -1: autopilot does not estimate the remaining battery',
+)
+
+type autopilot_version struct info 'Version and capability of autopilot software'(
+  uint64_t            capabilities        info 'bitmask of capabilities (see MAV_PROTOCOL_CAPABILITY enum)',
+  uint64_t            uid                 info 'UID if provided by hardware',
+  uint32_t            flightSwVersion     info 'Firmware version number',
+  uint32_t            middlewareSwVersion info 'Middleware version number',
+  uint32_t            osSwVersion         info 'Operating system version number',
+  uint32_t            boardVersion        info 'HW / board version (last 8 bytes should be silicon ID, if any)',
+  uint16_t            vendorId            info 'ID of the board vendor',
+  uint16_t            productId           info 'ID of the product',
+  [uint8_t, 8]        flightCustomVersion info 'Custom version field, commonly the first 8 bytes of the git hash. This is not an unique identifier, but should allow to identify the commit using the main version number even for very large code bases.',
+  [uint8_t, 8]        middlewareCustomVersion info 'Custom version field, commonly the first 8 bytes of the git hash. This is not an unique identifier, but should allow to identify the commit using the main version number even for very large code bases.',
+  [uint8_t, 8]        osCustomVersion     info 'Custom version field, commonly the first 8 bytes of the git hash. This is not an unique identifier, but should allow to identify the commit using the main version number even for very large code bases.',
+)
+
+type v2_extension struct info 'Message implementing parts of the V2 payload specs in V1 frames for transitional support.'(
+  uint16_t            messageType         info 'A code that identifies the software component that understands this message (analogous to usb device classes or mime type strings).  If this code is less than 32768, it is considered a \'registered\' protocol extension and the corresponding entry should be added to https://github.com/mavlink/mavlink/extension-message-ids.xml.  Software creators can register blocks of message IDs as needed (useful for GCS specific metadata, etc...). Message_types greater than 32767 are considered local experiments and should not be checked in to any widely distributed codebase.',
+  uint8_t             targetNetwork       info 'Network ID (0 for broadcast)',
+  uint8_t             targetSystem        info 'System ID (0 for broadcast)',
+  uint8_t             targetComponent     info 'Component ID (0 for broadcast)',
+  [uint8_t, 249]      payload             info 'Variable length payload. The length is defined by the remaining message length when subtracting the header and other fields.  The entire content of this block is opaque unless you understand any the encoding message_type.  The particular encoding used can be extension specific and might not always be documented as part of the mavlink specification.',
+)
+
+type memory_vect struct info 'Send raw controller memory. The use of this message is discouraged for normal packets, but a quite efficient way for testing new messages and getting experimental debug output.'(
+  uint16_t            address             info 'Starting address of the debug variables',
+  uint8_t             ver                 info 'Version code of the type variable. 0=unknown, type ignored and assumed int16_t. 1=as below',
+  uint8_t             ^type               info 'Type code of the memory variables. for ver = 1: 0=16 x int16_t, 1=16 x uint16_t, 2=16 x Q15, 3=16 x 1Q14',
+  [int8_t, 32]        value               info 'Memory contents at specified address',
+)
+
+type debug_vect struct(
+  uint64_t            timeUsec            info 'Timestamp',
+  ^float              x                   info 'x',
+  ^float              y                   info 'y',
+  ^float              z                   info 'z',
+  [char, 10]          name                info 'Name',
+)
+
+type named_value_float struct info 'Send a key-value pair as float. The use of this message is discouraged for normal packets, but a quite efficient way for testing new messages and getting experimental debug output.'(
+  uint32_t            timeBootMs          info 'Timestamp (milliseconds since system boot)',
+  ^float              value               info 'Floating point value',
+  [char, 10]          name                info 'Name of the debug variable',
+)
+
+type named_value_int struct info 'Send a key-value pair as integer. The use of this message is discouraged for normal packets, but a quite efficient way for testing new messages and getting experimental debug output.'(
+  uint32_t            timeBootMs          info 'Timestamp (milliseconds since system boot)',
+  int32_t             value               info 'Signed integer value',
+  [char, 10]          name                info 'Name of the debug variable',
+)
+
+type statustext struct info 'Status text message. These messages are printed in yellow in the COMM console of QGroundControl. WARNING: They consume quite some bandwidth, so use only for important status and error messages. If implemented wisely, these messages are buffered on the MCU and sent only at a limited rate (e.g. 10 Hz).'(
+  mav_severity_uint8_t severity            info 'Severity of status. Relies on the definitions within RFC-5424. See enum MAV_SEVERITY.',
+  [char, 50]          text                info 'Status text message, without null termination character',
+)
+
+type debug struct info 'Send a debug value. The index is used to discriminate between values. These values show up in the plot of QGroundControl as DEBUG N.'(
+  uint32_t            timeBootMs          info 'Timestamp (milliseconds since system boot)',
+  ^float              value               info 'DEBUG value',
+  uint8_t             ind                 info 'index of debug variable',
+)
+
+type set_cam_shutter struct(
+  ^float              gain                info 'Camera gain',
+  uint16_t            interval            info 'Shutter interval, in microseconds',
+  uint16_t            exposure            info 'Exposure time, in microseconds',
+  uint8_t             camNo               info 'Camera id',
+  uint8_t             camMode             info 'Camera mode: 0 = auto, 1 = manual',
+  uint8_t             triggerPin          info 'Trigger pin, 0-3 for PtGrey FireFly',
+)
+
+type image_triggered struct(
+  uint64_t            timestamp           info 'Timestamp',
+  uint32_t            seq                 info 'IMU seq',
+  ^float              roll                info 'Roll angle in rad',
+  ^float              pitch               info 'Pitch angle in rad',
+  ^float              yaw                 info 'Yaw angle in rad',
+  ^float              localZ              info 'Local frame Z coordinate (height over ground)',
+  ^float              lat                 info 'GPS X coordinate',
+  ^float              lon                 info 'GPS Y coordinate',
+  ^float              alt                 info 'Global frame altitude',
+  ^float              groundX             info 'Ground truth X',
+  ^float              groundY             info 'Ground truth Y',
+  ^float              groundZ             info 'Ground truth Z',
+)
+
+type image_trigger_control struct(
+  uint8_t             enable              info '0 to disable, 1 to enable',
+)
+
+type image_available struct(
+  uint64_t            camId               info 'Camera id',
+  uint64_t            timestamp           info 'Timestamp',
+  uint64_t            validUntil          info 'Until which timestamp this buffer will stay valid',
+  uint32_t            imgSeq              info 'The image sequence number',
+  uint32_t            imgBufIndex         info 'Position of the image in the buffer, starts with 0',
+  uint32_t            key                 info 'Shared memory area key',
+  uint32_t            exposure            info 'Exposure time, in microseconds',
+  ^float              gain                info 'Camera gain',
+  ^float              roll                info 'Roll angle in rad',
+  ^float              pitch               info 'Pitch angle in rad',
+  ^float              yaw                 info 'Yaw angle in rad',
+  ^float              localZ              info 'Local frame Z coordinate (height over ground)',
+  ^float              lat                 info 'GPS X coordinate',
+  ^float              lon                 info 'GPS Y coordinate',
+  ^float              alt                 info 'Global frame altitude',
+  ^float              groundX             info 'Ground truth X',
+  ^float              groundY             info 'Ground truth Y',
+  ^float              groundZ             info 'Ground truth Z',
+  uint16_t            width               info 'Image width',
+  uint16_t            height              info 'Image height',
+  uint16_t            depth               info 'Image depth',
+  uint8_t             camNo               info 'Camera # (starts with 0)',
+  uint8_t             channels            info 'Image channels',
+)
+
+type set_position_control_offset struct info 'Message sent to the MAV to set a new offset from the currently controlled position'(
+  ^float              x                   info 'x position offset',
+  ^float              y                   info 'y position offset',
+  ^float              z                   info 'z position offset',
+  ^float              yaw                 info 'yaw orientation offset in radians, 0 = NORTH',
+  uint8_t             targetSystem        info 'System ID',
+  uint8_t             targetComponent     info 'Component ID',
+)
+
+type position_control_setpoint struct(
+  ^float              x                   info 'x position',
+  ^float              y                   info 'y position',
+  ^float              z                   info 'z position',
+  ^float              yaw                 info 'yaw orientation in radians, 0 = NORTH',
+  uint16_t            id                  info 'ID of waypoint, 0 for plain position',
+)
+
+type marker struct(
+  ^float              x                   info 'x position',
+  ^float              y                   info 'y position',
+  ^float              z                   info 'z position',
+  ^float              roll                info 'roll orientation',
+  ^float              pitch               info 'pitch orientation',
+  ^float              yaw                 info 'yaw orientation',
+  uint16_t            id                  info 'ID',
+)
+
+type raw_aux struct(
+  int32_t             baro                info 'Barometric pressure (hecto Pascal)',
+  uint16_t            adc1                info 'ADC1 (J405 ADC3, LPC2148 AD0.6)',
+  uint16_t            adc2                info 'ADC2 (J405 ADC5, LPC2148 AD0.2)',
+  uint16_t            adc3                info 'ADC3 (J405 ADC6, LPC2148 AD0.1)',
+  uint16_t            adc4                info 'ADC4 (J405 ADC7, LPC2148 AD1.3)',
+  uint16_t            vbat                info 'Battery voltage',
+  int16_t             temp                info 'Temperature (degrees celcius)',
+)
+
+type watchdog_heartbeat struct(
+  uint16_t            watchdogId          info 'Watchdog ID',
+  uint16_t            processCount        info 'Number of processes',
+)
+
+type watchdog_process_info struct(
+  int32_t             timeout             info 'Timeout (seconds)',
+  uint16_t            watchdogId          info 'Watchdog ID',
+  uint16_t            processId           info 'Process ID',
+  [char, 100]         name                info 'Process name',
+  [char, 147]         arguments           info 'Process arguments',
+)
+
+type watchdog_process_status struct(
+  int32_t             pid                 info 'PID',
+  uint16_t            watchdogId          info 'Watchdog ID',
+  uint16_t            processId           info 'Process ID',
+  uint16_t            crashes             info 'Number of crashes',
+  uint8_t             state               info 'Is running / finished / suspended / crashed',
+  uint8_t             muted               info 'Is muted',
+)
+
+type watchdog_command struct(
+  uint16_t            watchdogId          info 'Watchdog ID',
+  uint16_t            processId           info 'Process ID',
+  uint8_t             targetSystemId      info 'Target system ID',
+  uint8_t             commandId           info 'Command ID',
+)
+
+type pattern_detected struct(
+  ^float              confidence          info 'Confidence of detection',
+  uint8_t             ^type               info '0: Pattern, 1: Letter',
+  [char, 100]         file                info 'Pattern file name',
+  uint8_t             detected            info 'Accepted as true detection, 0 no, 1 yes',
+)
+
+type point_of_interest struct info 'Notifies the operator about a point of interest (POI). This can be anything detected by the
+                system. This generic message is intented to help interfacing to generic visualizations and to display
+                the POI on a map.
+            '(
+  ^float              x                   info 'X Position',
+  ^float              y                   info 'Y Position',
+  ^float              z                   info 'Z Position',
+  uint16_t            timeout             info '0: no timeout, >1: timeout in seconds',
+  uint8_t             ^type               info '0: Notice, 1: Warning, 2: Critical, 3: Emergency, 4: Debug',
+  uint8_t             color               info '0: blue, 1: yellow, 2: red, 3: orange, 4: green, 5: magenta',
+  uint8_t             coordinateSystem    info '0: global, 1:local',
+  [char, 26]          name                info 'POI name',
+)
+
+type point_of_interest_connection struct info 'Notifies the operator about the connection of two point of interests (POI). This can be anything detected by the
+                system. This generic message is intented to help interfacing to generic visualizations and to display
+                the POI on a map.
+            '(
+  ^float              xp1                 info 'X1 Position',
+  ^float              yp1                 info 'Y1 Position',
+  ^float              zp1                 info 'Z1 Position',
+  ^float              xp2                 info 'X2 Position',
+  ^float              yp2                 info 'Y2 Position',
+  ^float              zp2                 info 'Z2 Position',
+  uint16_t            timeout             info '0: no timeout, >1: timeout in seconds',
+  uint8_t             ^type               info '0: Notice, 1: Warning, 2: Critical, 3: Emergency, 4: Debug',
+  uint8_t             color               info '0: blue, 1: yellow, 2: red, 3: orange, 4: green, 5: magenta',
+  uint8_t             coordinateSystem    info '0: global, 1:local',
+  [char, 26]          name                info 'POI connection name',
+)
+
+type brief_feature struct(
+  ^float              x                   info 'x position in m',
+  ^float              y                   info 'y position in m',
+  ^float              z                   info 'z position in m',
+  ^float              response            info 'Harris operator response at this location',
+  uint16_t            size                info 'Size in pixels',
+  uint16_t            orientation         info 'Orientation',
+  uint8_t             orientationAssignment info 'Orientation assignment 0: false, 1:true',
+  [uint8_t, 32]       descriptor          info 'Descriptor',
+)
+
+type attitude_control struct(
+  ^float              roll                info 'roll',
+  ^float              pitch               info 'pitch',
+  ^float              yaw                 info 'yaw',
+  ^float              thrust              info 'thrust',
+  uint8_t             target              info 'The system to be controlled',
+  uint8_t             rollManual          info 'roll control enabled auto:0, manual:1',
+  uint8_t             pitchManual         info 'pitch auto:0, manual:1',
+  uint8_t             yawManual           info 'yaw auto:0, manual:1',
+  uint8_t             thrustManual        info 'thrust auto:0, manual:1',
+)
+
+type detection_stats struct(
+  uint32_t            detections          info 'Number of detections',
+  uint32_t            clusterIters        info 'Number of cluster iterations',
+  ^float              bestScore           info 'Best score',
+  int32_t             bestLat             info 'Latitude of the best detection * 1E7',
+  int32_t             bestLon             info 'Longitude of the best detection * 1E7',
+  int32_t             bestAlt             info 'Altitude of the best detection * 1E3',
+  uint32_t            bestDetectionId     info 'Best detection ID',
+  uint32_t            bestClusterId       info 'Best cluster ID',
+  uint32_t            bestClusterIterId   info 'Best cluster ID',
+  uint32_t            imagesDone          info 'Number of images already processed',
+  uint32_t            imagesTodo          info 'Number of images still to process',
+  ^float              fps                 info 'Average images per seconds processed',
+)
+
+type onboard_health struct(
+  uint32_t            uptime              info 'Uptime of system',
+  ^float              ramTotal            info 'RAM size in GiB',
+  ^float              swapTotal           info 'Swap size in GiB',
+  ^float              diskTotal           info 'Disk total in GiB',
+  ^float              temp                info 'Temperature',
+  ^float              voltage             info 'Supply voltage V',
+  ^float              networkLoadIn       info 'Network load inbound KiB/s',
+  ^float              networkLoadOut      info 'Network load outbound in KiB/s ',
+  uint16_t            cpuFreq             info 'CPU frequency',
+  uint8_t             cpuLoad             info 'CPU load in percent',
+  uint8_t             ramUsage            info 'RAM usage in percent',
+  uint8_t             swapUsage           info 'Swap usage in percent',
+  int8_t              diskHealth          info 'Disk health (-1: N/A, 0: ERR, 1: RO, 2: RW)',
+  uint8_t             diskUsage           info 'Disk usage in percent',
+)
+
+type mav_mission_result_uint8_t enum uint8_t info 'result in a mavlink mission ack' (
+	MAV_MISSION_ACCEPTED = 0                 info 'mission accepted OK',
+	MAV_MISSION_ERROR = 1                    info 'generic error / not accepting mission commands at all right now',
+	MAV_MISSION_UNSUPPORTED_FRAME = 2        info 'coordinate frame is not supported',
+	MAV_MISSION_UNSUPPORTED = 3              info 'command is not supported',
+	MAV_MISSION_NO_SPACE = 4                 info 'mission item exceeds storage space',
+	MAV_MISSION_INVALID = 5                  info 'one of the parameters has an invalid value',
+	MAV_MISSION_INVALID_PARAM1 = 6           info 'param1 has an invalid value',
+	MAV_MISSION_INVALID_PARAM2 = 7           info 'param2 has an invalid value',
+	MAV_MISSION_INVALID_PARAM3 = 8           info 'param3 has an invalid value',
+	MAV_MISSION_INVALID_PARAM4 = 9           info 'param4 has an invalid value',
+	MAV_MISSION_INVALID_PARAM5_X = 10        info 'x/param5 has an invalid value',
+	MAV_MISSION_INVALID_PARAM6_Y = 11        info 'y/param6 has an invalid value',
+	MAV_MISSION_INVALID_PARAM7 = 12          info 'param7 has an invalid value',
+	MAV_MISSION_INVALID_SEQUENCE = 13        info 'received waypoint out of sequence',
+	MAV_MISSION_DENIED = 14                  info 'not accepting any mission commands from this communication partner',
+)
+
+type mav_battery_function_uint8_t enum uint8_t info 'Enumeration of battery functions' (
+	MAV_BATTERY_FUNCTION_UNKNOWN = 0         info 'Lithium polymere battery',
+	MAV_BATTERY_FUNCTION_ALL = 1             info 'Battery supports all flight systems',
+	MAV_BATTERY_FUNCTION_PROPULSION = 2      info 'Battery for the propulsion system',
+	MAV_BATTERY_FUNCTION_AVIONICS = 3        info 'Avionics battery',
+	MAV_BATTERY_TYPE_PAYLOAD = 4             info 'Payload battery',
+)
+
+type mav_frame_uint8_t enum uint8_t (
+	MAV_FRAME_GLOBAL = 0                     info 'Global coordinate frame, WGS84 coordinate system. First value / x: latitude, second value / y: longitude, third value / z: positive altitude over mean sea level (MSL)',
+	MAV_FRAME_LOCAL_NED = 1                  info 'Local coordinate frame, Z-up (x: north, y: east, z: down).',
+	MAV_FRAME_MISSION = 2                    info 'NOT a coordinate frame, indicates a mission command.',
+	MAV_FRAME_GLOBAL_RELATIVE_ALT = 3        info 'Global coordinate frame, WGS84 coordinate system, relative altitude over ground with respect to the home position. First value / x: latitude, second value / y: longitude, third value / z: positive altitude with 0 being at the altitude of the home location.',
+	MAV_FRAME_LOCAL_ENU = 4                  info 'Local coordinate frame, Z-down (x: east, y: north, z: up)',
+	MAV_FRAME_GLOBAL_INT = 5                 info 'Global coordinate frame, WGS84 coordinate system. First value / x: latitude in degrees*1.0e-7, second value / y: longitude in degrees*1.0e-7, third value / z: positive altitude over mean sea level (MSL)',
+	MAV_FRAME_GLOBAL_RELATIVE_ALT_INT = 6    info 'Global coordinate frame, WGS84 coordinate system, relative altitude over ground with respect to the home position. First value / x: latitude in degrees*10e-7, second value / y: longitude in degrees*10e-7, third value / z: positive altitude with 0 being at the altitude of the home location.',
+	MAV_FRAME_LOCAL_OFFSET_NED = 7           info 'Offset to the current local frame. Anything expressed in this frame should be added to the current local frame position.',
+	MAV_FRAME_BODY_NED = 8                   info 'Setpoint in body NED frame. This makes sense if all position control is externalized - e.g. useful to command 2 m/s^2 acceleration to the right.',
+	MAV_FRAME_BODY_OFFSET_NED = 9            info 'Offset in body NED frame. This makes sense if adding setpoints to the current flight path, to avoid an obstacle - e.g. useful to command 2 m/s^2 acceleration to the east.',
+	MAV_FRAME_GLOBAL_TERRAIN_ALT = 10        info 'Global coordinate frame with above terrain level altitude. WGS84 coordinate system, relative altitude over terrain with respect to the waypoint coordinate. First value / x: latitude in degrees, second value / y: longitude in degrees, third value / z: positive altitude in meters with 0 being at ground level in terrain model.',
+	MAV_FRAME_GLOBAL_TERRAIN_ALT_INT = 11    info 'Global coordinate frame with above terrain level altitude. WGS84 coordinate system, relative altitude over terrain with respect to the waypoint coordinate. First value / x: latitude in degrees*10e-7, second value / y: longitude in degrees*10e-7, third value / z: positive altitude in meters with 0 being at ground level in terrain model.',
+)
+
+type mav_battery_type_uint8_t enum uint8_t info 'Enumeration of battery types' (
+	MAV_BATTERY_TYPE_UNKNOWN = 0             info 'Not specified.',
+	MAV_BATTERY_TYPE_LIPO = 1                info 'Lithium polymere battery',
+	MAV_BATTERY_TYPE_LIFE = 2                info 'Lithium ferrite battery',
+	MAV_BATTERY_TYPE_LION = 3                info 'Lithium-ION battery',
+	MAV_BATTERY_TYPE_NIMH = 4                info 'Nickel metal hydride battery',
+)
+
+type mav_estimator_type_uint8_t enum uint8_t info 'Enumeration of estimator types' (
+	MAV_ESTIMATOR_TYPE_NAIVE = 1             info 'This is a naive estimator without any real covariance feedback.',
+	MAV_ESTIMATOR_TYPE_VISION = 2            info 'Computer vision based estimate. Might be up to scale.',
+	MAV_ESTIMATOR_TYPE_VIO = 3               info 'Visual-inertial estimate.',
+	MAV_ESTIMATOR_TYPE_GPS = 4               info 'Plain GPS estimate.',
+	MAV_ESTIMATOR_TYPE_GPS_INS = 5           info 'Estimator integrating GPS and inertial sensing.',
+)
+
+type mav_severity_uint8_t enum uint8_t info 'Indicates the severity level, generally used for status messages to indicate their relative urgency. Based on RFC-5424 using expanded definitions at: http://www.kiwisyslog.com/kb/info:-syslog-message-levels/.' (
+	MAV_SEVERITY_EMERGENCY = 0               info 'System is unusable. This is a "panic" condition.',
+	MAV_SEVERITY_ALERT = 1                   info 'Action should be taken immediately. Indicates error in non-critical systems.',
+	MAV_SEVERITY_CRITICAL = 2                info 'Action must be taken immediately. Indicates failure in a primary system.',
+	MAV_SEVERITY_ERROR = 3                   info 'Indicates an error in secondary/redundant systems.',
+	MAV_SEVERITY_WARNING = 4                 info 'Indicates about a possible future error if this is not resolved within a given timeframe. Example would be a low battery warning.',
+	MAV_SEVERITY_NOTICE = 5                  info 'An unusual event has occured, though not an error condition. This should be investigated for the root cause.',
+	MAV_SEVERITY_INFO = 6                    info 'Normal operational messages. Useful for logging. No action is required for these messages.',
+	MAV_SEVERITY_DEBUG = 7                   info 'Useful non-operational messages that can assist in debugging. These should not occur during normal operation.',
+)
+
+type mav_mode_uint8_t enum uint8_t info 'These defines are predefined OR-combined mode flags. There is no need to use values from this enum, but it
+               simplifies the use of the mode flags. Note that manual input is enabled in all modes as a safety override.' (
+	MAV_MODE_PREFLIGHT = 0                   info 'System is not ready to fly, booting, calibrating, etc. No flag is set.',
+	MAV_MODE_STABILIZE_DISARMED = 80         info 'System is allowed to be active, under assisted RC control.',
+	MAV_MODE_STABILIZE_ARMED = 208           info 'System is allowed to be active, under assisted RC control.',
+	MAV_MODE_MANUAL_DISARMED = 64            info 'System is allowed to be active, under manual (RC) control, no stabilization',
+	MAV_MODE_MANUAL_ARMED = 192              info 'System is allowed to be active, under manual (RC) control, no stabilization',
+	MAV_MODE_GUIDED_DISARMED = 88            info 'System is allowed to be active, under autonomous control, manual setpoint',
+	MAV_MODE_GUIDED_ARMED = 216              info 'System is allowed to be active, under autonomous control, manual setpoint',
+	MAV_MODE_AUTO_DISARMED = 92              info 'System is allowed to be active, under autonomous control and navigation (the trajectory is decided onboard and not pre-programmed by MISSIONs)',
+	MAV_MODE_AUTO_ARMED = 220                info 'System is allowed to be active, under autonomous control and navigation (the trajectory is decided onboard and not pre-programmed by MISSIONs)',
+	MAV_MODE_TEST_DISARMED = 66              info 'UNDEFINED mode. This solely depends on the autopilot - use with caution, intended for developers only.',
+	MAV_MODE_TEST_ARMED = 194                info 'UNDEFINED mode. This solely depends on the autopilot - use with caution, intended for developers only.',
+)
+
+type mav_param_type_uint8_t enum uint8_t info 'Specifies the datatype of a MAVLink parameter.' (
+	MAV_PARAM_TYPE_UINT8 = 1                 info '8-bit unsigned integer',
+	MAV_PARAM_TYPE_INT8 = 2                  info '8-bit signed integer',
+	MAV_PARAM_TYPE_UINT16 = 3                info '16-bit unsigned integer',
+	MAV_PARAM_TYPE_INT16 = 4                 info '16-bit signed integer',
+	MAV_PARAM_TYPE_UINT32 = 5                info '32-bit unsigned integer',
+	MAV_PARAM_TYPE_INT32 = 6                 info '32-bit signed integer',
+	MAV_PARAM_TYPE_UINT64 = 7                info '64-bit unsigned integer',
+	MAV_PARAM_TYPE_INT64 = 8                 info '64-bit signed integer',
+	MAV_PARAM_TYPE_REAL32 = 9                info '32-bit floating-point',
+	MAV_PARAM_TYPE_REAL64 = 10               info '64-bit floating-point',
+)
+
+type mav_cmd_uint16_t enum uint16_t info 'Commands to be executed by the MAV. They can be executed on user request, or as part of a mission script. If the action is used in a mission, the parameter mapping to the waypoint/mission message is as follows: Param 1, Param 2, Param 3, Param 4, X: Param 5, Y:Param 6, Z:Param 7. This command list is similar what ARINC 424 is for commercial aircraft: A data format how to interpret waypoint/mission data.' (
+	MAV_CMD_NAV_WAYPOINT = 16                info 'Navigate to MISSION.',
+	MAV_CMD_NAV_LOITER_UNLIM = 17            info 'Loiter around this MISSION an unlimited amount of time',
+	MAV_CMD_NAV_LOITER_TURNS = 18            info 'Loiter around this MISSION for X turns',
+	MAV_CMD_NAV_LOITER_TIME = 19             info 'Loiter around this MISSION for X seconds',
+	MAV_CMD_NAV_RETURN_TO_LAUNCH = 20        info 'Return to launch location',
+	MAV_CMD_NAV_LAND = 21                    info 'Land at location',
+	MAV_CMD_NAV_TAKEOFF = 22                 info 'Takeoff from ground / hand',
+	MAV_CMD_NAV_CONTINUE_AND_CHANGE_ALT = 30  info 'Continue on the current course and climb/descend to specified altitude.  When the altitude is reached continue to the next command (i.e., don\'t proceed to the next command until the desired altitude is reached.',
+	MAV_CMD_NAV_LOITER_TO_ALT = 31           info 'Begin loiter at the specified Latitude and Longitude.  If Lat=Lon=0, then loiter at the current position.  Don\'t consider the navigation command complete (don\'t leave loiter) until the altitude has been reached.  Additionally, if the Heading Required parameter is non-zero the  aircraft will not leave the loiter until heading toward the next waypoint. ',
+	MAV_CMD_NAV_ROI = 80                     info 'Sets the region of interest (ROI) for a sensor set or the vehicle itself. This can then be used by the vehicles control system to control the vehicle attitude and the attitude of various sensors such as cameras.',
+	MAV_CMD_NAV_PATHPLANNING = 81            info 'Control autonomous path planning on the MAV.',
+	MAV_CMD_NAV_SPLINE_WAYPOINT = 82         info 'Navigate to MISSION using a spline path.',
+	MAV_CMD_NAV_GUIDED_ENABLE = 92           info 'hand control over to an external controller',
+	MAV_CMD_NAV_LAST = 95                    info 'NOP - This command is only used to mark the upper limit of the NAV/ACTION commands in the enumeration',
+	MAV_CMD_CONDITION_DELAY = 112            info 'Delay mission state machine.',
+	MAV_CMD_CONDITION_CHANGE_ALT = 113       info 'Ascend/descend at rate.  Delay mission state machine until desired altitude reached.',
+	MAV_CMD_CONDITION_DISTANCE = 114         info 'Delay mission state machine until within desired distance of next NAV point.',
+	MAV_CMD_CONDITION_YAW = 115              info 'Reach a certain target angle.',
+	MAV_CMD_CONDITION_LAST = 159             info 'NOP - This command is only used to mark the upper limit of the CONDITION commands in the enumeration',
+	MAV_CMD_DO_SET_MODE = 176                info 'Set system mode.',
+	MAV_CMD_DO_JUMP = 177                    info 'Jump to the desired command in the mission list.  Repeat this action only the specified number of times',
+	MAV_CMD_DO_CHANGE_SPEED = 178            info 'Change speed and/or throttle set points.',
+	MAV_CMD_DO_SET_HOME = 179                info 'Changes the home location either to the current location or a specified location.',
+	MAV_CMD_DO_SET_PARAMETER = 180           info 'Set a system parameter.  Caution!  Use of this command requires knowledge of the numeric enumeration value of the parameter.',
+	MAV_CMD_DO_SET_RELAY = 181               info 'Set a relay to a condition.',
+	MAV_CMD_DO_REPEAT_RELAY = 182            info 'Cycle a relay on and off for a desired number of cyles with a desired period.',
+	MAV_CMD_DO_SET_SERVO = 183               info 'Set a servo to a desired PWM value.',
+	MAV_CMD_DO_REPEAT_SERVO = 184            info 'Cycle a between its nominal setting and a desired PWM for a desired number of cycles with a desired period.',
+	MAV_CMD_DO_FLIGHTTERMINATION = 185       info 'Terminate flight immediately',
+	MAV_CMD_DO_LAND_START = 189              info 'Mission command to perform a landing. This is used as a marker in a mission to tell the autopilot where a sequence of mission items that represents a landing starts. It may also be sent via a COMMAND_LONG to trigger a landing, in which case the nearest (geographically) landing sequence in the mission will be used. The Latitude/Longitude is optional, and may be set to 0/0 if not needed. If specified then it will be used to help find the closest landing sequence.',
+	MAV_CMD_DO_RALLY_LAND = 190              info 'Mission command to perform a landing from a rally point.',
+	MAV_CMD_DO_GO_AROUND = 191               info 'Mission command to safely abort an autonmous landing.',
+	MAV_CMD_DO_CONTROL_VIDEO = 200           info 'Control onboard camera system.',
+	MAV_CMD_DO_SET_ROI = 201                 info 'Sets the region of interest (ROI) for a sensor set or the vehicle itself. This can then be used by the vehicles control system to control the vehicle attitude and the attitude of various sensors such as cameras.',
+	MAV_CMD_DO_DIGICAM_CONFIGURE = 202       info 'Mission command to configure an on-board camera controller system.',
+	MAV_CMD_DO_DIGICAM_CONTROL = 203         info 'Mission command to control an on-board camera controller system.',
+	MAV_CMD_DO_MOUNT_CONFIGURE = 204         info 'Mission command to configure a camera or antenna mount',
+	MAV_CMD_DO_MOUNT_CONTROL = 205           info 'Mission command to control a camera or antenna mount',
+	MAV_CMD_DO_SET_CAM_TRIGG_DIST = 206      info 'Mission command to set CAM_TRIGG_DIST for this flight',
+	MAV_CMD_DO_FENCE_ENABLE = 207            info 'Mission command to enable the geofence',
+	MAV_CMD_DO_PARACHUTE = 208               info 'Mission command to trigger a parachute',
+	MAV_CMD_DO_INVERTED_FLIGHT = 210         info 'Change to/from inverted flight',
+	MAV_CMD_DO_MOUNT_CONTROL_QUAT = 220      info 'Mission command to control a camera or antenna mount, using a quaternion as reference.',
+	MAV_CMD_DO_GUIDED_MASTER = 221           info 'set id of master controller',
+	MAV_CMD_DO_GUIDED_LIMITS = 222           info 'set limits for external control',
+	MAV_CMD_DO_LAST = 240                    info 'NOP - This command is only used to mark the upper limit of the DO commands in the enumeration',
+	MAV_CMD_PREFLIGHT_CALIBRATION = 241      info 'Trigger calibration. This command will be only accepted if in pre-flight mode.',
+	MAV_CMD_PREFLIGHT_SET_SENSOR_OFFSETS = 242  info 'Set sensor offsets. This command will be only accepted if in pre-flight mode.',
+	MAV_CMD_PREFLIGHT_STORAGE = 245          info 'Request storage of different parameter values and logs. This command will be only accepted if in pre-flight mode.',
+	MAV_CMD_PREFLIGHT_REBOOT_SHUTDOWN = 246  info 'Request the reboot or shutdown of system components.',
+	MAV_CMD_OVERRIDE_GOTO = 252              info 'Hold / continue the current action',
+	MAV_CMD_MISSION_START = 300              info 'start running a mission',
+	MAV_CMD_COMPONENT_ARM_DISARM = 400       info 'Arms / Disarms a component',
+	MAV_CMD_START_RX_PAIR = 500              info 'Starts receiver pairing',
+	MAV_CMD_REQUEST_AUTOPILOT_CAPABILITIES = 520  info 'Request autopilot capabilities',
+	MAV_CMD_IMAGE_START_CAPTURE = 2000       info 'Start image capture sequence',
+	MAV_CMD_IMAGE_STOP_CAPTURE = 2001        info 'Stop image capture sequence',
+	MAV_CMD_DO_TRIGGER_CONTROL = 2003        info 'Enable or disable on-board camera triggering system.',
+	MAV_CMD_VIDEO_START_CAPTURE = 2500       info 'Starts video capture',
+	MAV_CMD_VIDEO_STOP_CAPTURE = 2501        info 'Stop the current video capture',
+	MAV_CMD_PANORAMA_CREATE = 2800           info 'Create a panorama at the current position',
+	MAV_CMD_PAYLOAD_PREPARE_DEPLOY = 30001   info 'Deploy payload on a Lat / Lon / Alt position. This includes the navigation to reach the required release position and velocity.',
+	MAV_CMD_PAYLOAD_CONTROL_DEPLOY = 30002   info 'Control the payload deployment.',
+	MAV_CMD_DO_START_SEARCH = 10001          info 'Starts a search',
+	MAV_CMD_DO_FINISH_SEARCH = 10002         info 'Starts a search',
+	MAV_CMD_NAV_SWEEP = 10003                info 'Starts a search',
+)
+
+component Pixhawk {
+	struct(
+		heartbeat                               _0,
+		sys_status                              _1,
+		system_time                             _2,
+		ping                                    _4,
+		change_operator_control                 _5,
+		change_operator_control_ack             _6,
+		auth_key                                _7,
+		set_mode                                _11,
+		param_request_read                      _20,
+		param_request_list                      _21,
+		param_value                             _22,
+		param_set                               _23,
+		gps_raw_int                             _24,
+		gps_status                              _25,
+		scaled_imu                              _26,
+		raw_imu                                 _27,
+		raw_pressure                            _28,
+		scaled_pressure                         _29,
+		attitude                                _30,
+		attitude_quaternion                     _31,
+		local_position_ned                      _32,
+		global_position_int                     _33,
+		rc_channels_scaled                      _34,
+		rc_channels_raw                         _35,
+		servo_output_raw                        _36,
+		mission_request_partial_list            _37,
+		mission_write_partial_list              _38,
+		mission_item                            _39,
+		mission_request                         _40,
+		mission_set_current                     _41,
+		mission_current                         _42,
+		mission_request_list                    _43,
+		mission_count                           _44,
+		mission_clear_all                       _45,
+		mission_item_reached                    _46,
+		mission_ack                             _47,
+		set_gps_global_origin                   _48,
+		gps_global_origin                       _49,
+		param_map_rc                            _50,
+		safety_set_allowed_area                 _54,
+		safety_allowed_area                     _55,
+		attitude_quaternion_cov                 _61,
+		nav_controller_output                   _62,
+		global_position_int_cov                 _63,
+		local_position_ned_cov                  _64,
+		rc_channels                             _65,
+		request_data_stream                     _66,
+		data_stream                             _67,
+		manual_control                          _69,
+		rc_channels_override                    _70,
+		mission_item_int                        _73,
+		vfr_hud                                 _74,
+		command_int                             _75,
+		command_long                            _76,
+		command_ack                             _77,
+		manual_setpoint                         _81,
+		set_attitude_target                     _82,
+		attitude_target                         _83,
+		set_position_target_local_ned           _84,
+		position_target_local_ned               _85,
+		set_position_target_global_int          _86,
+		position_target_global_int              _87,
+		local_position_ned_system_global_offset _89,
+		hil_state                               _90,
+		hil_controls                            _91,
+		hil_rc_inputs_raw                       _92,
+		optical_flow                            _100,
+		global_vision_position_estimate         _101,
+		vision_position_estimate                _102,
+		vision_speed_estimate                   _103,
+		vicon_position_estimate                 _104,
+		highres_imu                             _105,
+		optical_flow_rad                        _106,
+		hil_sensor                              _107,
+		sim_state                               _108,
+		radio_status                            _109,
+		file_transfer_protocol                  _110,
+		timesync                                _111,
+		camera_trigger                          _112,
+		hil_gps                                 _113,
+		hil_optical_flow                        _114,
+		hil_state_quaternion                    _115,
+		scaled_imu2                             _116,
+		log_request_list                        _117,
+		log_entry                               _118,
+		log_request_data                        _119,
+		log_data                                _120,
+		log_erase                               _121,
+		log_request_end                         _122,
+		gps_inject_data                         _123,
+		gps2_raw                                _124,
+		power_status                            _125,
+		serial_control                          _126,
+		gps_rtk                                 _127,
+		gps2_rtk                                _128,
+		scaled_imu3                             _129,
+		data_transmission_handshake             _130,
+		encapsulated_data                       _131,
+		distance_sensor                         _132,
+		terrain_request                         _133,
+		terrain_data                            _134,
+		terrain_check                           _135,
+		terrain_report                          _136,
+		scaled_pressure2                        _137,
+		att_pos_mocap                           _138,
+		set_actuator_control_target             _139,
+		actuator_control_target                 _140,
+		battery_status                          _147,
+		autopilot_version                       _148,
+		v2_extension                            _248,
+		memory_vect                             _249,
+		debug_vect                              _250,
+		named_value_float                       _251,
+		named_value_int                         _252,
+		statustext                              _253,
+		debug                                   _254,
+		set_cam_shutter                         _151,
+		image_triggered                         _152,
+		image_trigger_control                   _153,
+		image_available                         _154,
+		set_position_control_offset             _160,
+		position_control_setpoint               _170,
+		marker                                  _171,
+		raw_aux                                 _172,
+		watchdog_heartbeat                      _180,
+		watchdog_process_info                   _181,
+		watchdog_process_status                 _182,
+		watchdog_command                        _183,
+		pattern_detected                        _190,
+		point_of_interest                       _191,
+		point_of_interest_connection            _192,
+		brief_feature                           _195,
+		attitude_control                        _200,
+		detection_stats                         _205,
+		onboard_health                          _206,
+	)
+
+	command navWaypoint:16(
+		^float              param1 info 'Hold time in decimal seconds. (ignored by fixed wing, time to stay at MISSION for rotary wing)',
+		^float              param2 info 'Acceptance radius in meters (if the sphere with this radius is hit, the MISSION counts as reached)',
+		^float              param3 info '0 to pass through the WP, if > 0 radius in meters to pass by WP. Positive value for clockwise orbit, negative value for counter-clockwise orbit. Allows trajectory control.',
+		^float              param4 info 'Desired yaw angle at MISSION (rotary wing)',
+		^float              param5 info 'Latitude',
+		^float              param6 info 'Longitude',
+		^float              param7 info 'Altitude',
+		mav_cmd_uint16_t    ^command,
+		uint8_t             targetSystem,
+		uint8_t             targetComponent,
+		uint8_t             confirmation,
+	)
+
+	command navLoiterUnlim:17(
+		^float              param1 info 'Empty',
+		^float              param2 info 'Empty',
+		^float              param3 info 'Radius around MISSION, in meters. If positive loiter clockwise, else counter-clockwise',
+		^float              param4 info 'Desired yaw angle.',
+		^float              param5 info 'Latitude',
+		^float              param6 info 'Longitude',
+		^float              param7 info 'Altitude',
+		mav_cmd_uint16_t    ^command,
+		uint8_t             targetSystem,
+		uint8_t             targetComponent,
+		uint8_t             confirmation,
+	)
+
+	command navLoiterTurns:18(
+		^float              param1 info 'Turns',
+		^float              param2 info 'Empty',
+		^float              param3 info 'Radius around MISSION, in meters. If positive loiter clockwise, else counter-clockwise',
+		^float              param4 info 'Desired yaw angle.',
+		^float              param5 info 'Latitude',
+		^float              param6 info 'Longitude',
+		^float              param7 info 'Altitude',
+		mav_cmd_uint16_t    ^command,
+		uint8_t             targetSystem,
+		uint8_t             targetComponent,
+		uint8_t             confirmation,
+	)
+
+	command navLoiterTime:19(
+		^float              param1 info 'Seconds (decimal)',
+		^float              param2 info 'Empty',
+		^float              param3 info 'Radius around MISSION, in meters. If positive loiter clockwise, else counter-clockwise',
+		^float              param4 info 'Desired yaw angle.',
+		^float              param5 info 'Latitude',
+		^float              param6 info 'Longitude',
+		^float              param7 info 'Altitude',
+		mav_cmd_uint16_t    ^command,
+		uint8_t             targetSystem,
+		uint8_t             targetComponent,
+		uint8_t             confirmation,
+	)
+
+	command navReturnToLaunch:20(
+		^float              param1 info 'Empty',
+		^float              param2 info 'Empty',
+		^float              param3 info 'Empty',
+		^float              param4 info 'Empty',
+		^float              param5 info 'Empty',
+		^float              param6 info 'Empty',
+		^float              param7 info 'Empty',
+		mav_cmd_uint16_t    ^command,
+		uint8_t             targetSystem,
+		uint8_t             targetComponent,
+		uint8_t             confirmation,
+	)
+
+	command navLand:21(
+		^float              param1 info 'Empty',
+		^float              param2 info 'Empty',
+		^float              param3 info 'Empty',
+		^float              param4 info 'Desired yaw angle.',
+		^float              param5 info 'Latitude',
+		^float              param6 info 'Longitude',
+		^float              param7 info 'Altitude',
+		mav_cmd_uint16_t    ^command,
+		uint8_t             targetSystem,
+		uint8_t             targetComponent,
+		uint8_t             confirmation,
+	)
+
+	command navTakeoff:22(
+		^float              param1 info 'Minimum pitch (if airspeed sensor present), desired pitch without sensor',
+		^float              param2 info 'Empty',
+		^float              param3 info 'Empty',
+		^float              param4 info 'Yaw angle (if magnetometer present), ignored without magnetometer',
+		^float              param5 info 'Latitude',
+		^float              param6 info 'Longitude',
+		^float              param7 info 'Altitude',
+		mav_cmd_uint16_t    ^command,
+		uint8_t             targetSystem,
+		uint8_t             targetComponent,
+		uint8_t             confirmation,
+	)
+
+	command navContinueAndChangeAlt:30(
+		^float              param1 info 'Empty',
+		^float              param2 info 'Empty',
+		^float              param3 info 'Empty',
+		^float              param4 info 'Empty',
+		^float              param5 info 'Empty',
+		^float              param6 info 'Empty',
+		^float              param7 info 'Desired altitude in meters',
+		mav_cmd_uint16_t    ^command,
+		uint8_t             targetSystem,
+		uint8_t             targetComponent,
+		uint8_t             confirmation,
+	)
+
+	command navLoiterToAlt:31(
+		^float              param1 info 'Heading Required (0 = False)',
+		^float              param2 info 'Radius in meters. If positive loiter clockwise, negative counter-clockwise, 0 means no change to standard loiter.',
+		^float              param3 info 'Empty',
+		^float              param4 info 'Empty',
+		^float              param5 info 'Latitude',
+		^float              param6 info 'Longitude',
+		^float              param7 info 'Altitude',
+		mav_cmd_uint16_t    ^command,
+		uint8_t             targetSystem,
+		uint8_t             targetComponent,
+		uint8_t             confirmation,
+	)
+
+	command navRoi:80(
+		^float              param1 info 'Region of intereset mode. (see MAV_ROI enum)',
+		^float              param2 info 'MISSION index/ target ID. (see MAV_ROI enum)',
+		^float              param3 info 'ROI index (allows a vehicle to manage multiple ROI\'s)',
+		^float              param4 info 'Empty',
+		^float              param5 info 'x the location of the fixed ROI (see MAV_FRAME)',
+		^float              param6 info 'y',
+		^float              param7 info 'z',
+		mav_cmd_uint16_t    ^command,
+		uint8_t             targetSystem,
+		uint8_t             targetComponent,
+		uint8_t             confirmation,
+	)
+
+	command navPathplanning:81(
+		^float              param1 info '0: Disable local obstacle avoidance / local path planning (without resetting map), 1: Enable local path planning, 2: Enable and reset local path planning',
+		^float              param2 info '0: Disable full path planning (without resetting map), 1: Enable, 2: Enable and reset map/occupancy grid, 3: Enable and reset planned route, but not occupancy grid',
+		^float              param3 info 'Empty',
+		^float              param4 info 'Yaw angle at goal, in compass degrees, [0..360]',
+		^float              param5 info 'Latitude/X of goal',
+		^float              param6 info 'Longitude/Y of goal',
+		^float              param7 info 'Altitude/Z of goal',
+		mav_cmd_uint16_t    ^command,
+		uint8_t             targetSystem,
+		uint8_t             targetComponent,
+		uint8_t             confirmation,
+	)
+
+	command navSplineWaypoint:82(
+		^float              param1 info 'Hold time in decimal seconds. (ignored by fixed wing, time to stay at MISSION for rotary wing)',
+		^float              param2 info 'Empty',
+		^float              param3 info 'Empty',
+		^float              param4 info 'Empty',
+		^float              param5 info 'Latitude/X of goal',
+		^float              param6 info 'Longitude/Y of goal',
+		^float              param7 info 'Altitude/Z of goal',
+		mav_cmd_uint16_t    ^command,
+		uint8_t             targetSystem,
+		uint8_t             targetComponent,
+		uint8_t             confirmation,
+	)
+
+	command navGuidedEnable:92(
+		^float              param1 info 'On / Off (> 0.5f on)',
+		^float              param2 info 'Empty',
+		^float              param3 info 'Empty',
+		^float              param4 info 'Empty',
+		^float              param5 info 'Empty',
+		^float              param6 info 'Empty',
+		^float              param7 info 'Empty',
+		mav_cmd_uint16_t    ^command,
+		uint8_t             targetSystem,
+		uint8_t             targetComponent,
+		uint8_t             confirmation,
+	)
+
+	command navLast:95(
+		^float              param1 info 'Empty',
+		^float              param2 info 'Empty',
+		^float              param3 info 'Empty',
+		^float              param4 info 'Empty',
+		^float              param5 info 'Empty',
+		^float              param6 info 'Empty',
+		^float              param7 info 'Empty',
+		mav_cmd_uint16_t    ^command,
+		uint8_t             targetSystem,
+		uint8_t             targetComponent,
+		uint8_t             confirmation,
+	)
+
+	command conditionDelay:112(
+		^float              param1 info 'Delay in seconds (decimal)',
+		^float              param2 info 'Empty',
+		^float              param3 info 'Empty',
+		^float              param4 info 'Empty',
+		^float              param5 info 'Empty',
+		^float              param6 info 'Empty',
+		^float              param7 info 'Empty',
+		mav_cmd_uint16_t    ^command,
+		uint8_t             targetSystem,
+		uint8_t             targetComponent,
+		uint8_t             confirmation,
+	)
+
+	command conditionChangeAlt:113(
+		^float              param1 info 'Descent / Ascend rate (m/s)',
+		^float              param2 info 'Empty',
+		^float              param3 info 'Empty',
+		^float              param4 info 'Empty',
+		^float              param5 info 'Empty',
+		^float              param6 info 'Empty',
+		^float              param7 info 'Finish Altitude',
+		mav_cmd_uint16_t    ^command,
+		uint8_t             targetSystem,
+		uint8_t             targetComponent,
+		uint8_t             confirmation,
+	)
+
+	command conditionDistance:114(
+		^float              param1 info 'Distance (meters)',
+		^float              param2 info 'Empty',
+		^float              param3 info 'Empty',
+		^float              param4 info 'Empty',
+		^float              param5 info 'Empty',
+		^float              param6 info 'Empty',
+		^float              param7 info 'Empty',
+		mav_cmd_uint16_t    ^command,
+		uint8_t             targetSystem,
+		uint8_t             targetComponent,
+		uint8_t             confirmation,
+	)
+
+	command conditionYaw:115(
+		^float              param1 info 'target angle: [0-360], 0 is north',
+		^float              param2 info 'speed during yaw change:[deg per second]',
+		^float              param3 info 'direction: negative: counter clockwise, positive: clockwise [-1,1]',
+		^float              param4 info 'relative offset or absolute angle: [ 1,0]',
+		^float              param5 info 'Empty',
+		^float              param6 info 'Empty',
+		^float              param7 info 'Empty',
+		mav_cmd_uint16_t    ^command,
+		uint8_t             targetSystem,
+		uint8_t             targetComponent,
+		uint8_t             confirmation,
+	)
+
+	command conditionLast:159(
+		^float              param1 info 'Empty',
+		^float              param2 info 'Empty',
+		^float              param3 info 'Empty',
+		^float              param4 info 'Empty',
+		^float              param5 info 'Empty',
+		^float              param6 info 'Empty',
+		^float              param7 info 'Empty',
+		mav_cmd_uint16_t    ^command,
+		uint8_t             targetSystem,
+		uint8_t             targetComponent,
+		uint8_t             confirmation,
+	)
+
+	command doSetMode:176(
+		^float              param1 info 'Mode, as defined by ENUM MAV_MODE',
+		^float              param2 info 'Custom mode - this is system specific, please refer to the individual autopilot specifications for details.',
+		^float              param3 info 'Empty',
+		^float              param4 info 'Empty',
+		^float              param5 info 'Empty',
+		^float              param6 info 'Empty',
+		^float              param7 info 'Empty',
+		mav_cmd_uint16_t    ^command,
+		uint8_t             targetSystem,
+		uint8_t             targetComponent,
+		uint8_t             confirmation,
+	)
+
+	command doJump:177(
+		^float              param1 info 'Sequence number',
+		^float              param2 info 'Repeat count',
+		^float              param3 info 'Empty',
+		^float              param4 info 'Empty',
+		^float              param5 info 'Empty',
+		^float              param6 info 'Empty',
+		^float              param7 info 'Empty',
+		mav_cmd_uint16_t    ^command,
+		uint8_t             targetSystem,
+		uint8_t             targetComponent,
+		uint8_t             confirmation,
+	)
+
+	command doChangeSpeed:178(
+		^float              param1 info 'Speed type (0=Airspeed, 1=Ground Speed)',
+		^float              param2 info 'Speed  (m/s, -1 indicates no change)',
+		^float              param3 info 'Throttle  ( Percent, -1 indicates no change)',
+		^float              param4 info 'Empty',
+		^float              param5 info 'Empty',
+		^float              param6 info 'Empty',
+		^float              param7 info 'Empty',
+		mav_cmd_uint16_t    ^command,
+		uint8_t             targetSystem,
+		uint8_t             targetComponent,
+		uint8_t             confirmation,
+	)
+
+	command doSetHome:179(
+		^float              param1 info 'Use current (1=use current location, 0=use specified location)',
+		^float              param2 info 'Empty',
+		^float              param3 info 'Empty',
+		^float              param4 info 'Empty',
+		^float              param5 info 'Latitude',
+		^float              param6 info 'Longitude',
+		^float              param7 info 'Altitude',
+		mav_cmd_uint16_t    ^command,
+		uint8_t             targetSystem,
+		uint8_t             targetComponent,
+		uint8_t             confirmation,
+	)
+
+	command doSetParameter:180(
+		^float              param1 info 'Parameter number',
+		^float              param2 info 'Parameter value',
+		^float              param3 info 'Empty',
+		^float              param4 info 'Empty',
+		^float              param5 info 'Empty',
+		^float              param6 info 'Empty',
+		^float              param7 info 'Empty',
+		mav_cmd_uint16_t    ^command,
+		uint8_t             targetSystem,
+		uint8_t             targetComponent,
+		uint8_t             confirmation,
+	)
+
+	command doSetRelay:181(
+		^float              param1 info 'Relay number',
+		^float              param2 info 'Setting (1=on, 0=off, others possible depending on system hardware)',
+		^float              param3 info 'Empty',
+		^float              param4 info 'Empty',
+		^float              param5 info 'Empty',
+		^float              param6 info 'Empty',
+		^float              param7 info 'Empty',
+		mav_cmd_uint16_t    ^command,
+		uint8_t             targetSystem,
+		uint8_t             targetComponent,
+		uint8_t             confirmation,
+	)
+
+	command doRepeatRelay:182(
+		^float              param1 info 'Relay number',
+		^float              param2 info 'Cycle count',
+		^float              param3 info 'Cycle time (seconds, decimal)',
+		^float              param4 info 'Empty',
+		^float              param5 info 'Empty',
+		^float              param6 info 'Empty',
+		^float              param7 info 'Empty',
+		mav_cmd_uint16_t    ^command,
+		uint8_t             targetSystem,
+		uint8_t             targetComponent,
+		uint8_t             confirmation,
+	)
+
+	command doSetServo:183(
+		^float              param1 info 'Servo number',
+		^float              param2 info 'PWM (microseconds, 1000 to 2000 typical)',
+		^float              param3 info 'Empty',
+		^float              param4 info 'Empty',
+		^float              param5 info 'Empty',
+		^float              param6 info 'Empty',
+		^float              param7 info 'Empty',
+		mav_cmd_uint16_t    ^command,
+		uint8_t             targetSystem,
+		uint8_t             targetComponent,
+		uint8_t             confirmation,
+	)
+
+	command doRepeatServo:184(
+		^float              param1 info 'Servo number',
+		^float              param2 info 'PWM (microseconds, 1000 to 2000 typical)',
+		^float              param3 info 'Cycle count',
+		^float              param4 info 'Cycle time (seconds)',
+		^float              param5 info 'Empty',
+		^float              param6 info 'Empty',
+		^float              param7 info 'Empty',
+		mav_cmd_uint16_t    ^command,
+		uint8_t             targetSystem,
+		uint8_t             targetComponent,
+		uint8_t             confirmation,
+	)
+
+	command doFlighttermination:185(
+		^float              param1 info 'Flight termination activated if > 0.5',
+		^float              param2 info 'Empty',
+		^float              param3 info 'Empty',
+		^float              param4 info 'Empty',
+		^float              param5 info 'Empty',
+		^float              param6 info 'Empty',
+		^float              param7 info 'Empty',
+		mav_cmd_uint16_t    ^command,
+		uint8_t             targetSystem,
+		uint8_t             targetComponent,
+		uint8_t             confirmation,
+	)
+
+	command doLandStart:189(
+		^float              param1 info 'Empty',
+		^float              param2 info 'Empty',
+		^float              param3 info 'Empty',
+		^float              param4 info 'Empty',
+		^float              param5 info 'Latitude',
+		^float              param6 info 'Longitude',
+		^float              param7 info 'Empty',
+		mav_cmd_uint16_t    ^command,
+		uint8_t             targetSystem,
+		uint8_t             targetComponent,
+		uint8_t             confirmation,
+	)
+
+	command doRallyLand:190(
+		^float              param1 info 'Break altitude (meters)',
+		^float              param2 info 'Landing speed (m/s)',
+		^float              param3 info 'Empty',
+		^float              param4 info 'Empty',
+		^float              param5 info 'Empty',
+		^float              param6 info 'Empty',
+		^float              param7 info 'Empty',
+		mav_cmd_uint16_t    ^command,
+		uint8_t             targetSystem,
+		uint8_t             targetComponent,
+		uint8_t             confirmation,
+	)
+
+	command doGoAround:191(
+		^float              param1 info 'Altitude (meters)',
+		^float              param2 info 'Empty',
+		^float              param3 info 'Empty',
+		^float              param4 info 'Empty',
+		^float              param5 info 'Empty',
+		^float              param6 info 'Empty',
+		^float              param7 info 'Empty',
+		mav_cmd_uint16_t    ^command,
+		uint8_t             targetSystem,
+		uint8_t             targetComponent,
+		uint8_t             confirmation,
+	)
+
+	command doControlVideo:200(
+		^float              param1 info 'Camera ID (-1 for all)',
+		^float              param2 info 'Transmission: 0: disabled, 1: enabled compressed, 2: enabled raw',
+		^float              param3 info 'Transmission mode: 0: video stream, >0: single images every n seconds (decimal)',
+		^float              param4 info 'Recording: 0: disabled, 1: enabled compressed, 2: enabled raw',
+		^float              param5 info 'Empty',
+		^float              param6 info 'Empty',
+		^float              param7 info 'Empty',
+		mav_cmd_uint16_t    ^command,
+		uint8_t             targetSystem,
+		uint8_t             targetComponent,
+		uint8_t             confirmation,
+	)
+
+	command doSetRoi:201(
+		^float              param1 info 'Region of intereset mode. (see MAV_ROI enum)',
+		^float              param2 info 'MISSION index/ target ID. (see MAV_ROI enum)',
+		^float              param3 info 'ROI index (allows a vehicle to manage multiple ROI\'s)',
+		^float              param4 info 'Empty',
+		^float              param5 info 'x the location of the fixed ROI (see MAV_FRAME)',
+		^float              param6 info 'y',
+		^float              param7 info 'z',
+		mav_cmd_uint16_t    ^command,
+		uint8_t             targetSystem,
+		uint8_t             targetComponent,
+		uint8_t             confirmation,
+	)
+
+	command doDigicamConfigure:202(
+		^float              param1 info 'Modes: P, TV, AV, M, Etc',
+		^float              param2 info 'Shutter speed: Divisor number for one second',
+		^float              param3 info 'Aperture: F stop number',
+		^float              param4 info 'ISO number e.g. 80, 100, 200, Etc',
+		^float              param5 info 'Exposure type enumerator',
+		^float              param6 info 'Command Identity',
+		^float              param7 info 'Main engine cut-off time before camera trigger in seconds/10 (0 means no cut-off)',
+		mav_cmd_uint16_t    ^command,
+		uint8_t             targetSystem,
+		uint8_t             targetComponent,
+		uint8_t             confirmation,
+	)
+
+	command doDigicamControl:203(
+		^float              param1 info 'Session control e.g. show/hide lens',
+		^float              param2 info 'Zoom\'s absolute position',
+		^float              param3 info 'Zooming step value to offset zoom from the current position',
+		^float              param4 info 'Focus Locking, Unlocking or Re-locking',
+		^float              param5 info 'Shooting Command',
+		^float              param6 info 'Command Identity',
+		^float              param7 info 'Empty',
+		mav_cmd_uint16_t    ^command,
+		uint8_t             targetSystem,
+		uint8_t             targetComponent,
+		uint8_t             confirmation,
+	)
+
+	command doMountConfigure:204(
+		^float              param1 info 'Mount operation mode (see MAV_MOUNT_MODE enum)',
+		^float              param2 info 'stabilize roll? (1 = yes, 0 = no)',
+		^float              param3 info 'stabilize pitch? (1 = yes, 0 = no)',
+		^float              param4 info 'stabilize yaw? (1 = yes, 0 = no)',
+		^float              param5 info 'Empty',
+		^float              param6 info 'Empty',
+		^float              param7 info 'Empty',
+		mav_cmd_uint16_t    ^command,
+		uint8_t             targetSystem,
+		uint8_t             targetComponent,
+		uint8_t             confirmation,
+	)
+
+	command doMountControl:205(
+		^float              param1 info 'pitch or lat in degrees, depending on mount mode.',
+		^float              param2 info 'roll or lon in degrees depending on mount mode',
+		^float              param3 info 'yaw or alt (in meters) depending on mount mode',
+		^float              param4 info 'reserved',
+		^float              param5 info 'reserved',
+		^float              param6 info 'reserved',
+		^float              param7 info 'MAV_MOUNT_MODE enum value',
+		mav_cmd_uint16_t    ^command,
+		uint8_t             targetSystem,
+		uint8_t             targetComponent,
+		uint8_t             confirmation,
+	)
+
+	command doSetCamTriggDist:206(
+		^float              param1 info 'Camera trigger distance (meters)',
+		^float              param2 info 'Empty',
+		^float              param3 info 'Empty',
+		^float              param4 info 'Empty',
+		^float              param5 info 'Empty',
+		^float              param6 info 'Empty',
+		^float              param7 info 'Empty',
+		mav_cmd_uint16_t    ^command,
+		uint8_t             targetSystem,
+		uint8_t             targetComponent,
+		uint8_t             confirmation,
+	)
+
+	command doFenceEnable:207(
+		^float              param1 info 'enable? (0=disable, 1=enable)',
+		^float              param2 info 'Empty',
+		^float              param3 info 'Empty',
+		^float              param4 info 'Empty',
+		^float              param5 info 'Empty',
+		^float              param6 info 'Empty',
+		^float              param7 info 'Empty',
+		mav_cmd_uint16_t    ^command,
+		uint8_t             targetSystem,
+		uint8_t             targetComponent,
+		uint8_t             confirmation,
+	)
+
+	command doParachute:208(
+		^float              param1 info 'action (0=disable, 1=enable, 2=release, for some systems see PARACHUTE_ACTION enum, not in general message set.)',
+		^float              param2 info 'Empty',
+		^float              param3 info 'Empty',
+		^float              param4 info 'Empty',
+		^float              param5 info 'Empty',
+		^float              param6 info 'Empty',
+		^float              param7 info 'Empty',
+		mav_cmd_uint16_t    ^command,
+		uint8_t             targetSystem,
+		uint8_t             targetComponent,
+		uint8_t             confirmation,
+	)
+
+	command doInvertedFlight:210(
+		^float              param1 info 'inverted (0=normal, 1=inverted)',
+		^float              param2 info 'Empty',
+		^float              param3 info 'Empty',
+		^float              param4 info 'Empty',
+		^float              param5 info 'Empty',
+		^float              param6 info 'Empty',
+		^float              param7 info 'Empty',
+		mav_cmd_uint16_t    ^command,
+		uint8_t             targetSystem,
+		uint8_t             targetComponent,
+		uint8_t             confirmation,
+	)
+
+	command doMountControlQuat:220(
+		^float              param1 info 'q1 - quaternion param #1, w (1 in null-rotation)',
+		^float              param2 info 'q2 - quaternion param #2, x (0 in null-rotation)',
+		^float              param3 info 'q3 - quaternion param #3, y (0 in null-rotation)',
+		^float              param4 info 'q4 - quaternion param #4, z (0 in null-rotation)',
+		^float              param5 info 'Empty',
+		^float              param6 info 'Empty',
+		^float              param7 info 'Empty',
+		mav_cmd_uint16_t    ^command,
+		uint8_t             targetSystem,
+		uint8_t             targetComponent,
+		uint8_t             confirmation,
+	)
+
+	command doGuidedMaster:221(
+		^float              param1 info 'System ID',
+		^float              param2 info 'Component ID',
+		^float              param3 info 'Empty',
+		^float              param4 info 'Empty',
+		^float              param5 info 'Empty',
+		^float              param6 info 'Empty',
+		^float              param7 info 'Empty',
+		mav_cmd_uint16_t    ^command,
+		uint8_t             targetSystem,
+		uint8_t             targetComponent,
+		uint8_t             confirmation,
+	)
+
+	command doGuidedLimits:222(
+		^float              param1 info 'timeout - maximum time (in seconds) that external controller will be allowed to control vehicle. 0 means no timeout',
+		^float              param2 info 'absolute altitude min (in meters, AMSL) - if vehicle moves below this alt, the command will be aborted and the mission will continue.  0 means no lower altitude limit',
+		^float              param3 info 'absolute altitude max (in meters)- if vehicle moves above this alt, the command will be aborted and the mission will continue.  0 means no upper altitude limit',
+		^float              param4 info 'horizontal move limit (in meters, AMSL) - if vehicle moves more than this distance from it\'s location at the moment the command was executed, the command will be aborted and the mission will continue. 0 means no horizontal altitude limit',
+		^float              param5 info 'Empty',
+		^float              param6 info 'Empty',
+		^float              param7 info 'Empty',
+		mav_cmd_uint16_t    ^command,
+		uint8_t             targetSystem,
+		uint8_t             targetComponent,
+		uint8_t             confirmation,
+	)
+
+	command doLast:240(
+		^float              param1 info 'Empty',
+		^float              param2 info 'Empty',
+		^float              param3 info 'Empty',
+		^float              param4 info 'Empty',
+		^float              param5 info 'Empty',
+		^float              param6 info 'Empty',
+		^float              param7 info 'Empty',
+		mav_cmd_uint16_t    ^command,
+		uint8_t             targetSystem,
+		uint8_t             targetComponent,
+		uint8_t             confirmation,
+	)
+
+	command preflightCalibration:241(
+		^float              param1 info 'Gyro calibration: 0: no, 1: yes',
+		^float              param2 info 'Magnetometer calibration: 0: no, 1: yes',
+		^float              param3 info 'Ground pressure: 0: no, 1: yes',
+		^float              param4 info 'Radio calibration: 0: no, 1: yes',
+		^float              param5 info 'Accelerometer calibration: 0: no, 1: yes',
+		^float              param6 info 'Compass/Motor interference calibration: 0: no, 1: yes',
+		^float              param7 info 'Empty',
+		mav_cmd_uint16_t    ^command,
+		uint8_t             targetSystem,
+		uint8_t             targetComponent,
+		uint8_t             confirmation,
+	)
+
+	command preflightSetSensorOffsets:242(
+		^float              param1 info 'Sensor to adjust the offsets for: 0: gyros, 1: accelerometer, 2: magnetometer, 3: barometer, 4: optical flow, 5: second magnetometer',
+		^float              param2 info 'X axis offset (or generic dimension 1), in the sensor\'s raw units',
+		^float              param3 info 'Y axis offset (or generic dimension 2), in the sensor\'s raw units',
+		^float              param4 info 'Z axis offset (or generic dimension 3), in the sensor\'s raw units',
+		^float              param5 info 'Generic dimension 4, in the sensor\'s raw units',
+		^float              param6 info 'Generic dimension 5, in the sensor\'s raw units',
+		^float              param7 info 'Generic dimension 6, in the sensor\'s raw units',
+		mav_cmd_uint16_t    ^command,
+		uint8_t             targetSystem,
+		uint8_t             targetComponent,
+		uint8_t             confirmation,
+	)
+
+	command preflightStorage:245(
+		^float              param1 info 'Parameter storage: 0: READ FROM FLASH/EEPROM, 1: WRITE CURRENT TO FLASH/EEPROM',
+		^float              param2 info 'Mission storage: 0: READ FROM FLASH/EEPROM, 1: WRITE CURRENT TO FLASH/EEPROM',
+		^float              param3 info 'Reserved',
+		^float              param4 info 'Reserved',
+		^float              param5 info 'Empty',
+		^float              param6 info 'Empty',
+		^float              param7 info 'Empty',
+		mav_cmd_uint16_t    ^command,
+		uint8_t             targetSystem,
+		uint8_t             targetComponent,
+		uint8_t             confirmation,
+	)
+
+	command preflightRebootShutdown:246(
+		^float              param1 info '0: Do nothing for autopilot, 1: Reboot autopilot, 2: Shutdown autopilot.',
+		^float              param2 info '0: Do nothing for onboard computer, 1: Reboot onboard computer, 2: Shutdown onboard computer.',
+		^float              param3 info 'Reserved',
+		^float              param4 info 'Reserved',
+		^float              param5 info 'Empty',
+		^float              param6 info 'Empty',
+		^float              param7 info 'Empty',
+		mav_cmd_uint16_t    ^command,
+		uint8_t             targetSystem,
+		uint8_t             targetComponent,
+		uint8_t             confirmation,
+	)
+
+	command overrideGoto:252(
+		^float              param1 info 'MAV_GOTO_DO_HOLD: hold MAV_GOTO_DO_CONTINUE: continue with next item in mission plan',
+		^float              param2 info 'MAV_GOTO_HOLD_AT_CURRENT_POSITION: Hold at current position MAV_GOTO_HOLD_AT_SPECIFIED_POSITION: hold at specified position',
+		^float              param3 info 'MAV_FRAME coordinate frame of hold point',
+		^float              param4 info 'Desired yaw angle in degrees',
+		^float              param5 info 'Latitude / X position',
+		^float              param6 info 'Longitude / Y position',
+		^float              param7 info 'Altitude / Z position',
+		mav_cmd_uint16_t    ^command,
+		uint8_t             targetSystem,
+		uint8_t             targetComponent,
+		uint8_t             confirmation,
+	)
+
+	command missionStart:300(
+		^float              param1 info 'first_item: the first mission item to run',
+		^float              param2 info 'last_item:  the last mission item to run (after this item is run, the mission ends)',
+		^float              param3 info 'Parameter 3, as defined by MAV_CMD enum.',
+		^float              param4 info 'Parameter 4, as defined by MAV_CMD enum.',
+		^float              param5 info 'Parameter 5, as defined by MAV_CMD enum.',
+		^float              param6 info 'Parameter 6, as defined by MAV_CMD enum.',
+		^float              param7 info 'Parameter 7, as defined by MAV_CMD enum.',
+		mav_cmd_uint16_t    ^command,
+		uint8_t             targetSystem,
+		uint8_t             targetComponent,
+		uint8_t             confirmation,
+	)
+
+	command componentArmDisarm:400(
+		^float              param1 info '1 to arm, 0 to disarm',
+		^float              param2 info 'Parameter 2, as defined by MAV_CMD enum.',
+		^float              param3 info 'Parameter 3, as defined by MAV_CMD enum.',
+		^float              param4 info 'Parameter 4, as defined by MAV_CMD enum.',
+		^float              param5 info 'Parameter 5, as defined by MAV_CMD enum.',
+		^float              param6 info 'Parameter 6, as defined by MAV_CMD enum.',
+		^float              param7 info 'Parameter 7, as defined by MAV_CMD enum.',
+		mav_cmd_uint16_t    ^command,
+		uint8_t             targetSystem,
+		uint8_t             targetComponent,
+		uint8_t             confirmation,
+	)
+
+	command startRxPair:500(
+		^float              param1 info '0:Spektrum',
+		^float              param2 info '0:Spektrum DSM2, 1:Spektrum DSMX',
+		^float              param3 info 'Parameter 3, as defined by MAV_CMD enum.',
+		^float              param4 info 'Parameter 4, as defined by MAV_CMD enum.',
+		^float              param5 info 'Parameter 5, as defined by MAV_CMD enum.',
+		^float              param6 info 'Parameter 6, as defined by MAV_CMD enum.',
+		^float              param7 info 'Parameter 7, as defined by MAV_CMD enum.',
+		mav_cmd_uint16_t    ^command,
+		uint8_t             targetSystem,
+		uint8_t             targetComponent,
+		uint8_t             confirmation,
+	)
+
+	command requestAutopilotCapabilities:520(
+		^float              param1 info '1: Request autopilot version',
+		^float              param2 info 'Reserved (all remaining params)',
+		^float              param3 info 'Parameter 3, as defined by MAV_CMD enum.',
+		^float              param4 info 'Parameter 4, as defined by MAV_CMD enum.',
+		^float              param5 info 'Parameter 5, as defined by MAV_CMD enum.',
+		^float              param6 info 'Parameter 6, as defined by MAV_CMD enum.',
+		^float              param7 info 'Parameter 7, as defined by MAV_CMD enum.',
+		mav_cmd_uint16_t    ^command,
+		uint8_t             targetSystem,
+		uint8_t             targetComponent,
+		uint8_t             confirmation,
+	)
+
+	command imageStartCapture:2000(
+		^float              param1 info 'Duration between two consecutive pictures (in seconds)',
+		^float              param2 info 'Number of images to capture total - 0 for unlimited capture',
+		^float              param3 info 'Resolution in megapixels (0.3 for 640x480, 1.3 for 1280x720, etc)',
+		^float              param4 info 'Parameter 4, as defined by MAV_CMD enum.',
+		^float              param5 info 'Parameter 5, as defined by MAV_CMD enum.',
+		^float              param6 info 'Parameter 6, as defined by MAV_CMD enum.',
+		^float              param7 info 'Parameter 7, as defined by MAV_CMD enum.',
+		mav_cmd_uint16_t    ^command,
+		uint8_t             targetSystem,
+		uint8_t             targetComponent,
+		uint8_t             confirmation,
+	)
+
+	command imageStopCapture:2001(
+		^float              param1 info 'Reserved',
+		^float              param2 info 'Reserved',
+		^float              param3 info 'Parameter 3, as defined by MAV_CMD enum.',
+		^float              param4 info 'Parameter 4, as defined by MAV_CMD enum.',
+		^float              param5 info 'Parameter 5, as defined by MAV_CMD enum.',
+		^float              param6 info 'Parameter 6, as defined by MAV_CMD enum.',
+		^float              param7 info 'Parameter 7, as defined by MAV_CMD enum.',
+		mav_cmd_uint16_t    ^command,
+		uint8_t             targetSystem,
+		uint8_t             targetComponent,
+		uint8_t             confirmation,
+	)
+
+	command doTriggerControl:2003(
+		^float              param1 info 'Trigger enable/disable (0 for disable, 1 for start)',
+		^float              param2 info 'Shutter integration time (in ms)',
+		^float              param3 info 'Reserved',
+		^float              param4 info 'Parameter 4, as defined by MAV_CMD enum.',
+		^float              param5 info 'Parameter 5, as defined by MAV_CMD enum.',
+		^float              param6 info 'Parameter 6, as defined by MAV_CMD enum.',
+		^float              param7 info 'Parameter 7, as defined by MAV_CMD enum.',
+		mav_cmd_uint16_t    ^command,
+		uint8_t             targetSystem,
+		uint8_t             targetComponent,
+		uint8_t             confirmation,
+	)
+
+	command videoStartCapture:2500(
+		^float              param1 info 'Camera ID (0 for all cameras), 1 for first, 2 for second, etc.',
+		^float              param2 info 'Frames per second',
+		^float              param3 info 'Resolution in megapixels (0.3 for 640x480, 1.3 for 1280x720, etc)',
+		^float              param4 info 'Parameter 4, as defined by MAV_CMD enum.',
+		^float              param5 info 'Parameter 5, as defined by MAV_CMD enum.',
+		^float              param6 info 'Parameter 6, as defined by MAV_CMD enum.',
+		^float              param7 info 'Parameter 7, as defined by MAV_CMD enum.',
+		mav_cmd_uint16_t    ^command,
+		uint8_t             targetSystem,
+		uint8_t             targetComponent,
+		uint8_t             confirmation,
+	)
+
+	command videoStopCapture:2501(
+		^float              param1 info 'Reserved',
+		^float              param2 info 'Reserved',
+		^float              param3 info 'Parameter 3, as defined by MAV_CMD enum.',
+		^float              param4 info 'Parameter 4, as defined by MAV_CMD enum.',
+		^float              param5 info 'Parameter 5, as defined by MAV_CMD enum.',
+		^float              param6 info 'Parameter 6, as defined by MAV_CMD enum.',
+		^float              param7 info 'Parameter 7, as defined by MAV_CMD enum.',
+		mav_cmd_uint16_t    ^command,
+		uint8_t             targetSystem,
+		uint8_t             targetComponent,
+		uint8_t             confirmation,
+	)
+
+	command panoramaCreate:2800(
+		^float              param1 info 'Viewing angle horizontal of the panorama (in degrees, +- 0.5 the total angle)',
+		^float              param2 info 'Viewing angle vertical of panorama (in degrees)',
+		^float              param3 info 'Speed of the horizontal rotation (in degrees per second)',
+		^float              param4 info 'Speed of the vertical rotation (in degrees per second)',
+		^float              param5 info 'Parameter 5, as defined by MAV_CMD enum.',
+		^float              param6 info 'Parameter 6, as defined by MAV_CMD enum.',
+		^float              param7 info 'Parameter 7, as defined by MAV_CMD enum.',
+		mav_cmd_uint16_t    ^command,
+		uint8_t             targetSystem,
+		uint8_t             targetComponent,
+		uint8_t             confirmation,
+	)
+
+	command payloadPrepareDeploy:30001(
+		^float              param1 info 'Operation mode. 0: prepare single payload deploy (overwriting previous requests), but do not execute it. 1: execute payload deploy immediately (rejecting further deploy commands during execution, but allowing abort). 2: add payload deploy to existing deployment list.',
+		^float              param2 info 'Desired approach vector in degrees compass heading (0..360). A negative value indicates the system can define the approach vector at will.',
+		^float              param3 info 'Desired ground speed at release time. This can be overriden by the airframe in case it needs to meet minimum airspeed. A negative value indicates the system can define the ground speed at will.',
+		^float              param4 info 'Minimum altitude clearance to the release position in meters. A negative value indicates the system can define the clearance at will.',
+		^float              param5 info 'Latitude unscaled for MISSION_ITEM or in 1e7 degrees for MISSION_ITEM_INT',
+		^float              param6 info 'Longitude unscaled for MISSION_ITEM or in 1e7 degrees for MISSION_ITEM_INT',
+		^float              param7 info 'Altitude, in meters AMSL',
+		mav_cmd_uint16_t    ^command,
+		uint8_t             targetSystem,
+		uint8_t             targetComponent,
+		uint8_t             confirmation,
+	)
+
+	command payloadControlDeploy:30002(
+		^float              param1 info 'Operation mode. 0: Abort deployment, continue normal mission. 1: switch to payload deploment mode. 100: delete first payload deployment request. 101: delete all payload deployment requests.',
+		^float              param2 info 'Reserved',
+		^float              param3 info 'Reserved',
+		^float              param4 info 'Reserved',
+		^float              param5 info 'Reserved',
+		^float              param6 info 'Reserved',
+		^float              param7 info 'Reserved',
+		mav_cmd_uint16_t    ^command,
+		uint8_t             targetSystem,
+		uint8_t             targetComponent,
+		uint8_t             confirmation,
+	)
+
+	command doStartSearch:10001(
+		^float              param1 info '1 to arm, 0 to disarm',
+		^float              param2 info 'Parameter 2, as defined by MAV_CMD enum.',
+		^float              param3 info 'Parameter 3, as defined by MAV_CMD enum.',
+		^float              param4 info 'Parameter 4, as defined by MAV_CMD enum.',
+		^float              param5 info 'Parameter 5, as defined by MAV_CMD enum.',
+		^float              param6 info 'Parameter 6, as defined by MAV_CMD enum.',
+		^float              param7 info 'Parameter 7, as defined by MAV_CMD enum.',
+		mav_cmd_uint16_t    ^command,
+		uint8_t             targetSystem,
+		uint8_t             targetComponent,
+		uint8_t             confirmation,
+	)
+
+	command doFinishSearch:10002(
+		^float              param1 info '1 to arm, 0 to disarm',
+		^float              param2 info 'Parameter 2, as defined by MAV_CMD enum.',
+		^float              param3 info 'Parameter 3, as defined by MAV_CMD enum.',
+		^float              param4 info 'Parameter 4, as defined by MAV_CMD enum.',
+		^float              param5 info 'Parameter 5, as defined by MAV_CMD enum.',
+		^float              param6 info 'Parameter 6, as defined by MAV_CMD enum.',
+		^float              param7 info 'Parameter 7, as defined by MAV_CMD enum.',
+		mav_cmd_uint16_t    ^command,
+		uint8_t             targetSystem,
+		uint8_t             targetComponent,
+		uint8_t             confirmation,
+	)
+
+	command navSweep:10003(
+		^float              param1 info '1 to arm, 0 to disarm',
+		^float              param2 info 'Parameter 2, as defined by MAV_CMD enum.',
+		^float              param3 info 'Parameter 3, as defined by MAV_CMD enum.',
+		^float              param4 info 'Parameter 4, as defined by MAV_CMD enum.',
+		^float              param5 info 'Parameter 5, as defined by MAV_CMD enum.',
+		^float              param6 info 'Parameter 6, as defined by MAV_CMD enum.',
+		^float              param7 info 'Parameter 7, as defined by MAV_CMD enum.',
+		mav_cmd_uint16_t    ^command,
+		uint8_t             targetSystem,
+		uint8_t             targetComponent,
+		uint8_t             confirmation,
+	)
+
+	message heartbeat:0                              status (_0)
+	message sysStatus:1                              status (_1)
+	message systemTime:2                             status (_2)
+	message ping:4                                   status (_4)
+	message changeOperatorControl:5                  status (_5)
+	message changeOperatorControlAck:6               status (_6)
+	message authKey:7                                status (_7)
+	message setMode:11                               status (_11)
+	message paramRequestRead:20                      status (_20)
+	message paramRequestList:21                      status (_21)
+	message paramValue:22                            status (_22)
+	message paramSet:23                              status (_23)
+	message gpsRawInt:24                             status (_24)
+	message gpsStatus:25                             status (_25)
+	message scaledImu:26                             status (_26)
+	message rawImu:27                                status (_27)
+	message rawPressure:28                           status (_28)
+	message scaledPressure:29                        status (_29)
+	message attitude:30                              status (_30)
+	message attitudeQuaternion:31                    status (_31)
+	message localPositionNed:32                      status (_32)
+	message globalPositionInt:33                     status (_33)
+	message rcChannelsScaled:34                      status (_34)
+	message rcChannelsRaw:35                         status (_35)
+	message servoOutputRaw:36                        status (_36)
+	message missionRequestPartialList:37             status (_37)
+	message missionWritePartialList:38               status (_38)
+	message missionItem:39                           status (_39)
+	message missionRequest:40                        status (_40)
+	message missionSetCurrent:41                     status (_41)
+	message missionCurrent:42                        status (_42)
+	message missionRequestList:43                    status (_43)
+	message missionCount:44                          status (_44)
+	message missionClearAll:45                       status (_45)
+	message missionItemReached:46                    status (_46)
+	message missionAck:47                            status (_47)
+	message setGpsGlobalOrigin:48                    status (_48)
+	message gpsGlobalOrigin:49                       status (_49)
+	message paramMapRc:50                            status (_50)
+	message safetySetAllowedArea:54                  status (_54)
+	message safetyAllowedArea:55                     status (_55)
+	message attitudeQuaternionCov:61                 status (_61)
+	message navControllerOutput:62                   status (_62)
+	message globalPositionIntCov:63                  status (_63)
+	message localPositionNedCov:64                   status (_64)
+	message rcChannels:65                            status (_65)
+	message requestDataStream:66                     status (_66)
+	message dataStream:67                            status (_67)
+	message manualControl:69                         status (_69)
+	message rcChannelsOverride:70                    status (_70)
+	message missionItemInt:73                        status (_73)
+	message vfrHud:74                                status (_74)
+	message commandInt:75                            status (_75)
+	message commandAck:77                            status (_77)
+	message manualSetpoint:81                        status (_81)
+	message setAttitudeTarget:82                     status (_82)
+	message attitudeTarget:83                        status (_83)
+	message setPositionTargetLocalNed:84             status (_84)
+	message positionTargetLocalNed:85                status (_85)
+	message setPositionTargetGlobalInt:86            status (_86)
+	message positionTargetGlobalInt:87               status (_87)
+	message localPositionNedSystemGlobalOffset:89    status (_89)
+	message hilState:90                              status (_90)
+	message hilControls:91                           status (_91)
+	message hilRcInputsRaw:92                        status (_92)
+	message opticalFlow:100                          status (_100)
+	message globalVisionPositionEstimate:101         status (_101)
+	message visionPositionEstimate:102               status (_102)
+	message visionSpeedEstimate:103                  status (_103)
+	message viconPositionEstimate:104                status (_104)
+	message highresImu:105                           status (_105)
+	message opticalFlowRad:106                       status (_106)
+	message hilSensor:107                            status (_107)
+	message simState:108                             status (_108)
+	message radioStatus:109                          status (_109)
+	message fileTransferProtocol:110                 status (_110)
+	message timesync:111                             status (_111)
+	message cameraTrigger:112                        status (_112)
+	message hilGps:113                               status (_113)
+	message hilOpticalFlow:114                       status (_114)
+	message hilStateQuaternion:115                   status (_115)
+	message scaledImu2:116                           status (_116)
+	message logRequestList:117                       status (_117)
+	message logEntry:118                             status (_118)
+	message logRequestData:119                       status (_119)
+	message logData:120                              status (_120)
+	message logErase:121                             status (_121)
+	message logRequestEnd:122                        status (_122)
+	message gpsInjectData:123                        status (_123)
+	message gps2Raw:124                              status (_124)
+	message powerStatus:125                          status (_125)
+	message serialControl:126                        status (_126)
+	message gpsRtk:127                               status (_127)
+	message gps2Rtk:128                              status (_128)
+	message scaledImu3:129                           status (_129)
+	message dataTransmissionHandshake:130            status (_130)
+	message encapsulatedData:131                     status (_131)
+	message distanceSensor:132                       status (_132)
+	message terrainRequest:133                       status (_133)
+	message terrainData:134                          status (_134)
+	message terrainCheck:135                         status (_135)
+	message terrainReport:136                        status (_136)
+	message scaledPressure2:137                      status (_137)
+	message attPosMocap:138                          status (_138)
+	message setActuatorControlTarget:139             status (_139)
+	message actuatorControlTarget:140                status (_140)
+	message batteryStatus:147                        status (_147)
+	message autopilotVersion:148                     status (_148)
+	message v2Extension:248                          status (_248)
+	message memoryVect:249                           status (_249)
+	message debugVect:250                            status (_250)
+	message namedValueFloat:251                      status (_251)
+	message namedValueInt:252                        status (_252)
+	message statustext:253                           status (_253)
+	message debug:254                                status (_254)
+	message setCamShutter:151                        status (_151)
+	message imageTriggered:152                       status (_152)
+	message imageTriggerControl:153                  status (_153)
+	message imageAvailable:154                       status (_154)
+	message setPositionControlOffset:160             status (_160)
+	message positionControlSetpoint:170              status (_170)
+	message marker:171                               status (_171)
+	message rawAux:172                               status (_172)
+	message watchdogHeartbeat:180                    status (_180)
+	message watchdogProcessInfo:181                  status (_181)
+	message watchdogProcessStatus:182                status (_182)
+	message watchdogCommand:183                      status (_183)
+	message patternDetected:190                      status (_190)
+	message pointOfInterest:191                      status (_191)
+	message pointOfInterestConnection:192            status (_192)
+	message briefFeature:195                         status (_195)
+	message attitudeControl:200                      status (_200)
+	message detectionStats:205                       status (_205)
+	message onboardHealth:206                        status (_206)
+}

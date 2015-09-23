@@ -1,0 +1,151 @@
+{
+    parserClass = "ru.mipt.acsl.decode.parser.idea.DecodeParser"
+  parserUtilClass="ru.mipt.acsl.decode.parser.idea.DecodeParserUtil"
+
+    extends = "com.intellij.extapi.psi.ASTWrapperPsiElement"
+
+    psiClassPrefix = "Decode"
+    psiImplClassSuffix = "Impl"
+    psiPackage = "ru.mipt.acsl.decode.parser.psi"
+    psiImplPackage = "ru.mipt.acsl.decode.parser.psi.impl"
+
+    elementTypeHolderClass = "ru.mipt.acsl.decode.parser.psi.DecodeTypes"
+    elementTypeClass = "ru.mipt.acsl.decode.parser.psi.DecodeElementType"
+    tokenTypeClass = "ru.mipt.acsl.decode.parser.psi.DecodeTokenType"
+
+    tokens = [
+        NAMESPACE = "namespace"
+        COMPONENT = "component"
+        COMMAND = "command"
+        ESCAPED_NAME = "regexp:\^[a-zA-Z_][a-zA-Z0-9_]*"
+        ELEMENT_NAME_TOKEN = "regexp:[a-zA-Z_][a-zA-Z0-9_]*"
+        COMMENT = "regexp:#[^\r\n]*"
+        MULTILINE_COMMENT = 'regexp:/\*([^\*][^/\*]?)*\*/'
+        LEFT_BRACE = '{'
+        RIGHT_BRACE = '}'
+        LEFT_PAREN = '('
+        RIGHT_PAREN = ')'
+        LEFT_BRACKET = '['
+        RIGHT_BRACKET = ']'
+        COMMA = ','
+        EQ_SIGN = '='
+        STATUS = "status"
+        MESSAGE = "message"
+        EVENT = "event"
+        DYNAMIC = "dynamic"
+        PARAMETER = "parameter"
+        INFO = "info"
+        STRING = 'regexp:"([^"\\]|\\.)*"'
+        STRING_UNARY_QUOTES = "regexp:'([^'\\]|\\.)*'"
+        SUBCOMPONENT = "subcomponent"
+        UNIT_TOKEN = "unit"
+        TYPE_KEYWORD = "type"
+        ALIAS = "alias"
+        DOTS = ".."
+        DOT = "."
+        NON_NEGATIVE_NUMBER = "regexp:[0-9]+"
+        UINT = "uint"
+        INT = "int"
+        FLOAT = "float"
+        BOOL = "bool"
+        ARRAY = "array"
+        BER = "ber"
+        ENUM = "enum"
+        PLACEMENT = "placement"
+        BEFORE = "before"
+        AFTER = "after"
+        BASE_TYPE = "base_type"
+        STRUCT = "struct"
+        SLASH = '/'
+        STAR = '*'
+        PLUS = '+'
+        MINUS = '-'
+        COLON = ':'
+        DISPLAY = "display"
+        TRUE = "true"
+        FALSE = "false"
+        WITH = "with"
+    ]
+}
+
+decodeFile ::= namespace_decl (component_decl | unit_decl | type_decl | alias_decl)*
+
+alias_decl ::= ALIAS element_id type_application info_string?
+
+namespace_decl ::= NAMESPACE element_id
+
+element_name_rule ::= ELEMENT_NAME_TOKEN | ESCAPED_NAME
+
+component_decl ::= COMPONENT element_name_rule (COLON NON_NEGATIVE_NUMBER)? (WITH subcomponent_decl (COMMA subcomponent_decl)*)? info_string?
+    LEFT_BRACE component_base_type_decl? (command_decl|message_decl)* RIGHT_BRACE
+
+component_base_type_decl ::= type_decl_body
+
+command_decl ::= COMMAND element_name_rule COLON NON_NEGATIVE_NUMBER info_string? LEFT_PAREN command_args? RIGHT_PAREN
+
+command_args ::= command_arg (COMMA command_arg)* COMMA?
+
+command_arg ::= type_unit_application element_name_rule info_string?
+
+type_unit_application ::= type_application unit?
+
+type_application ::= element_id | primitive_type_application | array_type_application
+
+unit ::= SLASH element_id SLASH
+
+primitive_type_application ::= primitive_type_kind COLON NON_NEGATIVE_NUMBER | native_type_kind
+
+array_type_application ::= LEFT_BRACKET type_application (COMMA length_from (DOTS (length_to | STAR))?)? RIGHT_BRACKET
+
+struct_type_decl ::= STRUCT info_string? LEFT_PAREN command_arg (COMMA command_arg)* COMMA ? RIGHT_PAREN
+
+element_id ::= element_name_rule (DOT element_name_rule)*
+
+message_decl ::= MESSAGE element_name_rule COLON NON_NEGATIVE_NUMBER info_string? (status_message | event_message | dynamic_status_message)
+
+status_message ::= STATUS message_parameters_decl
+
+message_parameters_decl ::= LEFT_PAREN parameter_decl (COMMA parameter_decl)* COMMA? RIGHT_PAREN
+
+//deep_all_parameters ::= STAR DOT STAR
+
+//all_parameters ::= STAR
+
+event_message ::= EVENT message_parameters_decl
+
+dynamic_status_message ::= DYNAMIC STATUS message_parameters_decl
+
+parameter_decl ::= parameter_element info_string?
+
+parameter_element ::= element_id ((LEFT_BRACKET NON_NEGATIVE_NUMBER (DOTS NON_NEGATIVE_NUMBER)? RIGHT_BRACKET)+
+    (DOT element_id (LEFT_BRACKET NON_NEGATIVE_NUMBER (DOTS NON_NEGATIVE_NUMBER)? RIGHT_BRACKET)?)*)?
+
+info_string ::= INFO string_value
+
+string_value ::= STRING | STRING_UNARY_QUOTES
+
+subcomponent_decl ::= element_name_rule
+
+unit_decl ::= UNIT_TOKEN element_name_rule (DISPLAY string_value)? (PLACEMENT (BEFORE | AFTER))? info_string?
+
+type_decl ::= TYPE_KEYWORD element_name_rule info_string? type_decl_body
+
+primitive_type_kind ::= UINT | INT | FLOAT | BOOL
+
+native_type_kind ::= BER
+
+length_from ::= NON_NEGATIVE_NUMBER
+
+length_to ::= NON_NEGATIVE_NUMBER
+
+type_decl_body ::= (type_application info_string?) | enum_type_decl | struct_type_decl
+
+enum_type_decl ::= ENUM element_id info_string? LEFT_PAREN enum_type_values RIGHT_PAREN
+
+enum_type_values ::= enum_type_value (COMMA enum_type_value)* COMMA?
+
+enum_type_value ::= element_name_rule EQ_SIGN literal info_string?
+
+literal ::= float_literal | NON_NEGATIVE_NUMBER | TRUE | FALSE
+
+float_literal ::= (PLUS | MINUS)? (NON_NEGATIVE_NUMBER DOT NON_NEGATIVE_NUMBER? | DOT NON_NEGATIVE_NUMBER) (("e" | "E") (PLUS | MINUS)? NON_NEGATIVE_NUMBER)?

@@ -1,0 +1,50 @@
+<idea-plugin version="2">
+  <id>ru.mipt.acsl.decode.plugin</id>
+  <name>Decode Tools</name>
+  <version>0.1</version>
+  <vendor email="sc-acsl@aisys.ru" url="http://acsl.mipt.ru/">ACSL</vendor>
+
+  <description><![CDATA[
+      Device description interface language tools.
+    ]]></description>
+
+  <change-notes><![CDATA[
+      0.1 Initial version.
+    ]]>
+  </change-notes>
+
+  <!-- please see https://confluence.jetbrains.com/display/IDEADEV/Build+Number+Ranges for description -->
+  <idea-version since-build="131"/>
+
+  <!-- please see https://confluence.jetbrains.com/display/IDEADEV/Plugin+Compatibility+with+IntelliJ+Platform+Products
+       on how to target different products -->
+  <!-- uncomment to enable plugin in all products
+  <depends>com.intellij.modules.lang</depends>
+  -->
+
+  <extensions defaultExtensionNs="com.intellij">
+    <!-- Add your extensions here -->
+    <fileTypeFactory implementation="ru.mipt.acsl.decode.idea.plugin.DecodeFileTypeFactory"/>
+    <lang.parserDefinition language="Decode" implementationClass="ru.mipt.acsl.decode.idea.plugin.DecodeParserDefinition"/>
+    <lang.syntaxHighlighterFactory key="Decode" implementationClass="ru.mipt.acsl.decode.idea.plugin.DecodeSyntaxHighlighterFactory"/>
+    <completion.contributor language="Decode" implementationClass="ru.mipt.acsl.decode.idea.plugin.DecodeCompletionContributor"/>
+  </extensions>
+
+  <application-components>
+    <!-- Add your application components here -->
+  </application-components>
+
+  <project-components>
+    <!-- Add your project components here -->
+  </project-components>
+
+  <actions>
+    <!-- Add your actions here -->
+    <group class="ru.mipt.acsl.decode.idea.plugin.DecodeActionGroup" id="DecodeActionGroup" text="Decode">
+      <action class="ru.mipt.acsl.decode.idea.plugin.DecodeGenerateSqliteForDecodeSourcesAction" id="StoreToSqlite"
+              text="Generate SQLite for Decode sources"/>
+      <add-to-group group-id="ToolsMenu"/>
+    </group>
+  </actions>
+
+</idea-plugin>
