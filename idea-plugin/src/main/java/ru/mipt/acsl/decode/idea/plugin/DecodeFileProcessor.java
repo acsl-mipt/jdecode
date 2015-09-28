@@ -206,10 +206,11 @@ public class DecodeFileProcessor
     {
         DecodeArrayTypeApplication arrayType = typeApplication.getArrayTypeApplication();
         DecodePrimitiveTypeApplication primitiveType = typeApplication.getPrimitiveTypeApplication();
-        DecodeElementId elementId = typeApplication.getElementId();
-        if (elementId != null)
+        DecodeGenericTypeApplication genericTypeApplication = typeApplication.getGenericTypeApplication();
+        throw new AssertionError("not implemented: question mark & generic type");
+        /*if (genericTypeApplication != null)
         {
-            return proxy(namespace.getFqn(), ImmutableDecodeName.newInstanceFromSourceName(elementId.getText()));
+            return proxy(namespace.getFqn(), ImmutableDecodeName.newInstanceFromSourceName(genericTypeApplication.getText()));
         }
         if (primitiveType != null)
         {
@@ -219,7 +220,7 @@ public class DecodeFileProcessor
         {
             return getProxyFor(arrayType, namespace);
         }
-        throw new AssertionError();
+        throw new AssertionError();*/
     }
 
     @NotNull
@@ -236,8 +237,9 @@ public class DecodeFileProcessor
     {
         DecodeArrayTypeApplication arrayTypeApplication = typeApplication.getArrayTypeApplication();
         DecodePrimitiveTypeApplication primitiveTypeApplication = typeApplication.getPrimitiveTypeApplication();
-        DecodeElementId elementId = typeApplication.getElementId();
-        if (arrayTypeApplication != null)
+        DecodeGenericTypeApplication genericTypeApplication = typeApplication.getGenericTypeApplication();
+        throw new AssertionError("not implemented: question mark & generic type");
+        /*if (arrayTypeApplication != null)
         {
             return getProxyFor(arrayTypeApplication, namespace);
         }
@@ -245,11 +247,11 @@ public class DecodeFileProcessor
         {
             return getProxyFor(primitiveTypeApplication);
         }
-        if (elementId != null)
+        if (genericTypeApplication != null)
         {
-            return proxy(namespace.getFqn(), ImmutableDecodeName.newInstanceFromSourceName(elementId.getText()));
+            return proxy(namespace.getFqn(), ImmutableDecodeName.newInstanceFromSourceName(genericTypeApplication.getText()));
         }
-        throw new AssertionError();
+        throw new AssertionError();*/
     }
 
     @NotNull
@@ -263,7 +265,7 @@ public class DecodeFileProcessor
     {
         DecodeArrayTypeApplication arrayType = typeApplication.getArrayTypeApplication();
         DecodePrimitiveTypeApplication primitiveType = typeApplication.getPrimitiveTypeApplication();
-        DecodeElementId elementId = typeApplication.getElementId();
+        DecodeGenericTypeApplication genericTypeApplication = typeApplication.getGenericTypeApplication();
         if (arrayType != null)
         {
             return getNamespaceFqnFor(arrayType, namespace);
@@ -272,9 +274,9 @@ public class DecodeFileProcessor
         {
             return ImmutableDecodeFqn.newInstance(Lists.newArrayList(DecodeConstants.SYSTEM_NAMESPACE_NAME));
         }
-        if (elementId != null)
+        if (genericTypeApplication != null)
         {
-            String name = elementId.getText();
+            String name = genericTypeApplication.getElementId().getText();
             if (name.contains("."))
             {
                 return ImmutableDecodeFqn.newInstanceFromSource(name.substring(0, name.lastIndexOf('.') - 1));
@@ -390,7 +392,9 @@ public class DecodeFileProcessor
     {
         DecodeArrayTypeApplication arrayTypeApplication = newTypeDeclBody.getArrayTypeApplication();
         DecodePrimitiveTypeApplication primitiveTypeApplication = newTypeDeclBody.getPrimitiveTypeApplication();
-        DecodeElementId elementId = newTypeDeclBody.getElementId();
+        DecodeGenericTypeApplication genericTypeApplication = newTypeDeclBody.getGenericTypeApplication();
+        throw new AssertionError("not implemented: question mark & generic type");
+        /*
         if (arrayTypeApplication != null)
         {
 //            long minLength = Long.parseLong(arrayTypeApplication.getLengthFrom().getNonNegativeNumber().getText());
@@ -404,13 +408,13 @@ public class DecodeFileProcessor
             return SimpleDecodeSubType.newInstance(name, namespace,
                     makeProxyForPrimitiveType(primitiveTypeApplication), info);
         }
-        if (elementId != null)
+        if (genericTypeApplication != null)
         {
             return SimpleDecodeSubType.newInstance(name, namespace,
                     proxy(namespace.getFqn(), ImmutableDecodeName.newInstanceFromSourceName(
                             Preconditions.checkNotNull(newTypeDeclBody.getElementId()).getText())), info);
         }
-        throw new AssertionError();
+        throw new AssertionError();*/
     }
 
     @NotNull
@@ -426,7 +430,9 @@ public class DecodeFileProcessor
     {
         DecodeArrayTypeApplication arrayTypeApplication = typeApplication.getArrayTypeApplication();
         DecodePrimitiveTypeApplication primitiveTypeApplication = typeApplication.getPrimitiveTypeApplication();
-        DecodeElementId elementId = typeApplication.getElementId();
+        DecodeGenericTypeApplication genericTypeApplication = typeApplication.getGenericTypeApplication();
+        throw new AssertionError("not implemented: question mark & generic type");
+        /*
         if (arrayTypeApplication != null)
         {
             return resolveNamespaceForTypeApplication(arrayTypeApplication.getTypeApplication(), namespace);
@@ -436,12 +442,12 @@ public class DecodeFileProcessor
             // TODO: Resolve namespace for primitive type
             return namespace;
         }
-        if (elementId != null)
+        if (genericTypeApplication != null)
         {
             // TODO: Resolve namespace for base type
             return namespace;
         }
-        throw new AssertionError();
+        throw new AssertionError();*/
     }
 
     @NotNull
@@ -452,9 +458,10 @@ public class DecodeFileProcessor
                 .map(child -> ImmutableDecodeEnumConstant.newInstance(
                         ImmutableDecodeName.newInstanceFromSourceName(child.getElementNameRule().getText()),
                         child.getLiteral().getText(), getText(child.getInfoString()))).collect(Collectors.toSet());
-        return SimpleDecodeEnumType.newInstance(name, namespace, proxy(namespace.getFqn(),
+        throw new AssertionError("not implemented");
+        /*return SimpleDecodeEnumType.newInstance(name, namespace, proxy(namespace.getFqn(),
                         ImmutableDecodeName.newInstanceFromSourceName(enumTypeDecl.getElementId().getText())),
-                getText(enumTypeDecl.getInfoString()), values);
+                getText(enumTypeDecl.getInfoString()), values);*/
     }
 
     @NotNull
@@ -462,6 +469,8 @@ public class DecodeFileProcessor
                                                  @NotNull DecodeNamespace namespace,
                                                  @NotNull DecodePrimitiveTypeApplication primitiveTypeApplication)
     {
+        throw new AssertionError("not implemented: native type");
+        /*
         String typeKindString = primitiveTypeApplication.getPrimitiveTypeKind().getText();
         DecodeType.TypeKind typeKind;
         switch (typeKindString)
@@ -484,7 +493,7 @@ public class DecodeFileProcessor
         }
         return Optional.of(SimpleDecodePrimitiveType.newInstance(name, namespace,
                 typeKind, Long.parseLong(primitiveTypeApplication.getNonNegativeNumber().getText()),
-                Optional.<String>empty()));
+                Optional.<String>empty()));*/
     }
 
     @NotNull
