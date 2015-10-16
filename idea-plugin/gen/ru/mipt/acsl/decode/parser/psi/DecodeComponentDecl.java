@@ -11,7 +11,7 @@ public interface DecodeComponentDecl extends PsiElement {
   List<DecodeCommandDecl> getCommandDeclList();
 
   @Nullable
-  DecodeComponentBaseTypeDecl getComponentBaseTypeDecl();
+  DecodeComponentParametersDecl getComponentParametersDecl();
 
   @NotNull
   DecodeElementNameRule getElementNameRule();

@@ -27,11 +27,11 @@ public class DecodeVisitor extends PsiElementVisitor {
     visitPsiElement(o);
   }
 
-  public void visitComponentBaseTypeDecl(@NotNull DecodeComponentBaseTypeDecl o) {
+  public void visitComponentDecl(@NotNull DecodeComponentDecl o) {
     visitPsiElement(o);
   }
 
-  public void visitComponentDecl(@NotNull DecodeComponentDecl o) {
+  public void visitComponentParametersDecl(@NotNull DecodeComponentParametersDecl o) {
     visitPsiElement(o);
   }
 

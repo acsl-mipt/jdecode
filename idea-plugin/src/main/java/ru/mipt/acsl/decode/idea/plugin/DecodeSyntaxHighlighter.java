@@ -69,7 +69,8 @@ public class DecodeSyntaxHighlighter extends SyntaxHighlighterBase
                 DecodeTypes.ARRAY, DecodeTypes.BASE_TYPE, DecodeTypes.BOOL, DecodeTypes.ENUM, DecodeTypes.BER,
                 DecodeTypes.FLOAT, DecodeTypes.INT, DecodeTypes.UINT, DecodeTypes.STRUCT, DecodeTypes.UNIT_TOKEN,
                 DecodeTypes.TYPE_KEYWORD, DecodeTypes.SUBCOMPONENT, DecodeTypes.DISPLAY, DecodeTypes.PLACEMENT,
-                DecodeTypes.BEFORE, DecodeTypes.AFTER, DecodeTypes.COLON, DecodeTypes.ALIAS, DecodeTypes.WITH);
+                DecodeTypes.BEFORE, DecodeTypes.AFTER, DecodeTypes.COLON, DecodeTypes.ALIAS, DecodeTypes.WITH,
+                DecodeTypes.PARAMETERS);
     }};
     private static final TextAttributesKey[] NON_NEGATIVE_NUMBER_KEYS = {NON_NEGATIVE_NUMBER};
     private static final TextAttributesKey[] STAR_KEYS = {STAR};

@@ -38,6 +38,7 @@
         STRING = 'regexp:"([^"\\]|\\.)*"'
         STRING_UNARY_QUOTES = "regexp:'([^'\\]|\\.)*'"
         SUBCOMPONENT = "subcomponent"
+        PARAMETERS = "parameters"
         UNIT_TOKEN = "unit"
         TYPE_KEYWORD = "type"
         ALIAS = "alias"
@@ -81,9 +82,9 @@ namespace_decl ::= NAMESPACE element_id
 element_name_rule ::= ELEMENT_NAME_TOKEN | ESCAPED_NAME
 
 component_decl ::= info_string? COMPONENT element_name_rule (COLON NON_NEGATIVE_NUMBER)? (WITH subcomponent_decl (COMMA subcomponent_decl)*)?
-    LEFT_BRACE component_base_type_decl? (command_decl|message_decl)* RIGHT_BRACE
+    LEFT_BRACE component_parameters_decl? (command_decl|message_decl)* RIGHT_BRACE
 
-component_base_type_decl ::= type_decl_body
+component_parameters_decl ::= PARAMETERS LEFT_PAREN command_args RIGHT_PAREN
 
 command_decl ::= info_string? COMMAND element_name_rule COLON NON_NEGATIVE_NUMBER LEFT_PAREN command_args? RIGHT_PAREN (ARROW type_unit_application)?
 
@@ -103,7 +104,7 @@ primitive_type_application ::= primitive_type_kind COLON NON_NEGATIVE_NUMBER | n
 
 array_type_application ::= LEFT_BRACKET type_application (COMMA length_from (DOTS (length_to | STAR))?)? RIGHT_BRACKET
 
-struct_type_decl ::= info_string? STRUCT LEFT_PAREN command_arg (COMMA command_arg)* COMMA ? RIGHT_PAREN
+struct_type_decl ::= info_string? STRUCT LEFT_PAREN command_args RIGHT_PAREN
 
 element_id ::= element_name_rule (DOT element_name_rule)*
 
