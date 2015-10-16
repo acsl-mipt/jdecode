@@ -13,8 +13,8 @@ public interface DecodeTypes {
   IElementType COMMAND_ARG = new DecodeElementType("COMMAND_ARG");
   IElementType COMMAND_ARGS = new DecodeElementType("COMMAND_ARGS");
   IElementType COMMAND_DECL = new DecodeElementType("COMMAND_DECL");
-  IElementType COMPONENT_BASE_TYPE_DECL = new DecodeElementType("COMPONENT_BASE_TYPE_DECL");
   IElementType COMPONENT_DECL = new DecodeElementType("COMPONENT_DECL");
+  IElementType COMPONENT_PARAMETERS_DECL = new DecodeElementType("COMPONENT_PARAMETERS_DECL");
   IElementType DYNAMIC_STATUS_MESSAGE = new DecodeElementType("DYNAMIC_STATUS_MESSAGE");
   IElementType ELEMENT_ID = new DecodeElementType("ELEMENT_ID");
   IElementType ELEMENT_NAME_RULE = new DecodeElementType("ELEMENT_NAME_RULE");
@@ -84,6 +84,7 @@ public interface DecodeTypes {
   IElementType NAMESPACE = new DecodeTokenType("namespace");
   IElementType NON_NEGATIVE_NUMBER = new DecodeTokenType("NON_NEGATIVE_NUMBER");
   IElementType PARAMETER = new DecodeTokenType("parameter");
+  IElementType PARAMETERS = new DecodeTokenType("parameters");
   IElementType PLACEMENT = new DecodeTokenType("placement");
   IElementType PLUS = new DecodeTokenType("+");
   IElementType QUESTION = new DecodeTokenType("?");
@@ -121,11 +122,11 @@ public interface DecodeTypes {
       else if (type == COMMAND_DECL) {
         return new DecodeCommandDeclImpl(node);
       }
-      else if (type == COMPONENT_BASE_TYPE_DECL) {
-        return new DecodeComponentBaseTypeDeclImpl(node);
-      }
       else if (type == COMPONENT_DECL) {
         return new DecodeComponentDeclImpl(node);
+      }
+      else if (type == COMPONENT_PARAMETERS_DECL) {
+        return new DecodeComponentParametersDeclImpl(node);
       }
       else if (type == DYNAMIC_STATUS_MESSAGE) {
         return new DecodeDynamicStatusMessageImpl(node);

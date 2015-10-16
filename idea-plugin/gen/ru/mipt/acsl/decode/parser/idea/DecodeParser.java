@@ -38,11 +38,11 @@ public class DecodeParser implements PsiParser, LightPsiParser {
     else if (t == COMMAND_DECL) {
       r = command_decl(b, 0);
     }
-    else if (t == COMPONENT_BASE_TYPE_DECL) {
-      r = component_base_type_decl(b, 0);
-    }
     else if (t == COMPONENT_DECL) {
       r = component_decl(b, 0);
+    }
+    else if (t == COMPONENT_PARAMETERS_DECL) {
+      r = component_parameters_decl(b, 0);
     }
     else if (t == DYNAMIC_STATUS_MESSAGE) {
       r = dynamic_status_message(b, 0);
@@ -344,19 +344,8 @@ public class DecodeParser implements PsiParser, LightPsiParser {
   }
 
   /* ********************************************************** */
-  // type_decl_body
-  public static boolean component_base_type_decl(PsiBuilder b, int l) {
-    if (!recursion_guard_(b, l, "component_base_type_decl")) return false;
-    boolean r;
-    Marker m = enter_section_(b, l, _NONE_, "<component base type decl>");
-    r = type_decl_body(b, l + 1);
-    exit_section_(b, l, m, COMPONENT_BASE_TYPE_DECL, r, false, null);
-    return r;
-  }
-
-  /* ********************************************************** */
   // info_string? COMPONENT element_name_rule (COLON NON_NEGATIVE_NUMBER)? (WITH subcomponent_decl (COMMA subcomponent_decl)*)?
-  //     LEFT_BRACE component_base_type_decl? (command_decl|message_decl)* RIGHT_BRACE
+  //     LEFT_BRACE component_parameters_decl? (command_decl|message_decl)* RIGHT_BRACE
   public static boolean component_decl(PsiBuilder b, int l) {
     if (!recursion_guard_(b, l, "component_decl")) return false;
     boolean r;
@@ -440,10 +429,10 @@ public class DecodeParser implements PsiParser, LightPsiParser {
     return r;
   }
 
-  // component_base_type_decl?
+  // component_parameters_decl?
   private static boolean component_decl_6(PsiBuilder b, int l) {
     if (!recursion_guard_(b, l, "component_decl_6")) return false;
-    component_base_type_decl(b, l + 1);
+    component_parameters_decl(b, l + 1);
     return true;
   }
 
@@ -467,6 +456,20 @@ public class DecodeParser implements PsiParser, LightPsiParser {
     r = command_decl(b, l + 1);
     if (!r) r = message_decl(b, l + 1);
     exit_section_(b, m, null, r);
+    return r;
+  }
+
+  /* ********************************************************** */
+  // PARAMETERS LEFT_PAREN command_args RIGHT_PAREN
+  public static boolean component_parameters_decl(PsiBuilder b, int l) {
+    if (!recursion_guard_(b, l, "component_parameters_decl")) return false;
+    if (!nextTokenIs(b, PARAMETERS)) return false;
+    boolean r;
+    Marker m = enter_section_(b);
+    r = consumeTokens(b, 0, PARAMETERS, LEFT_PAREN);
+    r = r && command_args(b, l + 1);
+    r = r && consumeToken(b, RIGHT_PAREN);
+    exit_section_(b, m, COMPONENT_PARAMETERS_DECL, r);
     return r;
   }
 
@@ -1230,16 +1233,14 @@ public class DecodeParser implements PsiParser, LightPsiParser {
   }
 
   /* ********************************************************** */
-  // info_string? STRUCT LEFT_PAREN command_arg (COMMA command_arg)* COMMA ? RIGHT_PAREN
+  // info_string? STRUCT LEFT_PAREN command_args RIGHT_PAREN
   public static boolean struct_type_decl(PsiBuilder b, int l) {
     if (!recursion_guard_(b, l, "struct_type_decl")) return false;
     boolean r;
     Marker m = enter_section_(b, l, _NONE_, "<struct type decl>");
     r = struct_type_decl_0(b, l + 1);
     r = r && consumeTokens(b, 0, STRUCT, LEFT_PAREN);
-    r = r && command_arg(b, l + 1);
-    r = r && struct_type_decl_4(b, l + 1);
-    r = r && struct_type_decl_5(b, l + 1);
+    r = r && command_args(b, l + 1);
     r = r && consumeToken(b, RIGHT_PAREN);
     exit_section_(b, l, m, STRUCT_TYPE_DECL, r, false, null);
     return r;
@@ -1249,36 +1250,6 @@ public class DecodeParser implements PsiParser, LightPsiParser {
   private static boolean struct_type_decl_0(PsiBuilder b, int l) {
     if (!recursion_guard_(b, l, "struct_type_decl_0")) return false;
     info_string(b, l + 1);
-    return true;
-  }
-
-  // (COMMA command_arg)*
-  private static boolean struct_type_decl_4(PsiBuilder b, int l) {
-    if (!recursion_guard_(b, l, "struct_type_decl_4")) return false;
-    int c = current_position_(b);
-    while (true) {
-      if (!struct_type_decl_4_0(b, l + 1)) break;
-      if (!empty_element_parsed_guard_(b, "struct_type_decl_4", c)) break;
-      c = current_position_(b);
-    }
-    return true;
-  }
-
-  // COMMA command_arg
-  private static boolean struct_type_decl_4_0(PsiBuilder b, int l) {
-    if (!recursion_guard_(b, l, "struct_type_decl_4_0")) return false;
-    boolean r;
-    Marker m = enter_section_(b);
-    r = consumeToken(b, COMMA);
-    r = r && command_arg(b, l + 1);
-    exit_section_(b, m, null, r);
-    return r;
-  }
-
-  // COMMA ?
-  private static boolean struct_type_decl_5(PsiBuilder b, int l) {
-    if (!recursion_guard_(b, l, "struct_type_decl_5")) return false;
-    consumeToken(b, COMMA);
     return true;
   }
 

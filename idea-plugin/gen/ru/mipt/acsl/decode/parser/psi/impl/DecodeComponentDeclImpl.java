@@ -30,8 +30,8 @@ public class DecodeComponentDeclImpl extends ASTWrapperPsiElement implements Dec
 
   @Override
   @Nullable
-  public DecodeComponentBaseTypeDecl getComponentBaseTypeDecl() {
-    return findChildByClass(DecodeComponentBaseTypeDecl.class);
+  public DecodeComponentParametersDecl getComponentParametersDecl() {
+    return findChildByClass(DecodeComponentParametersDecl.class);
   }
 
   @Override

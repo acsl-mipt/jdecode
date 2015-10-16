@@ -24,8 +24,8 @@ public class DecodeStructTypeDeclImpl extends ASTWrapperPsiElement implements De
 
   @Override
   @NotNull
-  public List<DecodeCommandArg> getCommandArgList() {
-    return PsiTreeUtil.getChildrenOfTypeAsList(this, DecodeCommandArg.class);
+  public DecodeCommandArgs getCommandArgs() {
+    return findNotNullChildByClass(DecodeCommandArgs.class);
   }
 
   @Override

@@ -52,6 +52,7 @@ NON_NEGATIVE_NUMBER=[0-9]+
   "parameter"                { return PARAMETER; }
   "info"                     { return INFO; }
   "subcomponent"             { return SUBCOMPONENT; }
+  "parameters"               { return PARAMETERS; }
   "unit"                     { return UNIT_TOKEN; }
   "type"                     { return TYPE_KEYWORD; }
   "alias"                    { return ALIAS; }

@@ -7,6 +7,7 @@ import com.intellij.notification.NotificationType;
 import com.intellij.notification.Notifications;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiWhiteSpace;
+import org.apache.commons.lang.NotImplementedException;
 import ru.mipt.acsl.decode.model.domain.*;
 import ru.mipt.acsl.decode.model.domain.impl.*;
 import ru.mipt.acsl.decode.model.domain.impl.proxy.SimpleDecodeMaybeProxy;
@@ -126,8 +127,11 @@ public class DecodeFileProcessor
     private void processComponentDefinition(@NotNull DecodeComponentDecl componentDecl,
                                             @NotNull DecodeNamespace namespace)
     {
+        throw new NotImplementedException();
+        /*
         Optional<DecodeTypeDeclBody> typeDeclBodyOptional = Optional.ofNullable(
-                componentDecl.getComponentBaseTypeDecl()).map(
+                componentDecl.getComponentParametersDecl()).map(
+                DecodeComponentParametersDecl::getCommandArgs).map(DecodeCommandArgs::getCommandArgList).map(
                 DecodeComponentBaseTypeDecl::getTypeDeclBody);
         final String name = componentDecl.getElementNameRule().getText();
         Optional<DecodeMaybeProxy<DecodeType>> baseType = Optional.empty();
@@ -196,7 +200,7 @@ public class DecodeFileProcessor
             throw new AssertionError();
         }).collect(Collectors.toList()));
 
-        namespace.getComponents().add(component);
+        namespace.getComponents().add(component);*/
     }
 
     @NotNull
@@ -370,7 +374,7 @@ public class DecodeFileProcessor
             @NotNull DecodeNamespace namespace)
     {
         List<DecodeStructField> fields = new ArrayList<>();
-        for (DecodeCommandArg fieldElement : structTypeDecl.getCommandArgList())
+        for (DecodeCommandArg fieldElement : structTypeDecl.getCommandArgs().getCommandArgList())
         {
             DecodeTypeUnitApplication typeUnitApplication = fieldElement.getTypeUnitApplication();
             DecodeUnit unit = typeUnitApplication.getUnit();

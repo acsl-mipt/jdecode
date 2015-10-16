@@ -8,7 +8,7 @@ import com.intellij.psi.PsiElement;
 public interface DecodeStructTypeDecl extends PsiElement {
 
   @NotNull
-  List<DecodeCommandArg> getCommandArgList();
+  DecodeCommandArgs getCommandArgs();
 
   @Nullable
   DecodeInfoString getInfoString();
