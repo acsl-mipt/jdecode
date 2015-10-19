@@ -8,21 +8,9 @@ import com.intellij.psi.PsiElement;
 public interface DecodeMessageDecl extends PsiElement {
 
   @Nullable
-  DecodeDynamicStatusMessage getDynamicStatusMessage();
-
-  @NotNull
-  DecodeElementNameRule getElementNameRule();
-
-  @Nullable
   DecodeEventMessage getEventMessage();
 
   @Nullable
-  DecodeInfoString getInfoString();
-
-  @Nullable
   DecodeStatusMessage getStatusMessage();
-
-  @NotNull
-  PsiElement getNonNegativeNumber();
 
 }

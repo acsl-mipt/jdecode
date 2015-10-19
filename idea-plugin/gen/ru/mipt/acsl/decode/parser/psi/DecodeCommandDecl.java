@@ -19,7 +19,7 @@ public interface DecodeCommandDecl extends PsiElement {
   @Nullable
   DecodeTypeUnitApplication getTypeUnitApplication();
 
-  @NotNull
+  @Nullable
   PsiElement getNonNegativeNumber();
 
 }

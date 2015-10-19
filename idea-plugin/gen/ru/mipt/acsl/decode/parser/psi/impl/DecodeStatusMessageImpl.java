@@ -24,8 +24,26 @@ public class DecodeStatusMessageImpl extends ASTWrapperPsiElement implements Dec
 
   @Override
   @NotNull
+  public DecodeElementNameRule getElementNameRule() {
+    return findNotNullChildByClass(DecodeElementNameRule.class);
+  }
+
+  @Override
+  @Nullable
+  public DecodeInfoString getInfoString() {
+    return findChildByClass(DecodeInfoString.class);
+  }
+
+  @Override
+  @NotNull
   public DecodeMessageParametersDecl getMessageParametersDecl() {
     return findNotNullChildByClass(DecodeMessageParametersDecl.class);
+  }
+
+  @Override
+  @Nullable
+  public PsiElement getNonNegativeNumber() {
+    return findChildByType(NON_NEGATIVE_NUMBER);
   }
 
 }

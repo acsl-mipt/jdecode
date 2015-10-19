@@ -47,9 +47,9 @@ public class DecodeCommandDeclImpl extends ASTWrapperPsiElement implements Decod
   }
 
   @Override
-  @NotNull
+  @Nullable
   public PsiElement getNonNegativeNumber() {
-    return findNotNullChildByType(NON_NEGATIVE_NUMBER);
+    return findChildByType(NON_NEGATIVE_NUMBER);
   }
 
 }

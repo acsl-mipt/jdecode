@@ -35,10 +35,6 @@ public class DecodeVisitor extends PsiElementVisitor {
     visitPsiElement(o);
   }
 
-  public void visitDynamicStatusMessage(@NotNull DecodeDynamicStatusMessage o) {
-    visitPsiElement(o);
-  }
-
   public void visitElementId(@NotNull DecodeElementId o) {
     visitPsiElement(o);
   }

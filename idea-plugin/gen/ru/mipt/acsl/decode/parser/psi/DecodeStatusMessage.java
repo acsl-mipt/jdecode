@@ -8,6 +8,15 @@ import com.intellij.psi.PsiElement;
 public interface DecodeStatusMessage extends PsiElement {
 
   @NotNull
+  DecodeElementNameRule getElementNameRule();
+
+  @Nullable
+  DecodeInfoString getInfoString();
+
+  @NotNull
   DecodeMessageParametersDecl getMessageParametersDecl();
+
+  @Nullable
+  PsiElement getNonNegativeNumber();
 
 }

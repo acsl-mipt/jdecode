@@ -15,7 +15,6 @@ public interface DecodeTypes {
   IElementType COMMAND_DECL = new DecodeElementType("COMMAND_DECL");
   IElementType COMPONENT_DECL = new DecodeElementType("COMPONENT_DECL");
   IElementType COMPONENT_PARAMETERS_DECL = new DecodeElementType("COMPONENT_PARAMETERS_DECL");
-  IElementType DYNAMIC_STATUS_MESSAGE = new DecodeElementType("DYNAMIC_STATUS_MESSAGE");
   IElementType ELEMENT_ID = new DecodeElementType("ELEMENT_ID");
   IElementType ELEMENT_NAME_RULE = new DecodeElementType("ELEMENT_NAME_RULE");
   IElementType ENUM_TYPE_DECL = new DecodeElementType("ENUM_TYPE_DECL");
@@ -127,9 +126,6 @@ public interface DecodeTypes {
       }
       else if (type == COMPONENT_PARAMETERS_DECL) {
         return new DecodeComponentParametersDeclImpl(node);
-      }
-      else if (type == DYNAMIC_STATUS_MESSAGE) {
-        return new DecodeDynamicStatusMessageImpl(node);
       }
       else if (type == ELEMENT_ID) {
         return new DecodeElementIdImpl(node);

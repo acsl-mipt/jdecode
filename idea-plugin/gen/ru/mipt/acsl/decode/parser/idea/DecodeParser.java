@@ -44,9 +44,6 @@ public class DecodeParser implements PsiParser, LightPsiParser {
     else if (t == COMPONENT_PARAMETERS_DECL) {
       r = component_parameters_decl(b, 0);
     }
-    else if (t == DYNAMIC_STATUS_MESSAGE) {
-      r = dynamic_status_message(b, 0);
-    }
     else if (t == ELEMENT_ID) {
       r = element_id(b, 0);
     }
@@ -295,7 +292,7 @@ public class DecodeParser implements PsiParser, LightPsiParser {
   }
 
   /* ********************************************************** */
-  // info_string? COMMAND element_name_rule COLON NON_NEGATIVE_NUMBER LEFT_PAREN command_args? RIGHT_PAREN (ARROW type_unit_application)?
+  // info_string? COMMAND element_name_rule (COLON NON_NEGATIVE_NUMBER)? LEFT_PAREN command_args? RIGHT_PAREN (ARROW type_unit_application)?
   public static boolean command_decl(PsiBuilder b, int l) {
     if (!recursion_guard_(b, l, "command_decl")) return false;
     boolean r;
@@ -303,10 +300,11 @@ public class DecodeParser implements PsiParser, LightPsiParser {
     r = command_decl_0(b, l + 1);
     r = r && consumeToken(b, COMMAND);
     r = r && element_name_rule(b, l + 1);
-    r = r && consumeTokens(b, 0, COLON, NON_NEGATIVE_NUMBER, LEFT_PAREN);
-    r = r && command_decl_6(b, l + 1);
+    r = r && command_decl_3(b, l + 1);
+    r = r && consumeToken(b, LEFT_PAREN);
+    r = r && command_decl_5(b, l + 1);
     r = r && consumeToken(b, RIGHT_PAREN);
-    r = r && command_decl_8(b, l + 1);
+    r = r && command_decl_7(b, l + 1);
     exit_section_(b, l, m, COMMAND_DECL, r, false, null);
     return r;
   }
@@ -318,23 +316,40 @@ public class DecodeParser implements PsiParser, LightPsiParser {
     return true;
   }
 
+  // (COLON NON_NEGATIVE_NUMBER)?
+  private static boolean command_decl_3(PsiBuilder b, int l) {
+    if (!recursion_guard_(b, l, "command_decl_3")) return false;
+    command_decl_3_0(b, l + 1);
+    return true;
+  }
+
+  // COLON NON_NEGATIVE_NUMBER
+  private static boolean command_decl_3_0(PsiBuilder b, int l) {
+    if (!recursion_guard_(b, l, "command_decl_3_0")) return false;
+    boolean r;
+    Marker m = enter_section_(b);
+    r = consumeTokens(b, 0, COLON, NON_NEGATIVE_NUMBER);
+    exit_section_(b, m, null, r);
+    return r;
+  }
+
   // command_args?
-  private static boolean command_decl_6(PsiBuilder b, int l) {
-    if (!recursion_guard_(b, l, "command_decl_6")) return false;
+  private static boolean command_decl_5(PsiBuilder b, int l) {
+    if (!recursion_guard_(b, l, "command_decl_5")) return false;
     command_args(b, l + 1);
     return true;
   }
 
   // (ARROW type_unit_application)?
-  private static boolean command_decl_8(PsiBuilder b, int l) {
-    if (!recursion_guard_(b, l, "command_decl_8")) return false;
-    command_decl_8_0(b, l + 1);
+  private static boolean command_decl_7(PsiBuilder b, int l) {
+    if (!recursion_guard_(b, l, "command_decl_7")) return false;
+    command_decl_7_0(b, l + 1);
     return true;
   }
 
   // ARROW type_unit_application
-  private static boolean command_decl_8_0(PsiBuilder b, int l) {
-    if (!recursion_guard_(b, l, "command_decl_8_0")) return false;
+  private static boolean command_decl_7_0(PsiBuilder b, int l) {
+    if (!recursion_guard_(b, l, "command_decl_7_0")) return false;
     boolean r;
     Marker m = enter_section_(b);
     r = consumeToken(b, ARROW);
@@ -512,19 +527,6 @@ public class DecodeParser implements PsiParser, LightPsiParser {
   }
 
   /* ********************************************************** */
-  // DYNAMIC STATUS message_parameters_decl
-  public static boolean dynamic_status_message(PsiBuilder b, int l) {
-    if (!recursion_guard_(b, l, "dynamic_status_message")) return false;
-    if (!nextTokenIs(b, DYNAMIC)) return false;
-    boolean r;
-    Marker m = enter_section_(b);
-    r = consumeTokens(b, 0, DYNAMIC, STATUS);
-    r = r && message_parameters_decl(b, l + 1);
-    exit_section_(b, m, DYNAMIC_STATUS_MESSAGE, r);
-    return r;
-  }
-
-  /* ********************************************************** */
   // element_name_rule (DOT element_name_rule)*
   public static boolean element_id(PsiBuilder b, int l) {
     if (!recursion_guard_(b, l, "element_id")) return false;
@@ -672,15 +674,41 @@ public class DecodeParser implements PsiParser, LightPsiParser {
   }
 
   /* ********************************************************** */
-  // EVENT message_parameters_decl
+  // info_string? EVENT element_name_rule (COLON NON_NEGATIVE_NUMBER)? message_parameters_decl
   public static boolean event_message(PsiBuilder b, int l) {
     if (!recursion_guard_(b, l, "event_message")) return false;
-    if (!nextTokenIs(b, EVENT)) return false;
+    boolean r;
+    Marker m = enter_section_(b, l, _NONE_, "<event message>");
+    r = event_message_0(b, l + 1);
+    r = r && consumeToken(b, EVENT);
+    r = r && element_name_rule(b, l + 1);
+    r = r && event_message_3(b, l + 1);
+    r = r && message_parameters_decl(b, l + 1);
+    exit_section_(b, l, m, EVENT_MESSAGE, r, false, null);
+    return r;
+  }
+
+  // info_string?
+  private static boolean event_message_0(PsiBuilder b, int l) {
+    if (!recursion_guard_(b, l, "event_message_0")) return false;
+    info_string(b, l + 1);
+    return true;
+  }
+
+  // (COLON NON_NEGATIVE_NUMBER)?
+  private static boolean event_message_3(PsiBuilder b, int l) {
+    if (!recursion_guard_(b, l, "event_message_3")) return false;
+    event_message_3_0(b, l + 1);
+    return true;
+  }
+
+  // COLON NON_NEGATIVE_NUMBER
+  private static boolean event_message_3_0(PsiBuilder b, int l) {
+    if (!recursion_guard_(b, l, "event_message_3_0")) return false;
     boolean r;
     Marker m = enter_section_(b);
-    r = consumeToken(b, EVENT);
-    r = r && message_parameters_decl(b, l + 1);
-    exit_section_(b, m, EVENT_MESSAGE, r);
+    r = consumeTokens(b, 0, COLON, NON_NEGATIVE_NUMBER);
+    exit_section_(b, m, null, r);
     return r;
   }
 
@@ -907,36 +935,14 @@ public class DecodeParser implements PsiParser, LightPsiParser {
   }
 
   /* ********************************************************** */
-  // info_string? MESSAGE element_name_rule COLON NON_NEGATIVE_NUMBER (status_message | event_message | dynamic_status_message)
+  // status_message | event_message
   public static boolean message_decl(PsiBuilder b, int l) {
     if (!recursion_guard_(b, l, "message_decl")) return false;
     boolean r;
     Marker m = enter_section_(b, l, _NONE_, "<message decl>");
-    r = message_decl_0(b, l + 1);
-    r = r && consumeToken(b, MESSAGE);
-    r = r && element_name_rule(b, l + 1);
-    r = r && consumeTokens(b, 0, COLON, NON_NEGATIVE_NUMBER);
-    r = r && message_decl_5(b, l + 1);
-    exit_section_(b, l, m, MESSAGE_DECL, r, false, null);
-    return r;
-  }
-
-  // info_string?
-  private static boolean message_decl_0(PsiBuilder b, int l) {
-    if (!recursion_guard_(b, l, "message_decl_0")) return false;
-    info_string(b, l + 1);
-    return true;
-  }
-
-  // status_message | event_message | dynamic_status_message
-  private static boolean message_decl_5(PsiBuilder b, int l) {
-    if (!recursion_guard_(b, l, "message_decl_5")) return false;
-    boolean r;
-    Marker m = enter_section_(b);
     r = status_message(b, l + 1);
     if (!r) r = event_message(b, l + 1);
-    if (!r) r = dynamic_status_message(b, l + 1);
-    exit_section_(b, m, null, r);
+    exit_section_(b, l, m, MESSAGE_DECL, r, false, null);
     return r;
   }
 
@@ -1207,15 +1213,41 @@ public class DecodeParser implements PsiParser, LightPsiParser {
   }
 
   /* ********************************************************** */
-  // STATUS message_parameters_decl
+  // info_string? STATUS element_name_rule (COLON NON_NEGATIVE_NUMBER)? message_parameters_decl
   public static boolean status_message(PsiBuilder b, int l) {
     if (!recursion_guard_(b, l, "status_message")) return false;
-    if (!nextTokenIs(b, STATUS)) return false;
+    boolean r;
+    Marker m = enter_section_(b, l, _NONE_, "<status message>");
+    r = status_message_0(b, l + 1);
+    r = r && consumeToken(b, STATUS);
+    r = r && element_name_rule(b, l + 1);
+    r = r && status_message_3(b, l + 1);
+    r = r && message_parameters_decl(b, l + 1);
+    exit_section_(b, l, m, STATUS_MESSAGE, r, false, null);
+    return r;
+  }
+
+  // info_string?
+  private static boolean status_message_0(PsiBuilder b, int l) {
+    if (!recursion_guard_(b, l, "status_message_0")) return false;
+    info_string(b, l + 1);
+    return true;
+  }
+
+  // (COLON NON_NEGATIVE_NUMBER)?
+  private static boolean status_message_3(PsiBuilder b, int l) {
+    if (!recursion_guard_(b, l, "status_message_3")) return false;
+    status_message_3_0(b, l + 1);
+    return true;
+  }
+
+  // COLON NON_NEGATIVE_NUMBER
+  private static boolean status_message_3_0(PsiBuilder b, int l) {
+    if (!recursion_guard_(b, l, "status_message_3_0")) return false;
     boolean r;
     Marker m = enter_section_(b);
-    r = consumeToken(b, STATUS);
-    r = r && message_parameters_decl(b, l + 1);
-    exit_section_(b, m, STATUS_MESSAGE, r);
+    r = consumeTokens(b, 0, COLON, NON_NEGATIVE_NUMBER);
+    exit_section_(b, m, null, r);
     return r;
   }
 

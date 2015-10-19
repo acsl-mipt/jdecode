@@ -24,38 +24,14 @@ public class DecodeMessageDeclImpl extends ASTWrapperPsiElement implements Decod
 
   @Override
   @Nullable
-  public DecodeDynamicStatusMessage getDynamicStatusMessage() {
-    return findChildByClass(DecodeDynamicStatusMessage.class);
-  }
-
-  @Override
-  @NotNull
-  public DecodeElementNameRule getElementNameRule() {
-    return findNotNullChildByClass(DecodeElementNameRule.class);
-  }
-
-  @Override
-  @Nullable
   public DecodeEventMessage getEventMessage() {
     return findChildByClass(DecodeEventMessage.class);
   }
 
   @Override
   @Nullable
-  public DecodeInfoString getInfoString() {
-    return findChildByClass(DecodeInfoString.class);
-  }
-
-  @Override
-  @Nullable
   public DecodeStatusMessage getStatusMessage() {
     return findChildByClass(DecodeStatusMessage.class);
-  }
-
-  @Override
-  @NotNull
-  public PsiElement getNonNegativeNumber() {
-    return findNotNullChildByType(NON_NEGATIVE_NUMBER);
   }
 
 }
