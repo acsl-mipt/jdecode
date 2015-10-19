@@ -16,6 +16,9 @@ public interface DecodeEventMessage extends PsiElement {
   @NotNull
   DecodeMessageParametersDecl getMessageParametersDecl();
 
+  @NotNull
+  DecodeTypeApplication getTypeApplication();
+
   @Nullable
   PsiElement getNonNegativeNumber();
 

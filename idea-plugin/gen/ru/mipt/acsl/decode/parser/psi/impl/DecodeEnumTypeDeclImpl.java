@@ -35,15 +35,9 @@ public class DecodeEnumTypeDeclImpl extends ASTWrapperPsiElement implements Deco
   }
 
   @Override
-  @Nullable
-  public DecodeNativeTypeKind getNativeTypeKind() {
-    return findChildByClass(DecodeNativeTypeKind.class);
-  }
-
-  @Override
-  @Nullable
-  public DecodePrimitiveTypeKind getPrimitiveTypeKind() {
-    return findChildByClass(DecodePrimitiveTypeKind.class);
+  @NotNull
+  public DecodeTypeApplication getTypeApplication() {
+    return findNotNullChildByClass(DecodeTypeApplication.class);
   }
 
 }

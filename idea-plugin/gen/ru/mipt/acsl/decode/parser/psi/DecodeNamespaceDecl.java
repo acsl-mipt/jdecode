@@ -10,4 +10,7 @@ public interface DecodeNamespaceDecl extends PsiElement {
   @NotNull
   DecodeElementId getElementId();
 
+  @Nullable
+  DecodeInfoString getInfoString();
+
 }

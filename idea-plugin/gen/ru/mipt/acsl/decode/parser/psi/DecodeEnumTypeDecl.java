@@ -13,10 +13,7 @@ public interface DecodeEnumTypeDecl extends PsiElement {
   @Nullable
   DecodeInfoString getInfoString();
 
-  @Nullable
-  DecodeNativeTypeKind getNativeTypeKind();
-
-  @Nullable
-  DecodePrimitiveTypeKind getPrimitiveTypeKind();
+  @NotNull
+  DecodeTypeApplication getTypeApplication();
 
 }

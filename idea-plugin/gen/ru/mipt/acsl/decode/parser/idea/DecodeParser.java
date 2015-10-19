@@ -492,7 +492,6 @@ public class DecodeParser implements PsiParser, LightPsiParser {
   // namespace_decl (component_decl | unit_decl | type_decl | alias_decl)*
   static boolean decodeFile(PsiBuilder b, int l) {
     if (!recursion_guard_(b, l, "decodeFile")) return false;
-    if (!nextTokenIs(b, NAMESPACE)) return false;
     boolean r;
     Marker m = enter_section_(b);
     r = namespace_decl(b, l + 1);
@@ -576,14 +575,14 @@ public class DecodeParser implements PsiParser, LightPsiParser {
   }
 
   /* ********************************************************** */
-  // info_string? ENUM (primitive_type_kind | native_type_kind) LEFT_PAREN enum_type_values RIGHT_PAREN
+  // info_string? ENUM type_application LEFT_PAREN enum_type_values RIGHT_PAREN
   public static boolean enum_type_decl(PsiBuilder b, int l) {
     if (!recursion_guard_(b, l, "enum_type_decl")) return false;
     boolean r;
     Marker m = enter_section_(b, l, _NONE_, "<enum type decl>");
     r = enum_type_decl_0(b, l + 1);
     r = r && consumeToken(b, ENUM);
-    r = r && enum_type_decl_2(b, l + 1);
+    r = r && type_application(b, l + 1);
     r = r && consumeToken(b, LEFT_PAREN);
     r = r && enum_type_values(b, l + 1);
     r = r && consumeToken(b, RIGHT_PAREN);
@@ -596,17 +595,6 @@ public class DecodeParser implements PsiParser, LightPsiParser {
     if (!recursion_guard_(b, l, "enum_type_decl_0")) return false;
     info_string(b, l + 1);
     return true;
-  }
-
-  // primitive_type_kind | native_type_kind
-  private static boolean enum_type_decl_2(PsiBuilder b, int l) {
-    if (!recursion_guard_(b, l, "enum_type_decl_2")) return false;
-    boolean r;
-    Marker m = enter_section_(b);
-    r = primitive_type_kind(b, l + 1);
-    if (!r) r = native_type_kind(b, l + 1);
-    exit_section_(b, m, null, r);
-    return r;
   }
 
   /* ********************************************************** */
@@ -674,7 +662,7 @@ public class DecodeParser implements PsiParser, LightPsiParser {
   }
 
   /* ********************************************************** */
-  // info_string? EVENT element_name_rule (COLON NON_NEGATIVE_NUMBER)? message_parameters_decl
+  // info_string? EVENT element_name_rule (COLON NON_NEGATIVE_NUMBER)? type_application message_parameters_decl
   public static boolean event_message(PsiBuilder b, int l) {
     if (!recursion_guard_(b, l, "event_message")) return false;
     boolean r;
@@ -683,6 +671,7 @@ public class DecodeParser implements PsiParser, LightPsiParser {
     r = r && consumeToken(b, EVENT);
     r = r && element_name_rule(b, l + 1);
     r = r && event_message_3(b, l + 1);
+    r = r && type_application(b, l + 1);
     r = r && message_parameters_decl(b, l + 1);
     exit_section_(b, l, m, EVENT_MESSAGE, r, false, null);
     return r;
@@ -993,16 +982,23 @@ public class DecodeParser implements PsiParser, LightPsiParser {
   }
 
   /* ********************************************************** */
-  // NAMESPACE element_id
+  // info_string? NAMESPACE element_id
   public static boolean namespace_decl(PsiBuilder b, int l) {
     if (!recursion_guard_(b, l, "namespace_decl")) return false;
-    if (!nextTokenIs(b, NAMESPACE)) return false;
     boolean r;
-    Marker m = enter_section_(b);
-    r = consumeToken(b, NAMESPACE);
+    Marker m = enter_section_(b, l, _NONE_, "<namespace decl>");
+    r = namespace_decl_0(b, l + 1);
+    r = r && consumeToken(b, NAMESPACE);
     r = r && element_id(b, l + 1);
-    exit_section_(b, m, NAMESPACE_DECL, r);
+    exit_section_(b, l, m, NAMESPACE_DECL, r, false, null);
     return r;
+  }
+
+  // info_string?
+  private static boolean namespace_decl_0(PsiBuilder b, int l) {
+    if (!recursion_guard_(b, l, "namespace_decl_0")) return false;
+    info_string(b, l + 1);
+    return true;
   }
 
   /* ********************************************************** */

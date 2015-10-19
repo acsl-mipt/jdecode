@@ -41,6 +41,12 @@ public class DecodeEventMessageImpl extends ASTWrapperPsiElement implements Deco
   }
 
   @Override
+  @NotNull
+  public DecodeTypeApplication getTypeApplication() {
+    return findNotNullChildByClass(DecodeTypeApplication.class);
+  }
+
+  @Override
   @Nullable
   public PsiElement getNonNegativeNumber() {
     return findChildByType(NON_NEGATIVE_NUMBER);
