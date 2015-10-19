@@ -86,7 +86,7 @@ component_decl ::= info_string? COMPONENT element_name_rule (COLON NON_NEGATIVE_
 
 component_parameters_decl ::= PARAMETERS LEFT_PAREN command_args RIGHT_PAREN
 
-command_decl ::= info_string? COMMAND element_name_rule COLON NON_NEGATIVE_NUMBER LEFT_PAREN command_args? RIGHT_PAREN (ARROW type_unit_application)?
+command_decl ::= info_string? COMMAND element_name_rule (COLON NON_NEGATIVE_NUMBER)? LEFT_PAREN command_args? RIGHT_PAREN (ARROW type_unit_application)?
 
 command_args ::= command_arg (COMMA command_arg)* COMMA?
 
@@ -108,9 +108,9 @@ struct_type_decl ::= info_string? STRUCT LEFT_PAREN command_args RIGHT_PAREN
 
 element_id ::= element_name_rule (DOT element_name_rule)*
 
-message_decl ::= info_string? MESSAGE element_name_rule COLON NON_NEGATIVE_NUMBER (status_message | event_message | dynamic_status_message)
+message_decl ::= status_message | event_message
 
-status_message ::= STATUS message_parameters_decl
+status_message ::= info_string? STATUS element_name_rule (COLON NON_NEGATIVE_NUMBER)? message_parameters_decl
 
 message_parameters_decl ::= LEFT_PAREN parameter_decl (COMMA parameter_decl)* COMMA? RIGHT_PAREN
 
@@ -118,9 +118,9 @@ message_parameters_decl ::= LEFT_PAREN parameter_decl (COMMA parameter_decl)* CO
 
 //all_parameters ::= STAR
 
-event_message ::= EVENT message_parameters_decl
+event_message ::= info_string? EVENT element_name_rule (COLON NON_NEGATIVE_NUMBER)? message_parameters_decl
 
-dynamic_status_message ::= DYNAMIC STATUS message_parameters_decl
+//dynamic_status_message ::= DYNAMIC STATUS message_parameters_decl
 
 parameter_decl ::= info_string? parameter_element
 
