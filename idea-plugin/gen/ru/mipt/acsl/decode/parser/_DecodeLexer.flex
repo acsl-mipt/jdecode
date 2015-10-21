@@ -83,6 +83,8 @@ NON_NEGATIVE_NUMBER=[0-9]+
   "false"                    { return FALSE; }
   "with"                     { return WITH; }
   "?"                        { return QUESTION; }
+  "import"                   { return IMPORT; }
+  "as"                       { return AS; }
 
   {ESCAPED_NAME}             { return ESCAPED_NAME; }
   {ELEMENT_NAME_TOKEN}       { return ELEMENT_NAME_TOKEN; }

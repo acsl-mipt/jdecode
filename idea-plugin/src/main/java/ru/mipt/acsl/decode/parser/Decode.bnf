@@ -71,12 +71,15 @@
         WITH = "with"
         QUESTION = "?"
         IMPORT = "import"
+        AS = "as"
     ]
 }
 
-decodeFile ::= namespace_decl import* (component_decl | unit_decl | type_decl | alias_decl)*
+decodeFile ::= namespace_decl import_stmt* (component_decl | unit_decl | type_decl | alias_decl)*
 
-import ::= IMPORT element_id (DOT (element_name_rule | LEFT_BRACE RIGHT_BRACE) | STAR)
+import_stmt ::= IMPORT element_id (DOT (LEFT_BRACE import_element (COMMA import_element)* COMMA? RIGHT_BRACE | STAR))
+
+import_element ::= element_name_rule (AS element_name_rule)?
 
 alias_decl ::= info_string? ALIAS element_id type_application
 

@@ -67,6 +67,14 @@ public class DecodeVisitor extends PsiElementVisitor {
     visitPsiElement(o);
   }
 
+  public void visitImportElement(@NotNull DecodeImportElement o) {
+    visitPsiElement(o);
+  }
+
+  public void visitImportStmt(@NotNull DecodeImportStmt o) {
+    visitPsiElement(o);
+  }
+
   public void visitInfoString(@NotNull DecodeInfoString o) {
     visitPsiElement(o);
   }
