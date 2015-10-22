@@ -55,7 +55,7 @@ public class JavaDecodeSourcesGenerator implements Generator<JavaDecodeSourcesGe
     private void generateType(@NotNull DecodeType type)
     {
         Optional<AbstractJavaBaseClass> javaClassOptional =
-                type.accept(new DecodeTypeVisitor<Optional<AbstractJavaBaseClass>, RuntimeException>()
+                type.accept(new DecodeTypeVisitor<Optional<AbstractJavaBaseClass>>()
                 {
                     @Override
                     @NotNull
@@ -169,10 +169,10 @@ public class JavaDecodeSourcesGenerator implements Generator<JavaDecodeSourcesGe
     @NotNull
     private JavaType getJavaTypeForDecodeType(@NotNull DecodeType type, boolean genericUse)
     {
-        return type.accept(new DecodeTypeVisitor<JavaType, RuntimeException>()
+        return type.accept(new DecodeTypeVisitor<JavaType>()
         {
             @Override
-            public JavaType visit(@NotNull DecodePrimitiveType primitiveType) throws RuntimeException
+            public JavaType visit(@NotNull DecodePrimitiveType primitiveType)
             {
                 switch (primitiveType.getKind())
                 {
@@ -221,27 +221,27 @@ public class JavaDecodeSourcesGenerator implements Generator<JavaDecodeSourcesGe
             }
 
             @Override
-            public JavaType visit(@NotNull DecodeNativeType nativeType) throws RuntimeException
+            public JavaType visit(@NotNull DecodeNativeType nativeType)
             {
                 return new JavaTypeApplication("decode.Ber");
             }
 
             @Override
-            public JavaType visit(@NotNull DecodeSubType subType) throws RuntimeException
+            public JavaType visit(@NotNull DecodeSubType subType)
             {
                 return new JavaTypeApplication(subType.getNamespace().getFqn().asString() + "." + classNameFromTypeName(
                         subType.getName().asString()));
             }
 
             @Override
-            public JavaType visit(@NotNull DecodeEnumType enumType) throws RuntimeException
+            public JavaType visit(@NotNull DecodeEnumType enumType)
             {
                 return new JavaTypeApplication(enumType.getNamespace().getFqn().asString() + "." +
                         classNameFromTypeName(enumType.getName().asString()));
             }
 
             @Override
-            public JavaType visit(@NotNull DecodeArrayType arrayType) throws RuntimeException
+            public JavaType visit(@NotNull DecodeArrayType arrayType)
             {
                 return new JavaTypeApplication(
                         arrayType.getNamespace().getFqn().asString() + "." + classNameFromArrayType(
@@ -249,14 +249,14 @@ public class JavaDecodeSourcesGenerator implements Generator<JavaDecodeSourcesGe
             }
 
             @Override
-            public JavaType visit(@NotNull DecodeStructType structType) throws RuntimeException
+            public JavaType visit(@NotNull DecodeStructType structType)
             {
                 return new JavaTypeApplication(structType.getNamespace().getFqn().asString() + "." +
                         classNameFromTypeName(structType.getName().asString()));
             }
 
             @Override
-            public JavaType visit(@NotNull DecodeAliasType typeAlias) throws RuntimeException
+            public JavaType visit(@NotNull DecodeAliasType typeAlias)
             {
                 return getJavaTypeForDecodeType(typeAlias.getType().getObject(), genericUse);
             }

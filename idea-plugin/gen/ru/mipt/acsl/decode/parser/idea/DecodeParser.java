@@ -77,6 +77,9 @@ public class DecodeParser implements PsiParser, LightPsiParser {
     else if (t == INFO_STRING) {
       r = info_string(b, 0);
     }
+    else if (t == LANGUAGE_DECL) {
+      r = language_decl(b, 0);
+    }
     else if (t == LENGTH_FROM) {
       r = length_from(b, 0);
     }
@@ -495,7 +498,7 @@ public class DecodeParser implements PsiParser, LightPsiParser {
   }
 
   /* ********************************************************** */
-  // namespace_decl import_stmt* (component_decl | unit_decl | type_decl | alias_decl)*
+  // namespace_decl import_stmt* (component_decl | unit_decl | type_decl | alias_decl | language_decl)*
   static boolean decodeFile(PsiBuilder b, int l) {
     if (!recursion_guard_(b, l, "decodeFile")) return false;
     boolean r;
@@ -519,7 +522,7 @@ public class DecodeParser implements PsiParser, LightPsiParser {
     return true;
   }
 
-  // (component_decl | unit_decl | type_decl | alias_decl)*
+  // (component_decl | unit_decl | type_decl | alias_decl | language_decl)*
   private static boolean decodeFile_2(PsiBuilder b, int l) {
     if (!recursion_guard_(b, l, "decodeFile_2")) return false;
     int c = current_position_(b);
@@ -531,7 +534,7 @@ public class DecodeParser implements PsiParser, LightPsiParser {
     return true;
   }
 
-  // component_decl | unit_decl | type_decl | alias_decl
+  // component_decl | unit_decl | type_decl | alias_decl | language_decl
   private static boolean decodeFile_2_0(PsiBuilder b, int l) {
     if (!recursion_guard_(b, l, "decodeFile_2_0")) return false;
     boolean r;
@@ -540,6 +543,7 @@ public class DecodeParser implements PsiParser, LightPsiParser {
     if (!r) r = unit_decl(b, l + 1);
     if (!r) r = type_decl(b, l + 1);
     if (!r) r = alias_decl(b, l + 1);
+    if (!r) r = language_decl(b, l + 1);
     exit_section_(b, m, null, r);
     return r;
   }
@@ -1013,6 +1017,27 @@ public class DecodeParser implements PsiParser, LightPsiParser {
     r = string_value(b, l + 1);
     exit_section_(b, l, m, INFO_STRING, r, false, null);
     return r;
+  }
+
+  /* ********************************************************** */
+  // LANGUAGE element_name_rule DEFAULT?
+  public static boolean language_decl(PsiBuilder b, int l) {
+    if (!recursion_guard_(b, l, "language_decl")) return false;
+    if (!nextTokenIs(b, LANGUAGE)) return false;
+    boolean r;
+    Marker m = enter_section_(b);
+    r = consumeToken(b, LANGUAGE);
+    r = r && element_name_rule(b, l + 1);
+    r = r && language_decl_2(b, l + 1);
+    exit_section_(b, m, LANGUAGE_DECL, r);
+    return r;
+  }
+
+  // DEFAULT?
+  private static boolean language_decl_2(PsiBuilder b, int l) {
+    if (!recursion_guard_(b, l, "language_decl_2")) return false;
+    consumeToken(b, DEFAULT);
+    return true;
   }
 
   /* ********************************************************** */

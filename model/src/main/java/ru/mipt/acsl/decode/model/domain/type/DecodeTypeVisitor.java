@@ -5,19 +5,13 @@ import org.jetbrains.annotations.NotNull;
 /**
  * @author Artem Shein
  */
-public interface DecodeTypeVisitor<T, E extends Throwable>
+public interface DecodeTypeVisitor<T>
 {
-    T visit(@NotNull DecodePrimitiveType primitiveType) throws E;
-
-    T visit(@NotNull DecodeNativeType nativeType) throws E;
-
-    T visit(@NotNull DecodeSubType subType) throws E;
-
-    T visit(@NotNull DecodeEnumType enumType) throws E;
-
-    T visit(@NotNull DecodeArrayType arrayType) throws E;
-
-    T visit(@NotNull DecodeStructType structType) throws E;
-
-    T visit(@NotNull DecodeAliasType typeAlias) throws E;
+    T visit(@NotNull DecodePrimitiveType primitiveType);
+    T visit(@NotNull DecodeNativeType nativeType);
+    T visit(@NotNull DecodeSubType subType);
+    T visit(@NotNull DecodeEnumType enumType);
+    T visit(@NotNull DecodeArrayType arrayType);
+    T visit(@NotNull DecodeStructType structType);
+    T visit(@NotNull DecodeAliasType typeAlias);
 }

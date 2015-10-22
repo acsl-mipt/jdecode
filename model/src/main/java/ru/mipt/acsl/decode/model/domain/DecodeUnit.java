@@ -13,7 +13,7 @@ public interface DecodeUnit extends DecodeNameAware, DecodeOptionalInfoAware, De
     Optional<String> getDisplay();
 
     @Override
-    default <T, E extends Throwable> T accept(@NotNull DecodeReferenceableVisitor<T, E> visitor) throws E
+    default <T> T accept(@NotNull DecodeReferenceableVisitor<T> visitor)
     {
         return visitor.visit(this);
     }

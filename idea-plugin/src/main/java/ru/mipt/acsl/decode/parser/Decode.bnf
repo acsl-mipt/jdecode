@@ -72,10 +72,12 @@
         QUESTION = "?"
         IMPORT = "import"
         AS = "as"
+        LANGUAGE = "language"
+        DEFAULT = "default"
     ]
 }
 
-decodeFile ::= namespace_decl import_stmt* (component_decl | unit_decl | type_decl | alias_decl)*
+decodeFile ::= namespace_decl import_stmt* (component_decl | unit_decl | type_decl | alias_decl | language_decl)*
 
 import_stmt ::= IMPORT element_id (DOT (LEFT_BRACE import_element (COMMA import_element)* COMMA? RIGHT_BRACE | STAR))
 
@@ -162,3 +164,5 @@ enum_type_value ::= info_string? element_name_rule EQ_SIGN literal
 literal ::= float_literal | NON_NEGATIVE_NUMBER | TRUE | FALSE
 
 float_literal ::= (PLUS | MINUS)? (NON_NEGATIVE_NUMBER DOT NON_NEGATIVE_NUMBER? | DOT NON_NEGATIVE_NUMBER) (("e" | "E") (PLUS | MINUS)? NON_NEGATIVE_NUMBER)?
+
+language_decl ::= LANGUAGE element_name_rule DEFAULT?

@@ -30,7 +30,7 @@ public interface DecodeComponent extends DecodeOptionalInfoAware, DecodeReferenc
     List<DecodeMessage> getMessages();
 
     @Override
-    default <T, E extends Throwable> T accept(@NotNull DecodeReferenceableVisitor<T, E> visitor) throws E
+    default <T> T accept(@NotNull DecodeReferenceableVisitor<T> visitor)
     {
         return visitor.visit(this);
     }
@@ -61,7 +61,7 @@ public interface DecodeComponent extends DecodeOptionalInfoAware, DecodeReferenc
         return Preconditions.checkNotNull(result);
     }
 
-    class TokenWalker implements DecodeTypeVisitor<DecodeType, RuntimeException>
+    class TokenWalker implements DecodeTypeVisitor<DecodeType>
     {
         @NotNull
         private final Either<String, Integer> token;

@@ -35,10 +35,13 @@ public interface DecodeNamespace extends DecodeReferenceable, DecodeNameAware
     @NotNull
     List<DecodeComponent> getComponents();
 
-    default <T, E extends Throwable> T accept(@NotNull DecodeReferenceableVisitor<T, E> visitor) throws E
+    default <T> T accept(@NotNull DecodeReferenceableVisitor<T> visitor)
     {
         return visitor.visit(this);
     }
+
+    @NotNull
+    List<DecodeLanguage> getLanguages();
 
     @NotNull
     default DecodeFqn getFqn()

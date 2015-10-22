@@ -79,6 +79,10 @@ public class DecodeVisitor extends PsiElementVisitor {
     visitPsiElement(o);
   }
 
+  public void visitLanguageDecl(@NotNull DecodeLanguageDecl o) {
+    visitPsiElement(o);
+  }
+
   public void visitLengthFrom(@NotNull DecodeLengthFrom o) {
     visitPsiElement(o);
   }

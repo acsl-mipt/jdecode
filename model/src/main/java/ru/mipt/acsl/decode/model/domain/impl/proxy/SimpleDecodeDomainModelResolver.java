@@ -110,7 +110,7 @@ public final class SimpleDecodeDomainModelResolver implements DecodeDomainModelR
                 SimpleDecodeResolvingResult::merge);
     }
 
-    private static class DecodeTypeResolveVisitor implements DecodeTypeVisitor<Void,RuntimeException>
+    private static class DecodeTypeResolveVisitor implements DecodeTypeVisitor<Void>
     {
         @NotNull
         private final DecodeRegistry registry;
@@ -125,40 +125,40 @@ public final class SimpleDecodeDomainModelResolver implements DecodeDomainModelR
         }
 
         @Override
-        public Void visit(@NotNull DecodePrimitiveType baseType) throws RuntimeException
+        public Void visit(@NotNull DecodePrimitiveType baseType)
         {
             return null;
         }
 
         @Override
-        public Void visit(@NotNull DecodeNativeType nativeType) throws RuntimeException
+        public Void visit(@NotNull DecodeNativeType nativeType)
         {
             return null;
         }
 
         @Override
-        public Void visit(@NotNull DecodeSubType subType) throws RuntimeException
+        public Void visit(@NotNull DecodeSubType subType)
         {
             resolvingResultList.add(resolveWithTypeCheck(subType.getBaseType(), registry, DecodeType.class));
             return null;
         }
 
         @Override
-        public Void visit(@NotNull DecodeEnumType enumType) throws RuntimeException
+        public Void visit(@NotNull DecodeEnumType enumType)
         {
             resolvingResultList.add(resolveWithTypeCheck(enumType.getBaseType(), registry, DecodeType.class));
             return null;
         }
 
         @Override
-        public Void visit(@NotNull DecodeArrayType arrayType) throws RuntimeException
+        public Void visit(@NotNull DecodeArrayType arrayType)
         {
             resolvingResultList.add(resolveWithTypeCheck(arrayType.getBaseType(), registry, DecodeType.class));
             return null;
         }
 
         @Override
-        public Void visit(@NotNull DecodeStructType structType) throws RuntimeException
+        public Void visit(@NotNull DecodeStructType structType)
         {
             for (DecodeStructField field : structType.getFields())
             {
@@ -176,7 +176,7 @@ public final class SimpleDecodeDomainModelResolver implements DecodeDomainModelR
         }
 
         @Override
-        public Void visit(@NotNull DecodeAliasType typeAlias) throws RuntimeException
+        public Void visit(@NotNull DecodeAliasType typeAlias)
         {
             resolvingResultList.add(resolveWithTypeCheck(typeAlias.getType(), registry, DecodeType.class));
             return null;

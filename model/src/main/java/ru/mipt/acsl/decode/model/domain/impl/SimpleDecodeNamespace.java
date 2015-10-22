@@ -1,12 +1,9 @@
 package ru.mipt.acsl.decode.model.domain.impl;
 
 import org.jetbrains.annotations.Nullable;
-import ru.mipt.acsl.decode.model.domain.DecodeName;
+import ru.mipt.acsl.decode.model.domain.*;
 import ru.mipt.acsl.decode.model.domain.type.DecodeType;
 import org.jetbrains.annotations.NotNull;
-import ru.mipt.acsl.decode.model.domain.DecodeComponent;
-import ru.mipt.acsl.decode.model.domain.DecodeNamespace;
-import ru.mipt.acsl.decode.model.domain.DecodeUnit;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -29,6 +26,8 @@ public class SimpleDecodeNamespace implements DecodeNamespace
     private Optional<DecodeNamespace> parent;
     @NotNull
     private List<DecodeComponent> components = new ArrayList<>();
+    @NotNull
+    private List<DecodeLanguage> languages = new ArrayList<>();
 
     public static DecodeNamespace newInstance(@NotNull DecodeName name, @NotNull Optional<DecodeNamespace> parent)
     {
@@ -87,6 +86,13 @@ public class SimpleDecodeNamespace implements DecodeNamespace
     public List<DecodeComponent> getComponents()
     {
         return components;
+    }
+
+    @NotNull
+    @Override
+    public List<DecodeLanguage> getLanguages()
+    {
+        return languages;
     }
 
     @Override

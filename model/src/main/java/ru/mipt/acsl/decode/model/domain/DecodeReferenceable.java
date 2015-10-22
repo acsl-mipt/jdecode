@@ -9,5 +9,5 @@ import org.jetbrains.annotations.Nullable;
 public interface DecodeReferenceable extends DecodeNameAware
 {
     @Nullable
-    <T, E extends Throwable> T accept(@NotNull DecodeReferenceableVisitor<T, E> visitor) throws E;
+    <T> T accept(@NotNull DecodeReferenceableVisitor<T> visitor);
 }

@@ -17,7 +17,7 @@ public interface DecodeEnumType extends DecodeType
     Set<DecodeEnumConstant> getConstants();
 
     @Override
-    default <T, E extends Throwable> T accept(@NotNull DecodeTypeVisitor<T, E> visitor) throws E
+    default <T> T accept(@NotNull DecodeTypeVisitor<T> visitor)
     {
         return visitor.visit(this);
     }

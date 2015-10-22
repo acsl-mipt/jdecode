@@ -16,14 +16,10 @@ import java.util.Set;
 /**
  * @author Artem Shein
  */
-public class SimpleDecodeComponent extends AbstractDecodeOptionalInfoAware implements DecodeComponent
+public class SimpleDecodeComponent extends AbstractDecodeNameNamespaceOptionalInfoAware implements DecodeComponent
 {
     @NotNull
-    private final DecodeName name;
-    @NotNull
     private final Optional<Integer> id;
-    @NotNull
-    private DecodeNamespace namespace;
     @NotNull
     private final Optional<DecodeMaybeProxy<DecodeType>> baseType;
     @NotNull
@@ -63,29 +59,9 @@ public class SimpleDecodeComponent extends AbstractDecodeOptionalInfoAware imple
 
     @NotNull
     @Override
-    public DecodeNamespace getNamespace()
-    {
-        return namespace;
-    }
-
-    @Override
-    public void setNamespace(@NotNull DecodeNamespace namespace)
-    {
-        this.namespace = namespace;
-    }
-
-    @NotNull
-    @Override
     public Optional<String> getInfo()
     {
         return info;
-    }
-
-    @NotNull
-    @Override
-    public Optional<DecodeName> getOptionalName()
-    {
-        return Optional.of(name);
     }
 
     public static DecodeComponent newInstance(@NotNull DecodeName name, @NotNull DecodeNamespace namespace,
@@ -105,9 +81,7 @@ public class SimpleDecodeComponent extends AbstractDecodeOptionalInfoAware imple
                                   @NotNull Set<DecodeMaybeProxy<DecodeComponent>> subComponents,
                                   @NotNull List<DecodeCommand> commands, @NotNull List<DecodeMessage> messages)
     {
-        super(info);
-        this.name = name;
-        this.namespace = namespace;
+        super(name, namespace, info);
         this.id = id;
         this.baseType = baseType;
         this.subComponents = subComponents;

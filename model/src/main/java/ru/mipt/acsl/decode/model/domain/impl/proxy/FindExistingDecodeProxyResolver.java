@@ -40,7 +40,7 @@ public class FindExistingDecodeProxyResolver implements DecodeProxyResolver
             Optional<DecodeReferenceable> resolvedObject = current.getResolvedObject();
             if (resolvedObject.isPresent())
             {
-                current = Preconditions.checkNotNull(resolvedObject.get().<DecodeResolvingResult<DecodeReferenceable>, RuntimeException>accept(
+                current = Preconditions.checkNotNull(resolvedObject.get().accept(
                         new ResolveDecodeReferenceableVisitor(registry,
                         ImmutableDecodeName.newInstanceFromMangledName(part))));
             }
@@ -60,7 +60,7 @@ public class FindExistingDecodeProxyResolver implements DecodeProxyResolver
     }
 
     private static class ResolveDecodeReferenceableVisitor
-            implements DecodeReferenceableVisitor<DecodeResolvingResult<DecodeReferenceable>, RuntimeException>
+            implements DecodeReferenceableVisitor<DecodeResolvingResult<DecodeReferenceable>>
     {
         @NotNull
         private final DecodeRegistry registry;
@@ -142,14 +142,20 @@ public class FindExistingDecodeProxyResolver implements DecodeProxyResolver
 
         @Override
         @NotNull
-        public DecodeResolvingResult<DecodeReferenceable> visit(@NotNull DecodeComponent component) throws RuntimeException
+        public DecodeResolvingResult<DecodeReferenceable> visit(@NotNull DecodeComponent component)
         {
             return SimpleDecodeResolvingResult.immutableEmpty();
         }
 
         @Override
         @NotNull
-        public DecodeResolvingResult<DecodeReferenceable> visit(@NotNull DecodeUnit unit) throws RuntimeException
+        public DecodeResolvingResult<DecodeReferenceable> visit(@NotNull DecodeUnit unit)
+        {
+            return SimpleDecodeResolvingResult.immutableEmpty();
+        }
+
+        @Override
+        public DecodeResolvingResult<DecodeReferenceable> visit(@NotNull DecodeLanguage language)
         {
             return SimpleDecodeResolvingResult.immutableEmpty();
         }

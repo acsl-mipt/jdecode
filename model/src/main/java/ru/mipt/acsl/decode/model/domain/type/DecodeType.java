@@ -48,10 +48,10 @@ public interface DecodeType extends DecodeReferenceable, DecodeOptionalNameAndOp
         }
     }
 
-    <T, E extends Throwable> T accept(@NotNull DecodeTypeVisitor<T, E> visitor) throws E;
+    <T> T accept(@NotNull DecodeTypeVisitor<T> visitor);
 
     @Nullable
-    default <T, E extends Throwable> T accept(@NotNull DecodeReferenceableVisitor<T, E> visitor) throws E
+    default <T> T accept(@NotNull DecodeReferenceableVisitor<T> visitor)
     {
         return visitor.visit(this);
     }

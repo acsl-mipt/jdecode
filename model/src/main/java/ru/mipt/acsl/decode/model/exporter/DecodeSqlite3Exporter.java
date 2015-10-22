@@ -305,7 +305,7 @@ public class DecodeSqlite3Exporter
         return statement.getGeneratedKeys().getLong(1);
     }
 
-    private class InsertTypeVisitor implements DecodeTypeVisitor<Void, SQLException>
+    private class InsertTypeVisitor implements DecodeTypeVisitor<Void>
     {
         public InsertTypeVisitor()
         {
@@ -313,7 +313,7 @@ public class DecodeSqlite3Exporter
 
         @Nullable
         @Override
-        public Void visit(@NotNull DecodePrimitiveType primitiveType) throws SQLException
+        public Void visit(@NotNull DecodePrimitiveType primitiveType)
         {
             try(PreparedStatement insertPrimitiveType = connection.prepareStatement(
                     String.format("INSERT INTO %s (type_id, kind, bit_length) VALUES (?, ?, ?)", TableName.PRIMITIVE_TYPE)))
@@ -323,11 +323,15 @@ public class DecodeSqlite3Exporter
                 insertPrimitiveType.setLong(3, primitiveType.getBitLength());
                 insertPrimitiveType.execute();
             }
+            catch (SQLException e)
+            {
+                throw new ModelExportingException(e);
+            }
             return null;
         }
 
         @Override
-        public Void visit(@NotNull DecodeNativeType nativeType) throws SQLException
+        public Void visit(@NotNull DecodeNativeType nativeType)
         {
             try(PreparedStatement insertPrimitiveType = connection.prepareStatement(
                     String.format("INSERT INTO %s (type_id) VALUES (?)", TableName.NATIVE_TYPE)))
@@ -335,11 +339,15 @@ public class DecodeSqlite3Exporter
                 insertPrimitiveType.setLong(1, typeKeyByType.get(nativeType));
                 insertPrimitiveType.execute();
             }
+            catch (SQLException e)
+            {
+                throw new ModelExportingException(e);
+            }
             return null;
         }
 
         @Override
-        public Void visit(@NotNull DecodeSubType subType) throws SQLException
+        public Void visit(@NotNull DecodeSubType subType)
         {
             insertType(subType.getBaseType().getObject());
             try(PreparedStatement insertSubType = connection.prepareStatement(
@@ -351,12 +359,16 @@ public class DecodeSqlite3Exporter
                 insertSubType.setLong(2, typeKeyByType.get(subType.getBaseType().getObject()));
                 insertSubType.execute();
             }
+            catch (SQLException e)
+            {
+                throw new ModelExportingException(e);
+            }
             return null;
         }
 
         @Nullable
         @Override
-        public Void visit(@NotNull DecodeEnumType enumType) throws SQLException
+        public Void visit(@NotNull DecodeEnumType enumType)
         {
             insertType(enumType.getBaseType().getObject());
             try(PreparedStatement insertEnumType = connection.prepareStatement(
@@ -381,11 +393,15 @@ public class DecodeSqlite3Exporter
                     }
                 }
             }
+            catch (SQLException e)
+            {
+                throw new ModelExportingException(e);
+            }
             return null;
         }
 
         @Override
-        public Void visit(@NotNull DecodeArrayType arrayType) throws SQLException
+        public Void visit(@NotNull DecodeArrayType arrayType)
         {
             insertType(arrayType.getBaseType().getObject());
             try(PreparedStatement insertArrayType = connection.prepareStatement(
@@ -398,11 +414,15 @@ public class DecodeSqlite3Exporter
                 insertArrayType.setLong(4, arrayType.getSize().getMaxLength());
                 insertArrayType.execute();
             }
+            catch (SQLException e)
+            {
+                throw new ModelExportingException(e);
+            }
             return null;
         }
 
         @Override
-        public Void visit(@NotNull DecodeStructType structType) throws SQLException
+        public Void visit(@NotNull DecodeStructType structType)
         {
             try(PreparedStatement insertStructType = connection.prepareStatement(
                     String.format("INSERT INTO %s (type_id) VALUES (?)", TableName.STRUCT_TYPE)))
@@ -431,11 +451,15 @@ public class DecodeSqlite3Exporter
                     }
                 }
             }
+            catch (SQLException e)
+            {
+                throw new ModelExportingException(e);
+            }
             return null;
         }
 
         @Override
-        public Void visit(@NotNull DecodeAliasType typeAlias) throws SQLException
+        public Void visit(@NotNull DecodeAliasType typeAlias)
         {
             insertType(typeAlias.getType().getObject());
             try(PreparedStatement insertArrayType = connection.prepareStatement(
@@ -445,6 +469,10 @@ public class DecodeSqlite3Exporter
                 insertArrayType.setLong(1, typeKeyByType.get(typeAlias));
                 insertArrayType.setLong(2, typeKeyByType.get(typeAlias.getType().getObject()));
                 insertArrayType.execute();
+            }
+            catch (SQLException e)
+            {
+                throw new ModelExportingException(e);
             }
             return null;
         }

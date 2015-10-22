@@ -30,7 +30,7 @@ public class ImmutableDecodeBerType extends AbstractDecodeType implements Decode
     }
 
     @Override
-    public <T, E extends Throwable> T accept(@NotNull DecodeTypeVisitor<T, E> visitor) throws E
+    public <T> T accept(@NotNull DecodeTypeVisitor<T> visitor)
     {
         return visitor.visit(this);
     }
