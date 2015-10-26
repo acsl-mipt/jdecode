@@ -77,7 +77,8 @@ public class JavaDecodeSourcesGenerator implements Generator<JavaDecodeSourcesGe
                     {
                         DecodeType baseType = subType.getBaseType().getObject();
                         JavaClass javaClass = JavaClass.newBuilder(subType.getNamespace().getFqn().asString(),
-                                classNameFromTypeName(subType.getName().asString()))
+                                // FIXME
+                                classNameFromTypeName(subType.getOptionalName().get().asString()))
                                 .extendsClass(getJavaTypeForDecodeType(baseType, false))
                                 .build();
                         return Optional.of(javaClass);
@@ -88,7 +89,8 @@ public class JavaDecodeSourcesGenerator implements Generator<JavaDecodeSourcesGe
                     public Optional<AbstractJavaBaseClass> visit(@NotNull DecodeEnumType enumType) throws RuntimeException
                     {
                         JavaEnum javaEnum = JavaEnum.newBuilder(enumType.getNamespace().getFqn().asString(),
-                                classNameFromEnumName(enumType.getName().asString())).build();
+                                // FIXME
+                                classNameFromEnumName(enumType.getOptionalName().get().asString())).build();
                         return Optional.of(javaEnum);
                     }
 
@@ -113,7 +115,8 @@ public class JavaDecodeSourcesGenerator implements Generator<JavaDecodeSourcesGe
                     public Optional<AbstractJavaBaseClass> visit(@NotNull DecodeStructType structType) throws RuntimeException
                     {
                         JavaClass javaClass = JavaClass.newBuilder(structType.getNamespace().getFqn().asString(),
-                                classNameFromTypeName(structType.getName().asString()))
+                                // FIXME
+                                classNameFromTypeName(structType.getOptionalName().get().asString()))
                                 .constuctor(
                                         structType.getFields().stream().map(f ->
                                                 new JavaMethodArgument(
@@ -230,14 +233,16 @@ public class JavaDecodeSourcesGenerator implements Generator<JavaDecodeSourcesGe
             public JavaType visit(@NotNull DecodeSubType subType)
             {
                 return new JavaTypeApplication(subType.getNamespace().getFqn().asString() + "." + classNameFromTypeName(
-                        subType.getName().asString()));
+                        // FIXME
+                        subType.getOptionalName().get().asString()));
             }
 
             @Override
             public JavaType visit(@NotNull DecodeEnumType enumType)
             {
                 return new JavaTypeApplication(enumType.getNamespace().getFqn().asString() + "." +
-                        classNameFromTypeName(enumType.getName().asString()));
+                        // FIXME
+                        classNameFromTypeName(enumType.getOptionalName().get().asString()));
             }
 
             @Override
@@ -252,7 +257,8 @@ public class JavaDecodeSourcesGenerator implements Generator<JavaDecodeSourcesGe
             public JavaType visit(@NotNull DecodeStructType structType)
             {
                 return new JavaTypeApplication(structType.getNamespace().getFqn().asString() + "." +
-                        classNameFromTypeName(structType.getName().asString()));
+                        // FIXME
+                        classNameFromTypeName(structType.getOptionalName().get().asString()));
             }
 
             @Override

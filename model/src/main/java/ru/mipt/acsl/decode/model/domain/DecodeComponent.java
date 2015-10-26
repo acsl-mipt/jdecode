@@ -15,7 +15,7 @@ import java.util.stream.Collectors;
 /**
  * @author Artem Shein
  */
-public interface DecodeComponent extends DecodeOptionalInfoAware, DecodeReferenceable, DecodeNamespaceAware
+public interface DecodeComponent extends DecodeOptionalInfoAware, DecodeNameAware, DecodeReferenceable, DecodeNamespaceAware
 {
     @NotNull
     Optional<DecodeMaybeProxy<DecodeType>> getBaseType();

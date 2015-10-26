@@ -140,7 +140,7 @@ public class DecodeSqlite3Exporter
                 {
                     insertCommand.setLong(1, componentKey);
                     insertCommand.setString(2, command.getName().asString());
-                    insertCommand.setLong(3, command.getId());
+                    setLongOrNull(insertCommand, 3, command.getId().map(i -> (long)i));
                     setStringOrNull(insertCommand, 4, command.getInfo());
                     insertCommand.execute();
                     commandKey = getGeneratedKey(insertCommand);
@@ -170,7 +170,7 @@ public class DecodeSqlite3Exporter
                         String.format("INSERT INTO %s (message_id, component_id, name, info) VALUES (?, ?, ?, ?)",
                                 TableName.MESSAGE)))
                 {
-                    insertMessage.setLong(1, message.getId());
+                    setIntOrNull(insertMessage, 1, message.getId());
                     insertMessage.setLong(2, componentKey);
                     insertMessage.setString(3, message.getName().asString());
                     setStringOrNull(insertMessage, 4, message.getInfo());
@@ -196,6 +196,32 @@ public class DecodeSqlite3Exporter
         catch (SQLException e)
         {
             throw new ModelExportingException(e);
+        }
+    }
+
+    private void setLongOrNull(@NotNull PreparedStatement statement, int index, @NotNull Optional<Long> longOptional) throws
+            SQLException
+    {
+        if (longOptional.isPresent())
+        {
+            statement.setLong(index, longOptional.get());
+        }
+        else
+        {
+            statement.setNull(index, Types.BIGINT);
+        }
+    }
+
+    private void setIntOrNull(@NotNull PreparedStatement statement, int index, @NotNull Optional<Integer> integerOptional) throws
+            SQLException
+    {
+        if (integerOptional.isPresent())
+        {
+            statement.setInt(index, integerOptional.get());
+        }
+        else
+        {
+            statement.setNull(index, Types.BIGINT);
         }
     }
 
@@ -478,7 +504,7 @@ public class DecodeSqlite3Exporter
         }
     }
 
-    private static class DecodeInsertMessageVisitor implements DecodeMessageVisitor<Void, SQLException>
+    private static class DecodeInsertMessageVisitor implements DecodeMessageVisitor<Void>
     {
         private final long messageKey;
         @NotNull
@@ -492,7 +518,7 @@ public class DecodeSqlite3Exporter
         }
 
         @Override
-        public Void visit(@NotNull DecodeEventMessage eventMessage) throws SQLException
+        public Void visit(@NotNull DecodeEventMessage eventMessage)
         {
             try(PreparedStatement insertEventMessage = connection.prepareStatement(
                     String.format("INSERT INTO %s (message_id) VALUES (?)", TableName.EVENT_MESSAGE)))
@@ -500,11 +526,15 @@ public class DecodeSqlite3Exporter
                 insertEventMessage.setLong(1, messageKey);
                 insertEventMessage.execute();
             }
+            catch (SQLException e)
+            {
+                throw new ModelExportingException(e);
+            }
             return null;
         }
 
         @Override
-        public Void visit(@NotNull DecodeStatusMessage statusMessage) throws SQLException
+        public Void visit(@NotNull DecodeStatusMessage statusMessage)
         {
             try(PreparedStatement insertEventMessage = connection.prepareStatement(
                     String.format("INSERT INTO %s (message_id) VALUES (?)", TableName.STATUS_MESSAGE)))
@@ -512,17 +542,9 @@ public class DecodeSqlite3Exporter
                 insertEventMessage.setLong(1, messageKey);
                 insertEventMessage.execute();
             }
-            return null;
-        }
-
-        @Override
-        public Void visit(@NotNull DecodeDynamicStatusMessage dynamicStatusMessage) throws SQLException
-        {
-            try(PreparedStatement insertEventMessage = connection.prepareStatement(
-                    String.format("INSERT INTO %s (message_id) VALUES (?)", TableName.DYNAMIC_STATUS_MESSAGE)))
+            catch (SQLException e)
             {
-                insertEventMessage.setLong(1, messageKey);
-                insertEventMessage.execute();
+                throw new ModelExportingException(e);
             }
             return null;
         }

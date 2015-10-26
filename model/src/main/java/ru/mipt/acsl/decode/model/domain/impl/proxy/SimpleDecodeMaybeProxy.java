@@ -44,6 +44,21 @@ public class SimpleDecodeMaybeProxy<T extends DecodeReferenceable> extends Eithe
     }
 
     @NotNull
+    public static <K extends DecodeReferenceable> DecodeMaybeProxy<K> proxyForTypeString(@NotNull String string)
+    {
+        return proxy(DecodeUtils.getUriForSourceTypeString(string));
+    }
+
+    @NotNull
+    public static <K extends DecodeReferenceable> DecodeMaybeProxy<K> proxyForSystemTypeString(@NotNull String typeString)
+    {
+        typeString = DecodeUtils.normalizeSourceTypeString(typeString);
+        return proxyForTypeString(typeString.startsWith(DecodeConstants.SYSTEM_NAMESPACE_NAME.asString())
+                ? typeString
+                : DecodeConstants.SYSTEM_NAMESPACE_NAME.asString() + "." + typeString);
+    }
+
+    @NotNull
     public static <K extends DecodeReferenceable> DecodeMaybeProxy<K> proxyForSystem(@NotNull DecodeName decodeName)
     {
         return proxy(ImmutableDecodeFqn.newInstance(Lists.newArrayList(DecodeConstants.SYSTEM_NAMESPACE_NAME)), decodeName);

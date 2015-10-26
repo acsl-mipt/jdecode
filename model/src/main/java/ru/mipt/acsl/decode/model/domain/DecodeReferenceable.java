@@ -6,7 +6,7 @@ import org.jetbrains.annotations.Nullable;
 /**
  * @author Artem Shein
  */
-public interface DecodeReferenceable extends DecodeNameAware
+public interface DecodeReferenceable extends DecodeOptionalNameAware
 {
     @Nullable
     <T> T accept(@NotNull DecodeReferenceableVisitor<T> visitor);

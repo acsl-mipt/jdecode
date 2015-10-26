@@ -1,5 +1,6 @@
 package ru.mipt.acsl.decode.model.domain.impl;
 
+import com.google.common.base.Preconditions;
 import org.jetbrains.annotations.Nullable;
 import ru.mipt.acsl.decode.model.domain.*;
 import ru.mipt.acsl.decode.model.domain.type.DecodeType;
@@ -36,7 +37,7 @@ public class SimpleDecodeNamespace implements DecodeNamespace
 
     private SimpleDecodeNamespace(@NotNull DecodeName name, @NotNull Optional<DecodeNamespace> parent)
     {
-        this.name = name;
+        this.name = Preconditions.checkNotNull(name);
         this.parent = parent;
     }
 

@@ -1,12 +1,13 @@
 package ru.mipt.acsl.decode.model.domain.type;
 
+import ru.mipt.acsl.decode.model.domain.DecodeNameAware;
 import ru.mipt.acsl.decode.model.domain.proxy.DecodeMaybeProxy;
 import org.jetbrains.annotations.NotNull;
 
 /**
  * @author Artem Shein
  */
-public interface DecodeAliasType extends DecodeType
+public interface DecodeAliasType extends DecodeType, DecodeNameAware
 {
     @Override
     default <T> T accept(@NotNull DecodeTypeVisitor<T> visitor)

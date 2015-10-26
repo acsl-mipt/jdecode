@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * @author Artem Shein
@@ -147,8 +148,8 @@ public final class DecodeUtils
         List<DecodeType> types = targetNamespace.getTypes();
         namespace.getTypes().stream().forEach(t ->
         {
-            DecodeName name = t.getName();
-            Preconditions.checkState(types.stream().noneMatch(t2 -> t2.getName().equals(name)),
+            Optional<DecodeName> name = t.getOptionalName();
+            Preconditions.checkState(types.stream().noneMatch(t2 -> t2.getOptionalName().equals(name)),
                     "type name collision '%s'", name);
             t.setNamespace(targetNamespace);
         });
@@ -194,7 +195,7 @@ public final class DecodeUtils
                 currentNamespace.getParent().get().getSubNamespaces().add(currentNamespace);
             }
         }
-        return currentNamespace;
+        return Preconditions.checkNotNull(currentNamespace);
     }
 
     @NotNull
@@ -203,5 +204,60 @@ public final class DecodeUtils
         List<String> uriParts = getUriParts(uri);
         return ImmutableDecodeFqn.newInstance(uriParts.stream().limit(uriParts.size() - 1)
                 .map(ImmutableDecodeName::newInstanceFromMangledName).collect(Collectors.toList()));
+    }
+
+    @NotNull
+    public static URI getUriForSourceTypeString(@NotNull String typeString)
+    {
+        typeString = normalizeSourceTypeString(typeString);
+        typeString = processQuestionMarks(typeString);
+        int genericStartIndex = typeString.indexOf('<');
+        if (genericStartIndex != -1)
+        {
+            DecodeFqn namespaceFqn = ImmutableDecodeFqn.newInstanceFromSource(typeString.substring(0, genericStartIndex));
+            return getUriForTypeNamespaceNameGenericArguments(namespaceFqn.copyDropLast(), namespaceFqn.getLast(),
+                    typeString.substring(genericStartIndex));
+        }
+        DecodeFqn namespaceFqn = ImmutableDecodeFqn.newInstanceFromSource(typeString);
+        return getUriForNamespaceAndName(namespaceFqn.copyDropLast(), namespaceFqn.getLast());
+    }
+
+    @NotNull
+    private static URI getUriForTypeNamespaceNameGenericArguments(@NotNull DecodeFqn namespaceFqn,
+                                                                  @NotNull DecodeName typeName,
+                                                                  @NotNull String typeGenericArguments)
+    {
+        List<DecodeName> namespaceNameParts = new ArrayList<>(namespaceFqn.getParts());
+        namespaceNameParts.add(typeName);
+        try
+        {
+            return URI.create("/" + URLEncoder
+                    .encode(String.join("/", namespaceNameParts.stream().map(DecodeName::asString).collect(
+                            Collectors.toList()) + typeGenericArguments), Charsets.UTF_8.name()));
+        }
+        catch (UnsupportedEncodingException e)
+        {
+            throw new AssertionError(e);
+        }
+    }
+
+    @NotNull
+    private static String processQuestionMarks(@NotNull String typeString)
+    {
+        if (typeString.endsWith("?"))
+        {
+            String genericTypes = typeString.substring(0, typeString.length() - 1);
+            typeString = DecodeConstants.SYSTEM_NAMESPACE_NAME.asString() + ".optional<"
+                    + Stream.of(genericTypes.split(Pattern.quote(",")))
+                        .map(DecodeUtils::processQuestionMarks).collect(Collectors.joining(","))
+                    + ">";
+        }
+        return typeString;
+    }
+
+    @NotNull
+    public static String normalizeSourceTypeString(@NotNull String typeString)
+    {
+        return typeString.replaceAll(Pattern.quote(" "), "");
     }
 }

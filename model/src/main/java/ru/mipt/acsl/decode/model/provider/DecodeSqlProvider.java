@@ -195,8 +195,10 @@ public class DecodeSqlProvider
                             }
                             commands.add(ImmutableDecodeCommand.newInstance(
                                     ImmutableDecodeName.newInstanceFromMangledName(commandsSelectRs.getString("name")),
-                                    commandsSelectRs.getInt("command_id"),
-                                    Optional.ofNullable(commandsSelectRs.getString("info")), arguments));
+                                    getOptionalInt(commandsSelectRs, "command_id"),
+                                    Optional.ofNullable(commandsSelectRs.getString("info")), arguments,
+                                   SimpleDecodeMaybeProxy.object(Preconditions.checkNotNull(
+                                    typeById.get(commandsSelectRs.getLong("return_type_id")), "type not found"))));
                         }
 
                     }
@@ -211,11 +213,11 @@ public class DecodeSqlProvider
                         Optional.ofNullable(componentRs.getString("info")), subComponents, commands, messages);
                 try (PreparedStatement messagesSelect = connection.prepareStatement(String.format(
                         "SELECT m.id AS id, m.name AS name, m.message_id AS message_id, m.info AS info,"
-                                + " s.message_id AS s_message_id, e.message_id AS e_message_id,"
-                                + " d.message_id AS d_message_id FROM %s AS m LEFT JOIN %s AS s ON s.message_id = m.id"
-                                + " LEFT JOIN %s AS e ON e.message_id = m.id LEFT JOIN %s AS d ON d.message_id = m.id"
+                                + " s.message_id AS s_message_id, e.message_id AS e_message_id, e.event_type_id AS e_event_type_id,"
+                                + " FROM %s AS m LEFT JOIN %s AS s ON s.message_id = m.id"
+                                + " LEFT JOIN %s AS e ON e.message_id = m.id"
                                 + " WHERE component_id = ?", TableName.MESSAGE, TableName.STATUS_MESSAGE,
-                        TableName.EVENT_MESSAGE, TableName.DYNAMIC_STATUS_MESSAGE)))
+                        TableName.EVENT_MESSAGE)))
                 {
                     messagesSelect.setLong(1, componentId);
                     try (ResultSet messagesSelectRs = messagesSelect.executeQuery();
@@ -238,7 +240,7 @@ public class DecodeSqlProvider
 
                             DecodeName messageName = ImmutableDecodeName
                                     .newInstanceFromMangledName(messagesSelectRs.getString("name"));
-                            int messageId = messagesSelectRs.getInt("message_id");
+                            Optional<Integer> messageId = getOptionalInt(messagesSelectRs, "message_id");
                             Optional<String> messageInfo = Optional.ofNullable(messagesSelectRs.getString("info"));
 
                             DecodeMessage message = null;
@@ -257,16 +259,7 @@ public class DecodeSqlProvider
                                 Preconditions.checkState(message == null, "invalid message");
                                 message = ImmutableDecodeEventMessage
                                         .newInstance(component, messageName, messageId, messageInfo,
-                                                parameters);
-                            }
-
-                            messagesSelectRs.getLong("d_message_id");
-                            if (!messagesSelectRs.wasNull())
-                            {
-                                Preconditions.checkState(message == null, "invalid message");
-                                message = ImmutableDecodeDynamicStatusMessage
-                                        .newInstance(component, messageName, messageId,
-                                                messageInfo, parameters);
+                                                parameters, SimpleDecodeMaybeProxy.object(Preconditions.checkNotNull(typeById.get(messagesSelectRs.getLong("e_event_type_id")))));
                             }
 
                             messages.add(Preconditions.checkNotNull(message, "invalid message"));
@@ -279,6 +272,20 @@ public class DecodeSqlProvider
                 return component;
             }
         }
+    }
+
+    @NotNull
+    private Optional<Long> getOptionalLong(@NotNull ResultSet rs, @NotNull String fieldName) throws SQLException
+    {
+        long value = rs.getLong(fieldName);
+        return rs.wasNull() ? Optional.<Long>empty() : Optional.of(value);
+    }
+
+    @NotNull
+    private Optional<Integer> getOptionalInt(@NotNull ResultSet rs, @NotNull String fieldName) throws SQLException
+    {
+        int value = rs.getInt(fieldName);
+        return rs.wasNull() ?  Optional.<Integer>empty() : Optional.of(value);
     }
 
     private DecodeType ensureTypeLoaded(long typeId) throws SQLException

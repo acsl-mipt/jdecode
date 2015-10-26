@@ -14,12 +14,12 @@ public final class ImmutableDecodeName implements DecodeName
 
     public static DecodeName newInstanceFromSourceName(@NotNull String name)
     {
-        return new ImmutableDecodeName(DecodeName.mangleName(name));
+        return new ImmutableDecodeName(DecodeName.mangleName(Preconditions.checkNotNull(name)));
     }
 
     public static DecodeName newInstanceFromMangledName(@NotNull String value)
     {
-        return new ImmutableDecodeName(value);
+        return new ImmutableDecodeName(Preconditions.checkNotNull(value));
     }
 
     @NotNull

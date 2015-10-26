@@ -6,13 +6,14 @@ import ru.mipt.acsl.decode.model.domain.DecodeOptionalInfoAware;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * @author Artem Shein
  */
 public interface DecodeMessage extends DecodeOptionalInfoAware, DecodeNameAware
 {
-    <T, E extends Throwable> T accept(DecodeMessageVisitor<T, E> visitor) throws E;
+    <T> T accept(DecodeMessageVisitor<T> visitor);
 
     @NotNull
     List<DecodeMessageParameter> getParameters();
@@ -20,5 +21,6 @@ public interface DecodeMessage extends DecodeOptionalInfoAware, DecodeNameAware
     @NotNull
     DecodeComponent getComponent();
 
-    int getId();
+    @NotNull
+    Optional<Integer> getId();
 }

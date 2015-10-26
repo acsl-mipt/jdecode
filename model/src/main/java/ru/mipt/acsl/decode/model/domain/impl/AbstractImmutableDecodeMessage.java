@@ -4,6 +4,8 @@ import ru.mipt.acsl.decode.model.domain.DecodeComponent;
 import ru.mipt.acsl.decode.model.domain.DecodeName;
 import ru.mipt.acsl.decode.model.domain.message.DecodeMessageParameter;
 import org.jetbrains.annotations.NotNull;
+import ru.mipt.acsl.decode.model.domain.proxy.DecodeMaybeProxy;
+import ru.mipt.acsl.decode.model.domain.type.DecodeType;
 
 import java.util.List;
 import java.util.Optional;
@@ -15,7 +17,8 @@ public abstract class AbstractImmutableDecodeMessage extends AbstractDecodeMessa
 {
     @NotNull
     protected final DecodeName name;
-    protected final int id;
+    @NotNull
+    protected final Optional<Integer> id;
     @NotNull
     protected final List<DecodeMessageParameter> parameters;
     @NotNull
@@ -29,7 +32,8 @@ public abstract class AbstractImmutableDecodeMessage extends AbstractDecodeMessa
     }
 
     @Override
-    public int getId()
+    @NotNull
+    public Optional<Integer> getId()
     {
         return id;
     }
@@ -56,7 +60,8 @@ public abstract class AbstractImmutableDecodeMessage extends AbstractDecodeMessa
     }
 
 
-    protected AbstractImmutableDecodeMessage(@NotNull DecodeComponent component, @NotNull DecodeName name, int id,
+    protected AbstractImmutableDecodeMessage(@NotNull DecodeComponent component, @NotNull DecodeName name,
+                                             @NotNull Optional<Integer> id,
                                              @NotNull Optional<String> info,
                                              @NotNull List<DecodeMessageParameter> parameters)
     {

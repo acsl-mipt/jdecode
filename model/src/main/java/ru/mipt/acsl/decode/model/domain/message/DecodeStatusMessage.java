@@ -5,7 +5,7 @@ package ru.mipt.acsl.decode.model.domain.message;
  */
 public interface DecodeStatusMessage extends DecodeMessage
 {
-    default <T, E extends Throwable> T accept(DecodeMessageVisitor<T, E> visitor) throws E
+    default <T> T accept(DecodeMessageVisitor<T> visitor)
     {
         return visitor.visit(this);
     }

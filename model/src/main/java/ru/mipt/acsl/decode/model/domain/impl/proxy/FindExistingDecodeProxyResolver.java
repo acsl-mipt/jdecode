@@ -82,7 +82,7 @@ public class FindExistingDecodeProxyResolver implements DecodeProxyResolver
                             concat(namespace.getSubNamespaces().stream(), namespace.getUnits().stream()),
                             namespace.getTypes().stream()),
                     namespace.getComponents().stream())
-                    .filter(n -> n.getName().equals(part)).findAny();
+                    .filter(n -> n.getOptionalName().map(name -> name.equals(part)).orElse(false)).findAny();
             if (resolvedObject.isPresent())
             {
                 return SimpleDecodeResolvingResult.newInstance(resolvedObject);
@@ -110,7 +110,7 @@ public class FindExistingDecodeProxyResolver implements DecodeProxyResolver
                 }
                 final long finalMinLength = minLength;
                 final long finalMaxLength = maxLength;
-                DecodeArrayType newArrayType = namespace.getTypes().stream().filter(t -> t.getName().equals(part))
+                DecodeArrayType newArrayType = namespace.getTypes().stream().filter(t -> t.getOptionalName().map(on -> on.equals(part)).orElse(false))
                         .filter(DecodeArrayType.class::isInstance).map(DecodeArrayType.class::cast).findAny()
                         .orElseGet(() -> SimpleDecodeArrayType.newInstance(
                                 Optional.of(part),

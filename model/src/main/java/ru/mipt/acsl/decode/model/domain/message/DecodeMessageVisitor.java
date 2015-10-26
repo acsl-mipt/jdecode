@@ -5,9 +5,8 @@ import org.jetbrains.annotations.NotNull;
 /**
  * @author Artem Shein
  */
-public interface DecodeMessageVisitor<T, E extends Throwable>
+public interface DecodeMessageVisitor<T>
 {
-    T visit(@NotNull DecodeEventMessage eventMessage) throws E;
-    T visit(@NotNull DecodeStatusMessage statusMessage) throws E;
-    T visit(@NotNull DecodeDynamicStatusMessage dynamicStatusMessage) throws E;
+    T visit(@NotNull DecodeEventMessage eventMessage);
+    T visit(@NotNull DecodeStatusMessage statusMessage);
 }

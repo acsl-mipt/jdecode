@@ -53,7 +53,10 @@ public class ProvidePrimitivesAndNativeTypesDecodeProxyResolver implements Decod
                                             Optional.<String>empty()));
                     Preconditions.checkState(nativeOrPrimitiveType instanceof DecodePrimitiveType);
                     DecodePrimitiveType primitiveType = (DecodePrimitiveType) nativeOrPrimitiveType;
-                    if (!namespace.getTypes().stream().filter(t -> t.getName().equals(primitiveType.getName()))
+                    Optional<DecodeName> primitiveTypeOptionalName = primitiveType.getOptionalName();
+                    if (primitiveTypeOptionalName.isPresent()
+                            && !namespace.getTypes().stream()
+                            .filter(t -> t.getOptionalName().equals(primitiveTypeOptionalName))
                             .findAny().isPresent())
                     {
                         List<DecodeType> types = new ArrayList<>();
@@ -79,7 +82,10 @@ public class ProvidePrimitivesAndNativeTypesDecodeProxyResolver implements Decod
                         });
                 Preconditions.checkState(nativeOrPrimitiveType instanceof DecodeNativeType);
                 DecodeNativeType nativeType = (DecodeNativeType) nativeOrPrimitiveType;
-                if (!namespace.getTypes().stream().filter(t -> t.getName().equals(nativeType.getName()))
+                Optional<DecodeName> nativeTypeOptionalName = nativeType.getOptionalName();
+                if (nativeTypeOptionalName.isPresent()
+                        && !namespace.getTypes().stream().filter(t -> t.getOptionalName().equals(
+                        nativeTypeOptionalName))
                         .findAny().isPresent())
                 {
                     List<DecodeType> types = new ArrayList<>();

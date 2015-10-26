@@ -7,7 +7,7 @@ import org.jetbrains.annotations.NotNull;
  */
 public interface DecodeEventMessage extends DecodeMessage
 {
-    default <T, E extends Throwable> T accept(@NotNull DecodeMessageVisitor<T, E> visitor) throws E
+    default <T> T accept(@NotNull DecodeMessageVisitor<T> visitor)
     {
         return visitor.visit(this);
     }

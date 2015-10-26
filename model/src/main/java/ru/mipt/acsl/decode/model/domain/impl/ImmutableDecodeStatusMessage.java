@@ -5,6 +5,8 @@ import ru.mipt.acsl.decode.model.domain.DecodeName;
 import ru.mipt.acsl.decode.model.domain.message.DecodeMessageParameter;
 import ru.mipt.acsl.decode.model.domain.message.DecodeStatusMessage;
 import org.jetbrains.annotations.NotNull;
+import ru.mipt.acsl.decode.model.domain.proxy.DecodeMaybeProxy;
+import ru.mipt.acsl.decode.model.domain.type.DecodeType;
 
 import java.util.List;
 import java.util.Optional;
@@ -15,14 +17,15 @@ import java.util.Optional;
 public class ImmutableDecodeStatusMessage extends AbstractImmutableDecodeMessage implements DecodeStatusMessage
 {
     @NotNull
-    public static DecodeStatusMessage newInstance(@NotNull DecodeComponent component, @NotNull DecodeName name, int id,
-                                                 @NotNull Optional<String> info,
-                                                 @NotNull List<DecodeMessageParameter> parameters)
+    public static DecodeStatusMessage newInstance(@NotNull DecodeComponent component, @NotNull DecodeName name,
+                                                  @NotNull Optional<Integer> id, @NotNull Optional<String> info,
+                                                  @NotNull List<DecodeMessageParameter> parameters)
     {
         return new ImmutableDecodeStatusMessage(component, name, id, info, parameters);
     }
 
-    private ImmutableDecodeStatusMessage(@NotNull DecodeComponent component, @NotNull DecodeName name, int id,
+    private ImmutableDecodeStatusMessage(@NotNull DecodeComponent component, @NotNull DecodeName name,
+                                         @NotNull Optional<Integer> id,
                                          @NotNull Optional<String> info,
                                          @NotNull List<DecodeMessageParameter> parameters)
     {
