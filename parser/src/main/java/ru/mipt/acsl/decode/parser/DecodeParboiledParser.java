@@ -1,5 +1,6 @@
 package ru.mipt.acsl.decode.parser;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -77,23 +78,27 @@ public class DecodeParboiledParser extends BaseParser<Object>
 
     Rule Import(@NotNull Var<Map<String, DecodeMaybeProxy<DecodeReferenceable>>> importsVar)
     {
-        return Sequence("import", EW(), ElementIdAsFqn(),
-                FirstOf(Sequence('.', OptEW(), '{', OptEW(), ImportPartAsImportPart(), addImport(importsVar.get(), (ImportPart) pop()),
-                                ZeroOrMore(OptEW(), ',', OptEW(), ImportPartAsImportPart(), addImport(importsVar.get(), (ImportPart) pop())), Optional(OptEW(), ','), OptEW(), '}'),
+        Var<DecodeFqn> namespaceFqnVar = new Var<>();
+        return Sequence("import", EW(), ElementIdAsFqn(), namespaceFqnVar.set((DecodeFqn) pop()),
+                FirstOf(Sequence('.', OptEW(), '{', OptEW(), ImportPartAsImportPart(), addImport(importsVar.get(), namespaceFqnVar, (ImportPart) pop()),
+                                ZeroOrMore(OptEW(), ',', OptEW(), ImportPartAsImportPart(), addImport(importsVar.get(), namespaceFqnVar, (ImportPart) pop())), Optional(OptEW(), ','), OptEW(), '}'),
                         addImport(importsVar.get(), (DecodeFqn) pop())));
     }
 
-    private boolean addImport(@NotNull Map<String, DecodeMaybeProxy<DecodeReferenceable>> importMap,
-                           @NotNull ImportPart importPart)
+    static boolean addImport(@NotNull Map<String, DecodeMaybeProxy<DecodeReferenceable>> importMap,
+                             @NotNull Var<DecodeFqn> namespaceFqnVar,
+                             @NotNull ImportPart importPart)
     {
-        // TODO
+        Preconditions.checkState(!importMap.containsKey(importPart.getAlias()));
+        importMap.put(importPart.getAlias(), SimpleDecodeMaybeProxy.proxy(namespaceFqnVar.get(), importPart.getOriginalName()));
         return true;
     }
 
-    private boolean addImport(@NotNull Map<String, DecodeMaybeProxy<DecodeReferenceable>> importMap,
-                              @NotNull DecodeFqn fqn)
+    static boolean addImport(@NotNull Map<String, DecodeMaybeProxy<DecodeReferenceable>> importMap,
+                             @NotNull DecodeFqn fqn)
     {
-        // TODO
+        Preconditions.checkState(!importMap.containsKey(fqn.getLast().asString()));
+        importMap.put(fqn.getLast().asString(), SimpleDecodeMaybeProxy.proxy(fqn.copyDropLast(), fqn.getLast()));
         return true;
     }
 
@@ -523,20 +528,62 @@ public class DecodeParboiledParser extends BaseParser<Object>
 
     private interface ImportPart
     {
-
+        @NotNull
+        String getAlias();
+        @NotNull
+        DecodeName getOriginalName();
     }
 
-    private class ImportPartName implements ImportPart
+    static class ImportPartName implements ImportPart
     {
+        @NotNull
+        private final DecodeName name;
+
         public ImportPartName(@NotNull DecodeName name)
         {
+            this.name = name;
+        }
+
+        @NotNull
+        @Override
+        public String getAlias()
+        {
+            return name.asString();
+        }
+
+        @NotNull
+        @Override
+        public DecodeName getOriginalName()
+        {
+            return name;
         }
     }
 
-    private class ImportPartNameAlias implements ImportPart
+    static class ImportPartNameAlias implements ImportPart
     {
+        @NotNull
+        private final DecodeName name;
+        @NotNull
+        private final DecodeName alias;
+
         public ImportPartNameAlias(@NotNull DecodeName name, @NotNull DecodeName alias)
         {
+            this.name = name;
+            this.alias = alias;
+        }
+
+        @NotNull
+        @Override
+        public String getAlias()
+        {
+            return alias.asString();
+        }
+
+        @NotNull
+        @Override
+        public DecodeName getOriginalName()
+        {
+            return name;
         }
     }
 }
