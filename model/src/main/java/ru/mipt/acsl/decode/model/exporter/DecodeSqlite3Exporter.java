@@ -119,15 +119,19 @@ public class DecodeSqlite3Exporter
 
             long componentKey = getGeneratedKey(insertComponent);
             componentKeyByComponentMap.put(component, componentKey);
-            for (DecodeMaybeProxy<DecodeComponent> subComponent : component.getSubComponents())
+            int subComponentIndex = 0;
+            for (DecodeComponentRef subComponentRef : component.getSubComponents())
             {
+                DecodeMaybeProxy<DecodeComponent> subComponent = subComponentRef.getComponent();
                 insertComponent(subComponent.getObject());
                 try (PreparedStatement linkComponents = connection.prepareStatement(
-                        String.format("INSERT INTO %s (component_id, sub_component_id) VALUES (?, ?)",
+                        String.format("INSERT INTO %s (component_id, sub_component_index, sub_component_alias, sub_component_id) VALUES (?, ?, ?, ?)",
                                 TableName.SUB_COMPONENT)))
                 {
                     linkComponents.setLong(1, componentKey);
-                    linkComponents.setLong(2, componentKeyByComponentMap.get(subComponent.getObject()));
+                    linkComponents.setLong(2, subComponentIndex++);
+                    setStringOrNull(linkComponents, 3, subComponentRef.getAlias());
+                    linkComponents.setLong(4, componentKeyByComponentMap.get(subComponent.getObject()));
                     linkComponents.execute();
                 }
             }

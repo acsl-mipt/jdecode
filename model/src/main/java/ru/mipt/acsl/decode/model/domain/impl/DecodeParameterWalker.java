@@ -10,6 +10,7 @@ import org.parboiled.parserunners.TracingParseRunner;
 import org.parboiled.support.ParsingResult;
 import org.parboiled.support.Var;
 import ru.mipt.acsl.common.Either;
+import ru.mipt.acsl.decode.model.domain.DecodeComponent;
 import ru.mipt.acsl.decode.model.domain.message.DecodeMessageParameter;
 
 import java.util.ArrayList;

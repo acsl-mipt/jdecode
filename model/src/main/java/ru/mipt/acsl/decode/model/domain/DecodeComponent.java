@@ -21,7 +21,7 @@ public interface DecodeComponent extends DecodeOptionalInfoAware, DecodeNameAwar
     Optional<DecodeMaybeProxy<DecodeType>> getBaseType();
 
     @NotNull
-    Set<DecodeMaybeProxy<DecodeComponent>> getSubComponents();
+    List<DecodeComponentRef> getSubComponents();
 
     @NotNull
     List<DecodeCommand> getCommands();
@@ -36,29 +36,16 @@ public interface DecodeComponent extends DecodeOptionalInfoAware, DecodeNameAwar
     }
 
     @NotNull
-    default SortedSet<DecodeComponent> getAllSubComponentsOrdered()
-    {
-        SortedSet<DecodeComponent> components = new TreeSet<>();
-        components.addAll(getSubComponents().stream().map(DecodeMaybeProxy::getObject).collect(Collectors.toSet()));
-        components.addAll(
-                components.stream().flatMap(c -> c.getAllSubComponentsOrdered().stream()).collect(Collectors.toSet()));
-        return components;
-    }
-
-    @NotNull
     default DecodeType getTypeForParameter(@NotNull DecodeMessageParameter parameter)
     {
-        Optional<DecodeMaybeProxy<DecodeType>> baseType = getBaseType();
-        Preconditions.checkState(baseType.isPresent());
-        DecodeType result = baseType.get().getObject();
         DecodeParameterWalker walker = new DecodeParameterWalker(parameter);
+        DecodeComponentWalker componentWalker = new DecodeComponentWalker(this);
         while (walker.hasNext())
         {
             Either<String, Integer> token = walker.next();
-            result = Preconditions.checkNotNull(result)
-                    .accept(new TokenWalker(token));
+            componentWalker.walk(token);
         }
-        return Preconditions.checkNotNull(result);
+        return Preconditions.checkNotNull(componentWalker.getType()).get();
     }
 
     class TokenWalker implements DecodeTypeVisitor<DecodeType>
@@ -115,6 +102,54 @@ public interface DecodeComponent extends DecodeOptionalInfoAware, DecodeNameAwar
         public DecodeType visit(@NotNull DecodeAliasType typeAlias) throws RuntimeException
         {
             return typeAlias.getType().getObject().accept(this);
+        }
+    }
+
+    class DecodeComponentWalker
+    {
+        @NotNull
+        private DecodeComponent component;
+        @NotNull
+        private Optional<DecodeType> type = Optional.empty();
+
+        public DecodeComponentWalker(@NotNull DecodeComponent component)
+        {
+            this.component = component;
+        }
+
+        @NotNull
+        public Optional<DecodeType> getType()
+        {
+            return type;
+        }
+
+        public void walk(@NotNull Either<String, Integer> token)
+        {
+            if (type.isPresent())
+            {
+                // must not return null
+                type = Optional.of(type.get().accept(new TokenWalker(token)));
+            }
+            else
+            {
+                Preconditions.checkArgument(token.isLeft());
+                String stringToken = token.getLeft();
+                Optional<DecodeComponentRef> subComponent = component.getSubComponents().stream().filter(cr -> {
+                    Optional<String> alias = cr.getAlias();
+                    return (alias.isPresent() && alias.get().equals(stringToken))
+                            || cr.getComponent().getObject().getName().asString().equals(stringToken);
+                }).findAny();
+                if (subComponent.isPresent())
+                {
+                    component = subComponent.get().getComponent().getObject();
+                }
+                else
+                {
+                    Preconditions.checkState(component.getBaseType().isPresent());
+                    type = Optional.of(component.getBaseType().get().getObject());
+                    walk(token);
+                }
+            }
         }
     }
 }

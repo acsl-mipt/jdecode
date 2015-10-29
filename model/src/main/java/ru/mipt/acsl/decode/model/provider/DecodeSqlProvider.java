@@ -141,7 +141,7 @@ public class DecodeSqlProvider
                         componentRs.wasNull() ? Optional.<DecodeMaybeProxy<DecodeType>>empty()
                                 : Optional.of(SimpleDecodeMaybeProxy.object(ensureTypeLoaded(baseTypeId)));
 
-                Set<DecodeMaybeProxy<DecodeComponent>> subComponents = new HashSet<>();
+                List<DecodeComponentRef> subComponentRefs = new ArrayList<>();
                 try(PreparedStatement subComponentsSelect = connection.prepareStatement(
                         String.format(
                                 "SELECT sub_component_id FROM %s WHERE component_id = ? ORDER BY sub_component_id ASC",
@@ -152,9 +152,9 @@ public class DecodeSqlProvider
                     {
                         while (subComponentsRs.next())
                         {
-                            subComponents
-                                    .add(SimpleDecodeMaybeProxy
-                                            .object(ensureComponentLoaded(subComponentsRs.getLong("sub_component_id"))));
+                            subComponentRefs
+                                    .add(ImmutableDecodeComponentRef.newInstance(SimpleDecodeMaybeProxy
+                                            .object(ensureComponentLoaded(subComponentsRs.getLong("sub_component_id")))));
                         }
                     }
                 }
@@ -210,7 +210,7 @@ public class DecodeSqlProvider
                 component = SimpleDecodeComponent.newInstance(
                         ImmutableDecodeName.newInstanceFromMangledName(componentRs.getString("name")), namespace,
                         isComponentForcedIdProvided ? Optional.of(componentForcedId) : Optional.empty(), baseType,
-                        Optional.ofNullable(componentRs.getString("info")), subComponents, commands, messages);
+                        Optional.ofNullable(componentRs.getString("info")), subComponentRefs, commands, messages);
                 try (PreparedStatement messagesSelect = connection.prepareStatement(String.format(
                         "SELECT m.id AS id, m.name AS name, m.message_id AS message_id, m.info AS info,"
                                 + " s.message_id AS s_message_id, e.message_id AS e_message_id, e.event_type_id AS e_event_type_id,"

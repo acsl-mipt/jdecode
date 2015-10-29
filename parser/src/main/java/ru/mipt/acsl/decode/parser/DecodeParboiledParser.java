@@ -58,7 +58,8 @@ public class DecodeParboiledParser extends BaseParser<Object>
     {
         Var<DecodeNamespace> namespaceVar = new Var<>();
         Var<String> infoVar = new Var<>();
-        return Sequence(ACTION(resetImports()), OptInfoEw(infoVar), NamespaceAsNamespace(infoVar), namespaceVar.set((DecodeNamespace) pop()),
+        return Sequence(ACTION(resetImports()), OptInfoEw(infoVar), NamespaceAsNamespace(infoVar),
+                namespaceVar.set((DecodeNamespace) pop()),
                 ZeroOrMore(EW(), Import()),
                 ZeroOrMore(EW(),
                         infoVar.set(null), OptInfoEw(infoVar),
@@ -86,8 +87,10 @@ public class DecodeParboiledParser extends BaseParser<Object>
     {
         Var<DecodeFqn> namespaceFqnVar = new Var<>();
         return Sequence("import", EW(), ElementIdAsFqn(), namespaceFqnVar.set((DecodeFqn) pop()),
-                FirstOf(Sequence('.', OptEW(), '{', OptEW(), ImportPartAsImportPart(), addImport(namespaceFqnVar, (ImportPart) pop()),
-                                ZeroOrMore(OptEW(), ',', OptEW(), ImportPartAsImportPart(), addImport(namespaceFqnVar, (ImportPart) pop())),
+                FirstOf(Sequence('.', OptEW(), '{', OptEW(), ImportPartAsImportPart(),
+                                addImport(namespaceFqnVar, (ImportPart) pop()),
+                                ZeroOrMore(OptEW(), ',', OptEW(), ImportPartAsImportPart(),
+                                        addImport(namespaceFqnVar, (ImportPart) pop())),
                                 Optional(OptEW(), ','), OptEW(), '}'),
                         addImport(namespaceFqnVar.get())));
     }
@@ -284,8 +287,10 @@ public class DecodeParboiledParser extends BaseParser<Object>
                                 ArrayTypeApplicationAsProxyType()),
                         Sequence(ElementIdAsFqn(), push(
                                 proxyForTypeFqn(namespaceVar.get(), (DecodeFqn) pop())))),
-                Optional(OptEW(), '<', push(namespaceVar.get()), TypeApplicationAsProxyType(), genericTypesVar.get().add((DecodeMaybeProxy<DecodeReferenceable>) pop()),
-                        ZeroOrMore(OptEW(), ',', OptEW(), push(namespaceVar.get()), TypeApplicationAsProxyType(), genericTypesVar.get().add((DecodeMaybeProxy<DecodeReferenceable>) pop())),
+                Optional(OptEW(), '<', push(namespaceVar.get()), TypeApplicationAsProxyType(),
+                        genericTypesVar.get().add((DecodeMaybeProxy<DecodeReferenceable>) pop()),
+                        ZeroOrMore(OptEW(), ',', OptEW(), push(namespaceVar.get()), TypeApplicationAsProxyType(),
+                                genericTypesVar.get().add((DecodeMaybeProxy<DecodeReferenceable>) pop())),
                         Optional(OptEW(), ','), OptEW(), '>', push(proxyForSystemTypeString(
                                 ((DecodeMaybeProxy<DecodeReferenceable>) pop()).getProxy().getUri().toString() + "<" +
                                         genericTypesListToString(genericTypesVar.get()) + ">"))),
@@ -453,8 +458,24 @@ public class DecodeParboiledParser extends BaseParser<Object>
     Rule Subcomponent(@NotNull Var<DecodeNamespace> namespaceVar,
                       Var<List<DecodeComponentRef>> subComponentsVar)
     {
-        return Sequence(ElementIdAsFqn(), subComponentsVar.get().add(proxyDefaultNamespace(
-                (DecodeFqn) pop(), namespaceVar.get())));
+        return Sequence(ElementIdAsFqn(), addSubcomponent(subComponentsVar.get(), (DecodeFqn) pop(), namespaceVar.get()));
+    }
+
+    boolean addSubcomponent(@NotNull List<DecodeComponentRef> componentRefs, @NotNull DecodeFqn fqn,
+                                    @NotNull DecodeNamespace namespace)
+    {
+        String alias = fqn.asString();
+        if (fqn.size() == 1 && imports.containsKey(alias))
+        {
+            componentRefs.add(ImmutableDecodeComponentRef.newInstance(alias,
+                    (DecodeMaybeProxy<DecodeComponent>) (DecodeMaybeProxy<?>) Preconditions.checkNotNull(imports.get(
+                    alias))));
+        }
+        else
+        {
+            componentRefs.add(ImmutableDecodeComponentRef.newInstance(proxyDefaultNamespace(fqn, namespace)));
+        }
+        return true;
     }
 
     Rule UnitDeclAsUnit(@NotNull Var<DecodeNamespace> namespaceVar, @NotNull Var<String> infoVar)

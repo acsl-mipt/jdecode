@@ -5,6 +5,9 @@ import com.google.common.base.Preconditions;
 import org.apache.commons.io.IOUtils;
 import org.jetbrains.annotations.NotNull;
 import org.parboiled.Parboiled;
+import org.parboiled.parserunners.BasicParseRunner;
+import org.parboiled.parserunners.ParseRunner;
+import org.parboiled.parserunners.RecoveringParseRunner;
 import org.parboiled.parserunners.TracingParseRunner;
 import org.parboiled.support.ParsingResult;
 import ru.mipt.acsl.decode.model.domain.DecodeElement;
@@ -26,7 +29,7 @@ public class DecodeParser implements Parser<DecodeElement>
         DecodeParboiledParser parser = Parboiled.createParser(DecodeParboiledParser.class);
         try
         {
-            ParsingResult<DecodeElement> result = new TracingParseRunner<DecodeElement>(parser.File()).run(
+            ParsingResult<DecodeElement> result = new RecoveringParseRunner<DecodeElement>(parser.File()).run(
                     IOUtils.toString(is, Charsets.UTF_8));
             if (!result.matched || result.hasErrors())
             {

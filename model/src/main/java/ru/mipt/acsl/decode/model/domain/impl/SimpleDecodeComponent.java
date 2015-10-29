@@ -1,10 +1,7 @@
 package ru.mipt.acsl.decode.model.domain.impl;
 
 import org.jetbrains.annotations.NotNull;
-import ru.mipt.acsl.decode.model.domain.DecodeCommand;
-import ru.mipt.acsl.decode.model.domain.DecodeComponent;
-import ru.mipt.acsl.decode.model.domain.DecodeName;
-import ru.mipt.acsl.decode.model.domain.DecodeNamespace;
+import ru.mipt.acsl.decode.model.domain.*;
 import ru.mipt.acsl.decode.model.domain.message.DecodeMessage;
 import ru.mipt.acsl.decode.model.domain.proxy.DecodeMaybeProxy;
 import ru.mipt.acsl.decode.model.domain.type.DecodeType;
@@ -23,7 +20,7 @@ public class SimpleDecodeComponent extends AbstractDecodeNameNamespaceOptionalIn
     @NotNull
     private final Optional<DecodeMaybeProxy<DecodeType>> baseType;
     @NotNull
-    private final Set<DecodeMaybeProxy<DecodeComponent>> subComponents;
+    private final List<DecodeComponentRef> subComponents;
     @NotNull
     private final List<DecodeCommand> commands;
     @NotNull
@@ -38,7 +35,7 @@ public class SimpleDecodeComponent extends AbstractDecodeNameNamespaceOptionalIn
 
     @NotNull
     @Override
-    public Set<DecodeMaybeProxy<DecodeComponent>> getSubComponents()
+    public List<DecodeComponentRef> getSubComponents()
     {
         return subComponents;
     }
@@ -68,7 +65,7 @@ public class SimpleDecodeComponent extends AbstractDecodeNameNamespaceOptionalIn
                                              @NotNull Optional<Integer> id,
                                              @NotNull Optional<DecodeMaybeProxy<DecodeType>> baseType,
                                              @NotNull Optional<String> info,
-                                             @NotNull Set<DecodeMaybeProxy<DecodeComponent>> subComponents,
+                                             @NotNull List<DecodeComponentRef> subComponents,
                                              @NotNull List<DecodeCommand> commands,
                                              @NotNull List<DecodeMessage> messages)
     {
@@ -78,7 +75,7 @@ public class SimpleDecodeComponent extends AbstractDecodeNameNamespaceOptionalIn
     private SimpleDecodeComponent(@NotNull DecodeName name, @NotNull DecodeNamespace namespace,
                                   @NotNull Optional<Integer> id, @NotNull Optional<DecodeMaybeProxy<DecodeType>> baseType,
                                   @NotNull Optional<String> info,
-                                  @NotNull Set<DecodeMaybeProxy<DecodeComponent>> subComponents,
+                                  @NotNull List<DecodeComponentRef> subComponents,
                                   @NotNull List<DecodeCommand> commands, @NotNull List<DecodeMessage> messages)
     {
         super(name, namespace, info);

@@ -77,8 +77,9 @@ public final class SimpleDecodeDomainModelResolver implements DecodeDomainModelR
                 }
             }
         }
-        for (DecodeMaybeProxy<DecodeComponent> subComponent : component.getSubComponents())
+        for (DecodeComponentRef subComponentRef : component.getSubComponents())
         {
+            DecodeMaybeProxy<DecodeComponent> subComponent = subComponentRef.getComponent();
             resultList.add(resolveWithTypeCheck(subComponent, registry, DecodeComponent.class));
             if (subComponent.isResolved())
             {

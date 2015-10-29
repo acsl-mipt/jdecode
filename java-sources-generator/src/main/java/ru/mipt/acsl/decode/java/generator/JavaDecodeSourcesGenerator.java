@@ -5,12 +5,12 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import ru.mipt.acsl.decode.model.domain.*;
 import ru.mipt.acsl.generation.GenerationException;
 import ru.mipt.acsl.generation.Generator;
 import ru.mipt.acsl.generator.java.ast.*;
-import ru.mipt.acsl.decode.model.domain.DecodeComponent;
-import ru.mipt.acsl.decode.model.domain.DecodeNamespace;
-import ru.mipt.acsl.decode.model.domain.DecodeUnit;
 import ru.mipt.acsl.decode.model.domain.message.DecodeMessageParameter;
 import ru.mipt.acsl.decode.model.domain.type.*;
 
@@ -26,7 +26,10 @@ import java.util.stream.Stream;
 public class JavaDecodeSourcesGenerator implements Generator<JavaDecodeSourcesGeneratorConfiguration>
 {
     @NotNull
+    private static final Logger LOG = LoggerFactory.getLogger(JavaDecodeSourcesGenerator.class);
+    @NotNull
     private final JavaDecodeSourcesGeneratorConfiguration config;
+    private static int uniqueId = 0;
 
     public JavaDecodeSourcesGenerator(@NotNull JavaDecodeSourcesGeneratorConfiguration config)
     {
@@ -36,6 +39,7 @@ public class JavaDecodeSourcesGenerator implements Generator<JavaDecodeSourcesGe
     @Override
     public void generate()
     {
+        LOG.info("Generating Java sources to '{}'", config.getOutputDir().getAbsolutePath());
         generateNamespaces(config.getRegistry().getRootNamespaces());
     }
 
@@ -115,8 +119,7 @@ public class JavaDecodeSourcesGenerator implements Generator<JavaDecodeSourcesGe
                     public Optional<AbstractJavaBaseClass> visit(@NotNull DecodeStructType structType) throws RuntimeException
                     {
                         JavaClass javaClass = JavaClass.newBuilder(structType.getNamespace().getFqn().asString(),
-                                // FIXME
-                                classNameFromTypeName(structType.getOptionalName().get().asString()))
+                                classNameFromTypeName(getOrMakeUniqueName(structType)))
                                 .constuctor(
                                         structType.getFields().stream().map(f ->
                                                 new JavaMethodArgument(
@@ -155,6 +158,19 @@ public class JavaDecodeSourcesGenerator implements Generator<JavaDecodeSourcesGe
         {
             generateJavaClass(javaClassOptional.get());
         }
+    }
+
+    @NotNull
+    private String getOrMakeUniqueName(DecodeOptionalNameAware optionalNameAware)
+    {
+        Optional<DecodeName> optionalName = optionalNameAware.getOptionalName();
+        return optionalName.isPresent() ? optionalName.get().asString() : makeUniqueName();
+    }
+
+    @NotNull
+    private String makeUniqueName()
+    {
+        return "name" + uniqueId++;
     }
 
     @NotNull
