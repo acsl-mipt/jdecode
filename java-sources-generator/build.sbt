@@ -11,15 +11,11 @@ lazy val commonSettings = Seq(
   libraryDependencies ++= Seq(jetBrainsAnnotations, guava, commonsUtil, commonsIo, commonsLang)
 )
 
-lazy val common = project
-lazy val parser = project
-lazy val model = project
-lazy val javaSourcesGenerator = project in file("java-sources-generator")
-lazy val mavlinkSourcesGenerator = project in file("mavlink-sources-generator")
+lazy val model = RootProject(file("model"))
 
 lazy val root = (project in file(".")).
-  aggregate(common, model, parser).
   settings(commonSettings: _*).
   settings(
-    name := "decode"
-  )
+    name := "decode-java-sources-generator"
+  ).
+  dependsOn(model)
