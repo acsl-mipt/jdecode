@@ -18,8 +18,8 @@ public class JavaStringExpr implements JavaExpr
     }
 
     @Override
-    public void generate(@NotNull JavaGeneratorState state, @NotNull Appendable appendable) throws IOException
+    public void generate(@NotNull JavaGeneratorState state)
     {
-        appendable.append("\"").append(str).append("\"");
+        state.append("\"").append(str).append("\"");
     }
 }

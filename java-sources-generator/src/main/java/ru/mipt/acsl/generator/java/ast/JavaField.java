@@ -48,26 +48,26 @@ public class JavaField implements JavaAstElement
     }
 
     @Override
-    public void generate(@NotNull JavaGeneratorState state, @NotNull Appendable appendable) throws IOException
+    public void generate(@NotNull JavaGeneratorState state)
     {
-        visibility.generate(state, appendable);
-        appendable.append(" ");
+        visibility.generate(state);
+        state.append(" ");
         if (isStatic)
         {
-            appendable.append("static ");
+            state.append("static ");
         }
         if (isFinal)
         {
-            appendable.append("final ");
+            state.append("final ");
         }
-        type.generate(state,  appendable);
-        appendable.append(" ").append(name);
+        type.generate(state);
+        state.append(" ").append(name);
         if (value.isPresent())
         {
-            appendable.append(" = ");
-            value.get().generate(state, appendable);
+            state.append(" = ");
+            value.get().generate(state);
         }
-        appendable.append(";");
+        state.append(";");
     }
 
     public void setType(@NotNull JavaType type)

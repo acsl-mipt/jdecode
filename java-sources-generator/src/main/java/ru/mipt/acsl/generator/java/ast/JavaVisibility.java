@@ -20,8 +20,8 @@ public enum JavaVisibility implements JavaAstElement
     }
 
     @Override
-    public void generate(@NotNull JavaGeneratorState state, @NotNull Appendable appendable) throws IOException
+    public void generate(@NotNull JavaGeneratorState state)
     {
-        appendable.append(name);
+        state.append(name);
     }
 }

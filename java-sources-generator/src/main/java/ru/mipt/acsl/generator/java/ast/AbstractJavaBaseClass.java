@@ -145,7 +145,7 @@ public abstract class AbstractJavaBaseClass implements JavaAstElement
         return constructors;
     }
 
-    protected void generateStatic(@NotNull JavaGeneratorState state) throws IOException
+    protected void generateStatic(@NotNull JavaGeneratorState state)
     {
         if (isStatic)
         {

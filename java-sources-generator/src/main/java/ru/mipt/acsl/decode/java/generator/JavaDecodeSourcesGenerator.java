@@ -341,7 +341,7 @@ public class JavaDecodeSourcesGenerator implements Generator<JavaDecodeSourcesGe
                     }
                 }
                 state.eol();
-                javaClass.generate(state, writer);
+                javaClass.generate(state);
             }
         }
         catch (Exception e)

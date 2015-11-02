@@ -41,7 +41,7 @@ class CDecodeSourcesGenerator(val config: CDecodeGeneratorConfiguration) extends
     ns.getTypes.toTraversable.foreach(generateType(_).map(typesHeader += _))
     if (typesHeader.statements.nonEmpty) {
       for (typeHeaderStream <- managed(new OutputStreamWriter(new FileOutputStream(new File(nsDir, "types.h"))))) {
-        protectDoubleIncludeFile(typesHeader).generate(CGeneratorState(), typeHeaderStream)
+        protectDoubleIncludeFile(typesHeader).generate(CGeneratorState(typeHeaderStream))
       }
     }
     ns.getComponents.toTraversable.foreach(generateComponent)

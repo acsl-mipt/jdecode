@@ -12,5 +12,5 @@ import java.io.IOException;
 public interface JavaAstElement extends Generatable<JavaGeneratorState>
 {
     @Override
-    void generate(@NotNull JavaGeneratorState state, @NotNull Appendable appendable) throws IOException;
+    void generate(@NotNull JavaGeneratorState state);
 }

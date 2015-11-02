@@ -22,7 +22,7 @@ public class JavaAddExpr implements JavaExpr
     }
 
     @Override
-    public void generate(@NotNull JavaGeneratorState state, @NotNull Appendable appendable) throws IOException
+    public void generate(@NotNull JavaGeneratorState state)
     {
         boolean isFirst = true;
         for (JavaExpr expr : exprs)
@@ -33,9 +33,9 @@ public class JavaAddExpr implements JavaExpr
             }
             else
             {
-                appendable.append(" + ");
+                state.append(" + ");
             }
-            expr.generate(state, appendable);
+            expr.generate(state);
         }
     }
 }

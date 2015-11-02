@@ -51,12 +51,12 @@ public class JavaTypeApplication implements JavaType
     }
 
     @Override
-    public void generate(@NotNull JavaGeneratorState state, @NotNull Appendable appendable) throws IOException
+    public void generate(@NotNull JavaGeneratorState state)
     {
-        appendable.append(type);
+        state.append(type);
         if (!genericParameters.isEmpty())
         {
-            appendable.append("<");
+            state.append("<");
             boolean isFirst = true;
             for (JavaType parameter: genericParameters)
             {
@@ -66,11 +66,11 @@ public class JavaTypeApplication implements JavaType
                 }
                 else
                 {
-                    appendable.append(", ");
+                    state.append(", ");
                 }
-                parameter.generate(state, appendable);
+                parameter.generate(state);
             }
-            appendable.append(">");
+            state.append(">");
         }
     }
 

@@ -20,9 +20,9 @@ trait HStmt extends CStmt
 trait CMacroStmt extends HStmt
 
 class CDefine(val name: String, val value: Option[String]) extends CMacroStmt {
-  override def generate(generatorState: CGeneratorState, appendable: Appendable): Unit = {
-    appendable.append("#define ").append(name)
-    value.map(appendable.append(" ").append(_))
+  override def generate(s: CGeneratorState): Unit = {
+    s.append("#define ").append(name)
+    value.map(s.append(" ").append)
   }
 }
 
@@ -32,10 +32,10 @@ object CDefine {
 }
 
 class CIfNDef(val name: String, val statements: Seq[CStmt]) extends CMacroStmt {
-  override def generate(generatorState: CGeneratorState, appendable: Appendable): Unit = {
-    appendable.append("#ifndef ").append(name)
-    generatorState.eol(appendable)
-    statements.foreach(stmt => { stmt.generate(generatorState, appendable); generatorState.eol(appendable) })
+  override def generate(s: CGeneratorState): Unit = {
+    s.append("#ifndef ").append(name)
+    s.eol()
+    statements.foreach(stmt => { stmt.generate(s); s.eol() })
   }
 }
 
@@ -44,8 +44,8 @@ object CIfNDef {
 }
 
 class CEndIf extends CMacroStmt {
-  override def generate(generatorState: CGeneratorState, appendable: Appendable): Unit = {
-    appendable.append("#endif")
+  override def generate(s: CGeneratorState): Unit = {
+    s.append("#endif")
   }
 }
 
@@ -59,23 +59,23 @@ trait CType extends CAstElement {
 }
 
 case class CPtrType(subType: CType) extends CType {
-  override def generate(generatorState: CGeneratorState, appendable: Appendable): Unit = {
-    subType.generate(generatorState, appendable)
-    appendable.append("*")
+  override def generate(s: CGeneratorState): Unit = {
+    subType.generate(s)
+    s.append("*")
   }
 }
 
 case class CTypeDefStmt(name: String, t: CType) extends HStmt {
-  override def generate(generatorState: CGeneratorState, appendable: Appendable): Unit = {
-    appendable.append("typedef ")
-    t.generate(generatorState, appendable)
-    appendable.append(" ").append(name).append(";")
+  override def generate(s: CGeneratorState): Unit = {
+    s.append("typedef ")
+    t.generate(s)
+    s.append(" ").append(name).append(";")
   }
 }
 
 class CNativeType(name: String) extends CType {
-  override def generate(generatorState: CGeneratorState, appendable: Appendable): Unit = {
-    appendable.append(name)
+  override def generate(s: CGeneratorState): Unit = {
+    s.append(name)
   }
 }
 
@@ -92,8 +92,8 @@ case object CFloatType extends CNativeType("float")
 case object CDoubleType extends CNativeType("double")
 
 case class CTypeApplication(name: String) extends CType {
-  override def generate(generatorState: CGeneratorState, appendable: Appendable): Unit = {
-    appendable.append(name)
+  override def generate(s: CGeneratorState): Unit = {
+    s.append(name)
   }
 }
 
@@ -108,13 +108,13 @@ object CEnumTypeDefConst {
 trait CTypeDef extends CType
 
 class CEnumTypeDef(consts: Iterable[CEnumTypeDefConst], name: Option[String] = None) extends CTypeDef {
-  override def generate(generatorState: CGeneratorState, appendable: Appendable): Unit = {
-    appendable.append("enum")
-    name.map(appendable.append(" ").append(_))
-    appendable.append(" {")
+  override def generate(s: CGeneratorState): Unit = {
+    s.append("enum")
+    name.map(s.append(" ").append)
+    s.append(" {")
     var first = true
-    consts.map(c => { if (first) first = !first else appendable.append(","); appendable.append(" ").append(c.name).append(" = ").append(c.value.toString);  })
-    appendable.append(" }")
+    consts.map(c => { if (first) first = !first else s.append(","); s.append(" ").append(c.name).append(" = ").append(c.value.toString);  })
+    s.append(" }")
   }
 }
 
@@ -127,24 +127,24 @@ case class CStructTypeDefField(name: String, t: CType) {
 }
 
 case class CStructTypeDef(fields: Traversable[CStructTypeDefField], name: Option[String] = None) extends CType {
-  override def generate(generatorState: CGeneratorState, appendable: Appendable): Unit = {
-    appendable.append("struct ")
-    name.map(appendable.append(_).append(" "))
-    appendable.append("{")
-    generatorState.incIndentation()
+  override def generate(s: CGeneratorState): Unit = {
+    s.append("struct ")
+    name.map(s.append(_).append(" "))
+    s.append("{")
+    s.incIndentation()
     var first = true
     fields.foreach(f => {
       if (first) {
         first = !first
-        generatorState.eol(appendable)
+        s.eol()
       }
-      generatorState.indent(appendable)
-      f.t.generate(generatorState, appendable)
-      appendable.append(" ").append(f.name).append(";")
-      generatorState.eol(appendable)
+      s.indent()
+      f.t.generate(s)
+      s.append(" ").append(f.name).append(";")
+      s.eol()
     })
-    generatorState.decIndentation()
-    appendable.append("}")
+    s.decIndentation()
+    s.append("}")
   }
 }
 
@@ -155,8 +155,8 @@ class AstFile[A <: CStmt](val statements: mutable.Buffer[A]) extends Growable[A]
 
 class CFile[A <: CStmt](statements: mutable.Buffer[A]) extends AstFile[A](statements) with Generatable[CGeneratorState] {
 
-  override def generate(generatorState: CGeneratorState, appendable: Appendable): Unit = {
-    statements.foreach(stmt => { stmt.generate(generatorState, appendable); generatorState.eol() })
+  override def generate(generatorState: CGeneratorState): Unit = {
+    statements.foreach(stmt => { stmt.generate(generatorState); generatorState.eol() })
   }
 
   override def +=(elem: A): CFile.this.type = {
@@ -180,11 +180,21 @@ object HFile {
 }
 
 class CGeneratorState(var a: Appendable) {
+  private var indentation: Int = 0
+
+  def indent() = append("  " * indentation)
+
+  def decIndentation() = indentation -= 1
+
+  def incIndentation() = indentation += 1
+
+  def append(s: String): CGeneratorState = { a.append(s); this }
+
   def eol(): Unit = {
     a.append("\n")
   }
 }
 
 object CGeneratorState {
-  def apply() = new CGeneratorState()
+  def apply(a: Appendable) = new CGeneratorState(a)
 }

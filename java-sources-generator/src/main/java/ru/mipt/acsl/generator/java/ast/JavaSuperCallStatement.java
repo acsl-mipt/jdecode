@@ -19,9 +19,9 @@ public class JavaSuperCallStatement implements JavaStatement
     }
 
     @Override
-    public void generate(@NotNull JavaGeneratorState state, @NotNull Appendable appendable) throws IOException
+    public void generate(@NotNull JavaGeneratorState state)
     {
-        appendable.append("super(");
+        state.append("super(");
         if (!arguments.isEmpty())
         {
             boolean isFirst = true;
@@ -33,11 +33,11 @@ public class JavaSuperCallStatement implements JavaStatement
                 }
                 else
                 {
-                    appendable.append(", ");
+                    state.append(", ");
                 }
-                expr.generate(state, appendable);
+                expr.generate(state);
             }
         }
-        appendable.append(")");
+        state.append(")");
     }
 }

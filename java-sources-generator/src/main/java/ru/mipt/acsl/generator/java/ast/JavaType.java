@@ -44,9 +44,9 @@ public interface JavaType extends JavaAstElement
         }
 
         @Override
-        public void generate(@NotNull JavaGeneratorState state, @NotNull Appendable appendable) throws IOException
+        public void generate(@NotNull JavaGeneratorState state)
         {
-            appendable.append(name);
+            state.append(name);
         }
     }
 
@@ -79,9 +79,9 @@ public interface JavaType extends JavaAstElement
         }
 
         @Override
-        public void generate(@NotNull JavaGeneratorState state, @NotNull Appendable appendable) throws IOException
+        public void generate(@NotNull JavaGeneratorState state)
         {
-            appendable.append(typeFqn);
+            state.append(typeFqn);
         }
     }
 }
