@@ -434,8 +434,8 @@ public class JavaDecodeSourcesGenerator implements Generator<JavaDecodeSourcesGe
 
     @NotNull
     @Override
-    public Optional<JavaDecodeSourcesGeneratorConfiguration> getConfiguration()
+    public JavaDecodeSourcesGeneratorConfiguration getConfiguration()
     {
-        return Optional.of(config);
+        return config;
     }
 }

@@ -12,9 +12,9 @@ import org.jdom2.input.SAXBuilder;
 import org.jetbrains.annotations.NotNull;
 import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
+import ru.mipt.acsl.generation.Generatable;
 import ru.mipt.acsl.generation.GenerationException;
 import ru.mipt.acsl.generation.Generator;
-import ru.mipt.acsl.generation.StatelessGeneratable;
 
 import java.io.*;
 import java.util.*;
@@ -173,9 +173,9 @@ public class MavlinkDecodeSourceGenerator implements Generator<MavlinkDecodeSour
 
     @NotNull
     @Override
-    public Optional<MavlinkDecodeSourceGeneratorConfiguration> getConfiguration()
+    public MavlinkDecodeSourceGeneratorConfiguration getConfiguration()
     {
-        return Optional.of(config);
+        return config;
     }
 
     @NotNull
@@ -380,7 +380,7 @@ public class MavlinkDecodeSourceGenerator implements Generator<MavlinkDecodeSour
         appendable.append("\n");
     }
 
-    private static class Message implements StatelessGeneratable
+    private static class Message implements Generatable<Appendable>
     {
         @NotNull
         private final String typeName;
@@ -485,7 +485,7 @@ public class MavlinkDecodeSourceGenerator implements Generator<MavlinkDecodeSour
         }
     }
 
-    private static class StructField implements StatelessGeneratable
+    private static class StructField implements Generatable<Appendable>
     {
         @NotNull
         public Optional<String> getDescription()
