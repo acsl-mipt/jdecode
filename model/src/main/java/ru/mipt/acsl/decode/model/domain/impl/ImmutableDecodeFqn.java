@@ -2,11 +2,12 @@ package ru.mipt.acsl.decode.model.domain.impl;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import org.jetbrains.annotations.NotNull;
 import ru.mipt.acsl.decode.model.domain.DecodeFqn;
 import ru.mipt.acsl.decode.model.domain.DecodeName;
-import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -56,6 +57,23 @@ public class ImmutableDecodeFqn implements DecodeFqn
     public int size()
     {
         return parts.size();
+    }
+
+    @Override
+    public boolean equals(Object o)
+    {
+        if (o == null || !(o instanceof DecodeFqn))
+        {
+            return false;
+        }
+        DecodeFqn fqn = (DecodeFqn)o;
+        return this == fqn || Objects.equals(parts, fqn.getParts());
+    }
+
+    @Override
+    public int hashCode()
+    {
+        return Objects.hashCode(parts);
     }
 
     private ImmutableDecodeFqn(@NotNull List<DecodeName> parts)

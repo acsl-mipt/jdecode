@@ -1,12 +1,9 @@
 package ru.mipt.acsl.generator.c.ast
 
-import java.security.MessageDigest
-
 import ru.mipt.acsl.generation.Generatable
 
 import scala.collection.generic.Growable
 import scala.collection.mutable
-import scala.util.Random
 
 /**
  * @author Artem Shein
@@ -17,12 +14,29 @@ trait CAstElement extends Generatable[CGeneratorState]
 trait CStmt extends CAstElement
 trait HStmt extends CStmt
 
+class HComment(val text: String) extends HStmt {
+  override def generate(s: CGeneratorState): Unit = {
+    s.append("/* ").append(text).append(" */")
+  }
+}
+
+object HComment {
+  def apply(text: String) = new HComment(text)
+}
+
+object HEol extends HStmt {
+  override def generate(s: CGeneratorState): Unit = {
+    s.eol()
+  }
+}
+
 trait CMacroStmt extends HStmt
 
 class CDefine(val name: String, val value: Option[String]) extends CMacroStmt {
   override def generate(s: CGeneratorState): Unit = {
     s.append("#define ").append(name)
     value.map(s.append(" ").append)
+    s.eol()
   }
 }
 
@@ -33,8 +47,7 @@ object CDefine {
 
 class CIfNDef(val name: String, val statements: Seq[CStmt]) extends CMacroStmt {
   override def generate(s: CGeneratorState): Unit = {
-    s.append("#ifndef ").append(name)
-    s.eol()
+    s.append("#ifndef ").append(name).eol()
     statements.foreach(stmt => { stmt.generate(s); s.eol() })
   }
 }
@@ -69,11 +82,11 @@ case class CTypeDefStmt(name: String, t: CType) extends HStmt {
   override def generate(s: CGeneratorState): Unit = {
     s.append("typedef ")
     t.generate(s)
-    s.append(" ").append(name).append(";")
+    s.append(" ").append(name).append(";").eol()
   }
 }
 
-class CNativeType(name: String) extends CType {
+class CNativeType(name: String) extends CTypeApplication(name) {
   override def generate(s: CGeneratorState): Unit = {
     s.append(name)
   }
@@ -91,10 +104,14 @@ case object CSignedLongType extends CNativeType("signed long")
 case object CFloatType extends CNativeType("float")
 case object CDoubleType extends CNativeType("double")
 
-case class CTypeApplication(name: String) extends CType {
+class CTypeApplication(val name: String) extends CType {
   override def generate(s: CGeneratorState): Unit = {
     s.append(name)
   }
+}
+
+object CTypeApplication {
+  def apply(name: String): CTypeApplication = new CTypeApplication(name)
 }
 
 class CEnumTypeDefConst(val name: String, val value: Int) {
@@ -140,8 +157,7 @@ case class CStructTypeDef(fields: Traversable[CStructTypeDefField], name: Option
       }
       s.indent()
       f.t.generate(s)
-      s.append(" ").append(f.name).append(";")
-      s.eol()
+      s.append(" ").append(f.name).append(";").eol()
     })
     s.decIndentation()
     s.append("}")
@@ -155,8 +171,8 @@ class AstFile[A <: CStmt](val statements: mutable.Buffer[A]) extends Growable[A]
 
 class CFile[A <: CStmt](statements: mutable.Buffer[A]) extends AstFile[A](statements) with Generatable[CGeneratorState] {
 
-  override def generate(generatorState: CGeneratorState): Unit = {
-    statements.foreach(stmt => { stmt.generate(generatorState); generatorState.eol() })
+  override def generate(s: CGeneratorState): Unit = {
+    statements.foreach(_.generate(s))
   }
 
   override def +=(elem: A): CFile.this.type = {
@@ -190,8 +206,9 @@ class CGeneratorState(var a: Appendable) {
 
   def append(s: String): CGeneratorState = { a.append(s); this }
 
-  def eol(): Unit = {
+  def eol(): CGeneratorState = {
     a.append("\n")
+    this
   }
 }
 
