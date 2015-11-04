@@ -29,13 +29,29 @@ class CDecodeSourcesGenerator(val config: CDecodeGeneratorConfiguration) extends
     config.registry.getRootNamespaces.toList.foreach(generateNs)
   }
 
-  def makeDirForNs(ns: DecodeNamespace) : File = {
-    val fqn = config.namespaceAlias.getOrElse(ns.getFqn, ns.getFqn)
-    logger.debug(s"Dir for namespace ${ns.getFqn.asString()}: ${fqn.asString()}")
-    val dir = new File(config.outputDir, fqn.getParts.toList.map(_.asString()).mkString("/"))
+  def dirForNs(ns: DecodeNamespace): File = {
+    new File(config.outputDir,
+      config.namespaceAlias.getOrElse(ns.getFqn, ns.getFqn).getParts.toList.map(_.asString()).mkString("/"))
+  }
+
+  def makeDirForNs(ns: DecodeNamespace): File = {
+    val dir = dirForNs(ns)
     if(!(dir.exists() || dir.mkdirs()))
       sys.error(s"Can't create directory ${dir.getAbsolutePath}")
     dir
+  }
+
+  def writeFile[T <: CStmt](file: File, hfile: CFile[T]): Unit = {
+    for (typeHeaderStream <- managed(new OutputStreamWriter(new FileOutputStream(file)))) {
+      hfile.generate(CGeneratorState(typeHeaderStream))
+    }
+  }
+
+  def writeFileIfNotEmptyWithComment[A >: HStmt <: CStmt](file: File, cFile: CFile[A], comment: String): Unit = {
+    if (cFile.statements.nonEmpty) {
+      cFile.statements.prepend(HComment(comment), HEol)
+      writeFile(file, cFile)
+    }
   }
 
   def generateNs(ns: DecodeNamespace): Unit = {
@@ -45,16 +61,11 @@ class CDecodeSourcesGenerator(val config: CDecodeGeneratorConfiguration) extends
     ns.getTypes.toTraversable.foreach(t => {
       generateType(t).map({
         if (t.getOptionalName.isPresent)
-          typesHeader ++= Seq(HComment(t.getOptionalName.get().asString()), HEol);
+          typesHeader ++= Seq(HComment(t.getOptionalName.get().asString()), HEol)
         typesHeader ++= Seq(_, HEol)
       })
     })
-    if (typesHeader.statements.nonEmpty) {
-      typesHeader.statements.prepend(HComment(s"Types of ${ns.getFqn.asString()} namespace"), HEol)
-      for (typeHeaderStream <- managed(new OutputStreamWriter(new FileOutputStream(new File(nsDir, "types.h"))))) {
-        protectDoubleIncludeFile(typesHeader).generate(CGeneratorState(typeHeaderStream))
-      }
-    }
+    writeFileIfNotEmptyWithComment(new File(nsDir, "types.h"), protectDoubleIncludeFile(typesHeader), s"Types of ${ns.getFqn.asString()} namespace")
     ns.getComponents.toTraversable.foreach(generateComponent)
   }
 
@@ -73,26 +84,13 @@ class CDecodeSourcesGenerator(val config: CDecodeGeneratorConfiguration) extends
       val baseCType: String = arrayType.getBaseType.getObject.accept(typeNameVisitor)
       val min = arrayType.getSize.getMinLength
       val max = arrayType.getSize.getMaxLength
-      val prefix = "DECODE_ARRAY_TYPE"
-      if (arrayType.isFixedSize) {
-        if (min == 0) {
-          s"${prefix}_NAME($baseCType)"
-        } else {
-          s"${prefix}_FIXED_SIZE_NAME($baseCType, $min)"
-        }
-      } else {
-        if (min == 0) {
-          if (max == 0) {
-            s"${prefix}_NAME($baseCType)"
-          } else {
-            s"${prefix}_MAX_NAME($baseCType, $max)"
-          }
-        } else if (max == 0) {
-          s"${prefix}_MIN_NAME($baseCType, $min)"
-        } else {
-          s"${prefix}_MIN_MAX_NAME($baseCType, $min, $max)"
-        }
-      }
+      "DECODE_ARRAY_TYPE_" + ((arrayType.isFixedSize, min, max) match {
+        case (true, 0, _) | (false, 0, 0) => s"NAME($baseCType)"
+        case (true, _, _) => s"FIXED_SIZE_NAME($baseCType, $min)"
+        case (false, 0, _) => s"MAX_NAME($baseCType, $max)"
+        case (false, _, 0) => s"MIN_NAME($baseCType, $min)"
+        case (false, _, _) => s"MIN_MAX_NAME($baseCType, $min, $max)"
+      })
     }
 
     override def visit(structType: DecodeStructType): String = cTypeNameFromOptionalName(structType.getOptionalName)
@@ -119,7 +117,7 @@ class CDecodeSourcesGenerator(val config: CDecodeGeneratorConfiguration) extends
     val bytes = Array[Byte](10)
     rand.nextBytes(bytes)
     val uniqueName: String = "__" ++ MessageDigest.getInstance("MD5").digest(bytes).map("%02x".format(_)).mkString ++ "__"
-    HFile(Seq(CIfNDef(uniqueName, Seq(CDefine(uniqueName)))) ++ file.statements ++ Seq(CEndIf()))
+    HFile(Seq(CIfNDef(uniqueName, Seq(CDefine(uniqueName)))) ++ file.statements ++ Seq(CEndIf()): _*)
   }
 
   private def primitiveTypeToCTypeApplication(primitiveType: DecodePrimitiveType): CTypeApplication = {
@@ -198,6 +196,11 @@ class CDecodeSourcesGenerator(val config: CDecodeGeneratorConfiguration) extends
 
   private def generateComponent(comp: DecodeComponent) = {
     logger.debug(s"Generating component ${comp.getName.asString()}")
+    val dir = dirForNs(comp.getNamespace)
+    val hFile = new File(dir, comp.getName.asString() + "Component.h")
+    val cFile = new File(dir, comp.getName.asString() + "Component.c")
+    writeFileIfNotEmptyWithComment(hFile, protectDoubleIncludeFile(HFile()), "Component header")
+    writeFileIfNotEmptyWithComment(cFile, CFile(HEol), "Component header")
   }
 
   override def getConfiguration: CDecodeGeneratorConfiguration = config

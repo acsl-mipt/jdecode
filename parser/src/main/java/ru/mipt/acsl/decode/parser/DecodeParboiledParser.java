@@ -170,13 +170,12 @@ public class DecodeParboiledParser extends BaseParser<Object>
         Var<DecodeName> baseTypeNameVar = new Var<>();
         Var<DecodeComponent> componentVar = new Var<>();
         Var<Integer> idVar = new Var<>();
-        return Sequence("component", EW(), ElementNameAsName(),
+        return Sequence("component", EW(), ElementNameAsName(), baseTypeNameVar.set((DecodeName) peek()),
                 Optional(OptEW(), ':', NonNegativeNumberAsInteger(), idVar.set(((ImmutableDecodeElementWrapper<Integer>) pop()).getValue())),
                 Optional(EW(), "with", OptEW(), Subcomponent(namespaceVar, subComponentsVar),
                         ZeroOrMore(OptEW(), ',', OptEW(), Subcomponent(namespaceVar, subComponentsVar))),
                 OptEW(), '{',
-                Optional(OptEW(), ComponentParametersAsType(namespaceVar,
-                                baseTypeNameVar),
+                Optional(OptEW(), ComponentParametersAsType(namespaceVar, baseTypeNameVar),
                         typeVar.set((DecodeType) pop()), namespaceVar.get().getTypes().add(typeVar.get())),
                 componentVar.set(SimpleDecodeComponent
                         .newInstance((DecodeName) pop(), namespaceVar.get(), Optional.ofNullable(idVar.get()),

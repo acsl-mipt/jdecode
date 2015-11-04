@@ -185,14 +185,17 @@ class CFile[A <: CStmt](statements: mutable.Buffer[A]) extends AstFile[A](statem
   }
 }
 
-class HFile(statements: mutable.Buffer[HStmt]) extends CFile(statements) {
+object CFile {
+  def apply(statements: CStmt*) = new CFile[CStmt](statements.to[mutable.Buffer])
+}
+
+class HFile(statements: mutable.Buffer[HStmt]) extends CFile[HStmt](statements) {
 
 }
 
 object HFile {
   def apply() = new HFile(mutable.Buffer())
-  def apply(statements: mutable.Buffer[HStmt]) = new HFile(statements)
-  def apply(statements: Seq[HStmt]) = new HFile(mutable.Buffer() ++ statements)
+  def apply(statements: HStmt*) = new HFile(statements.to[mutable.Buffer])
 }
 
 class CGeneratorState(var a: Appendable) {
