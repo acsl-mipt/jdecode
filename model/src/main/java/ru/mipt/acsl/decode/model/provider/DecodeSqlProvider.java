@@ -4,6 +4,7 @@ import com.google.common.base.Preconditions;
 import org.jetbrains.annotations.NotNull;
 import ru.mipt.acsl.decode.model.domain.*;
 import ru.mipt.acsl.decode.model.domain.impl.*;
+import ru.mipt.acsl.decode.model.domain.impl.type.*;
 import ru.mipt.acsl.decode.model.domain.message.DecodeMessage;
 import ru.mipt.acsl.decode.model.domain.message.DecodeMessageParameter;
 import ru.mipt.acsl.decode.model.domain.proxy.DecodeMaybeProxy;
@@ -193,12 +194,13 @@ public class DecodeSqlProvider
                                             unit, Optional.ofNullable(commandArgumentsRs.getString("info"))));
                                 }
                             }
+                            Optional<Long> returnTypeIdOptional = getOptionalLong(commandsSelectRs, "return_type_id");
                             commands.add(ImmutableDecodeCommand.newInstance(
                                     ImmutableDecodeName.newInstanceFromMangledName(commandsSelectRs.getString("name")),
                                     getOptionalInt(commandsSelectRs, "command_id"),
                                     Optional.ofNullable(commandsSelectRs.getString("info")), arguments,
-                                   SimpleDecodeMaybeProxy.object(Preconditions.checkNotNull(
-                                    typeById.get(commandsSelectRs.getLong("return_type_id")), "type not found"))));
+                                    returnTypeIdOptional.map(rti -> SimpleDecodeMaybeProxy.object(
+                                            Preconditions.checkNotNull(typeById.get(rti), "type not found")))));
                         }
 
                     }

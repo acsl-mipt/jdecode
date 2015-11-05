@@ -3,6 +3,7 @@ package ru.mipt.acsl.decode.model.domain.impl.proxy;
 import com.google.common.base.Preconditions;
 import ru.mipt.acsl.decode.model.domain.*;
 import ru.mipt.acsl.decode.model.domain.impl.*;
+import ru.mipt.acsl.decode.model.domain.impl.type.SimpleDecodeArrayType;
 import ru.mipt.acsl.decode.model.domain.proxy.DecodeProxyResolver;
 import ru.mipt.acsl.decode.model.domain.proxy.DecodeResolvingResult;
 import ru.mipt.acsl.decode.model.domain.type.DecodeArrayType;
@@ -29,8 +30,7 @@ public class FindExistingDecodeProxyResolver implements DecodeProxyResolver
     @NotNull
     @Override
     public <T extends DecodeReferenceable> DecodeResolvingResult<T> resolve(@NotNull DecodeRegistry registry,
-                                                                          @NotNull URI uri,
-                                                                          @NotNull Class<T> cls)
+                                                                            @NotNull URI uri, @NotNull Class<T> cls)
     {
         Iterator<String> iter = DecodeUtils.getUriParts(uri).iterator();
         DecodeResolvingResult<DecodeReferenceable> current = SimpleDecodeResolvingResult.immutableEmpty();

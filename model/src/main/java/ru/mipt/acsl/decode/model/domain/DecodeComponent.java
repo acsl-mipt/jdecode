@@ -103,6 +103,18 @@ public interface DecodeComponent extends DecodeOptionalInfoAware, DecodeNameAwar
         {
             return typeAlias.getType().getObject().accept(this);
         }
+
+        @Override
+        public DecodeType visit(@NotNull DecodeGenericType genericType)
+        {
+            return null;
+        }
+
+        @Override
+        public DecodeType visit(@NotNull DecodeGenericTypeSpecialized genericTypeSpecialized)
+        {
+            return null;
+        }
     }
 
     class DecodeComponentWalker

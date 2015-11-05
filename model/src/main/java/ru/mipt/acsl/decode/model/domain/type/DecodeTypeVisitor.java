@@ -14,4 +14,6 @@ public interface DecodeTypeVisitor<T>
     T visit(@NotNull DecodeArrayType arrayType);
     T visit(@NotNull DecodeStructType structType);
     T visit(@NotNull DecodeAliasType typeAlias);
+    T visit(@NotNull DecodeGenericType genericType);
+    T visit(@NotNull DecodeGenericTypeSpecialized genericTypeSpecialized);
 }

@@ -1,6 +1,8 @@
-package ru.mipt.acsl.decode.model.domain.impl;
+package ru.mipt.acsl.decode.model.domain.impl.type;
 
 import ru.mipt.acsl.decode.model.domain.DecodeName;
+import ru.mipt.acsl.decode.model.domain.impl.AbstractDecodeOptionalInfoAware;
+import ru.mipt.acsl.decode.model.domain.impl.ImmutableDecodeElementWrapper;
 import ru.mipt.acsl.decode.model.domain.type.DecodeEnumConstant;
 import org.jetbrains.annotations.NotNull;
 

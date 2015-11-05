@@ -1,14 +1,14 @@
-package ru.mipt.acsl.decode.model.domain.impl;
+package ru.mipt.acsl.decode.model.domain.impl.type;
 
 import org.jetbrains.annotations.NotNull;
 import ru.mipt.acsl.decode.model.domain.*;
+import ru.mipt.acsl.decode.model.domain.impl.AbstractDecodeNameNamespaceOptionalInfoAware;
 import ru.mipt.acsl.decode.model.domain.message.DecodeMessage;
 import ru.mipt.acsl.decode.model.domain.proxy.DecodeMaybeProxy;
 import ru.mipt.acsl.decode.model.domain.type.DecodeType;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 
 /**
  * @author Artem Shein

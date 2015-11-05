@@ -1,4 +1,4 @@
-package ru.mipt.acsl.decode.model.domain.impl;
+package ru.mipt.acsl.decode.model.domain.impl.type;
 
 import ru.mipt.acsl.decode.model.domain.DecodeName;
 import ru.mipt.acsl.decode.model.domain.type.DecodeType;

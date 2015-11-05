@@ -1,5 +1,6 @@
 package ru.mipt.acsl.decode.model.domain.impl;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import ru.mipt.acsl.decode.model.domain.impl.proxy.ProvidePrimitivesAndNativeTypesDecodeProxyResolver;
 import ru.mipt.acsl.decode.model.domain.proxy.DecodeProxyResolver;
@@ -34,7 +35,8 @@ public class SimpleDecodeRegistry implements DecodeRegistry
     private SimpleDecodeRegistry(@NotNull DecodeProxyResolver... resolvers)
     {
         proxyResolvers.addAll(Lists.newArrayList(resolvers));
-        rootNamespaces.add(SimpleDecodeNamespace.newInstance(DecodeConstants.SYSTEM_NAMESPACE_NAME,
+        Preconditions.checkState(DecodeConstants.SYSTEM_NAMESPACE_FQN.size() == 1, "not implemented");
+        rootNamespaces.add(SimpleDecodeNamespace.newInstance(DecodeConstants.SYSTEM_NAMESPACE_FQN.getLast(),
                 Optional.<DecodeNamespace>empty()));
 
     }

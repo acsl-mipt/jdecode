@@ -13,12 +13,14 @@ import org.slf4j.LoggerFactory;
 import ru.mipt.acsl.decode.model.domain.*;
 import ru.mipt.acsl.decode.model.domain.impl.*;
 import ru.mipt.acsl.decode.model.domain.impl.proxy.SimpleDecodeMaybeProxy;
+import ru.mipt.acsl.decode.model.domain.impl.type.*;
 import ru.mipt.acsl.decode.model.domain.message.DecodeMessage;
 import ru.mipt.acsl.decode.model.domain.message.DecodeMessageParameter;
 import ru.mipt.acsl.decode.model.domain.proxy.DecodeMaybeProxy;
 import ru.mipt.acsl.decode.model.domain.type.DecodeEnumConstant;
 import ru.mipt.acsl.decode.model.domain.type.DecodeStructField;
 import ru.mipt.acsl.decode.model.domain.type.DecodeType;
+import ru.mipt.acsl.parsing.ParsingException;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -126,9 +128,9 @@ public class DecodeParboiledParser extends BaseParser<Object>
 
     Rule AliasAsAlias(@NotNull Var<DecodeNamespace> namespaceVar, @NotNull Var<String> infoVar)
     {
-        return Sequence("alias", EW(), ElementNameAsName(), EW(), push(namespaceVar.get()), TypeApplicationAsProxyType(),
+        return Sequence("alias", EW(), ElementNameAsName(), EW(), push(namespaceVar.get()), TypeApplicationAsOptionalProxyType(),
                 push(SimpleDecodeAliasType.newInstance((DecodeName) pop(1), namespaceVar.get(),
-                        (DecodeMaybeProxy<DecodeType>) pop(), Optional.ofNullable(infoVar.get()))));
+                        getOrThrow((Optional<DecodeMaybeProxy<DecodeType>>) pop()), Optional.ofNullable(infoVar.get()))));
     }
 
     Rule NamespaceAsNamespace(@NotNull Var<String> infoVar)
@@ -213,12 +215,12 @@ public class DecodeParboiledParser extends BaseParser<Object>
         Var<List<DecodeCommandArgument>> argsVar = new Var<>(new ArrayList<>());
         Var<String> infoVar = new Var<>();
         Var<Integer> idVar = new Var<>();
-        Var<DecodeMaybeProxy<DecodeReferenceable>> returnTypeVar = new Var<>(SimpleDecodeMaybeProxy.proxyForSystem(ImmutableDecodeName.newInstanceFromMangledName("void")));
+        Var<Optional<DecodeMaybeProxy<DecodeType>>> returnTypeVar = new Var<>(Optional.empty());
         return Sequence(OptInfoEw(infoVar), "command", EW(), ElementNameAsName(), OptEW(),
                 Optional(':', OptEW(), NonNegativeNumberAsInteger(), idVar.set(((ImmutableDecodeElementWrapper<Integer>) pop()).getValue()), OptEW()),
                 '(', Optional(OptEW(), CommandArgs(namespaceVar, argsVar)), OptEW(), ')',
-                Optional(OptEW(), "->", OptEW(), push(namespaceVar.get()), TypeApplicationAsProxyType(), returnTypeVar.set(
-                        (DecodeMaybeProxy<DecodeReferenceable>) pop())),
+                Optional(OptEW(), "->", OptEW(), push(namespaceVar.get()), TypeApplicationAsOptionalProxyType(),
+                        returnTypeVar.set((Optional<DecodeMaybeProxy<DecodeType>>) pop())),
                 push(ImmutableDecodeCommand.newInstance((DecodeName) pop(),
                         Optional.ofNullable(idVar.get()), Optional.ofNullable(infoVar.get()),
                         argsVar.get(), returnTypeVar.get())));
@@ -237,7 +239,7 @@ public class DecodeParboiledParser extends BaseParser<Object>
         Var<String> infoVar = new Var<>();
         return Sequence(OptInfoEw(infoVar), TypeUnitApplicationAsProxyType(namespaceVar, unitVar), EW(), ElementNameAsName(),
                 push(ImmutableDecodeCommandArgument
-                        .newInstance((DecodeName) pop(), (DecodeMaybeProxy<DecodeType>) pop(),
+                        .newInstance((DecodeName) pop(), getOrThrow((Optional<DecodeMaybeProxy<DecodeType>>) pop()),
                                 Optional.ofNullable(unitVar.get()),
                                 Optional.ofNullable(infoVar.get()))));
     }
@@ -249,7 +251,7 @@ public class DecodeParboiledParser extends BaseParser<Object>
         return Sequence(OptInfoEw(infoVar), TypeUnitApplicationAsProxyType(namespaceVar,
                         unitVar), EW(), ElementNameAsName(),
                 push(ImmutableDecodeStructField
-                        .newInstance((DecodeName) pop(), (DecodeMaybeProxy<DecodeType>) pop(),
+                        .newInstance((DecodeName) pop(), getOrThrow((Optional<DecodeMaybeProxy<DecodeType>>) pop()),
                                 Optional.ofNullable(unitVar.get()),
                                 Optional.ofNullable(infoVar.get()))));
     }
@@ -257,7 +259,7 @@ public class DecodeParboiledParser extends BaseParser<Object>
     Rule TypeUnitApplicationAsProxyType(@NotNull Var<DecodeNamespace> namespaceVar,
                                         @NotNull Var<DecodeMaybeProxy<DecodeUnit>> unitVar)
     {
-        return Sequence(push(namespaceVar.get()), TypeApplicationAsProxyType(), Optional(
+        return Sequence(push(namespaceVar.get()), TypeApplicationAsOptionalProxyType(), Optional(
                 OptEW(), UnitAsFqn(), unitVar.set(unitForFqn((DecodeFqn) pop(), namespaceVar.get()))));
     }
 
@@ -271,32 +273,33 @@ public class DecodeParboiledParser extends BaseParser<Object>
         return proxyDefaultNamespace(unitFqn, namespace);
     }
 
-    Rule TypeApplicationAsProxyType()
+    Rule TypeApplicationAsOptionalProxyType()
     {
-        Var<List<DecodeMaybeProxy<DecodeReferenceable>>> genericTypesVar = new Var<>(new ArrayList<>());
+        Var<List<Optional<DecodeMaybeProxy<DecodeReferenceable>>>> genericTypesVar = new Var<>(new ArrayList<>());
         Var<DecodeNamespace> namespaceVar = new Var<>();
         return Sequence(
                 // FIXME: Parboiled bug
                 namespaceVar.set((DecodeNamespace) pop()),
                 FirstOf(
-                        PrimitiveTypeApplicationAsProxyType(),
-                        NativeTypeApplicationAsProxyType(),
+                        PrimitiveTypeApplicationAsOptionalProxyType(),
+                        NativeTypeApplicationAsOptionalProxyType(),
                         // FIXME: bug with Var in parboiled
                         Sequence(push(namespaceVar.get()),
-                                ArrayTypeApplicationAsProxyType()),
-                        Sequence(ElementIdAsFqn(), push(
-                                proxyForTypeFqn(namespaceVar.get(), (DecodeFqn) pop())))),
-                Optional(OptEW(), '<', push(namespaceVar.get()), TypeApplicationAsProxyType(),
-                        genericTypesVar.get().add((DecodeMaybeProxy<DecodeReferenceable>) pop()),
-                        ZeroOrMore(OptEW(), ',', OptEW(), push(namespaceVar.get()), TypeApplicationAsProxyType(),
-                                genericTypesVar.get().add((DecodeMaybeProxy<DecodeReferenceable>) pop())),
-                        Optional(OptEW(), ','), OptEW(), '>', push(proxyForSystemTypeString(
-                                ((DecodeMaybeProxy<DecodeReferenceable>) pop()).getProxy().getUri().toString() + "<" +
-                                        genericTypesListToString(genericTypesVar.get()) + ">"))),
+                                ArrayTypeApplicationAsOptionalProxyType()),
+                        Sequence(ElementIdAsFqn(),
+                                push(Optional.of(proxyForTypeFqn(namespaceVar.get(), (DecodeFqn) pop()))))),
+                Optional(OptEW(), '<', push(namespaceVar.get()), TypeApplicationAsOptionalProxyType(),
+                        genericTypesVar.get().add((Optional<DecodeMaybeProxy<DecodeReferenceable>>) pop()),
+                        ZeroOrMore(OptEW(), ',', OptEW(), push(namespaceVar.get()), TypeApplicationAsOptionalProxyType(),
+                                genericTypesVar.get().add((Optional<DecodeMaybeProxy<DecodeReferenceable>>) pop())),
+                        Optional(OptEW(), ','), OptEW(), '>', push(Optional.of(proxyForTypeString(
+                                DecodeUtils.typeUriToTypeName(
+                                getOrThrow((Optional<DecodeMaybeProxy<DecodeReferenceable>>) pop()).getProxy().getUri()) + "<" +
+                                        genericTypesListToString(genericTypesVar.get()) + ">", namespaceVar.get().getFqn())))),
                 Optional(OptEW(), '?',
-                        push(proxyForSystem(ImmutableDecodeName.newInstanceFromSourceName("optional<"
-                                + ((DecodeMaybeProxy<DecodeReferenceable>) pop()).getProxy().getUri().toString()
-                                + ">")))));
+                        push(Optional.of(proxyForSystem(ImmutableDecodeName.newInstanceFromSourceName("optional<"
+                                + getOrThrow((Optional<DecodeMaybeProxy<DecodeReferenceable>>) pop()).getProxy().getUri().toString()
+                                + ">"))))));
     }
 
     DecodeMaybeProxy<DecodeReferenceable> proxyForTypeFqn(@NotNull DecodeNamespace namespace,
@@ -310,10 +313,10 @@ public class DecodeParboiledParser extends BaseParser<Object>
     }
 
     @NotNull
-    static String genericTypesListToString(@NotNull List<DecodeMaybeProxy<DecodeReferenceable>> genericTypesVar)
+    static String genericTypesListToString(@NotNull List<Optional<DecodeMaybeProxy<DecodeReferenceable>>> genericTypesVar)
     {
-        return genericTypesVar.stream().map(DecodeMaybeProxy::getProxy)
-                .map(DecodeProxy::getUri).map(Object::toString).collect(
+        return genericTypesVar.stream().map(op -> op.map(DecodeMaybeProxy::getProxy)
+                .map(DecodeProxy::getUri).map(Object::toString).orElse("void")).collect(
                 Collectors.joining(","));
     }
 
@@ -322,32 +325,38 @@ public class DecodeParboiledParser extends BaseParser<Object>
         return Sequence('/', ElementIdAsFqn(), '/');
     }
 
-    Rule NativeTypeApplicationAsProxyType()
+    Rule NativeTypeApplicationAsOptionalProxyType()
     {
-        return Sequence("ber",
-                push(proxyForSystem(ImmutableDecodeName.newInstanceFromSourceName(match()))));
+        return FirstOf(Sequence("void", push(Optional.empty())),
+                Sequence("ber",
+                        push(Optional.of(proxyForSystem(ImmutableDecodeName.newInstanceFromSourceName(match()))))));
     }
 
-    Rule PrimitiveTypeApplicationAsProxyType()
+    Rule PrimitiveTypeApplicationAsOptionalProxyType()
     {
         return Sequence(Sequence(PrimitiveTypeKind(), ':', NonNegativeNumber()),
-                push(proxyForSystem(ImmutableDecodeName.newInstanceFromSourceName(match()))));
+                push(Optional.of(proxyForSystem(ImmutableDecodeName.newInstanceFromSourceName(match())))));
     }
 
     // FIXME: uses DecodeNamespace ref from stack, should use Var, parboiled bug
-    Rule ArrayTypeApplicationAsProxyType()
+    Rule ArrayTypeApplicationAsOptionalProxyType()
     {
         Var<DecodeNamespace> namespaceVar = new Var<>();
         Var<DecodeMaybeProxy<DecodeType>> typeApplicationVar = new Var<>();
         return Sequence(
                 Sequence(namespaceVar.set((DecodeNamespace) pop()), '[', OptEW(),
                         push(namespaceVar.get()),
-                        TypeApplicationAsProxyType(), typeApplicationVar.set((DecodeMaybeProxy<DecodeType>) pop()),
+                        TypeApplicationAsOptionalProxyType(), typeApplicationVar.set(getOrThrow((Optional<DecodeMaybeProxy<DecodeType>>) pop())),
                         Optional(OptEW(), ',', OptEW(),
                                 Sequence(LengthFrom(), Optional(OptEW(), "..", OptEW(), LengthTo()))),
                         OptEW(), ']'),
-                push(proxy(DecodeUtils.getNamespaceFqnFromUri(typeApplicationVar.get().getProxy().getUri()), ImmutableDecodeName
-                        .newInstanceFromSourceName(match()))));
+                push(Optional.of(proxy(DecodeUtils.getNamespaceFqnFromUri(typeApplicationVar.get().getProxy().getUri()), ImmutableDecodeName
+                        .newInstanceFromSourceName(match())))));
+    }
+
+    static <T> T getOrThrow(@NotNull Optional<T> optional)
+    {
+        return optional.orElseThrow(() -> new ParsingException("void type is not allowed here"));
     }
 
     Rule StructTypeFields(@NotNull Var<DecodeNamespace> namespaceVar, @NotNull Var<List<DecodeStructField>> fieldsVar)
@@ -415,9 +424,9 @@ public class DecodeParboiledParser extends BaseParser<Object>
         @NotNull Var<DecodeName> nameVar = new Var<>();
         @NotNull Var<Integer> idVar = new Var<>();
         Var<List<DecodeMessageParameter>> parametersVar = new Var<>(new ArrayList<>());
-        return Sequence("event", EW(), MessageNameId(nameVar, idVar), EW(), push(componentVar.get().getNamespace()), TypeApplicationAsProxyType(), OptEW(), MessageParameters(parametersVar),
+        return Sequence("event", EW(), MessageNameId(nameVar, idVar), EW(), push(componentVar.get().getNamespace()), TypeApplicationAsOptionalProxyType(), OptEW(), MessageParameters(parametersVar),
                 push(ImmutableDecodeEventMessage.newInstance(componentVar.get(), nameVar.get(), Optional.ofNullable(idVar.get()),
-                        Optional.ofNullable(infoVar.get()), parametersVar.get(), (DecodeMaybeProxy<DecodeType>) pop())));
+                        Optional.ofNullable(infoVar.get()), parametersVar.get(), getOrThrow((Optional<DecodeMaybeProxy<DecodeType>>) pop()))));
     }
 
     Rule ParameterAsParameter()
@@ -514,10 +523,10 @@ public class DecodeParboiledParser extends BaseParser<Object>
         return FirstOf(
                 EnumTypeDeclAsType(namespaceVar, nameVar),
                 StructTypeDeclAsStructType(namespaceVar, nameVar),
-                Sequence(push(namespaceVar.get()), TypeApplicationAsProxyType(),
+                Sequence(push(namespaceVar.get()), TypeApplicationAsOptionalProxyType(),
                         push(SimpleDecodeSubType
                                 .newInstance(Optional.ofNullable(nameVar.get()), namespaceVar.get(),
-                                        (DecodeMaybeProxy<DecodeType>) pop(), Optional.ofNullable(
+                                        getOrThrow((Optional<DecodeMaybeProxy<DecodeType>>) pop()), Optional.ofNullable(
                                                 infoVar.get())))));
     }
 
@@ -525,10 +534,11 @@ public class DecodeParboiledParser extends BaseParser<Object>
     {
         Var<String> infoVar = new Var<>();
         Var<Set<DecodeEnumConstant>> enumConstantsVar = new Var<>(new HashSet<>());
-        return Sequence("enum", EW(), push(namespaceVar.get()), TypeApplicationAsProxyType(), OptEW(), '(', OptEW(),
+        return Sequence("enum", EW(), push(namespaceVar.get()), TypeApplicationAsOptionalProxyType(), OptEW(), '(', OptEW(),
                 EnumTypeValues(enumConstantsVar), OptEW(), ')',
                 push(SimpleDecodeEnumType.newInstance(Optional.ofNullable(nameVar.get()), namespaceVar.get(),
-                        (DecodeMaybeProxy<DecodeType>) pop(), Optional.ofNullable(infoVar.get()), enumConstantsVar.get())));
+                        getOrThrow((Optional<DecodeMaybeProxy<DecodeType>>) pop()),
+                        Optional.ofNullable(infoVar.get()), enumConstantsVar.get())));
     }
 
     Rule EnumTypeValues(@NotNull Var<Set<DecodeEnumConstant>> enumConstantsVar)

@@ -5,7 +5,11 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import org.jetbrains.annotations.NotNull;
 import ru.mipt.acsl.decode.model.domain.*;
+import ru.mipt.acsl.decode.model.domain.impl.proxy.SimpleDecodeMaybeProxy;
+import ru.mipt.acsl.decode.model.domain.proxy.DecodeMaybeProxy;
 import ru.mipt.acsl.decode.model.domain.type.DecodeType;
+import ru.mipt.acsl.decode.model.exporter.ModelExportingException;
+import ru.mipt.acsl.decode.model.provider.ModelImportingException;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
@@ -80,29 +84,32 @@ public final class DecodeUtils
     {
         List<DecodeName> namespaceNameParts = new ArrayList<>(namespaceFqn.getParts());
         namespaceNameParts.add(name);
-        try
-        {
-            return URI.create("/" + URLEncoder
-                    .encode(String.join("/", namespaceNameParts.stream().map(DecodeName::asString).collect(
-                            Collectors.toList())), Charsets.UTF_8.name()));
-        }
-        catch (UnsupportedEncodingException e)
-        {
-            throw new AssertionError(e);
-        }
+            return URI.create("/" + String.join("/",
+                    namespaceNameParts.stream().map(DecodeName::asString).map(s -> {
+                        try
+                        {
+                            return URLEncoder.encode(s, Charsets.UTF_8.name());
+                        }
+                        catch (UnsupportedEncodingException e)
+                        {
+                            throw new ModelImportingException(e);
+                        }
+                    }).collect(
+                            Collectors.toList())));
     }
 
     public static List<String> getUriParts(@NotNull URI uri)
     {
-        try
-        {
-            return Lists.newArrayList(
-                    URLDecoder.decode(uri.getPath(), Charsets.UTF_8.name()).substring(1).split(Pattern.quote("/")));
-        }
-        catch (UnsupportedEncodingException e)
-        {
-            throw new AssertionError(e);
-        }
+        return Stream.of(uri.getPath().substring(1).split(Pattern.quote("/"))).map(part -> {
+            try
+            {
+                return URLDecoder.decode(part, Charsets.UTF_8.name());
+            }
+            catch (UnsupportedEncodingException e)
+            {
+                throw new ModelExportingException(e);
+            }
+        }).collect(Collectors.toList());
     }
 
     @NotNull
@@ -207,7 +214,7 @@ public final class DecodeUtils
     }
 
     @NotNull
-    public static URI getUriForSourceTypeString(@NotNull String typeString)
+    public static URI getUriForSourceTypeString(@NotNull String typeString, @NotNull DecodeFqn defaultNamespaceFqn)
     {
         typeString = normalizeSourceTypeString(typeString);
         typeString = processQuestionMarks(typeString);
@@ -215,7 +222,9 @@ public final class DecodeUtils
         if (genericStartIndex != -1)
         {
             DecodeFqn namespaceFqn = ImmutableDecodeFqn.newInstanceFromSource(typeString.substring(0, genericStartIndex));
-            return getUriForTypeNamespaceNameGenericArguments(namespaceFqn.copyDropLast(), namespaceFqn.getLast(),
+            return getUriForTypeNamespaceNameGenericArguments(namespaceFqn.size() > 1
+                            ? namespaceFqn.copyDropLast()
+                            : defaultNamespaceFqn, namespaceFqn.getLast(),
                     typeString.substring(genericStartIndex));
         }
         DecodeFqn namespaceFqn = ImmutableDecodeFqn.newInstanceFromSource(typeString);
@@ -232,8 +241,18 @@ public final class DecodeUtils
         try
         {
             return URI.create("/" + URLEncoder
-                    .encode(String.join("/", namespaceNameParts.stream().map(DecodeName::asString).collect(
-                            Collectors.toList()) + typeGenericArguments), Charsets.UTF_8.name()));
+                    .encode(String.join("/", namespaceNameParts.stream().map(DecodeName::asString)
+                            .map(s -> {
+                                try
+                                {
+                                    return URLEncoder.encode(s, Charsets.UTF_8.name());
+                                }
+                                catch (UnsupportedEncodingException e)
+                                {
+                                    throw new ModelImportingException(e);
+                                }
+                            }).collect(
+                            Collectors.toList())) + typeGenericArguments, Charsets.UTF_8.name()));
         }
         catch (UnsupportedEncodingException e)
         {
@@ -247,7 +266,7 @@ public final class DecodeUtils
         if (typeString.endsWith("?"))
         {
             String genericTypes = typeString.substring(0, typeString.length() - 1);
-            typeString = DecodeConstants.SYSTEM_NAMESPACE_NAME.asString() + ".optional<"
+            typeString = DecodeConstants.SYSTEM_NAMESPACE_FQN.asString() + ".optional<"
                     + Stream.of(genericTypes.split(Pattern.quote(",")))
                         .map(DecodeUtils::processQuestionMarks).collect(Collectors.joining(","))
                     + ">";
@@ -259,5 +278,25 @@ public final class DecodeUtils
     public static String normalizeSourceTypeString(@NotNull String typeString)
     {
         return typeString.replaceAll(Pattern.quote(" "), "");
+    }
+
+    public static String typeUriToTypeName(@NotNull URI uri)
+    {
+        try
+        {
+            return URLDecoder.decode(uri.toString(), Charsets.UTF_8.name()).substring(1).replace("/", ".");
+        }
+        catch (UnsupportedEncodingException e)
+        {
+            throw new ModelExportingException(e);
+        }
+    }
+
+    @NotNull
+    public static Optional<DecodeMaybeProxy<DecodeType>> uriToOptionalMaybeProxyType(@NotNull String typeUriString)
+    {
+        return "".equals(typeUriString)
+                ? Optional.empty()
+                : Optional.of(SimpleDecodeMaybeProxy.proxy(URI.create(typeUriString)));
     }
 }

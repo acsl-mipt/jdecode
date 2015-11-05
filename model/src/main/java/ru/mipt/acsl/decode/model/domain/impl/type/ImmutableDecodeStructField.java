@@ -1,6 +1,7 @@
-package ru.mipt.acsl.decode.model.domain.impl;
+package ru.mipt.acsl.decode.model.domain.impl.type;
 
 import ru.mipt.acsl.decode.model.domain.DecodeName;
+import ru.mipt.acsl.decode.model.domain.impl.AbstractDecodeOptionalInfoAware;
 import ru.mipt.acsl.decode.model.domain.proxy.DecodeMaybeProxy;
 import ru.mipt.acsl.decode.model.domain.type.DecodeStructField;
 import ru.mipt.acsl.decode.model.domain.type.DecodeType;

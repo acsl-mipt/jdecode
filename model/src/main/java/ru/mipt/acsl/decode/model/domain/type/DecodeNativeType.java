@@ -1,7 +1,7 @@
 package ru.mipt.acsl.decode.model.domain.type;
 
 import ru.mipt.acsl.decode.model.domain.DecodeNameAware;
-import ru.mipt.acsl.decode.model.domain.impl.ImmutableDecodeBerType;
+import ru.mipt.acsl.decode.model.domain.impl.type.ImmutableDecodeBerType;
 
 import java.util.HashSet;
 import java.util.Set;

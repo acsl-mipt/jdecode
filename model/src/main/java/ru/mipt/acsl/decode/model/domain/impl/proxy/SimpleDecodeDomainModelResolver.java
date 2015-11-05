@@ -68,6 +68,10 @@ public final class SimpleDecodeDomainModelResolver implements DecodeDomainModelR
         }
         for (DecodeCommand command : component.getCommands())
         {
+            if (command.getReturnType().isPresent())
+            {
+                resultList.add(resolveWithTypeCheck(command.getReturnType().get(), registry, DecodeType.class));
+            }
             for (DecodeCommandArgument argument : command.getArguments())
             {
                 resultList.add(resolveWithTypeCheck(argument.getType(), registry, DecodeType.class));
@@ -180,6 +184,21 @@ public final class SimpleDecodeDomainModelResolver implements DecodeDomainModelR
         public Void visit(@NotNull DecodeAliasType typeAlias)
         {
             resolvingResultList.add(resolveWithTypeCheck(typeAlias.getType(), registry, DecodeType.class));
+            return null;
+        }
+
+        @Override
+        public Void visit(@NotNull DecodeGenericType genericType)
+        {
+            return null;
+        }
+
+        @Override
+        public Void visit(@NotNull DecodeGenericTypeSpecialized genericTypeSpecialized)
+        {
+            resolvingResultList.add(resolveWithTypeCheck(genericTypeSpecialized.getGenericType(), registry, DecodeGenericType.class));
+            genericTypeSpecialized.getGenericTypeArguments().stream().filter(Optional::isPresent).forEach(
+                    arg -> resolvingResultList.add(resolveWithTypeCheck(arg.get(), registry, DecodeType.class)));
             return null;
         }
     }

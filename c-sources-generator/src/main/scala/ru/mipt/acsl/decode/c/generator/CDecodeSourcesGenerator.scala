@@ -8,6 +8,7 @@ import com.typesafe.scalalogging.LazyLogging
 import ru.mipt.acsl.decode.model.domain.`type`.DecodeType.TypeKind
 import ru.mipt.acsl.decode.model.domain.`type`._
 import ru.mipt.acsl.decode.model.domain._
+import ru.mipt.acsl.decode.model.domain.proxy.DecodeMaybeProxy
 import ru.mipt.acsl.generation.Generator
 import ru.mipt.acsl.generator.c.ast._
 
@@ -17,16 +18,14 @@ import resource._
 import scala.collection.mutable
 import scala.util.Random
 
-class CDecodeGeneratorConfiguration(val outputDir: File, val registry: DecodeRegistry,
-                                    val namespaceAlias: Map[DecodeFqn, DecodeFqn] = Map())
-{
+class CDecodeGeneratorConfiguration(val outputDir: File, val registry: DecodeRegistry, val rootComponentFqn: String,
+                                    val namespaceAlias: Map[DecodeFqn, DecodeFqn] = Map()) {
 
 }
 
-class CDecodeSourcesGenerator(val config: CDecodeGeneratorConfiguration) extends Generator[CDecodeGeneratorConfiguration] with LazyLogging
-{
-  override def generate() = {
-    config.registry.getRootNamespaces.toList.foreach(generateNs)
+class CDecodeSourcesGenerator(val config: CDecodeGeneratorConfiguration) extends Generator[CDecodeGeneratorConfiguration] with LazyLogging {
+  override def generate() {
+    generateRootComponent(config.registry.getComponent(config.rootComponentFqn).get())
   }
 
   def dirForNs(ns: DecodeNamespace): File = {
@@ -34,28 +33,28 @@ class CDecodeSourcesGenerator(val config: CDecodeGeneratorConfiguration) extends
       config.namespaceAlias.getOrElse(ns.getFqn, ns.getFqn).getParts.toList.map(_.asString()).mkString("/"))
   }
 
-  def makeDirForNs(ns: DecodeNamespace): File = {
+  def ensureDirForNsExists(ns: DecodeNamespace): File = {
     val dir = dirForNs(ns)
-    if(!(dir.exists() || dir.mkdirs()))
+    if (!(dir.exists() || dir.mkdirs()))
       sys.error(s"Can't create directory ${dir.getAbsolutePath}")
     dir
   }
 
-  def writeFile[T <: CStmt](file: File, hfile: CFile[T]): Unit = {
+  def writeFile[T <: CStmt](file: File, hfile: CFile[T]) {
     for (typeHeaderStream <- managed(new OutputStreamWriter(new FileOutputStream(file)))) {
       hfile.generate(CGeneratorState(typeHeaderStream))
     }
   }
 
-  def writeFileIfNotEmptyWithComment[A >: HStmt <: CStmt](file: File, cFile: CFile[A], comment: String): Unit = {
+  def writeFileIfNotEmptyWithComment[A >: HStmt <: CStmt](file: File, cFile: CFile[A], comment: String) {
     if (cFile.statements.nonEmpty) {
       cFile.statements.prepend(HComment(comment), HEol)
       writeFile(file, cFile)
     }
   }
 
-  def generateNs(ns: DecodeNamespace): Unit = {
-    val nsDir = makeDirForNs(ns)
+  def generateNs(ns: DecodeNamespace) {
+    val nsDir = ensureDirForNsExists(ns)
     ns.getSubNamespaces.toTraversable.foreach(generateNs)
     val typesHeader = HFile()
     ns.getTypes.toTraversable.foreach(t => {
@@ -66,7 +65,7 @@ class CDecodeSourcesGenerator(val config: CDecodeGeneratorConfiguration) extends
       })
     })
     writeFileIfNotEmptyWithComment(new File(nsDir, "types.h"), protectDoubleIncludeFile(typesHeader), s"Types of ${ns.getFqn.asString()} namespace")
-    ns.getComponents.toTraversable.foreach(generateComponent)
+    //ns.getComponents.toTraversable.foreach(generateRootComponent)
   }
 
   var typeNameId: Int = 0
@@ -96,6 +95,12 @@ class CDecodeSourcesGenerator(val config: CDecodeGeneratorConfiguration) extends
     override def visit(structType: DecodeStructType): String = cTypeNameFromOptionalName(structType.getOptionalName)
 
     override def visit(typeAlias: DecodeAliasType): String = typeAlias.getName.asString()
+
+    override def visit(genericType: DecodeGenericType): String = cTypeNameFromOptionalName(genericType.getOptionalName)
+
+    override def visit(genericTypeSpecialized: DecodeGenericTypeSpecialized): String =
+      cTypeNameFor(genericTypeSpecialized.getGenericType.getObject) + "_" +
+        genericTypeSpecialized.getGenericTypeArguments.to[Iterable].map(tp => if (tp.isPresent) cTypeNameFor(tp.get().getObject) else "void").mkString("_")
   }
 
   private def cTypeNameFromOptionalName(name: Optional[DecodeName]): String = {
@@ -165,6 +170,10 @@ class CDecodeSourcesGenerator(val config: CDecodeGeneratorConfiguration) extends
     override def visit(structType: DecodeStructType) = CTypeApplication(cTypeNameFor(structType))
 
     override def visit(typeAlias: DecodeAliasType) = CTypeApplication(cTypeNameFor(typeAlias))
+
+    override def visit(genericType: DecodeGenericType): CTypeApplication = CTypeApplication(cTypeNameFor(genericType))
+
+    override def visit(genericTypeSpecialized: DecodeGenericTypeSpecialized): CTypeApplication = CTypeApplication(cTypeNameFor(genericTypeSpecialized))
   }
 
   private def generateType(t: DecodeType): Option[HStmt] = {
@@ -190,12 +199,62 @@ class CDecodeSourcesGenerator(val config: CDecodeGeneratorConfiguration) extends
         val oldName: String = cTypeNameFor(typeAlias.getType.getObject)
         if (newName equals oldName) Some(HComment("omitted due name clash")) else Some(CDefine(newName, oldName))
       }
+
+      override def visit(genericType: DecodeGenericType): Option[HStmt] = sys.error("not implemented")
+
+      override def visit(genericTypeSpecialized: DecodeGenericTypeSpecialized): Option[HStmt] = sys.error("not implemented")
     })
 
   }
 
-  private def generateComponent(comp: DecodeComponent) = {
+  private def collectNsForType(t: DecodeMaybeProxy[DecodeType], set: mutable.Set[DecodeNamespace]) {
+    require(t.isResolved, s"Proxy not resolved error for ${t.getProxy.toString}")
+    collectNsForType(t.getObject, set)
+  }
+
+  private def collectNsForType(t: DecodeType, set: mutable.Set[DecodeNamespace]) {
+    set += t.getNamespace
+    t.accept(new DecodeTypeVisitor[Unit] {
+      override def visit(primitiveType: DecodePrimitiveType) {}
+
+      override def visit(nativeType: DecodeNativeType) {}
+
+      override def visit(subType: DecodeSubType) = collectNsForType(subType.getBaseType, set)
+
+      override def visit(enumType: DecodeEnumType) = collectNsForType(enumType.getBaseType, set)
+
+      override def visit(arrayType: DecodeArrayType) = collectNsForType(arrayType.getBaseType, set)
+
+      override def visit(structType: DecodeStructType) = structType.getFields.to[Iterable].foreach(f => collectNsForType(f.getType, set))
+
+      override def visit(typeAlias: DecodeAliasType) = collectNsForType(typeAlias.getType, set)
+
+      override def visit(genericType: DecodeGenericType) {}
+
+      override def visit(genericTypeSpecialized: DecodeGenericTypeSpecialized) = genericTypeSpecialized.getGenericTypeArguments.to[Iterable].filter(_.isPresent).foreach(a => collectNsForType(a.get(), set))
+    })
+  }
+
+  private def collectNsForTypes(comp: DecodeComponent, set: mutable.Set[DecodeNamespace]) {
+    comp.getSubComponents.foreach(cr => collectNsForTypes(cr.getComponent.getObject, set))
+    if (comp.getBaseType.isPresent)
+      collectNsForType(comp.getBaseType.get, set)
+    comp.getCommands.to[Iterable].foreach(cmd => {
+      cmd.getArguments.to[Iterable].foreach(arg => collectNsForType(arg.getType, set))
+      if (cmd.getReturnType.isPresent)
+        collectNsForType(cmd.getReturnType.get(), set)
+    })
+  }
+
+  private def generateRootComponent(comp: DecodeComponent) {
     logger.debug(s"Generating component ${comp.getName.asString()}")
+    val nsSet = mutable.HashSet[DecodeNamespace]()
+    collectNsForTypes(comp, nsSet)
+    nsSet.foreach(generateNs)
+    generateComponent(comp)
+  }
+
+  private def generateComponent(comp: DecodeComponent) {
     val dir = dirForNs(comp.getNamespace)
     val hFile = new File(dir, comp.getName.asString() + "Component.h")
     val cFile = new File(dir, comp.getName.asString() + "Component.c")

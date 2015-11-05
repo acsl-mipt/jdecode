@@ -506,6 +506,18 @@ public class DecodeSqlite3Exporter
             }
             return null;
         }
+
+        @Override
+        public Void visit(@NotNull DecodeGenericType genericType)
+        {
+            throw new AssertionError("not implemented");
+        }
+
+        @Override
+        public Void visit(@NotNull DecodeGenericTypeSpecialized genericTypeSpecialized)
+        {
+            throw new AssertionError("not implemented");
+        }
     }
 
     private static class DecodeInsertMessageVisitor implements DecodeMessageVisitor<Void>

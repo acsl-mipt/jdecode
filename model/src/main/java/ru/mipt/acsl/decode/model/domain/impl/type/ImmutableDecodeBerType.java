@@ -1,8 +1,9 @@
-package ru.mipt.acsl.decode.model.domain.impl;
+package ru.mipt.acsl.decode.model.domain.impl.type;
 
 import org.jetbrains.annotations.NotNull;
 import ru.mipt.acsl.decode.model.domain.DecodeName;
 import ru.mipt.acsl.decode.model.domain.DecodeNamespace;
+import ru.mipt.acsl.decode.model.domain.impl.ImmutableDecodeName;
 import ru.mipt.acsl.decode.model.domain.type.DecodeNativeType;
 import ru.mipt.acsl.decode.model.domain.type.DecodeTypeVisitor;
 

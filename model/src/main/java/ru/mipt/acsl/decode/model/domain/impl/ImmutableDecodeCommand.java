@@ -6,6 +6,7 @@ import ru.mipt.acsl.decode.model.domain.DecodeCommandArgument;
 import org.jetbrains.annotations.NotNull;
 import ru.mipt.acsl.decode.model.domain.DecodeReferenceable;
 import ru.mipt.acsl.decode.model.domain.proxy.DecodeMaybeProxy;
+import ru.mipt.acsl.decode.model.domain.type.DecodeType;
 
 import java.util.List;
 import java.util.Optional;
@@ -22,26 +23,21 @@ public class ImmutableDecodeCommand extends AbstractDecodeOptionalInfoAware impl
     @NotNull
     private final Optional<Integer> id;
     @NotNull
-    private final DecodeMaybeProxy<DecodeReferenceable> returnType;
+    private final Optional<DecodeMaybeProxy<DecodeType>> returnType;
 
     @NotNull
     public static DecodeCommand newInstance(@NotNull DecodeName name, @NotNull Optional<Integer> id, @NotNull Optional<String> info,
                                             @NotNull List<DecodeCommandArgument> arguments,
-                                            @NotNull DecodeMaybeProxy<DecodeReferenceable> returnType)
+                                            @NotNull Optional<DecodeMaybeProxy<DecodeType>> returnType)
     {
         return new ImmutableDecodeCommand(name, id, info, arguments, returnType);
     }
 
-    private ImmutableDecodeCommand(@NotNull DecodeName name, @NotNull Optional<Integer> id,
-                                   @NotNull Optional<String> info,
-                                   @NotNull List<DecodeCommandArgument> arguments,
-                                   @NotNull DecodeMaybeProxy<DecodeReferenceable> returnType)
+    @Override
+    @NotNull
+    public Optional<DecodeMaybeProxy<DecodeType>> getReturnType()
     {
-        super(info);
-        this.name = name;
-        this.id = id;
-        this.arguments = arguments;
-        this.returnType = returnType;
+        return returnType;
     }
 
     @NotNull
@@ -77,5 +73,17 @@ public class ImmutableDecodeCommand extends AbstractDecodeOptionalInfoAware impl
     {
         return String.format("%s{name=%s, arguments=%s, info=%s}", ImmutableDecodeCommand.class.getName(), name,
                 arguments, info);
+    }
+
+    private ImmutableDecodeCommand(@NotNull DecodeName name, @NotNull Optional<Integer> id,
+                                   @NotNull Optional<String> info,
+                                   @NotNull List<DecodeCommandArgument> arguments,
+                                   @NotNull Optional<DecodeMaybeProxy<DecodeType>> returnType)
+    {
+        super(info);
+        this.name = name;
+        this.id = id;
+        this.arguments = arguments;
+        this.returnType = returnType;
     }
 }

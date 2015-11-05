@@ -1,5 +1,6 @@
 package ru.mipt.acsl.decode.model.domain;
 
+import ru.mipt.acsl.decode.model.domain.impl.ImmutableDecodeFqn;
 import ru.mipt.acsl.decode.model.domain.impl.ImmutableDecodeName;
 import org.jetbrains.annotations.NotNull;
 
@@ -9,7 +10,7 @@ import org.jetbrains.annotations.NotNull;
 public final class DecodeConstants
 {
     @NotNull
-    public static final DecodeName SYSTEM_NAMESPACE_NAME = ImmutableDecodeName.newInstanceFromMangledName("decode");
+    public static final DecodeFqn SYSTEM_NAMESPACE_FQN = ImmutableDecodeFqn.newInstanceFromSource("decode");
 
     private DecodeConstants()
     {

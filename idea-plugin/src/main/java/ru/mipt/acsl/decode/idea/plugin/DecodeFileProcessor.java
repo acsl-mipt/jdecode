@@ -1,6 +1,5 @@
 package ru.mipt.acsl.decode.idea.plugin;
 
-import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.intellij.notification.Notification;
 import com.intellij.notification.NotificationType;
@@ -10,7 +9,10 @@ import com.intellij.psi.PsiWhiteSpace;
 import org.apache.commons.lang.NotImplementedException;
 import ru.mipt.acsl.decode.model.domain.*;
 import ru.mipt.acsl.decode.model.domain.impl.*;
-import ru.mipt.acsl.decode.model.domain.impl.proxy.SimpleDecodeMaybeProxy;
+import ru.mipt.acsl.decode.model.domain.impl.type.ImmutableDecodeEnumConstant;
+import ru.mipt.acsl.decode.model.domain.impl.type.ImmutableDecodeStructField;
+import ru.mipt.acsl.decode.model.domain.impl.type.SimpleDecodeAliasType;
+import ru.mipt.acsl.decode.model.domain.impl.type.SimpleDecodeStructType;
 import ru.mipt.acsl.decode.model.domain.message.DecodeMessageParameter;
 import ru.mipt.acsl.decode.model.domain.proxy.DecodeMaybeProxy;
 import ru.mipt.acsl.decode.model.domain.type.*;

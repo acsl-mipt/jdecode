@@ -153,6 +153,19 @@ public class JavaDecodeSourcesGenerator implements Generator<JavaDecodeSourcesGe
                     {
                         return Optional.empty();
                     }
+
+                    @Override
+                    public Optional<AbstractJavaBaseClass> visit(@NotNull DecodeGenericType genericType)
+                    {
+                        return Optional.empty();
+                    }
+
+                    @Override
+                    public Optional<AbstractJavaBaseClass> visit(
+                            @NotNull DecodeGenericTypeSpecialized genericTypeSpecialized)
+                    {
+                        return Optional.empty();
+                    }
                 });
         if (javaClassOptional.isPresent())
         {
@@ -281,6 +294,18 @@ public class JavaDecodeSourcesGenerator implements Generator<JavaDecodeSourcesGe
             public JavaType visit(@NotNull DecodeAliasType typeAlias)
             {
                 return getJavaTypeForDecodeType(typeAlias.getType().getObject(), genericUse);
+            }
+
+            @Override
+            public JavaType visit(@NotNull DecodeGenericType genericType)
+            {
+                throw new AssertionError("not implemented");
+            }
+
+            @Override
+            public JavaType visit(@NotNull DecodeGenericTypeSpecialized genericTypeSpecialized)
+            {
+                throw new AssertionError("not implemented");
             }
         });
     }
