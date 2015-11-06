@@ -2,7 +2,7 @@ package ru.mipt.acsl.decode.model.domain.impl.type;
 
 import org.jetbrains.annotations.NotNull;
 import ru.mipt.acsl.decode.model.domain.DecodeNamespace;
-import ru.mipt.acsl.decode.model.domain.IDecodeName;
+import ru.mipt.acsl.decode.model.domain.DecodeName;
 import ru.mipt.acsl.decode.model.domain.impl.AbstractDecodeOptionalInfoAware;
 import ru.mipt.acsl.decode.model.domain.proxy.DecodeMaybeProxy;
 import ru.mipt.acsl.decode.model.domain.type.DecodeAliasType;
@@ -16,13 +16,13 @@ import java.util.Optional;
 public class SimpleDecodeAliasType extends AbstractDecodeOptionalInfoAware implements DecodeAliasType
 {
     @NotNull
-    private final IDecodeName name;
+    private final DecodeName name;
     @NotNull
     private final DecodeMaybeProxy<DecodeType> type;
     @NotNull
     private DecodeNamespace namespace;
 
-    public SimpleDecodeAliasType(@NotNull IDecodeName name, @NotNull DecodeNamespace namespace,
+    public SimpleDecodeAliasType(@NotNull DecodeName name, @NotNull DecodeNamespace namespace,
                                  @NotNull DecodeMaybeProxy<DecodeType> type, @NotNull Optional<String> info)
     {
         super(info);
@@ -32,16 +32,16 @@ public class SimpleDecodeAliasType extends AbstractDecodeOptionalInfoAware imple
     }
 
     @NotNull
-    public static DecodeAliasType newInstance(@NotNull IDecodeName name, @NotNull DecodeNamespace namespace,
-                                             @NotNull DecodeMaybeProxy<DecodeType> type,
-                                             @NotNull Optional<String> info)
+    public static DecodeAliasType newInstance(@NotNull DecodeName name, @NotNull DecodeNamespace namespace,
+                                              @NotNull DecodeMaybeProxy<DecodeType> type,
+                                              @NotNull Optional<String> info)
     {
         return new SimpleDecodeAliasType(name, namespace, type, info);
     }
 
     @NotNull
     @Override
-    public Optional<IDecodeName> getOptionalName()
+    public Optional<DecodeName> getOptionalName()
     {
         return Optional.of(name);
     }
@@ -55,7 +55,7 @@ public class SimpleDecodeAliasType extends AbstractDecodeOptionalInfoAware imple
 
     @NotNull
     @Override
-    public IDecodeName getName()
+    public DecodeName getName()
     {
 
         return name;

@@ -27,7 +27,7 @@ public class SimpleDecodeProxy<T extends DecodeReferenceable> implements DecodeP
     public static <T extends DecodeReferenceable> DecodeProxy<T> newInstanceFromTypeUriString(@NotNull String typeUriString, @NotNull DecodeFqn defaultNsFqn)
     {
         return newInstance(URI.create((typeUriString.startsWith("/")? typeUriString : "/" + defaultNsFqn.getParts().stream().map(
-                IDecodeName::asString).collect(Collectors.joining("/")) + typeUriString)));
+                DecodeName::asString).collect(Collectors.joining("/")) + typeUriString)));
     }
 
     private SimpleDecodeProxy(@NotNull URI uri)

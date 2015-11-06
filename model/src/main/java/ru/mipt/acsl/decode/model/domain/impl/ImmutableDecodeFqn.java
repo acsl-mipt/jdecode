@@ -4,7 +4,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import org.jetbrains.annotations.NotNull;
 import ru.mipt.acsl.decode.model.domain.DecodeFqn;
-import ru.mipt.acsl.decode.model.domain.IDecodeName;
+import ru.mipt.acsl.decode.model.domain.DecodeName;
 
 import java.util.List;
 import java.util.Objects;
@@ -18,9 +18,9 @@ import java.util.stream.Stream;
 public class ImmutableDecodeFqn implements DecodeFqn
 {
     @NotNull
-    private final List<IDecodeName> parts;
+    private final List<DecodeName> parts;
 
-    public static DecodeFqn newInstance(@NotNull List<IDecodeName> parts)
+    public static DecodeFqn newInstance(@NotNull List<DecodeName> parts)
     {
         return new ImmutableDecodeFqn(parts);
     }
@@ -29,12 +29,12 @@ public class ImmutableDecodeFqn implements DecodeFqn
     public static DecodeFqn newInstanceFromSource(@NotNull String sourceText)
     {
         return new ImmutableDecodeFqn(Stream.of(sourceText.split(Pattern.quote(".")))
-                .map(DecodeName::newFromSourceName).collect(Collectors.toList()));
+                .map(DecodeNameImpl::newFromSourceName).collect(Collectors.toList()));
     }
 
     @NotNull
     @Override
-    public List<IDecodeName> getParts()
+    public List<DecodeName> getParts()
     {
         return parts;
     }
@@ -43,7 +43,7 @@ public class ImmutableDecodeFqn implements DecodeFqn
     @Override
     public String asString()
     {
-        return String.join(".", parts.stream().map(IDecodeName::asString).collect(Collectors.<String>toList()));
+        return String.join(".", parts.stream().map(DecodeName::asString).collect(Collectors.<String>toList()));
     }
 
     @NotNull
@@ -76,7 +76,7 @@ public class ImmutableDecodeFqn implements DecodeFqn
         return Objects.hashCode(parts);
     }
 
-    private ImmutableDecodeFqn(@NotNull List<IDecodeName> parts)
+    private ImmutableDecodeFqn(@NotNull List<DecodeName> parts)
     {
         Preconditions.checkArgument(!parts.isEmpty(), "FQN must not be empty");
         this.parts = ImmutableList.copyOf(parts);
@@ -87,6 +87,6 @@ public class ImmutableDecodeFqn implements DecodeFqn
     public String toString()
     {
         return String.format("%s{parts=%s}", ImmutableDecodeFqn.class.getName(),
-                String.join(".", parts.stream().map(IDecodeName::asString).collect(Collectors.toList())));
+                String.join(".", parts.stream().map(DecodeName::asString).collect(Collectors.toList())));
     }
 }

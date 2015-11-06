@@ -1,6 +1,6 @@
 package ru.mipt.acsl.decode.model.domain.impl.type;
 
-import ru.mipt.acsl.decode.model.domain.IDecodeName;
+import ru.mipt.acsl.decode.model.domain.DecodeName;
 import ru.mipt.acsl.decode.model.domain.type.DecodeType;
 import ru.mipt.acsl.decode.model.domain.DecodeNamespace;
 import ru.mipt.acsl.decode.model.domain.type.DecodePrimitiveType;
@@ -19,21 +19,21 @@ public class SimpleDecodePrimitiveType extends AbstractDecodeType implements Dec
 
     private final long bitLength;
 
-    public static DecodePrimitiveType newInstance(@NotNull Optional<IDecodeName> name, @NotNull DecodeNamespace namespace,
-                                                 @NotNull DecodeType.TypeKind kind, long bitLength,
-                                                 @NotNull Optional<String> info)
+    public static DecodePrimitiveType newInstance(@NotNull Optional<DecodeName> name, @NotNull DecodeNamespace namespace,
+                                                  @NotNull DecodeType.TypeKind kind, long bitLength,
+                                                  @NotNull Optional<String> info)
     {
         return new SimpleDecodePrimitiveType(name, namespace, kind, bitLength, info);
     }
 
-    public static DecodePrimitiveType newInstance(@NotNull Optional<IDecodeName> name, @NotNull DecodeNamespace namespace,
+    public static DecodePrimitiveType newInstance(@NotNull Optional<DecodeName> name, @NotNull DecodeNamespace namespace,
                                                   @NotNull DecodeType.TypeKind kind, long bitLength,
                                                   @Nullable String info)
     {
         return new SimpleDecodePrimitiveType(name, namespace, kind, bitLength, Optional.ofNullable(info));
     }
 
-    private SimpleDecodePrimitiveType(@NotNull Optional<IDecodeName> name, @NotNull DecodeNamespace namespace,
+    private SimpleDecodePrimitiveType(@NotNull Optional<DecodeName> name, @NotNull DecodeNamespace namespace,
                                       @NotNull DecodeType.TypeKind kind, long bitLength,
                                       @NotNull Optional<String> info)
     {

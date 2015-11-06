@@ -2,7 +2,7 @@ package ru.mipt.acsl.decode.model.domain.impl;
 
 import org.jetbrains.annotations.NotNull;
 import ru.mipt.acsl.decode.model.domain.DecodeOptionalNameAware;
-import ru.mipt.acsl.decode.model.domain.IDecodeName;
+import ru.mipt.acsl.decode.model.domain.DecodeName;
 
 import java.util.Optional;
 
@@ -13,23 +13,23 @@ public class AbstractDecodeNameAndOptionalInfoAware extends AbstractDecodeOption
         DecodeOptionalNameAware
 {
     @NotNull
-    private final IDecodeName name;
+    private final DecodeName name;
 
-    protected AbstractDecodeNameAndOptionalInfoAware(@NotNull IDecodeName name, @NotNull Optional<String> info)
+    protected AbstractDecodeNameAndOptionalInfoAware(@NotNull DecodeName name, @NotNull Optional<String> info)
     {
         super(info);
         this.name = name;
     }
 
     @NotNull
-    public IDecodeName getName()
+    public DecodeName getName()
     {
         return name;
     }
 
     @NotNull
     @Override
-    public Optional<IDecodeName> getOptionalName()
+    public Optional<DecodeName> getOptionalName()
     {
         return Optional.of(name);
     }

@@ -13,14 +13,14 @@ public class SimpleDecodeLanguage extends AbstractDecodeNameNamespaceOptionalInf
 {
     private final boolean isDefault;
 
-    private SimpleDecodeLanguage(@NotNull DecodeName name, @NotNull DecodeNamespace namespace, boolean isDefault,
-                                @NotNull Optional<String> info)
+    private SimpleDecodeLanguage(@NotNull DecodeNameImpl name, @NotNull DecodeNamespace namespace, boolean isDefault,
+                                 @NotNull Optional<String> info)
     {
         super(name, namespace, info);
         this.isDefault = isDefault;
     }
 
-    public static DecodeLanguage newInstance(@NotNull DecodeName name, @NotNull DecodeNamespace namespace,
+    public static DecodeLanguage newInstance(@NotNull DecodeNameImpl name, @NotNull DecodeNamespace namespace,
                                              boolean isDefault,
                                              @NotNull Optional<String> info)
     {

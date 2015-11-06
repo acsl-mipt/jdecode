@@ -3,7 +3,7 @@ package ru.mipt.acsl.decode.model.domain.impl;
 import org.jetbrains.annotations.NotNull;
 import ru.mipt.acsl.decode.model.domain.DecodeCommand;
 import ru.mipt.acsl.decode.model.domain.DecodeCommandArgument;
-import ru.mipt.acsl.decode.model.domain.IDecodeName;
+import ru.mipt.acsl.decode.model.domain.DecodeName;
 import ru.mipt.acsl.decode.model.domain.proxy.DecodeMaybeProxy;
 import ru.mipt.acsl.decode.model.domain.type.DecodeType;
 
@@ -18,14 +18,14 @@ public class ImmutableDecodeCommand extends AbstractDecodeOptionalInfoAware impl
     @NotNull
     private final List<DecodeCommandArgument> arguments;
     @NotNull
-    private final DecodeName name;
+    private final DecodeNameImpl name;
     @NotNull
     private final Optional<Integer> id;
     @NotNull
     private final Optional<DecodeMaybeProxy<DecodeType>> returnType;
 
     @NotNull
-    public static DecodeCommand newInstance(@NotNull DecodeName name, @NotNull Optional<Integer> id, @NotNull Optional<String> info,
+    public static DecodeCommand newInstance(@NotNull DecodeNameImpl name, @NotNull Optional<Integer> id, @NotNull Optional<String> info,
                                             @NotNull List<DecodeCommandArgument> arguments,
                                             @NotNull Optional<DecodeMaybeProxy<DecodeType>> returnType)
     {
@@ -55,14 +55,14 @@ public class ImmutableDecodeCommand extends AbstractDecodeOptionalInfoAware impl
 
     @NotNull
     @Override
-    public Optional<IDecodeName> getOptionalName()
+    public Optional<DecodeName> getOptionalName()
     {
         return Optional.of(name);
     }
 
     @NotNull
     @Override
-    public DecodeName getName()
+    public DecodeNameImpl getName()
     {
         return name;
     }
@@ -74,7 +74,7 @@ public class ImmutableDecodeCommand extends AbstractDecodeOptionalInfoAware impl
                 arguments, info);
     }
 
-    private ImmutableDecodeCommand(@NotNull DecodeName name, @NotNull Optional<Integer> id,
+    private ImmutableDecodeCommand(@NotNull DecodeNameImpl name, @NotNull Optional<Integer> id,
                                    @NotNull Optional<String> info,
                                    @NotNull List<DecodeCommandArgument> arguments,
                                    @NotNull Optional<DecodeMaybeProxy<DecodeType>> returnType)

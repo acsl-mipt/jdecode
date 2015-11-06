@@ -176,7 +176,7 @@ public class JavaDecodeSourcesGenerator implements Generator<JavaDecodeSourcesGe
     @NotNull
     private String getOrMakeUniqueName(DecodeOptionalNameAware optionalNameAware)
     {
-        Optional<IDecodeName> optionalName = optionalNameAware.getOptionalName();
+        Optional<DecodeName> optionalName = optionalNameAware.getOptionalName();
         return optionalName.isPresent() ? optionalName.get().asString() : makeUniqueName();
     }
 

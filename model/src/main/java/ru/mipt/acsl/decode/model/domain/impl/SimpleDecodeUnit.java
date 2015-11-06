@@ -3,8 +3,9 @@ package ru.mipt.acsl.decode.model.domain.impl;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import ru.mipt.acsl.decode.model.domain.DecodeNamespace;
+import ru.mipt.acsl.decode.model.domain.DecodeReferenceableVisitor;
 import ru.mipt.acsl.decode.model.domain.DecodeUnit;
-import ru.mipt.acsl.decode.model.domain.IDecodeName;
+import ru.mipt.acsl.decode.model.domain.DecodeName;
 
 import java.util.Optional;
 
@@ -16,26 +17,26 @@ public class SimpleDecodeUnit extends AbstractDecodeOptionalInfoAware implements
     @NotNull
     private final Optional<String> display;
     @NotNull
-    private final DecodeName name;
+    private final DecodeNameImpl name;
     @NotNull
     private DecodeNamespace namespace;
 
     @NotNull
-    public static DecodeUnit newInstance(@NotNull DecodeName name, @NotNull DecodeNamespace namespace,
-                                        @NotNull Optional<String> display,
-                                        @NotNull Optional<String> info)
+    public static DecodeUnit newInstance(@NotNull DecodeNameImpl name, @NotNull DecodeNamespace namespace,
+                                         @NotNull Optional<String> display,
+                                         @NotNull Optional<String> info)
     {
         return new SimpleDecodeUnit(name, namespace, display, info);
     }
 
     @NotNull
-    public static DecodeUnit newInstance(@NotNull DecodeName name, @NotNull DecodeNamespace namespace,
-                                        @Nullable String display, @Nullable String info)
+    public static DecodeUnit newInstance(@NotNull DecodeNameImpl name, @NotNull DecodeNamespace namespace,
+                                         @Nullable String display, @Nullable String info)
     {
         return newInstance(name, namespace, Optional.ofNullable(display), Optional.ofNullable(info));
     }
 
-    private SimpleDecodeUnit(@NotNull DecodeName name, @NotNull DecodeNamespace namespace,
+    private SimpleDecodeUnit(@NotNull DecodeNameImpl name, @NotNull DecodeNamespace namespace,
                              @NotNull Optional<String> display,
                              @NotNull Optional<String> info)
     {
@@ -52,16 +53,22 @@ public class SimpleDecodeUnit extends AbstractDecodeOptionalInfoAware implements
         return display;
     }
 
+    @Override
+    public <T> T accept(DecodeReferenceableVisitor<T> visitor)
+    {
+        return visitor.visit(this);
+    }
+
     @NotNull
     @Override
-    public DecodeName getName()
+    public DecodeNameImpl getName()
     {
         return name;
     }
 
     @NotNull
     @Override
-    public Optional<IDecodeName> getOptionalName()
+    public Optional<DecodeName> getOptionalName()
     {
         return Optional.of(name);
     }

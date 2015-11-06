@@ -259,7 +259,7 @@ public class DecodeSqlite3Exporter
                 String.format("INSERT INTO %s (namespace_id, name, info) VALUES (?, ?, ?)", TableName.TYPE)))
         {
             insertType.setLong(1, namespaceKeyByNamespaceMap.get(type.getNamespace()));
-            setStringOrNull(insertType, 2, type.getOptionalName().map(IDecodeName::asString));
+            setStringOrNull(insertType, 2, type.getOptionalName().map(DecodeName::asString));
             setStringOrNull(insertType, 3, type.getInfo());
             insertType.execute();
             typeKeyByType.put(type, getGeneratedKey(insertType));
@@ -475,7 +475,7 @@ public class DecodeSqlite3Exporter
                         insertField.setLong(4, typeKeyByType.get(field.getType().getObject()));
                         insertField.setLong(5, namespaceKeyByNamespaceMap.get(structType.getNamespace()));
                         setStringOrNull(insertField, 6, field.getUnit().map(DecodeMaybeProxy::getObject).map(
-                                DecodeUnit::getName).map(IDecodeName::asString));
+                                DecodeUnit::getName).map(DecodeName::asString));
                         setStringOrNull(insertField, 7, field.getInfo());
                         insertField.execute();
                     }

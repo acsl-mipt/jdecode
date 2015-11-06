@@ -2,7 +2,6 @@ package ru.mipt.acsl.decode.model.domain.impl;
 
 import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
 import org.jetbrains.annotations.NotNull;
 import ru.mipt.acsl.decode.model.domain.*;
 import ru.mipt.acsl.decode.model.domain.impl.proxy.SimpleDecodeMaybeProxy;
@@ -41,7 +40,7 @@ public final class DecodeUtils
             final DecodeNamespace parentNamespace = namespace;
             namespace = namespaces.stream().filter(ns -> ns.getName().asString().equals(namespaceName)).findAny().orElseGet(() -> {
                 DecodeNamespace newNamespace = SimpleDecodeNamespace.newInstance(
-                        DecodeName.newFromMangledName(namespaceName),
+                        DecodeNameImpl.newFromMangledName(namespaceName),
                         Optional.ofNullable(parentNamespace));
                 if (parentNamespace != null)
                 {
@@ -64,7 +63,7 @@ public final class DecodeUtils
     {
         List<DecodeNamespace> namespaces = registry.getRootNamespaces();
         Optional<DecodeNamespace> namespace = Optional.empty();
-        for (IDecodeName namespaceName : namespaceFqn.getParts())
+        for (DecodeName namespaceName : namespaceFqn.getParts())
         {
             namespace = namespaces.stream().filter(ns -> ns.getName().equals(namespaceName)).findAny();
             if (!namespace.isPresent())
@@ -80,12 +79,12 @@ public final class DecodeUtils
     }
 
     @NotNull
-    public static URI getUriForNamespaceAndName(@NotNull DecodeFqn namespaceFqn, @NotNull IDecodeName name)
+    public static URI getUriForNamespaceAndName(@NotNull DecodeFqn namespaceFqn, @NotNull DecodeName name)
     {
-        List<IDecodeName> namespaceNameParts = new ArrayList<>(namespaceFqn.getParts());
+        List<DecodeName> namespaceNameParts = new ArrayList<>(namespaceFqn.getParts());
         namespaceNameParts.add(name);
             return URI.create("/" + String.join("/",
-                    namespaceNameParts.stream().map(IDecodeName::asString).map(s -> {
+                    namespaceNameParts.stream().map(DecodeName::asString).map(s -> {
                         try
                         {
                             return URLEncoder.encode(s, Charsets.UTF_8.name());
@@ -146,7 +145,7 @@ public final class DecodeUtils
         List<DecodeUnit> units = targetNamespace.getUnits();
         namespace.getUnits().stream().forEach(u ->
         {
-            IDecodeName name = u.getName();
+            DecodeName name = u.getName();
             Preconditions.checkState(units.stream().noneMatch(u2 -> u2.getName().equals(name)),
                     "unit name collision '%s'", name);
             u.setNamespace(targetNamespace);
@@ -156,7 +155,7 @@ public final class DecodeUtils
         List<DecodeType> types = targetNamespace.getTypes();
         namespace.getTypes().stream().forEach(t ->
         {
-            Optional<IDecodeName> name = t.getOptionalName();
+            Optional<DecodeName> name = t.getOptionalName();
             Preconditions.checkState(types.stream().noneMatch(t2 -> t2.getOptionalName().equals(name)),
                     "type name collision '%s'", name);
             t.setNamespace(targetNamespace);
@@ -166,7 +165,7 @@ public final class DecodeUtils
         List<DecodeComponent> components = targetNamespace.getComponents();
         namespace.getComponents().stream().forEach(c ->
         {
-            IDecodeName name = c.getName();
+            DecodeName name = c.getName();
             Preconditions.checkState(components.stream().noneMatch(c2 -> c2.getName().equals(name)),
                     "component name collision '%s'", name);
             c.setNamespace(targetNamespace);
@@ -179,7 +178,7 @@ public final class DecodeUtils
     {
         DecodeNamespace namespace = SimpleDecodeNamespace.newInstance(namespaceFqn.getLast(),
                 Optional.<DecodeNamespace>empty());
-        List<IDecodeName> parts = namespaceFqn.getParts();
+        List<DecodeName> parts = namespaceFqn.getParts();
         for (int i = parts.size() - 2; i >= 0; i--)
         {
             DecodeNamespace parentNamespace = SimpleDecodeNamespace.newInstance(parts.get(i),
@@ -195,7 +194,7 @@ public final class DecodeUtils
     public static DecodeNamespace newNamespaceForFqn(@NotNull DecodeFqn fqn)
     {
         DecodeNamespace currentNamespace = null;
-        for (IDecodeName name : fqn.getParts())
+        for (DecodeName name : fqn.getParts())
         {
             currentNamespace = SimpleDecodeNamespace.newInstance(name, Optional.ofNullable(currentNamespace));
             if (currentNamespace.getParent().isPresent())
@@ -211,7 +210,7 @@ public final class DecodeUtils
     {
         List<String> uriParts = getUriParts(uri);
         return ImmutableDecodeFqn.newInstance(uriParts.stream().limit(uriParts.size() - 1)
-                .map(DecodeName::newFromMangledName).collect(Collectors.toList()));
+                .map(DecodeNameImpl::newFromMangledName).collect(Collectors.toList()));
     }
 
     @NotNull
@@ -235,15 +234,15 @@ public final class DecodeUtils
 
     @NotNull
     private static URI getUriForTypeNamespaceNameGenericArguments(@NotNull DecodeFqn namespaceFqn,
-                                                                  @NotNull IDecodeName typeName,
+                                                                  @NotNull DecodeName typeName,
                                                                   @NotNull String typeGenericArguments)
     {
-        List<IDecodeName> namespaceNameParts = new ArrayList<>(namespaceFqn.getParts());
+        List<DecodeName> namespaceNameParts = new ArrayList<>(namespaceFqn.getParts());
         namespaceNameParts.add(typeName);
         try
         {
             return URI.create("/" + URLEncoder
-                    .encode(String.join("/", namespaceNameParts.stream().map(IDecodeName::asString)
+                    .encode(String.join("/", namespaceNameParts.stream().map(DecodeName::asString)
                             .map(s -> {
                                 try
                                 {

@@ -8,7 +8,7 @@ import org.jetbrains.annotations.NotNull;
 public interface DecodeNameAware extends DecodeOptionalNameAware
 {
     @NotNull
-    default IDecodeName getName()
+    default DecodeName getName()
     {
         return getOptionalName().get();
     }

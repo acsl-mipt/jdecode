@@ -2,8 +2,8 @@ package ru.mipt.acsl.decode.model.domain.impl.type;
 
 import org.jetbrains.annotations.NotNull;
 import ru.mipt.acsl.decode.model.domain.DecodeNamespace;
-import ru.mipt.acsl.decode.model.domain.IDecodeName;
-import ru.mipt.acsl.decode.model.domain.impl.DecodeName;
+import ru.mipt.acsl.decode.model.domain.DecodeName;
+import ru.mipt.acsl.decode.model.domain.impl.DecodeNameImpl;
 import ru.mipt.acsl.decode.model.domain.type.DecodeNativeType;
 import ru.mipt.acsl.decode.model.domain.type.DecodeTypeVisitor;
 
@@ -15,16 +15,16 @@ import java.util.Optional;
 public class ImmutableDecodeBerType extends AbstractDecodeType implements DecodeNativeType
 {
     public static final String NAME = "ber";
-    public static final IDecodeName MANGLED_NAME = DecodeName.newFromMangledName(NAME);
+    public static final DecodeName MANGLED_NAME = DecodeNameImpl.newFromMangledName(NAME);
 
-    public static DecodeNativeType newInstance(@NotNull Optional<IDecodeName> name,
+    public static DecodeNativeType newInstance(@NotNull Optional<DecodeName> name,
                                               @NotNull DecodeNamespace namespace,
                                               @NotNull Optional<String> info)
     {
         return new ImmutableDecodeBerType(name, namespace, info);
     }
 
-    private ImmutableDecodeBerType(@NotNull Optional<IDecodeName> name,
+    private ImmutableDecodeBerType(@NotNull Optional<DecodeName> name,
                                    @NotNull DecodeNamespace namespace,
                                    @NotNull Optional<String> info)
     {

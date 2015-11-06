@@ -46,7 +46,7 @@ public interface DecodeNamespace extends DecodeReferenceable, DecodeNameAware
     @NotNull
     default DecodeFqn getFqn()
     {
-        List<IDecodeName> parts = new ArrayList<>();
+        List<DecodeName> parts = new ArrayList<>();
         DecodeNamespace currentNamespace = this;
         while (currentNamespace.getParent().isPresent())
         {

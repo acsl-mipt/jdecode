@@ -1,13 +1,15 @@
 package ru.mipt.acsl.decode.model.domain
 
+import java.util.Optional
+
 /**
   * @author Artem Shein
   */
-trait IDecodeName {
+trait DecodeName {
   def asString(): String
 }
 
-object IDecodeName {
+object DecodeName {
   def mangleName(name: String): String = {
     var result = name
     if (result.startsWith("^")) {
@@ -18,4 +20,10 @@ object IDecodeName {
       sys.error("invalid name")
     result
   }
+}
+
+trait DecodeUnit extends DecodeNameAware with DecodeOptionalInfoAware with DecodeReferenceable with DecodeNamespaceAware {
+  def getDisplay: Optional[String]
+
+  def accept[T] (visitor: DecodeReferenceableVisitor[T] ): T = visitor.visit(this)
 }

@@ -1,7 +1,7 @@
 package ru.mipt.acsl.decode.model.domain.type;
 
 import org.jetbrains.annotations.NotNull;
-import ru.mipt.acsl.decode.model.domain.IDecodeName;
+import ru.mipt.acsl.decode.model.domain.DecodeName;
 
 import java.util.List;
 import java.util.Optional;
@@ -12,7 +12,7 @@ import java.util.Optional;
 public interface DecodeGenericType extends DecodeType
 {
     @NotNull
-    List<Optional<IDecodeName>> getTypeParameters();
+    List<Optional<DecodeName>> getTypeParameters();
 
     @Override
     default <T> T accept(@NotNull DecodeTypeVisitor<T> visitor)

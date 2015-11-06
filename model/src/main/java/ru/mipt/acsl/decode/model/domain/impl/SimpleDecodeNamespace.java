@@ -16,7 +16,7 @@ import java.util.Optional;
 public class SimpleDecodeNamespace implements DecodeNamespace
 {
     @NotNull
-    private final IDecodeName name;
+    private final DecodeName name;
     @NotNull
     private List<DecodeType> types = new ArrayList<>();
     @NotNull
@@ -30,12 +30,12 @@ public class SimpleDecodeNamespace implements DecodeNamespace
     @NotNull
     private List<DecodeLanguage> languages = new ArrayList<>();
 
-    public static DecodeNamespace newInstance(@NotNull IDecodeName name, @NotNull Optional<DecodeNamespace> parent)
+    public static DecodeNamespace newInstance(@NotNull DecodeName name, @NotNull Optional<DecodeNamespace> parent)
     {
         return new SimpleDecodeNamespace(name, parent);
     }
 
-    private SimpleDecodeNamespace(@NotNull IDecodeName name, @NotNull Optional<DecodeNamespace> parent)
+    private SimpleDecodeNamespace(@NotNull DecodeName name, @NotNull Optional<DecodeNamespace> parent)
     {
         this.name = Preconditions.checkNotNull(name);
         this.parent = parent;
@@ -104,14 +104,14 @@ public class SimpleDecodeNamespace implements DecodeNamespace
 
     @NotNull
     @Override
-    public Optional<IDecodeName> getOptionalName()
+    public Optional<DecodeName> getOptionalName()
     {
         return Optional.of(name);
     }
 
     @Override
     @NotNull
-    public IDecodeName getName()
+    public DecodeName getName()
     {
         return name;
     }

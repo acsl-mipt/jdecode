@@ -22,7 +22,7 @@ import java.util.stream.Stream;
 public class ProvidePrimitivesAndNativeTypesDecodeProxyResolver implements DecodeProxyResolver
 {
     @NotNull
-    private final Map<DecodeName, DecodeType> knownTypeByNameMap = new HashMap<>();
+    private final Map<DecodeNameImpl, DecodeType> knownTypeByNameMap = new HashMap<>();
     @NotNull
     private final Map<String, DecodeGenericTypeSpecialized> genericTypeSpecializedByTypeNameMap = new HashMap<>();
 
@@ -48,7 +48,7 @@ public class ProvidePrimitivesAndNativeTypesDecodeProxyResolver implements Decod
                 Optional<DecodeType.TypeKind> typeKindOptional = DecodeType.TypeKind.forName(typeKind);
                 if (typeKindOptional.isPresent())
                 {
-                    DecodeName name = DecodeName.newFromMangledName(typeName);
+                    DecodeNameImpl name = DecodeNameImpl.newFromMangledName(typeName);
                     DecodeNamespace namespace = namespaceOptional.get();
                     DecodeType nativeOrPrimitiveType = knownTypeByNameMap.computeIfAbsent(name,
                             (nameKey) -> SimpleDecodePrimitiveType
@@ -57,7 +57,7 @@ public class ProvidePrimitivesAndNativeTypesDecodeProxyResolver implements Decod
                                             Optional.<String>empty()));
                     Preconditions.checkState(nativeOrPrimitiveType instanceof DecodePrimitiveType);
                     DecodePrimitiveType primitiveType = (DecodePrimitiveType) nativeOrPrimitiveType;
-                    Optional<IDecodeName> primitiveTypeOptionalName = primitiveType.getOptionalName();
+                    Optional<DecodeName> primitiveTypeOptionalName = primitiveType.getOptionalName();
                     if (primitiveTypeOptionalName.isPresent()
                             && !namespace.getTypes().stream()
                             .filter(t -> t.getOptionalName().equals(primitiveTypeOptionalName))
@@ -104,7 +104,7 @@ public class ProvidePrimitivesAndNativeTypesDecodeProxyResolver implements Decod
             // Native type
             else if (DecodeNativeType.MANGLED_TYPE_NAMES.contains(typeName))
             {
-                DecodeName name = DecodeName.newFromMangledName(typeName);
+                DecodeNameImpl name = DecodeNameImpl.newFromMangledName(typeName);
                 DecodeNamespace namespace = namespaceOptional.get();
                 DecodeType knownType = knownTypeByNameMap.computeIfAbsent(name,
                         (nameKey) -> {
@@ -123,7 +123,7 @@ public class ProvidePrimitivesAndNativeTypesDecodeProxyResolver implements Decod
                             }
                             throw new AssertionError();
                         });
-                Optional<IDecodeName> nativeTypeOptionalName = knownType.getOptionalName();
+                Optional<DecodeName> nativeTypeOptionalName = knownType.getOptionalName();
                 if (nativeTypeOptionalName.isPresent()
                         && !namespace.getTypes().stream().filter(t -> t.getOptionalName().equals(
                         nativeTypeOptionalName))

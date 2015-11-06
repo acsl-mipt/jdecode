@@ -1,9 +1,9 @@
 package ru.mipt.acsl.decode.model.domain.type;
 
 import ru.mipt.acsl.decode.model.domain.DecodeOptionalInfoAware;
+import ru.mipt.acsl.decode.model.domain.DecodeUnit;
 import ru.mipt.acsl.decode.model.domain.proxy.DecodeMaybeProxy;
 import ru.mipt.acsl.decode.model.domain.DecodeNameAware;
-import ru.mipt.acsl.decode.model.domain.DecodeUnit;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Optional;

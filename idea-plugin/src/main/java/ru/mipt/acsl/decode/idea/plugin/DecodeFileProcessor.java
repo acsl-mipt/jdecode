@@ -77,7 +77,7 @@ public class DecodeFileProcessor
             {
                 namespace.getUnits().add(
                         SimpleDecodeUnit.newInstance(
-                                ImmutableDecodeName.newInstanceFromSourceName(
+                                DecodeNameImpl.newFromSourceName(
                                         ((DecodeUnitDecl) element).getElementNameRule().getText()),
                                 namespace,
                                 getText(((DecodeUnitDecl) element).getStringValue()),
@@ -94,7 +94,7 @@ public class DecodeFileProcessor
             else if (element instanceof DecodeAliasDecl)
             {
                 namespace.getTypes()
-                        .add(SimpleDecodeAliasType.newInstance(ImmutableDecodeName.newInstanceFromSourceName(
+                        .add(SimpleDecodeAliasType.newInstance(DecodeNameImpl.newFromSourceName(
                                         ((DecodeAliasDecl) element).getElementId().getText()),
                                 namespace,
                                 makeProxyForTypeApplication(((DecodeAliasDecl) element).getTypeApplication(), namespace),
@@ -234,7 +234,7 @@ public class DecodeFileProcessor
                                                    @NotNull DecodeNamespace namespace)
     {
         return proxy(getNamespaceFqnFor(arrayType, namespace),
-                ImmutableDecodeName.newInstanceFromSourceName(arrayType.getText()));
+                DecodeNameImpl.newFromSourceName(arrayType.getText()));
     }
 
     @NotNull
@@ -278,7 +278,7 @@ public class DecodeFileProcessor
         }
         if (primitiveType != null)
         {
-            return ImmutableDecodeFqn.newInstance(Lists.newArrayList(DecodeConstants.SYSTEM_NAMESPACE_NAME));
+            return DecodeConstants.SYSTEM_NAMESPACE_FQN;
         }
         if (genericTypeApplication != null)
         {
@@ -295,7 +295,7 @@ public class DecodeFileProcessor
     @NotNull
     private DecodeMaybeProxy<DecodeType> getProxyFor(@NotNull DecodePrimitiveTypeApplication primitiveType)
     {
-        return proxyForSystem(ImmutableDecodeName.newInstanceFromSourceName(primitiveType.getText()));
+        return proxyForSystem(DecodeNameImpl.newFromSourceName(primitiveType.getText()));
     }
 
     @NotNull
@@ -317,8 +317,8 @@ public class DecodeFileProcessor
     }
 
     @NotNull
-    private DecodeMaybeProxy<DecodeType> findExistingOrCreateType(@NotNull Optional<DecodeName> name, @NotNull DecodeTypeDeclBody typeDeclBody,
-                                           @NotNull DecodeNamespace namespace)
+    private DecodeMaybeProxy<DecodeType> findExistingOrCreateType(@NotNull Optional<DecodeNameImpl> name, @NotNull DecodeTypeDeclBody typeDeclBody,
+                                                                  @NotNull DecodeNamespace namespace)
     {
         DecodeTypeApplication typeApplication = typeDeclBody.getTypeApplication();
         DecodeEnumTypeDecl enumType = typeDeclBody.getEnumTypeDecl();
@@ -339,8 +339,8 @@ public class DecodeFileProcessor
     }
 
     @NotNull
-    private DecodeType newType(@NotNull Optional<DecodeName> name, @NotNull DecodeTypeDeclBody typeDeclBody,
-                              @NotNull DecodeNamespace namespace)
+    private DecodeType newType(@NotNull Optional<DecodeNameImpl> name, @NotNull DecodeTypeDeclBody typeDeclBody,
+                               @NotNull DecodeNamespace namespace)
     {
         DecodeTypeApplication typeApplication = typeDeclBody.getTypeApplication();
         DecodeEnumTypeDecl enumType = typeDeclBody.getEnumTypeDecl();
@@ -365,7 +365,7 @@ public class DecodeFileProcessor
     private DecodeType newType(@NotNull DecodeTypeDecl typeDecl, @NotNull DecodeNamespace namespace)
     {
         return newType(
-                Optional.of(ImmutableDecodeName.newInstanceFromSourceName(typeDecl.getElementNameRule().getText())),
+                Optional.of(DecodeNameImpl.newFromSourceName(typeDecl.getElementNameRule().getText())),
                 typeDecl.getTypeDeclBody(), namespace);
     }
 
@@ -380,18 +380,18 @@ public class DecodeFileProcessor
         {
             DecodeTypeUnitApplication typeUnitApplication = fieldElement.getTypeUnitApplication();
             DecodeUnit unit = typeUnitApplication.getUnit();
-            fields.add(ImmutableDecodeStructField.newInstance(ImmutableDecodeName.newInstanceFromSourceName(
+            fields.add(ImmutableDecodeStructField.newInstance(DecodeNameImpl.newFromSourceName(
                             fieldElement.getElementNameRule().getText()),
                     makeProxyForTypeApplication(typeUnitApplication.getTypeApplication(), namespace),
                     Optional.ofNullable(unit).map(u -> proxy(namespace.getFqn(),
-                            ImmutableDecodeName.newInstanceFromSourceName(u.getElementId().getText()))),
+                            DecodeNameImpl.newFromSourceName(u.getElementId().getText()))),
                     getText(fieldElement.getInfoString())));
         }
         return SimpleDecodeStructType.newInstance(name, namespace, getText(structTypeDecl.getInfoString()), fields);
     }
 
     @NotNull
-    private DecodeSubType newSubTypeForTypeApplication(@NotNull Optional<DecodeName> name,
+    private DecodeSubType newSubTypeForTypeApplication(@NotNull Optional<DecodeNameImpl> name,
                                                       @NotNull Optional<String> info,
                                                       @NotNull DecodeTypeApplication newTypeDeclBody,
                                                       @NotNull DecodeNamespace namespace)
@@ -457,12 +457,12 @@ public class DecodeFileProcessor
     }
 
     @NotNull
-    private static DecodeType newEnumType(@NotNull Optional<DecodeName> name, @NotNull DecodeEnumTypeDecl enumTypeDecl,
-                                         @NotNull DecodeNamespace namespace)
+    private static DecodeType newEnumType(@NotNull Optional<DecodeNameImpl> name, @NotNull DecodeEnumTypeDecl enumTypeDecl,
+                                          @NotNull DecodeNamespace namespace)
     {
         Set<DecodeEnumConstant> values = enumTypeDecl.getEnumTypeValues().getEnumTypeValueList().stream()
                 .map(child -> ImmutableDecodeEnumConstant.newInstance(
-                        ImmutableDecodeName.newInstanceFromSourceName(child.getElementNameRule().getText()),
+                        DecodeNameImpl.newFromSourceName(child.getElementNameRule().getText()),
                         child.getLiteral().getText(), getText(child.getInfoString()))).collect(Collectors.toSet());
         throw new AssertionError("not implemented");
         /*return SimpleDecodeEnumType.newInstance(name, namespace, proxy(namespace.getFqn(),
@@ -471,7 +471,7 @@ public class DecodeFileProcessor
     }
 
     @NotNull
-    private Optional<DecodeType> newPrimitiveType(@NotNull Optional<DecodeName> name,
+    private Optional<DecodeType> newPrimitiveType(@NotNull Optional<DecodeNameImpl> name,
                                                  @NotNull DecodeNamespace namespace,
                                                  @NotNull DecodePrimitiveTypeApplication primitiveTypeApplication)
     {

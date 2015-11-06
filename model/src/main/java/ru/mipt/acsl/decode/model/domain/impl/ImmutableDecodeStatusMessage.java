@@ -14,14 +14,14 @@ import java.util.Optional;
 public class ImmutableDecodeStatusMessage extends AbstractImmutableDecodeMessage implements DecodeStatusMessage
 {
     @NotNull
-    public static DecodeStatusMessage newInstance(@NotNull DecodeComponent component, @NotNull DecodeName name,
+    public static DecodeStatusMessage newInstance(@NotNull DecodeComponent component, @NotNull DecodeNameImpl name,
                                                   @NotNull Optional<Integer> id, @NotNull Optional<String> info,
                                                   @NotNull List<DecodeMessageParameter> parameters)
     {
         return new ImmutableDecodeStatusMessage(component, name, id, info, parameters);
     }
 
-    private ImmutableDecodeStatusMessage(@NotNull DecodeComponent component, @NotNull DecodeName name,
+    private ImmutableDecodeStatusMessage(@NotNull DecodeComponent component, @NotNull DecodeNameImpl name,
                                          @NotNull Optional<Integer> id,
                                          @NotNull Optional<String> info,
                                          @NotNull List<DecodeMessageParameter> parameters)

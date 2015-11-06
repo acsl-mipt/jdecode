@@ -1,9 +1,9 @@
 package ru.mipt.acsl.decode.model.domain.impl;
 
-import ru.mipt.acsl.decode.model.domain.IDecodeName;
+import ru.mipt.acsl.decode.model.domain.DecodeUnit;
+import ru.mipt.acsl.decode.model.domain.DecodeName;
 import ru.mipt.acsl.decode.model.domain.proxy.DecodeMaybeProxy;
 import ru.mipt.acsl.decode.model.domain.type.DecodeType;
-import ru.mipt.acsl.decode.model.domain.DecodeUnit;
 import ru.mipt.acsl.decode.model.domain.DecodeCommandArgument;
 import org.jetbrains.annotations.NotNull;
 
@@ -21,16 +21,16 @@ public class ImmutableDecodeCommandArgument extends AbstractDecodeOptionalInfoAw
     @NotNull
     private final Optional<DecodeMaybeProxy<DecodeUnit>> unit;
     @NotNull
-    private final DecodeName name;
+    private final DecodeNameImpl name;
 
-    public static DecodeCommandArgument newInstance(@NotNull DecodeName name, @NotNull DecodeMaybeProxy<DecodeType> type,
-                                                   @NotNull Optional<DecodeMaybeProxy<DecodeUnit>> unit,
-                                                   @NotNull Optional<String> info)
+    public static DecodeCommandArgument newInstance(@NotNull DecodeNameImpl name, @NotNull DecodeMaybeProxy<DecodeType> type,
+                                                    @NotNull Optional<DecodeMaybeProxy<DecodeUnit>> unit,
+                                                    @NotNull Optional<String> info)
     {
         return new ImmutableDecodeCommandArgument(name, type, unit, info);
     }
 
-    private ImmutableDecodeCommandArgument(@NotNull DecodeName name, @NotNull DecodeMaybeProxy<DecodeType> type,
+    private ImmutableDecodeCommandArgument(@NotNull DecodeNameImpl name, @NotNull DecodeMaybeProxy<DecodeType> type,
                                            @NotNull Optional<DecodeMaybeProxy<DecodeUnit>> unit,
                                            @NotNull Optional<String> info)
     {
@@ -57,14 +57,14 @@ public class ImmutableDecodeCommandArgument extends AbstractDecodeOptionalInfoAw
 
     @NotNull
     @Override
-    public Optional<IDecodeName> getOptionalName()
+    public Optional<DecodeName> getOptionalName()
     {
         return Optional.of(name);
     }
 
     @NotNull
     @Override
-    public DecodeName getName()
+    public DecodeNameImpl getName()
     {
         return name;
     }

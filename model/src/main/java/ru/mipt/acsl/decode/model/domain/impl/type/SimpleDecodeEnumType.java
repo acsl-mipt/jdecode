@@ -1,7 +1,7 @@
 package ru.mipt.acsl.decode.model.domain.impl.type;
 
 import ru.mipt.acsl.decode.model.domain.DecodeNamespace;
-import ru.mipt.acsl.decode.model.domain.IDecodeName;
+import ru.mipt.acsl.decode.model.domain.DecodeName;
 import ru.mipt.acsl.decode.model.domain.proxy.DecodeMaybeProxy;
 import ru.mipt.acsl.decode.model.domain.type.DecodeEnumConstant;
 import ru.mipt.acsl.decode.model.domain.type.DecodeType;
@@ -22,7 +22,7 @@ public class SimpleDecodeEnumType extends AbstractDecodeType implements DecodeEn
     @NotNull
     private final Set<DecodeEnumConstant> constants;
 
-    public static DecodeEnumType newInstance(@NotNull Optional<IDecodeName> name,
+    public static DecodeEnumType newInstance(@NotNull Optional<DecodeName> name,
                                             @NotNull DecodeNamespace namespace,
                                             @NotNull DecodeMaybeProxy<DecodeType> baseType,
                                             @NotNull Optional<String> info,
@@ -31,7 +31,7 @@ public class SimpleDecodeEnumType extends AbstractDecodeType implements DecodeEn
         return new SimpleDecodeEnumType(name, namespace, baseType, info, constants);
     }
 
-    private SimpleDecodeEnumType(@NotNull Optional<IDecodeName> name,
+    private SimpleDecodeEnumType(@NotNull Optional<DecodeName> name,
                                  @NotNull DecodeNamespace namespace,
                                  @NotNull DecodeMaybeProxy<DecodeType> baseType,
                                  @NotNull Optional<String> info,

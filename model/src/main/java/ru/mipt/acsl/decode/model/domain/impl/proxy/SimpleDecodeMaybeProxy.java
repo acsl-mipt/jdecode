@@ -36,7 +36,7 @@ public class SimpleDecodeMaybeProxy<T extends DecodeReferenceable> extends Eithe
 
     @NotNull
     public static <K extends DecodeReferenceable> DecodeMaybeProxy<K> proxy(@NotNull DecodeFqn namespaceFqn,
-                                                                          @NotNull IDecodeName name)
+                                                                          @NotNull DecodeName name)
     {
         return proxy(DecodeUtils.getUriForNamespaceAndName(namespaceFqn, name));
     }
@@ -56,7 +56,7 @@ public class SimpleDecodeMaybeProxy<T extends DecodeReferenceable> extends Eithe
     }
 
     @NotNull
-    public static <K extends DecodeReferenceable> DecodeMaybeProxy<K> proxyForSystem(@NotNull IDecodeName decodeName)
+    public static <K extends DecodeReferenceable> DecodeMaybeProxy<K> proxyForSystem(@NotNull DecodeName decodeName)
     {
         return proxy(DecodeConstants.SYSTEM_NAMESPACE_FQN, decodeName);
     }

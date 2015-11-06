@@ -10,7 +10,6 @@ import org.parboiled.parserunners.TracingParseRunner;
 import org.parboiled.support.ParsingResult;
 import org.parboiled.support.Var;
 import ru.mipt.acsl.common.Either;
-import ru.mipt.acsl.decode.model.domain.DecodeComponent;
 import ru.mipt.acsl.decode.model.domain.message.DecodeMessageParameter;
 
 import java.util.ArrayList;
@@ -63,7 +62,7 @@ public class DecodeParameterWalker implements Iterator<Either<String, Integer>>
         {
             return Sequence(Sequence(Optional('^'), FirstOf(CharRange('a', 'z'), CharRange('A', 'Z'), '_'), ZeroOrMore(
                     FirstOf(CharRange('a', 'z'), CharRange('A', 'Z'), CharRange('0', '9'), '_'))),
-                    tokens.get().add(Either.left(DecodeName.newFromSourceName(match()).asString())));
+                    tokens.get().add(Either.left(DecodeNameImpl.newFromSourceName(match()).asString())));
         }
 
         Rule ArrayLimits(@NotNull Var<List<Either<String, Integer>>> tokens)

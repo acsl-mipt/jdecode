@@ -19,7 +19,7 @@ public class ImmutableDecodeEventMessage extends AbstractImmutableDecodeMessage 
     protected final DecodeMaybeProxy<DecodeType> eventType;
 
     @NotNull
-    public static DecodeEventMessage newInstance(@NotNull DecodeComponent component, @NotNull DecodeName name,
+    public static DecodeEventMessage newInstance(@NotNull DecodeComponent component, @NotNull DecodeNameImpl name,
                                                  @NotNull Optional<Integer> id, @NotNull Optional<String> info,
                                                  @NotNull List<DecodeMessageParameter> parameters,
                                                  @NotNull DecodeMaybeProxy<DecodeType> eventType)
@@ -35,7 +35,7 @@ public class ImmutableDecodeEventMessage extends AbstractImmutableDecodeMessage 
                 name, id, info, parameters, eventType);
     }
 
-    private ImmutableDecodeEventMessage(@NotNull DecodeComponent component, @NotNull DecodeName name,
+    private ImmutableDecodeEventMessage(@NotNull DecodeComponent component, @NotNull DecodeNameImpl name,
                                         @NotNull Optional<Integer> id,
                                         @NotNull Optional<String> info,
                                         @NotNull List<DecodeMessageParameter> parameters,

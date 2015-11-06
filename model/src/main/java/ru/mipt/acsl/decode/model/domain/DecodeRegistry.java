@@ -1,6 +1,6 @@
 package ru.mipt.acsl.decode.model.domain;
 
-import ru.mipt.acsl.decode.model.domain.impl.DecodeName;
+import ru.mipt.acsl.decode.model.domain.impl.DecodeNameImpl;
 import ru.mipt.acsl.decode.model.domain.message.DecodeMessage;
 import ru.mipt.acsl.decode.model.domain.proxy.DecodeResolvingResult;
 import org.jetbrains.annotations.NotNull;
@@ -30,7 +30,7 @@ public interface DecodeRegistry
         {
             return Optional.empty();
         }
-        IDecodeName componentName = DecodeName.newFromMangledName(fqn.substring(dotPos + 1, fqn.length()));
+        DecodeName componentName = DecodeNameImpl.newFromMangledName(fqn.substring(dotPos + 1, fqn.length()));
         return namespaceOptional.get().getComponents().stream().filter((c) -> c.getName().equals(componentName)).findAny();
     }
 
@@ -45,7 +45,7 @@ public interface DecodeRegistry
             {
                 return Optional.empty();
             }
-            IDecodeName decodeName = DecodeName.newFromMangledName(namespaceName);
+            DecodeName decodeName = DecodeNameImpl.newFromMangledName(namespaceName);
             currentNamespace = currentNamespaces.stream().filter((n) -> n.getName().equals(decodeName)).findAny();
             currentNamespaces = currentNamespace.isPresent() ? currentNamespace.get().getSubNamespaces() : null;
         }
@@ -56,7 +56,7 @@ public interface DecodeRegistry
     default Optional<DecodeMessage> getMessage(@NotNull String fqn)
     {
         int dotPos = fqn.lastIndexOf('.');
-        IDecodeName decodeName = DecodeName.newFromMangledName(fqn.substring(dotPos + 1, fqn.length()));
+        DecodeName decodeName = DecodeNameImpl.newFromMangledName(fqn.substring(dotPos + 1, fqn.length()));
         return getComponent(fqn.substring(0, dotPos)).map((c) -> c.getMessages().stream().filter((m) -> m.getName().equals(decodeName)).findAny().orElse(null));
     }
 

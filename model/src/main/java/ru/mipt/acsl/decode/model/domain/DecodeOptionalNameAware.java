@@ -10,5 +10,5 @@ import java.util.Optional;
 public interface DecodeOptionalNameAware extends DecodeElement
 {
     @NotNull
-    Optional<IDecodeName> getOptionalName();
+    Optional<DecodeName> getOptionalName();
 }
