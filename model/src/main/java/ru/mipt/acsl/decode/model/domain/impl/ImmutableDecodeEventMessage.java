@@ -1,7 +1,6 @@
 package ru.mipt.acsl.decode.model.domain.impl;
 
 import ru.mipt.acsl.decode.model.domain.DecodeComponent;
-import ru.mipt.acsl.decode.model.domain.DecodeName;
 import ru.mipt.acsl.decode.model.domain.message.DecodeEventMessage;
 import ru.mipt.acsl.decode.model.domain.message.DecodeMessageParameter;
 import org.jetbrains.annotations.NotNull;

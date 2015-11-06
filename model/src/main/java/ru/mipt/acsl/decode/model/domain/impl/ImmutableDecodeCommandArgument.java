@@ -1,6 +1,6 @@
 package ru.mipt.acsl.decode.model.domain.impl;
 
-import ru.mipt.acsl.decode.model.domain.DecodeName;
+import ru.mipt.acsl.decode.model.domain.IDecodeName;
 import ru.mipt.acsl.decode.model.domain.proxy.DecodeMaybeProxy;
 import ru.mipt.acsl.decode.model.domain.type.DecodeType;
 import ru.mipt.acsl.decode.model.domain.DecodeUnit;
@@ -57,7 +57,7 @@ public class ImmutableDecodeCommandArgument extends AbstractDecodeOptionalInfoAw
 
     @NotNull
     @Override
-    public Optional<DecodeName> getOptionalName()
+    public Optional<IDecodeName> getOptionalName()
     {
         return Optional.of(name);
     }

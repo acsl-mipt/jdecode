@@ -1,7 +1,7 @@
 package ru.mipt.acsl.decode.model.domain.impl.type;
 
-import ru.mipt.acsl.decode.model.domain.DecodeName;
 import ru.mipt.acsl.decode.model.domain.DecodeNamespace;
+import ru.mipt.acsl.decode.model.domain.IDecodeName;
 import ru.mipt.acsl.decode.model.domain.proxy.DecodeMaybeProxy;
 import ru.mipt.acsl.decode.model.domain.type.ArraySize;
 import ru.mipt.acsl.decode.model.domain.type.DecodeArrayType;
@@ -20,7 +20,7 @@ public class SimpleDecodeArrayType extends AbstractDecodeType implements DecodeA
     @NotNull
     private final ArraySize size;
 
-    public static DecodeArrayType newInstance(@NotNull Optional<DecodeName> name, @NotNull DecodeNamespace namespace,
+    public static DecodeArrayType newInstance(@NotNull Optional<IDecodeName> name, @NotNull DecodeNamespace namespace,
                                              @NotNull DecodeMaybeProxy<DecodeType> baseType,
                                              @NotNull Optional<String> info,
                                              @NotNull ArraySize size)
@@ -28,7 +28,7 @@ public class SimpleDecodeArrayType extends AbstractDecodeType implements DecodeA
         return new SimpleDecodeArrayType(name, namespace, baseType, info, size);
     }
 
-    private SimpleDecodeArrayType(@NotNull Optional<DecodeName> name, @NotNull DecodeNamespace namespace,
+    private SimpleDecodeArrayType(@NotNull Optional<IDecodeName> name, @NotNull DecodeNamespace namespace,
                                   @NotNull DecodeMaybeProxy<DecodeType> baseType,
                                   @NotNull Optional<String> info, @NotNull ArraySize size)
     {

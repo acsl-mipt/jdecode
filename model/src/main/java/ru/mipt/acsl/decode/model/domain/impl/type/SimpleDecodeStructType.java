@@ -1,7 +1,7 @@
 package ru.mipt.acsl.decode.model.domain.impl.type;
 
-import ru.mipt.acsl.decode.model.domain.DecodeName;
 import ru.mipt.acsl.decode.model.domain.DecodeNamespace;
+import ru.mipt.acsl.decode.model.domain.IDecodeName;
 import ru.mipt.acsl.decode.model.domain.type.DecodeStructField;
 import ru.mipt.acsl.decode.model.domain.type.DecodeStructType;
 import com.google.common.collect.ImmutableList;
@@ -18,14 +18,14 @@ public class SimpleDecodeStructType extends AbstractDecodeType implements Decode
     @NotNull
     private final List<DecodeStructField> fields;
 
-    public static DecodeStructType newInstance(@NotNull Optional<DecodeName> name,
+    public static DecodeStructType newInstance(@NotNull Optional<IDecodeName> name,
                                               @NotNull DecodeNamespace namespace, @NotNull Optional<String> info,
                                               @NotNull List<DecodeStructField> fields)
     {
         return new SimpleDecodeStructType(name, namespace, info, fields);
     }
 
-    private SimpleDecodeStructType(@NotNull Optional<DecodeName> name, @NotNull DecodeNamespace namespace,
+    private SimpleDecodeStructType(@NotNull Optional<IDecodeName> name, @NotNull DecodeNamespace namespace,
                                    @NotNull Optional<String> info,
                                    @NotNull List<DecodeStructField> fields)
     {

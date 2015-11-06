@@ -1,15 +1,14 @@
 package ru.mipt.acsl.decode.model.domain.impl.proxy;
 
 import com.google.common.base.Charsets;
-import ru.mipt.acsl.decode.model.domain.DecodeProxy;
-import ru.mipt.acsl.decode.model.domain.DecodeReferenceable;
-import ru.mipt.acsl.decode.model.domain.DecodeRegistry;
+import ru.mipt.acsl.decode.model.domain.*;
 import ru.mipt.acsl.decode.model.domain.proxy.DecodeResolvingResult;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URLDecoder;
+import java.util.stream.Collectors;
 
 /**
  * @author Artem Shein
@@ -22,6 +21,13 @@ public class SimpleDecodeProxy<T extends DecodeReferenceable> implements DecodeP
     public static <T extends DecodeReferenceable> SimpleDecodeProxy<T> newInstance(@NotNull URI uri)
     {
         return new SimpleDecodeProxy<>(uri);
+    }
+
+    @NotNull
+    public static <T extends DecodeReferenceable> DecodeProxy<T> newInstanceFromTypeUriString(@NotNull String typeUriString, @NotNull DecodeFqn defaultNsFqn)
+    {
+        return newInstance(URI.create((typeUriString.startsWith("/")? typeUriString : "/" + defaultNsFqn.getParts().stream().map(
+                IDecodeName::asString).collect(Collectors.joining("/")) + typeUriString)));
     }
 
     private SimpleDecodeProxy(@NotNull URI uri)

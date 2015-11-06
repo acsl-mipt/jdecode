@@ -1,8 +1,8 @@
 package ru.mipt.acsl.decode.model.domain.impl.type;
 
 import org.jetbrains.annotations.NotNull;
-import ru.mipt.acsl.decode.model.domain.DecodeName;
 import ru.mipt.acsl.decode.model.domain.DecodeNamespace;
+import ru.mipt.acsl.decode.model.domain.IDecodeName;
 import ru.mipt.acsl.decode.model.domain.proxy.DecodeMaybeProxy;
 import ru.mipt.acsl.decode.model.domain.type.DecodeGenericType;
 import ru.mipt.acsl.decode.model.domain.type.DecodeGenericTypeSpecialized;
@@ -21,7 +21,7 @@ public class ImmutableDecodeGenericTypeSpecialized extends AbstractDecodeType im
     @NotNull
     private List<Optional<DecodeMaybeProxy<DecodeType>>> genericTypeArguments;
 
-    public static DecodeGenericTypeSpecialized newInstance(@NotNull Optional<DecodeName> name,
+    public static DecodeGenericTypeSpecialized newInstance(@NotNull Optional<IDecodeName> name,
                                                            @NotNull DecodeNamespace namespace,
                                                            @NotNull Optional<String> info,
                                                            @NotNull DecodeMaybeProxy<DecodeGenericType> genericType,
@@ -45,7 +45,7 @@ public class ImmutableDecodeGenericTypeSpecialized extends AbstractDecodeType im
         return genericTypeArguments;
     }
 
-    private ImmutableDecodeGenericTypeSpecialized(@NotNull Optional<DecodeName> name,
+    private ImmutableDecodeGenericTypeSpecialized(@NotNull Optional<IDecodeName> name,
                                                   @NotNull DecodeNamespace namespace,
                                                   @NotNull Optional<String> info,
                                                   @NotNull DecodeMaybeProxy<DecodeGenericType> genericType,

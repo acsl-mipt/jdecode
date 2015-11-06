@@ -1,6 +1,6 @@
 package ru.mipt.acsl.decode.model.domain.impl;
 
-import ru.mipt.acsl.decode.model.domain.DecodeName;
+import ru.mipt.acsl.decode.model.domain.IDecodeName;
 import ru.mipt.acsl.decode.model.domain.DecodeOptionalNameAndOptionalInfoAware;
 import org.jetbrains.annotations.NotNull;
 
@@ -13,9 +13,9 @@ public class AbstractDecodeOptionalNameAndOptionalInfoAware extends AbstractDeco
         DecodeOptionalNameAndOptionalInfoAware
 {
     @NotNull
-    protected Optional<DecodeName> name;
+    protected Optional<IDecodeName> name;
 
-    public AbstractDecodeOptionalNameAndOptionalInfoAware(@NotNull Optional<DecodeName> name,
+    public AbstractDecodeOptionalNameAndOptionalInfoAware(@NotNull Optional<IDecodeName> name,
                                                           @NotNull Optional<String> info)
     {
         super(info);
@@ -24,7 +24,7 @@ public class AbstractDecodeOptionalNameAndOptionalInfoAware extends AbstractDeco
 
     @NotNull
     @Override
-    public Optional<DecodeName> getOptionalName()
+    public Optional<IDecodeName> getOptionalName()
     {
         return name;
     }

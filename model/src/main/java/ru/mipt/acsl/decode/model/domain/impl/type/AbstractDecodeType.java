@@ -1,6 +1,6 @@
 package ru.mipt.acsl.decode.model.domain.impl.type;
 
-import ru.mipt.acsl.decode.model.domain.DecodeName;
+import ru.mipt.acsl.decode.model.domain.IDecodeName;
 import ru.mipt.acsl.decode.model.domain.DecodeNamespace;
 import ru.mipt.acsl.decode.model.domain.impl.AbstractDecodeOptionalNameAndOptionalInfoAware;
 import ru.mipt.acsl.decode.model.domain.type.DecodeType;
@@ -17,7 +17,7 @@ public abstract class AbstractDecodeType extends AbstractDecodeOptionalNameAndOp
     protected DecodeNamespace namespace;
 
     public AbstractDecodeType(
-            @NotNull Optional<DecodeName> name,
+            @NotNull Optional<IDecodeName> name,
             @NotNull DecodeNamespace namespace,
             @NotNull Optional<String> info)
     {

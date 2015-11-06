@@ -1,6 +1,6 @@
 package ru.mipt.acsl.decode.model.domain.impl.type;
 
-import ru.mipt.acsl.decode.model.domain.DecodeName;
+import ru.mipt.acsl.decode.model.domain.IDecodeName;
 import ru.mipt.acsl.decode.model.domain.proxy.DecodeMaybeProxy;
 import ru.mipt.acsl.decode.model.domain.DecodeNamespace;
 import ru.mipt.acsl.decode.model.domain.type.DecodeSubType;
@@ -17,7 +17,7 @@ public class SimpleDecodeSubType extends AbstractDecodeType implements DecodeSub
     @NotNull
     private final DecodeMaybeProxy<DecodeType> baseType;
 
-    public static DecodeSubType newInstance(@NotNull Optional<DecodeName> name,
+    public static DecodeSubType newInstance(@NotNull Optional<IDecodeName> name,
                                            @NotNull DecodeNamespace namespace,
                                            @NotNull DecodeMaybeProxy<DecodeType> baseType,
                                            @NotNull Optional<String> info)
@@ -25,7 +25,7 @@ public class SimpleDecodeSubType extends AbstractDecodeType implements DecodeSub
         return new SimpleDecodeSubType(name, namespace, baseType, info);
     }
 
-    private SimpleDecodeSubType(@NotNull Optional<DecodeName> name, @NotNull DecodeNamespace namespace,
+    private SimpleDecodeSubType(@NotNull Optional<IDecodeName> name, @NotNull DecodeNamespace namespace,
                                 @NotNull DecodeMaybeProxy<DecodeType> baseType,
                                 @NotNull Optional<String> info)
     {

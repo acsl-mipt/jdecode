@@ -1,5 +1,6 @@
 package ru.mipt.acsl.decode.parser;
 
+import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import org.jetbrains.annotations.NotNull;
@@ -13,6 +14,7 @@ import org.slf4j.LoggerFactory;
 import ru.mipt.acsl.decode.model.domain.*;
 import ru.mipt.acsl.decode.model.domain.impl.*;
 import ru.mipt.acsl.decode.model.domain.impl.proxy.SimpleDecodeMaybeProxy;
+import ru.mipt.acsl.decode.model.domain.impl.proxy.SimpleDecodeProxy;
 import ru.mipt.acsl.decode.model.domain.impl.type.*;
 import ru.mipt.acsl.decode.model.domain.message.DecodeMessage;
 import ru.mipt.acsl.decode.model.domain.message.DecodeMessageParameter;
@@ -22,6 +24,8 @@ import ru.mipt.acsl.decode.model.domain.type.DecodeStructField;
 import ru.mipt.acsl.decode.model.domain.type.DecodeType;
 import ru.mipt.acsl.parsing.ParsingException;
 
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -160,7 +164,7 @@ public class DecodeParboiledParser extends BaseParser<Object>
         return Sequence(
                 Sequence(Optional('^'), FirstOf(CharRange('a', 'z'), CharRange('A', 'Z'), '_'), ZeroOrMore(
                         FirstOf(CharRange('a', 'z'), CharRange('A', 'Z'), CharRange('0', '9'), '_'))),
-                push(ImmutableDecodeName.newInstanceFromSourceName(match())));
+                push(DecodeName.newFromSourceName(match())));
     }
 
     Rule ComponentAsComponent(@NotNull Var<DecodeNamespace> namespaceVar, @NotNull Var<String> infoVar)
@@ -169,7 +173,7 @@ public class DecodeParboiledParser extends BaseParser<Object>
         Var<List<DecodeComponentRef>> subComponentsVar = new Var<>(new ArrayList<>());
         Var<List<DecodeCommand>> commandsVar = new Var<>(new ArrayList<>());
         Var<List<DecodeMessage>> messagesVar = new Var<>(new ArrayList<>());
-        Var<DecodeName> baseTypeNameVar = new Var<>();
+        Var<IDecodeName> baseTypeNameVar = new Var<>();
         Var<DecodeComponent> componentVar = new Var<>();
         Var<Integer> idVar = new Var<>();
         return Sequence("component", EW(), ElementNameAsName(), baseTypeNameVar.set((DecodeName) peek()),
@@ -193,7 +197,7 @@ public class DecodeParboiledParser extends BaseParser<Object>
     }
 
     Rule ComponentParametersAsType(@NotNull Var<DecodeNamespace> namespaceVar,
-                                   @NotNull Var<DecodeName> nameVar)
+                                   @NotNull Var<IDecodeName> nameVar)
     {
         Var<List<DecodeStructField>> fieldsVar = new Var<>(new ArrayList<>());
         Var<String> infoVar = new Var<>();
@@ -204,10 +208,10 @@ public class DecodeParboiledParser extends BaseParser<Object>
     }
 
     @NotNull
-    static Optional<DecodeName> makeNewSystemName(@Nullable DecodeName name)
+    static Optional<IDecodeName> makeNewSystemName(@Nullable IDecodeName name)
     {
-        return Optional.ofNullable(name).map(DecodeName::asString).map(n -> ImmutableDecodeName
-                .newInstanceFromSourceName(n + "$"));
+        return Optional.ofNullable(name).map(IDecodeName::asString).map(n -> DecodeName
+                .newFromSourceName(n + "$"));
     }
 
     Rule CommandAsCommand(@NotNull Var<DecodeNamespace> namespaceVar)
@@ -292,12 +296,11 @@ public class DecodeParboiledParser extends BaseParser<Object>
                         genericTypesVar.get().add((Optional<DecodeMaybeProxy<DecodeReferenceable>>) pop()),
                         ZeroOrMore(OptEW(), ',', OptEW(), push(namespaceVar.get()), TypeApplicationAsOptionalProxyType(),
                                 genericTypesVar.get().add((Optional<DecodeMaybeProxy<DecodeReferenceable>>) pop())),
-                        Optional(OptEW(), ','), OptEW(), '>', push(Optional.of(proxyForTypeString(
-                                DecodeUtils.typeUriToTypeName(
-                                getOrThrow((Optional<DecodeMaybeProxy<DecodeReferenceable>>) pop()).getProxy().getUri()) + "<" +
-                                        genericTypesListToString(genericTypesVar.get()) + ">", namespaceVar.get().getFqn())))),
+                        Optional(OptEW(), ','), OptEW(), '>', push(Optional.of(SimpleDecodeMaybeProxy.proxyForTypeUriString(
+                                getOrThrow((Optional<DecodeMaybeProxy<DecodeReferenceable>>) pop()).getProxy().getUri() + "%3C" +
+                                        genericTypesListToTypesUriString(genericTypesVar.get()) + "%3E", namespaceVar.get().getFqn())))),
                 Optional(OptEW(), '?',
-                        push(Optional.of(proxyForSystem(ImmutableDecodeName.newInstanceFromSourceName("optional<"
+                        push(Optional.of(proxyForSystem(DecodeName.newFromSourceName("optional<"
                                 + getOrThrow((Optional<DecodeMaybeProxy<DecodeReferenceable>>) pop()).getProxy().getUri().toString()
                                 + ">"))))));
     }
@@ -313,11 +316,22 @@ public class DecodeParboiledParser extends BaseParser<Object>
     }
 
     @NotNull
-    static String genericTypesListToString(@NotNull List<Optional<DecodeMaybeProxy<DecodeReferenceable>>> genericTypesVar)
+    static String genericTypesListToTypesUriString(@NotNull List<Optional<DecodeMaybeProxy<DecodeReferenceable>>> genericTypesVar)
     {
-        return genericTypesVar.stream().map(op -> op.map(DecodeMaybeProxy::getProxy)
-                .map(DecodeProxy::getUri).map(Object::toString).orElse("void")).collect(
+        String result = genericTypesVar.stream().map(op -> op.map(DecodeMaybeProxy::getProxy)
+                .map(DecodeProxy::getUri).map(Object::toString).map(s -> {
+                    try
+                    {
+                        return URLEncoder.encode(s, Charsets.UTF_8.name());
+                    }
+                    catch (UnsupportedEncodingException e)
+                    {
+                        throw new ParsingException(e);
+                    }
+                }).orElse("void")).collect(
                 Collectors.joining(","));
+        Preconditions.checkState(!result.contains("/") && !result.contains("<"), "invalid types string");
+        return result;
     }
 
     Rule UnitAsFqn()
@@ -329,13 +343,13 @@ public class DecodeParboiledParser extends BaseParser<Object>
     {
         return FirstOf(Sequence("void", push(Optional.empty())),
                 Sequence("ber",
-                        push(Optional.of(proxyForSystem(ImmutableDecodeName.newInstanceFromSourceName(match()))))));
+                        push(Optional.of(proxyForSystem(DecodeName.newFromSourceName(match()))))));
     }
 
     Rule PrimitiveTypeApplicationAsOptionalProxyType()
     {
         return Sequence(Sequence(PrimitiveTypeKind(), ':', NonNegativeNumber()),
-                push(Optional.of(proxyForSystem(ImmutableDecodeName.newInstanceFromSourceName(match())))));
+                push(Optional.of(proxyForSystem(DecodeName.newFromSourceName(match())))));
     }
 
     // FIXME: uses DecodeNamespace ref from stack, should use Var, parboiled bug
@@ -350,8 +364,8 @@ public class DecodeParboiledParser extends BaseParser<Object>
                         Optional(OptEW(), ',', OptEW(),
                                 Sequence(LengthFrom(), Optional(OptEW(), "..", OptEW(), LengthTo()))),
                         OptEW(), ']'),
-                push(Optional.of(proxy(DecodeUtils.getNamespaceFqnFromUri(typeApplicationVar.get().getProxy().getUri()), ImmutableDecodeName
-                        .newInstanceFromSourceName(match())))));
+                push(Optional.of(proxy(DecodeUtils.getNamespaceFqnFromUri(typeApplicationVar.get().getProxy().getUri()), DecodeName
+                        .newFromSourceName(match())))));
     }
 
     static <T> T getOrThrow(@NotNull Optional<T> optional)
@@ -380,7 +394,7 @@ public class DecodeParboiledParser extends BaseParser<Object>
 
     Rule ElementIdAsFqn()
     {
-        Var<List<DecodeName>> names = new Var<>();
+        Var<List<IDecodeName>> names = new Var<>();
         return Sequence(ElementNameAsName(), names.set(Lists.newArrayList((DecodeName) pop())),
                 ZeroOrMore('.', ElementNameAsName(), names.get().add((DecodeName) pop())),
                 push(ImmutableDecodeFqn.newInstance(names.get())));

@@ -103,7 +103,7 @@ class CDecodeSourcesGenerator(val config: CDecodeGeneratorConfiguration) extends
         genericTypeSpecialized.getGenericTypeArguments.to[Iterable].map(tp => if (tp.isPresent) cTypeNameFor(tp.get().getObject) else "void").mkString("_")
   }
 
-  private def cTypeNameFromOptionalName(name: Optional[DecodeName]): String = {
+  private def cTypeNameFromOptionalName(name: Optional[IDecodeName]): String = {
     if (name.isPresent) {
       name.get.asString()
     } else {

@@ -1,10 +1,9 @@
 package ru.mipt.acsl.decode.model.domain.impl;
 
-import ru.mipt.acsl.decode.model.domain.DecodeName;
+import org.jetbrains.annotations.NotNull;
 import ru.mipt.acsl.decode.model.domain.DecodeCommand;
 import ru.mipt.acsl.decode.model.domain.DecodeCommandArgument;
-import org.jetbrains.annotations.NotNull;
-import ru.mipt.acsl.decode.model.domain.DecodeReferenceable;
+import ru.mipt.acsl.decode.model.domain.IDecodeName;
 import ru.mipt.acsl.decode.model.domain.proxy.DecodeMaybeProxy;
 import ru.mipt.acsl.decode.model.domain.type.DecodeType;
 
@@ -56,7 +55,7 @@ public class ImmutableDecodeCommand extends AbstractDecodeOptionalInfoAware impl
 
     @NotNull
     @Override
-    public Optional<DecodeName> getOptionalName()
+    public Optional<IDecodeName> getOptionalName()
     {
         return Optional.of(name);
     }

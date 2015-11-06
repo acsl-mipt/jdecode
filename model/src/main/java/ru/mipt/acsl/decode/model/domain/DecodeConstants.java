@@ -1,7 +1,6 @@
 package ru.mipt.acsl.decode.model.domain;
 
 import ru.mipt.acsl.decode.model.domain.impl.ImmutableDecodeFqn;
-import ru.mipt.acsl.decode.model.domain.impl.ImmutableDecodeName;
 import org.jetbrains.annotations.NotNull;
 
 /**

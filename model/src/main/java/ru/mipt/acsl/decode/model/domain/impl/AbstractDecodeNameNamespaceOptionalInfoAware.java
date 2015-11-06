@@ -1,9 +1,9 @@
 package ru.mipt.acsl.decode.model.domain.impl;
 
 import org.jetbrains.annotations.NotNull;
-import ru.mipt.acsl.decode.model.domain.DecodeName;
 import ru.mipt.acsl.decode.model.domain.DecodeNamespace;
 import ru.mipt.acsl.decode.model.domain.DecodeNamespaceAware;
+import ru.mipt.acsl.decode.model.domain.IDecodeName;
 
 import java.util.Optional;
 
@@ -16,7 +16,7 @@ public class AbstractDecodeNameNamespaceOptionalInfoAware extends AbstractDecode
     @NotNull
     protected DecodeNamespace namespace;
 
-    protected AbstractDecodeNameNamespaceOptionalInfoAware(@NotNull DecodeName name,
+    protected AbstractDecodeNameNamespaceOptionalInfoAware(@NotNull IDecodeName name,
                                                            @NotNull DecodeNamespace namespace,
                                                            @NotNull Optional<String> info)
     {

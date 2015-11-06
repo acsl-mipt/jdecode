@@ -2,9 +2,9 @@ package ru.mipt.acsl.decode.model.domain.impl;
 
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import ru.mipt.acsl.decode.model.domain.DecodeName;
 import ru.mipt.acsl.decode.model.domain.DecodeNamespace;
 import ru.mipt.acsl.decode.model.domain.DecodeUnit;
+import ru.mipt.acsl.decode.model.domain.IDecodeName;
 
 import java.util.Optional;
 
@@ -61,7 +61,7 @@ public class SimpleDecodeUnit extends AbstractDecodeOptionalInfoAware implements
 
     @NotNull
     @Override
-    public Optional<DecodeName> getOptionalName()
+    public Optional<IDecodeName> getOptionalName()
     {
         return Optional.of(name);
     }

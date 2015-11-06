@@ -10,15 +10,15 @@ import java.util.List;
 public interface DecodeFqn extends DecodeElement
 {
     @NotNull
-    List<DecodeName> getParts();
+    List<IDecodeName> getParts();
 
     @NotNull
     String asString();
 
     @NotNull
-    default DecodeName getLast()
+    default IDecodeName getLast()
     {
-        List<DecodeName> parts = getParts();
+        List<IDecodeName> parts = getParts();
         return parts.get(parts.size() - 1);
     }
 

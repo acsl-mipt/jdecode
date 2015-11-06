@@ -1,6 +1,6 @@
 package ru.mipt.acsl.decode.model.domain.impl.type;
 
-import ru.mipt.acsl.decode.model.domain.DecodeName;
+import ru.mipt.acsl.decode.model.domain.IDecodeName;
 import ru.mipt.acsl.decode.model.domain.impl.AbstractDecodeOptionalInfoAware;
 import ru.mipt.acsl.decode.model.domain.proxy.DecodeMaybeProxy;
 import ru.mipt.acsl.decode.model.domain.type.DecodeStructField;
@@ -20,16 +20,16 @@ public class ImmutableDecodeStructField extends AbstractDecodeOptionalInfoAware 
     @NotNull
     private final Optional<DecodeMaybeProxy<DecodeUnit>> unit;
     @NotNull
-    private final DecodeName name;
+    private final IDecodeName name;
 
-    public static DecodeStructField newInstance(@NotNull DecodeName name, @NotNull DecodeMaybeProxy<DecodeType> type,
-                                               @NotNull Optional<DecodeMaybeProxy<DecodeUnit>> unit,
-                                               @NotNull Optional<String> info)
+    public static DecodeStructField newInstance(@NotNull IDecodeName name, @NotNull DecodeMaybeProxy<DecodeType> type,
+                                                @NotNull Optional<DecodeMaybeProxy<DecodeUnit>> unit,
+                                                @NotNull Optional<String> info)
     {
         return new ImmutableDecodeStructField(name, type, unit, info);
     }
 
-    private ImmutableDecodeStructField(@NotNull DecodeName name, @NotNull DecodeMaybeProxy<DecodeType> type,
+    private ImmutableDecodeStructField(@NotNull IDecodeName name, @NotNull DecodeMaybeProxy<DecodeType> type,
                                        @NotNull Optional<DecodeMaybeProxy<DecodeUnit>> unit,
                                        @NotNull Optional<String> info)
     {
@@ -55,14 +55,14 @@ public class ImmutableDecodeStructField extends AbstractDecodeOptionalInfoAware 
 
     @NotNull
     @Override
-    public DecodeName getName()
+    public IDecodeName getName()
     {
         return name;
     }
 
     @NotNull
     @Override
-    public Optional<DecodeName> getOptionalName()
+    public Optional<IDecodeName> getOptionalName()
     {
         return Optional.of(name);
     }

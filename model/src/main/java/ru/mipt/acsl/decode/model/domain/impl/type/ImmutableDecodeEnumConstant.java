@@ -1,6 +1,6 @@
 package ru.mipt.acsl.decode.model.domain.impl.type;
 
-import ru.mipt.acsl.decode.model.domain.DecodeName;
+import ru.mipt.acsl.decode.model.domain.IDecodeName;
 import ru.mipt.acsl.decode.model.domain.impl.AbstractDecodeOptionalInfoAware;
 import ru.mipt.acsl.decode.model.domain.impl.ImmutableDecodeElementWrapper;
 import ru.mipt.acsl.decode.model.domain.type.DecodeEnumConstant;
@@ -14,18 +14,18 @@ import java.util.Optional;
 public class ImmutableDecodeEnumConstant extends AbstractDecodeOptionalInfoAware implements DecodeEnumConstant
 {
     @NotNull
-    private final DecodeName name;
+    private final IDecodeName name;
     @NotNull
     private final String value;
 
     @NotNull
-    public static DecodeEnumConstant newInstance(@NotNull DecodeName name, @NotNull String value, @NotNull Optional<String> info)
+    public static DecodeEnumConstant newInstance(@NotNull IDecodeName name, @NotNull String value, @NotNull Optional<String> info)
     {
         return new ImmutableDecodeEnumConstant(name, value, info);
     }
 
     @NotNull
-    public static DecodeEnumConstant newInstanceWrapper(@NotNull DecodeName name,
+    public static DecodeEnumConstant newInstanceWrapper(@NotNull IDecodeName name,
                                                        @NotNull ImmutableDecodeElementWrapper<String> value,
                                                        @NotNull Optional<String> info)
     {
@@ -34,7 +34,7 @@ public class ImmutableDecodeEnumConstant extends AbstractDecodeOptionalInfoAware
 
     @NotNull
     @Override
-    public DecodeName getName()
+    public IDecodeName getName()
     {
         return name;
     }
@@ -64,7 +64,7 @@ public class ImmutableDecodeEnumConstant extends AbstractDecodeOptionalInfoAware
                 info);
     }
 
-    private ImmutableDecodeEnumConstant(@NotNull DecodeName name, @NotNull String value, @NotNull Optional<String> info)
+    private ImmutableDecodeEnumConstant(@NotNull IDecodeName name, @NotNull String value, @NotNull Optional<String> info)
     {
         super(info);
         this.name = name;

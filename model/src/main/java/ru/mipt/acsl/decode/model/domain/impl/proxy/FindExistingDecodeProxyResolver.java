@@ -42,7 +42,7 @@ public class FindExistingDecodeProxyResolver implements DecodeProxyResolver
             {
                 current = Preconditions.checkNotNull(resolvedObject.get().accept(
                         new ResolveDecodeReferenceableVisitor(registry,
-                        ImmutableDecodeName.newInstanceFromMangledName(part))));
+                        DecodeName.newFromMangledName(part))));
             }
             else
             {
@@ -116,7 +116,7 @@ public class FindExistingDecodeProxyResolver implements DecodeProxyResolver
                                 Optional.of(part),
                                 namespace,
                                 proxy(namespace.getFqn(),
-                                        ImmutableDecodeName.newInstanceFromSourceName(
+                                        DecodeName.newFromSourceName(
                                                 innerPart.substring(0, index == -1 ? innerPart.length() : index))),
                                 Optional.<String>empty(),
                                 ImmutableArraySize.newInstance(finalMinLength, finalMaxLength)));

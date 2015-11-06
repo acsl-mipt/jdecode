@@ -41,7 +41,7 @@ public final class DecodeUtils
             final DecodeNamespace parentNamespace = namespace;
             namespace = namespaces.stream().filter(ns -> ns.getName().asString().equals(namespaceName)).findAny().orElseGet(() -> {
                 DecodeNamespace newNamespace = SimpleDecodeNamespace.newInstance(
-                        ImmutableDecodeName.newInstanceFromMangledName(namespaceName),
+                        DecodeName.newFromMangledName(namespaceName),
                         Optional.ofNullable(parentNamespace));
                 if (parentNamespace != null)
                 {
@@ -64,7 +64,7 @@ public final class DecodeUtils
     {
         List<DecodeNamespace> namespaces = registry.getRootNamespaces();
         Optional<DecodeNamespace> namespace = Optional.empty();
-        for (DecodeName namespaceName : namespaceFqn.getParts())
+        for (IDecodeName namespaceName : namespaceFqn.getParts())
         {
             namespace = namespaces.stream().filter(ns -> ns.getName().equals(namespaceName)).findAny();
             if (!namespace.isPresent())
@@ -80,12 +80,12 @@ public final class DecodeUtils
     }
 
     @NotNull
-    public static URI getUriForNamespaceAndName(@NotNull DecodeFqn namespaceFqn, @NotNull DecodeName name)
+    public static URI getUriForNamespaceAndName(@NotNull DecodeFqn namespaceFqn, @NotNull IDecodeName name)
     {
-        List<DecodeName> namespaceNameParts = new ArrayList<>(namespaceFqn.getParts());
+        List<IDecodeName> namespaceNameParts = new ArrayList<>(namespaceFqn.getParts());
         namespaceNameParts.add(name);
             return URI.create("/" + String.join("/",
-                    namespaceNameParts.stream().map(DecodeName::asString).map(s -> {
+                    namespaceNameParts.stream().map(IDecodeName::asString).map(s -> {
                         try
                         {
                             return URLEncoder.encode(s, Charsets.UTF_8.name());
@@ -100,7 +100,8 @@ public final class DecodeUtils
 
     public static List<String> getUriParts(@NotNull URI uri)
     {
-        return Stream.of(uri.getPath().substring(1).split(Pattern.quote("/"))).map(part -> {
+        String s = uri.toString();
+        return Stream.of(s.substring(1).split(Pattern.quote("/"))).map(part -> {
             try
             {
                 return URLDecoder.decode(part, Charsets.UTF_8.name());
@@ -145,7 +146,7 @@ public final class DecodeUtils
         List<DecodeUnit> units = targetNamespace.getUnits();
         namespace.getUnits().stream().forEach(u ->
         {
-            DecodeName name = u.getName();
+            IDecodeName name = u.getName();
             Preconditions.checkState(units.stream().noneMatch(u2 -> u2.getName().equals(name)),
                     "unit name collision '%s'", name);
             u.setNamespace(targetNamespace);
@@ -155,7 +156,7 @@ public final class DecodeUtils
         List<DecodeType> types = targetNamespace.getTypes();
         namespace.getTypes().stream().forEach(t ->
         {
-            Optional<DecodeName> name = t.getOptionalName();
+            Optional<IDecodeName> name = t.getOptionalName();
             Preconditions.checkState(types.stream().noneMatch(t2 -> t2.getOptionalName().equals(name)),
                     "type name collision '%s'", name);
             t.setNamespace(targetNamespace);
@@ -165,7 +166,7 @@ public final class DecodeUtils
         List<DecodeComponent> components = targetNamespace.getComponents();
         namespace.getComponents().stream().forEach(c ->
         {
-            DecodeName name = c.getName();
+            IDecodeName name = c.getName();
             Preconditions.checkState(components.stream().noneMatch(c2 -> c2.getName().equals(name)),
                     "component name collision '%s'", name);
             c.setNamespace(targetNamespace);
@@ -178,7 +179,7 @@ public final class DecodeUtils
     {
         DecodeNamespace namespace = SimpleDecodeNamespace.newInstance(namespaceFqn.getLast(),
                 Optional.<DecodeNamespace>empty());
-        List<DecodeName> parts = namespaceFqn.getParts();
+        List<IDecodeName> parts = namespaceFqn.getParts();
         for (int i = parts.size() - 2; i >= 0; i--)
         {
             DecodeNamespace parentNamespace = SimpleDecodeNamespace.newInstance(parts.get(i),
@@ -194,7 +195,7 @@ public final class DecodeUtils
     public static DecodeNamespace newNamespaceForFqn(@NotNull DecodeFqn fqn)
     {
         DecodeNamespace currentNamespace = null;
-        for (DecodeName name : fqn.getParts())
+        for (IDecodeName name : fqn.getParts())
         {
             currentNamespace = SimpleDecodeNamespace.newInstance(name, Optional.ofNullable(currentNamespace));
             if (currentNamespace.getParent().isPresent())
@@ -210,38 +211,39 @@ public final class DecodeUtils
     {
         List<String> uriParts = getUriParts(uri);
         return ImmutableDecodeFqn.newInstance(uriParts.stream().limit(uriParts.size() - 1)
-                .map(ImmutableDecodeName::newInstanceFromMangledName).collect(Collectors.toList()));
+                .map(DecodeName::newFromMangledName).collect(Collectors.toList()));
     }
 
     @NotNull
-    public static URI getUriForSourceTypeString(@NotNull String typeString, @NotNull DecodeFqn defaultNamespaceFqn)
+    public static URI getUriForSourceTypeFqnString(@NotNull String typeFqnString, @NotNull DecodeFqn defaultNamespaceFqn)
     {
-        typeString = normalizeSourceTypeString(typeString);
-        typeString = processQuestionMarks(typeString);
-        int genericStartIndex = typeString.indexOf('<');
+        Preconditions.checkArgument(!typeFqnString.contains("/"), "illegal type fqn '%s'", typeFqnString);
+        typeFqnString = normalizeSourceTypeString(typeFqnString);
+        typeFqnString = processQuestionMarks(typeFqnString);
+        int genericStartIndex = typeFqnString.indexOf('<');
         if (genericStartIndex != -1)
         {
-            DecodeFqn namespaceFqn = ImmutableDecodeFqn.newInstanceFromSource(typeString.substring(0, genericStartIndex));
+            DecodeFqn namespaceFqn = ImmutableDecodeFqn.newInstanceFromSource(typeFqnString.substring(0, genericStartIndex));
             return getUriForTypeNamespaceNameGenericArguments(namespaceFqn.size() > 1
                             ? namespaceFqn.copyDropLast()
                             : defaultNamespaceFqn, namespaceFqn.getLast(),
-                    typeString.substring(genericStartIndex));
+                    typeFqnString.substring(genericStartIndex));
         }
-        DecodeFqn namespaceFqn = ImmutableDecodeFqn.newInstanceFromSource(typeString);
+        DecodeFqn namespaceFqn = ImmutableDecodeFqn.newInstanceFromSource(typeFqnString);
         return getUriForNamespaceAndName(namespaceFqn.copyDropLast(), namespaceFqn.getLast());
     }
 
     @NotNull
     private static URI getUriForTypeNamespaceNameGenericArguments(@NotNull DecodeFqn namespaceFqn,
-                                                                  @NotNull DecodeName typeName,
+                                                                  @NotNull IDecodeName typeName,
                                                                   @NotNull String typeGenericArguments)
     {
-        List<DecodeName> namespaceNameParts = new ArrayList<>(namespaceFqn.getParts());
+        List<IDecodeName> namespaceNameParts = new ArrayList<>(namespaceFqn.getParts());
         namespaceNameParts.add(typeName);
         try
         {
             return URI.create("/" + URLEncoder
-                    .encode(String.join("/", namespaceNameParts.stream().map(DecodeName::asString)
+                    .encode(String.join("/", namespaceNameParts.stream().map(IDecodeName::asString)
                             .map(s -> {
                                 try
                                 {
@@ -282,14 +284,7 @@ public final class DecodeUtils
 
     public static String typeUriToTypeName(@NotNull URI uri)
     {
-        try
-        {
-            return URLDecoder.decode(uri.toString(), Charsets.UTF_8.name()).substring(1).replace("/", ".");
-        }
-        catch (UnsupportedEncodingException e)
-        {
-            throw new ModelExportingException(e);
-        }
+        return typeFqnStringFromUriString(uri.toString());
     }
 
     @NotNull
@@ -298,5 +293,18 @@ public final class DecodeUtils
         return "".equals(typeUriString)
                 ? Optional.empty()
                 : Optional.of(SimpleDecodeMaybeProxy.proxy(URI.create(typeUriString)));
+    }
+
+    @NotNull
+    public static String typeFqnStringFromUriString(@NotNull String typeUriString)
+    {
+        try
+        {
+            return URLDecoder.decode(typeUriString, Charsets.UTF_8.name()).substring(1).replace("/", ".");
+        }
+        catch (UnsupportedEncodingException e)
+        {
+            throw new ModelExportingException(e);
+        }
     }
 }

@@ -1,9 +1,7 @@
 package ru.mipt.acsl.decode.model.domain.impl.proxy;
 
-import com.google.common.collect.Lists;
 import ru.mipt.acsl.common.Either;
 import ru.mipt.acsl.decode.model.domain.impl.DecodeUtils;
-import ru.mipt.acsl.decode.model.domain.impl.ImmutableDecodeFqn;
 import ru.mipt.acsl.decode.model.domain.impl.SimpleDecodeResolvingResult;
 import ru.mipt.acsl.decode.model.domain.proxy.DecodeMaybeProxy;
 import ru.mipt.acsl.decode.model.domain.proxy.DecodeResolvingResult;
@@ -38,7 +36,7 @@ public class SimpleDecodeMaybeProxy<T extends DecodeReferenceable> extends Eithe
 
     @NotNull
     public static <K extends DecodeReferenceable> DecodeMaybeProxy<K> proxy(@NotNull DecodeFqn namespaceFqn,
-                                                                          @NotNull DecodeName name)
+                                                                          @NotNull IDecodeName name)
     {
         return proxy(DecodeUtils.getUriForNamespaceAndName(namespaceFqn, name));
     }
@@ -47,7 +45,7 @@ public class SimpleDecodeMaybeProxy<T extends DecodeReferenceable> extends Eithe
     public static <K extends DecodeReferenceable> DecodeMaybeProxy<K> proxyForTypeString(@NotNull String string,
                                                                                          @NotNull DecodeFqn defaultNamespaceFqn)
     {
-        return proxy(DecodeUtils.getUriForSourceTypeString(string, defaultNamespaceFqn));
+        return proxy(DecodeUtils.getUriForSourceTypeFqnString(string, defaultNamespaceFqn));
     }
 
     @NotNull
@@ -58,11 +56,12 @@ public class SimpleDecodeMaybeProxy<T extends DecodeReferenceable> extends Eithe
     }
 
     @NotNull
-    public static <K extends DecodeReferenceable> DecodeMaybeProxy<K> proxyForSystem(@NotNull DecodeName decodeName)
+    public static <K extends DecodeReferenceable> DecodeMaybeProxy<K> proxyForSystem(@NotNull IDecodeName decodeName)
     {
         return proxy(DecodeConstants.SYSTEM_NAMESPACE_FQN, decodeName);
     }
 
+    @NotNull
     public static <K extends DecodeReferenceable> DecodeMaybeProxy<K> proxyDefaultNamespace(@NotNull
                                                                                             DecodeFqn elementFqn, @NotNull
                                                                                             DecodeNamespace defaultNamespace)
@@ -74,6 +73,13 @@ public class SimpleDecodeMaybeProxy<T extends DecodeReferenceable> extends Eithe
     public static <K extends DecodeReferenceable> DecodeMaybeProxy<K> object(@NotNull K object)
     {
         return new SimpleDecodeMaybeProxy<>(object);
+    }
+
+    @NotNull
+    public static <T extends DecodeReferenceable> DecodeMaybeProxy<T> proxyForTypeUriString(@NotNull String typeUriString,
+                                                                                            @NotNull DecodeFqn defaultNsFqn)
+    {
+        return new SimpleDecodeMaybeProxy<T>(SimpleDecodeProxy.newInstanceFromTypeUriString(typeUriString, defaultNsFqn));
     }
 
     @Override

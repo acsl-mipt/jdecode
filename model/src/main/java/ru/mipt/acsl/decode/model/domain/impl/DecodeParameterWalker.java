@@ -63,7 +63,7 @@ public class DecodeParameterWalker implements Iterator<Either<String, Integer>>
         {
             return Sequence(Sequence(Optional('^'), FirstOf(CharRange('a', 'z'), CharRange('A', 'Z'), '_'), ZeroOrMore(
                     FirstOf(CharRange('a', 'z'), CharRange('A', 'Z'), CharRange('0', '9'), '_'))),
-                    tokens.get().add(Either.left(ImmutableDecodeName.newInstanceFromSourceName(match()).asString())));
+                    tokens.get().add(Either.left(DecodeName.newFromSourceName(match()).asString())));
         }
 
         Rule ArrayLimits(@NotNull Var<List<Either<String, Integer>>> tokens)

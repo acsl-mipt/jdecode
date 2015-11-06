@@ -1,8 +1,8 @@
 package ru.mipt.acsl.decode.model.domain.type;
 
-import ru.mipt.acsl.decode.model.domain.DecodeName;
 import ru.mipt.acsl.decode.model.domain.DecodeOptionalInfoAware;
 import org.jetbrains.annotations.NotNull;
+import ru.mipt.acsl.decode.model.domain.IDecodeName;
 
 /**
  * @author Artem Shein
@@ -10,7 +10,7 @@ import org.jetbrains.annotations.NotNull;
 public interface DecodeEnumConstant extends DecodeOptionalInfoAware
 {
     @NotNull
-    DecodeName getName();
+    IDecodeName getName();
     @NotNull
     String getValue();
 }

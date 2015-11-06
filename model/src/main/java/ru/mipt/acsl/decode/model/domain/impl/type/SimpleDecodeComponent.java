@@ -61,18 +61,18 @@ public class SimpleDecodeComponent extends AbstractDecodeNameNamespaceOptionalIn
         return info;
     }
 
-    public static DecodeComponent newInstance(@NotNull DecodeName name, @NotNull DecodeNamespace namespace,
-                                             @NotNull Optional<Integer> id,
-                                             @NotNull Optional<DecodeMaybeProxy<DecodeType>> baseType,
-                                             @NotNull Optional<String> info,
-                                             @NotNull List<DecodeComponentRef> subComponents,
-                                             @NotNull List<DecodeCommand> commands,
-                                             @NotNull List<DecodeMessage> messages)
+    public static DecodeComponent newInstance(@NotNull IDecodeName name, @NotNull DecodeNamespace namespace,
+                                              @NotNull Optional<Integer> id,
+                                              @NotNull Optional<DecodeMaybeProxy<DecodeType>> baseType,
+                                              @NotNull Optional<String> info,
+                                              @NotNull List<DecodeComponentRef> subComponents,
+                                              @NotNull List<DecodeCommand> commands,
+                                              @NotNull List<DecodeMessage> messages)
     {
         return new SimpleDecodeComponent(name, namespace, id, baseType, info, subComponents, commands, messages);
     }
 
-    private SimpleDecodeComponent(@NotNull DecodeName name, @NotNull DecodeNamespace namespace,
+    private SimpleDecodeComponent(@NotNull IDecodeName name, @NotNull DecodeNamespace namespace,
                                   @NotNull Optional<Integer> id, @NotNull Optional<DecodeMaybeProxy<DecodeType>> baseType,
                                   @NotNull Optional<String> info,
                                   @NotNull List<DecodeComponentRef> subComponents,
