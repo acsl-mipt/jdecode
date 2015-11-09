@@ -1,7 +1,7 @@
 package ru.mipt.acsl.decode.model.domain;
 
-import ru.mipt.acsl.decode.model.domain.impl.ImmutableDecodeFqn;
 import org.jetbrains.annotations.NotNull;
+import ru.mipt.acsl.decode.model.domain.impl.type.DecodeFqnImpl;
 
 /**
  * @author Artem Shein
@@ -9,7 +9,7 @@ import org.jetbrains.annotations.NotNull;
 public final class DecodeConstants
 {
     @NotNull
-    public static final DecodeFqn SYSTEM_NAMESPACE_FQN = ImmutableDecodeFqn.newInstanceFromSource("decode");
+    public static final DecodeFqn SYSTEM_NAMESPACE_FQN = DecodeFqnImpl.newFromSource("decode");
 
     private DecodeConstants()
     {

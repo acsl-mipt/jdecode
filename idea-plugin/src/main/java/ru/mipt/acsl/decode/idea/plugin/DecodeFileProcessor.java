@@ -317,7 +317,7 @@ public class DecodeFileProcessor
     }
 
     @NotNull
-    private DecodeMaybeProxy<DecodeType> findExistingOrCreateType(@NotNull Optional<DecodeNameImpl> name, @NotNull DecodeTypeDeclBody typeDeclBody,
+    private DecodeMaybeProxy<DecodeType> findExistingOrCreateType(@NotNull Optional<DecodeName> name, @NotNull DecodeTypeDeclBody typeDeclBody,
                                                                   @NotNull DecodeNamespace namespace)
     {
         DecodeTypeApplication typeApplication = typeDeclBody.getTypeApplication();
@@ -339,7 +339,7 @@ public class DecodeFileProcessor
     }
 
     @NotNull
-    private DecodeType newType(@NotNull Optional<DecodeNameImpl> name, @NotNull DecodeTypeDeclBody typeDeclBody,
+    private DecodeType newType(@NotNull Optional<DecodeName> name, @NotNull DecodeTypeDeclBody typeDeclBody,
                                @NotNull DecodeNamespace namespace)
     {
         DecodeTypeApplication typeApplication = typeDeclBody.getTypeApplication();
@@ -391,7 +391,7 @@ public class DecodeFileProcessor
     }
 
     @NotNull
-    private DecodeSubType newSubTypeForTypeApplication(@NotNull Optional<DecodeNameImpl> name,
+    private DecodeSubType newSubTypeForTypeApplication(@NotNull Optional<DecodeName> name,
                                                       @NotNull Optional<String> info,
                                                       @NotNull DecodeTypeApplication newTypeDeclBody,
                                                       @NotNull DecodeNamespace namespace)
@@ -457,7 +457,7 @@ public class DecodeFileProcessor
     }
 
     @NotNull
-    private static DecodeType newEnumType(@NotNull Optional<DecodeNameImpl> name, @NotNull DecodeEnumTypeDecl enumTypeDecl,
+    private static DecodeType newEnumType(@NotNull Optional<DecodeName> name, @NotNull DecodeEnumTypeDecl enumTypeDecl,
                                           @NotNull DecodeNamespace namespace)
     {
         Set<DecodeEnumConstant> values = enumTypeDecl.getEnumTypeValues().getEnumTypeValueList().stream()
@@ -471,7 +471,7 @@ public class DecodeFileProcessor
     }
 
     @NotNull
-    private Optional<DecodeType> newPrimitiveType(@NotNull Optional<DecodeNameImpl> name,
+    private Optional<DecodeType> newPrimitiveType(@NotNull Optional<DecodeName> name,
                                                  @NotNull DecodeNamespace namespace,
                                                  @NotNull DecodePrimitiveTypeApplication primitiveTypeApplication)
     {

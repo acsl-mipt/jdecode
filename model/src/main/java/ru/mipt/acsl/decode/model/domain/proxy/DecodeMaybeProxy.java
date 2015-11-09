@@ -1,7 +1,6 @@
 package ru.mipt.acsl.decode.model.domain.proxy;
 
 import org.jetbrains.annotations.NotNull;
-import ru.mipt.acsl.decode.model.domain.DecodeElement;
 import ru.mipt.acsl.decode.model.domain.DecodeProxy;
 import ru.mipt.acsl.decode.model.domain.DecodeReferenceable;
 import ru.mipt.acsl.decode.model.domain.DecodeRegistry;
@@ -9,7 +8,7 @@ import ru.mipt.acsl.decode.model.domain.DecodeRegistry;
 /**
  * @author Artem Shein
  */
-public interface DecodeMaybeProxy<T extends DecodeReferenceable> extends DecodeElement
+public interface DecodeMaybeProxy<T extends DecodeReferenceable>
 {
     DecodeResolvingResult<T> resolve(@NotNull DecodeRegistry registry, @NotNull Class<T> cls);
 

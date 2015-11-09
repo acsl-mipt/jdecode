@@ -1,12 +1,11 @@
 package ru.mipt.acsl.decode.model.domain.impl;
 
 import org.jetbrains.annotations.NotNull;
-import ru.mipt.acsl.decode.model.domain.DecodeElement;
 
 /**
  * @author Artem Shein
  */
-public class ImmutableDecodeElementWrapper<T> implements DecodeElement
+public class ImmutableDecodeElementWrapper<T>
 {
     private final T value;
 

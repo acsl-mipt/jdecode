@@ -10,15 +10,12 @@ import java.util.Optional;
 /**
  * @author Artem Shein
  */
-public class AbstractDecodeNameNamespaceOptionalInfoAware extends AbstractDecodeNameAndOptionalInfoAware implements
-        DecodeNamespaceAware
+
 {
     @NotNull
     protected DecodeNamespace namespace;
 
-    protected AbstractDecodeNameNamespaceOptionalInfoAware(@NotNull DecodeName name,
-                                                           @NotNull DecodeNamespace namespace,
-                                                           @NotNull Optional<String> info)
+    protected AbstractDecodeNameNamespaceOptionalInfoAware()
     {
         super(name, info);
         this.namespace = namespace;

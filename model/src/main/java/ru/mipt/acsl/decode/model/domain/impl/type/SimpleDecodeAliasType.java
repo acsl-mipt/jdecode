@@ -1,12 +1,12 @@
 package ru.mipt.acsl.decode.model.domain.impl.type;
 
 import org.jetbrains.annotations.NotNull;
-import ru.mipt.acsl.decode.model.domain.DecodeNamespace;
+import ru.mipt.acsl.decode.model.domain.DecodeAliasType;
 import ru.mipt.acsl.decode.model.domain.DecodeName;
-import ru.mipt.acsl.decode.model.domain.impl.AbstractDecodeOptionalInfoAware;
+import ru.mipt.acsl.decode.model.domain.DecodeNamespace;
+import ru.mipt.acsl.decode.model.domain.DecodeType;
 import ru.mipt.acsl.decode.model.domain.proxy.DecodeMaybeProxy;
-import ru.mipt.acsl.decode.model.domain.type.DecodeAliasType;
-import ru.mipt.acsl.decode.model.domain.type.DecodeType;
+import scala.Option;
 
 import java.util.Optional;
 
@@ -23,7 +23,7 @@ public class SimpleDecodeAliasType extends AbstractDecodeOptionalInfoAware imple
     private DecodeNamespace namespace;
 
     public SimpleDecodeAliasType(@NotNull DecodeName name, @NotNull DecodeNamespace namespace,
-                                 @NotNull DecodeMaybeProxy<DecodeType> type, @NotNull Optional<String> info)
+                                 @NotNull DecodeMaybeProxy<DecodeType> type, @NotNull Option<String> info)
     {
         super(info);
         this.name = name;
@@ -34,21 +34,21 @@ public class SimpleDecodeAliasType extends AbstractDecodeOptionalInfoAware imple
     @NotNull
     public static DecodeAliasType newInstance(@NotNull DecodeName name, @NotNull DecodeNamespace namespace,
                                               @NotNull DecodeMaybeProxy<DecodeType> type,
-                                              @NotNull Optional<String> info)
+                                              @NotNull Option<String> info)
     {
         return new SimpleDecodeAliasType(name, namespace, type, info);
     }
 
     @NotNull
     @Override
-    public Optional<DecodeName> getOptionalName()
+    public Option<DecodeName> getOptionalName()
     {
-        return Optional.of(name);
+        return Option.apply(name);
     }
 
     @NotNull
     @Override
-    public DecodeMaybeProxy<DecodeType> getType()
+    public DecodeMaybeProxy<DecodeType> type()
     {
         return type;
     }
@@ -66,7 +66,7 @@ public class SimpleDecodeAliasType extends AbstractDecodeOptionalInfoAware imple
     public String toString()
     {
         return String.format("%s{name=%s, namespace=%s, type=%s, info=%s}", SimpleDecodeAliasType.class.getName(), name,
-                namespace.getFqn(), type, info);
+                namespace.getFqn(), type, info());
     }
 
     @NotNull

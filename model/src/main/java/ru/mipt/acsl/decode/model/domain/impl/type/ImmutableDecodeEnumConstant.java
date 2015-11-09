@@ -1,10 +1,10 @@
 package ru.mipt.acsl.decode.model.domain.impl.type;
 
-import ru.mipt.acsl.decode.model.domain.DecodeName;
-import ru.mipt.acsl.decode.model.domain.impl.AbstractDecodeOptionalInfoAware;
-import ru.mipt.acsl.decode.model.domain.impl.ImmutableDecodeElementWrapper;
-import ru.mipt.acsl.decode.model.domain.type.DecodeEnumConstant;
 import org.jetbrains.annotations.NotNull;
+import ru.mipt.acsl.decode.model.domain.DecodeEnumConstant;
+import ru.mipt.acsl.decode.model.domain.DecodeName;
+import ru.mipt.acsl.decode.model.domain.impl.ImmutableDecodeElementWrapper;
+import scala.Option;
 
 import java.util.Optional;
 
@@ -19,7 +19,7 @@ public class ImmutableDecodeEnumConstant extends AbstractDecodeOptionalInfoAware
     private final String value;
 
     @NotNull
-    public static DecodeEnumConstant newInstance(@NotNull DecodeName name, @NotNull String value, @NotNull Optional<String> info)
+    public static DecodeEnumConstant newInstance(@NotNull DecodeName name, @NotNull String value, @NotNull Option<String> info)
     {
         return new ImmutableDecodeEnumConstant(name, value, info);
     }
@@ -27,21 +27,21 @@ public class ImmutableDecodeEnumConstant extends AbstractDecodeOptionalInfoAware
     @NotNull
     public static DecodeEnumConstant newInstanceWrapper(@NotNull DecodeName name,
                                                        @NotNull ImmutableDecodeElementWrapper<String> value,
-                                                       @NotNull Optional<String> info)
+                                                       @NotNull Option<String> info)
     {
         return newInstance(name, value.getValue(), info);
     }
 
     @NotNull
     @Override
-    public DecodeName getName()
+    public DecodeName name()
     {
         return name;
     }
 
     @NotNull
     @Override
-    public String getValue()
+    public String value()
     {
         return value;
     }
@@ -54,17 +54,17 @@ public class ImmutableDecodeEnumConstant extends AbstractDecodeOptionalInfoAware
             return false;
         }
         DecodeEnumConstant c = (DecodeEnumConstant)o;
-        return this == c || (name.equals(c.getName()) && value.equals(c.getValue()));
+        return this == c || (name.equals(c.name()) && value.equals(c.value()));
     }
 
     @Override
     public String toString()
     {
         return String.format("%s{name=%s, value=%s, info=%s}", ImmutableDecodeEnumConstant.class.getName(), name, value,
-                info);
+                info());
     }
 
-    private ImmutableDecodeEnumConstant(@NotNull DecodeName name, @NotNull String value, @NotNull Optional<String> info)
+    private ImmutableDecodeEnumConstant(@NotNull DecodeName name, @NotNull String value, @NotNull Option<String> info)
     {
         super(info);
         this.name = name;

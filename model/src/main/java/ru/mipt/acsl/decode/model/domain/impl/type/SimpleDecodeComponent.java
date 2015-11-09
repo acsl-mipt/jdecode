@@ -5,7 +5,6 @@ import ru.mipt.acsl.decode.model.domain.*;
 import ru.mipt.acsl.decode.model.domain.impl.AbstractDecodeNameNamespaceOptionalInfoAware;
 import ru.mipt.acsl.decode.model.domain.message.DecodeMessage;
 import ru.mipt.acsl.decode.model.domain.proxy.DecodeMaybeProxy;
-import ru.mipt.acsl.decode.model.domain.type.DecodeType;
 
 import java.util.List;
 import java.util.Optional;
@@ -13,7 +12,7 @@ import java.util.Optional;
 /**
  * @author Artem Shein
  */
-public class SimpleDecodeComponent extends AbstractDecodeNameNamespaceOptionalInfoAware implements DecodeComponent
+
 {
     @NotNull
     private final Optional<Integer> id;
@@ -61,13 +60,7 @@ public class SimpleDecodeComponent extends AbstractDecodeNameNamespaceOptionalIn
         return info;
     }
 
-    public static DecodeComponent newInstance(@NotNull DecodeName name, @NotNull DecodeNamespace namespace,
-                                              @NotNull Optional<Integer> id,
-                                              @NotNull Optional<DecodeMaybeProxy<DecodeType>> baseType,
-                                              @NotNull Optional<String> info,
-                                              @NotNull List<DecodeComponentRef> subComponents,
-                                              @NotNull List<DecodeCommand> commands,
-                                              @NotNull List<DecodeMessage> messages)
+    public static DecodeComponent newInstance
     {
         return new SimpleDecodeComponent(name, namespace, id, baseType, info, subComponents, commands, messages);
     }

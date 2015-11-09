@@ -7,10 +7,8 @@ import ru.mipt.acsl.decode.model.domain.message.DecodeMessage;
 import ru.mipt.acsl.decode.model.domain.message.DecodeMessageParameter;
 import ru.mipt.acsl.decode.model.domain.proxy.DecodeMaybeProxy;
 import org.jetbrains.annotations.NotNull;
-import ru.mipt.acsl.decode.model.domain.type.*;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * @author Artem Shein
@@ -73,7 +71,7 @@ public interface DecodeComponent extends DecodeOptionalInfoAware, DecodeNameAwar
         @Override
         public DecodeType visit(@NotNull DecodeSubType subType) throws RuntimeException
         {
-            return subType.getBaseType().getObject().accept(this);
+            return subType.baseType().getObject().accept(this);
         }
 
         @Override
@@ -86,7 +84,7 @@ public interface DecodeComponent extends DecodeOptionalInfoAware, DecodeNameAwar
         public DecodeType visit(@NotNull DecodeArrayType arrayType) throws RuntimeException
         {
             Preconditions.checkState(token.isRight());
-            return arrayType.getBaseType().getObject();
+            return arrayType.baseType().getObject();
         }
 
         @Override
@@ -94,14 +92,16 @@ public interface DecodeComponent extends DecodeOptionalInfoAware, DecodeNameAwar
         {
             Preconditions.checkState(token.isLeft());
             String name = token.getLeft();
-            return structType.getFields().stream().filter(f -> f.getName().asString().equals(name))
-                    .findAny().orElseThrow(() -> new AssertionError(String.format("Field '%s' not found in struct '%s'", name, structType))).getType().getObject();
+            return structType.getFields().find(f -> f.name().asString().equals(name))
+                    .<DecodeStructField>getOrElse(() -> {
+                        throw new AssertionError(String.format("Field '%s' not found in struct '%s'", name, structType));
+                    }).type().getObject();
         }
 
         @Override
         public DecodeType visit(@NotNull DecodeAliasType typeAlias) throws RuntimeException
         {
-            return typeAlias.getType().getObject().accept(this);
+            return typeAlias.type().getObject().accept(this);
         }
 
         @Override
@@ -149,7 +149,7 @@ public interface DecodeComponent extends DecodeOptionalInfoAware, DecodeNameAwar
                 Optional<DecodeComponentRef> subComponent = component.getSubComponents().stream().filter(cr -> {
                     Optional<String> alias = cr.getAlias();
                     return (alias.isPresent() && alias.get().equals(stringToken))
-                            || cr.getComponent().getObject().getName().asString().equals(stringToken);
+                            || cr.getComponent().getObject().name().asString().equals(stringToken);
                 }).findAny();
                 if (subComponent.isPresent())
                 {
