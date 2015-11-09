@@ -2,11 +2,12 @@ package ru.mipt.acsl.decode.model.domain.impl;
 
 import com.google.common.collect.Lists;
 import ru.mipt.acsl.decode.model.domain.DecodeReferenceable;
+import ru.mipt.acsl.decode.model.domain.DecodeResolvingResult;
 import ru.mipt.acsl.decode.modeling.ModelingMessage;
 import ru.mipt.acsl.decode.modeling.ResolvingMessage;
 import ru.mipt.acsl.decode.modeling.impl.SimpleMessage;
-import ru.mipt.acsl.decode.model.domain.proxy.DecodeResolvingResult;
 import org.jetbrains.annotations.NotNull;
+import scala.Option;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -17,15 +18,15 @@ import java.util.Optional;
  */
 public final class SimpleDecodeResolvingResult<T extends DecodeReferenceable> implements DecodeResolvingResult<T>
 {
-    private static final DecodeResolvingResult<DecodeReferenceable> EMPTY = newInstance(Optional.<DecodeReferenceable>empty());
+    private static final DecodeResolvingResult<DecodeReferenceable> EMPTY = newInstance(Option.<DecodeReferenceable>empty());
     @NotNull
     private final List<ResolvingMessage> messages;
     @NotNull
-    private final Optional<T> resolvedObject;
+    private final Option<T> resolvedObject;
 
     @NotNull
     public static <T extends DecodeReferenceable> DecodeResolvingResult<T> newInstance(
-            @NotNull Optional<T> resolvedObject)
+            @NotNull Option<T> resolvedObject)
     {
         return new SimpleDecodeResolvingResult<>(resolvedObject, new ArrayList<>());
     }
@@ -39,7 +40,7 @@ public final class SimpleDecodeResolvingResult<T extends DecodeReferenceable> im
     public static <T extends DecodeReferenceable> DecodeResolvingResult<T> error(@NotNull String msg,
                                                                                @NotNull Object... args)
     {
-        return new SimpleDecodeResolvingResult<>(Optional.empty(), Lists.newArrayList(SimpleMessage.error(msg, args)));
+        return new SimpleDecodeResolvingResult<>(Option.empty(), Lists.newArrayList(SimpleMessage.error(msg, args)));
     }
 
     public static <T extends DecodeReferenceable> DecodeResolvingResult<T> merge(
@@ -52,12 +53,12 @@ public final class SimpleDecodeResolvingResult<T extends DecodeReferenceable> im
 
     @NotNull
     @Override
-    public Optional<T> getResolvedObject()
+    public Option<T> resolvedObject()
     {
         return resolvedObject;
     }
 
-    private SimpleDecodeResolvingResult(@NotNull Optional<T> resolvedObject,
+    private SimpleDecodeResolvingResult(@NotNull Option<T> resolvedObject,
                                         @NotNull List<ResolvingMessage> messages)
     {
         this.resolvedObject = resolvedObject;

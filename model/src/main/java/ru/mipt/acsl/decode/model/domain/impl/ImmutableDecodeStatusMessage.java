@@ -1,9 +1,11 @@
 package ru.mipt.acsl.decode.model.domain.impl;
 
 import ru.mipt.acsl.decode.model.domain.DecodeComponent;
+import ru.mipt.acsl.decode.model.domain.DecodeName;
 import ru.mipt.acsl.decode.model.domain.message.DecodeMessageParameter;
 import ru.mipt.acsl.decode.model.domain.message.DecodeStatusMessage;
 import org.jetbrains.annotations.NotNull;
+import scala.Option;
 
 import java.util.List;
 import java.util.Optional;
@@ -14,16 +16,16 @@ import java.util.Optional;
 public class ImmutableDecodeStatusMessage extends AbstractImmutableDecodeMessage implements DecodeStatusMessage
 {
     @NotNull
-    public static DecodeStatusMessage newInstance(@NotNull DecodeComponent component, @NotNull DecodeNameImpl name,
-                                                  @NotNull Optional<Integer> id, @NotNull Optional<String> info,
+    public static DecodeStatusMessage newInstance(@NotNull DecodeComponent component, @NotNull DecodeName name,
+                                                  @NotNull Option<Integer> id, @NotNull Option<String> info,
                                                   @NotNull List<DecodeMessageParameter> parameters)
     {
         return new ImmutableDecodeStatusMessage(component, name, id, info, parameters);
     }
 
-    private ImmutableDecodeStatusMessage(@NotNull DecodeComponent component, @NotNull DecodeNameImpl name,
-                                         @NotNull Optional<Integer> id,
-                                         @NotNull Optional<String> info,
+    private ImmutableDecodeStatusMessage(@NotNull DecodeComponent component, @NotNull DecodeName name,
+                                         @NotNull Option<Integer> id,
+                                         @NotNull Option<String> info,
                                          @NotNull List<DecodeMessageParameter> parameters)
     {
         super(component, name, id, info, parameters);
@@ -34,6 +36,6 @@ public class ImmutableDecodeStatusMessage extends AbstractImmutableDecodeMessage
     public String toString()
     {
         return String.format("%s{name=%s, id=%s, info=%s, parameters=%s}",
-                ImmutableDecodeStatusMessage.class.getName(), name, id, info, parameters);
+                ImmutableDecodeStatusMessage.class.getName(), name, id, info(), parameters);
     }
 }

@@ -1,11 +1,9 @@
 package ru.mipt.acsl.decode.model.domain.impl;
 
 import org.jetbrains.annotations.NotNull;
-import ru.mipt.acsl.decode.model.domain.DecodeCommand;
-import ru.mipt.acsl.decode.model.domain.DecodeCommandArgument;
-import ru.mipt.acsl.decode.model.domain.DecodeName;
-import ru.mipt.acsl.decode.model.domain.proxy.DecodeMaybeProxy;
-import ru.mipt.acsl.decode.model.domain.type.DecodeType;
+import ru.mipt.acsl.decode.model.domain.*;
+import ru.mipt.acsl.decode.model.domain.impl.type.AbstractDecodeOptionalInfoAware;
+import scala.Option;
 
 import java.util.List;
 import java.util.Optional;
@@ -18,51 +16,51 @@ public class ImmutableDecodeCommand extends AbstractDecodeOptionalInfoAware impl
     @NotNull
     private final List<DecodeCommandArgument> arguments;
     @NotNull
-    private final DecodeNameImpl name;
+    private final DecodeName name;
     @NotNull
-    private final Optional<Integer> id;
+    private final Option<Integer> id;
     @NotNull
-    private final Optional<DecodeMaybeProxy<DecodeType>> returnType;
+    private final Option<DecodeMaybeProxy<DecodeType>> returnType;
 
     @NotNull
-    public static DecodeCommand newInstance(@NotNull DecodeNameImpl name, @NotNull Optional<Integer> id, @NotNull Optional<String> info,
+    public static DecodeCommand newInstance(@NotNull DecodeName name, @NotNull Option<Integer> id, @NotNull Option<String> info,
                                             @NotNull List<DecodeCommandArgument> arguments,
-                                            @NotNull Optional<DecodeMaybeProxy<DecodeType>> returnType)
+                                            @NotNull Option<DecodeMaybeProxy<DecodeType>> returnType)
     {
         return new ImmutableDecodeCommand(name, id, info, arguments, returnType);
     }
 
     @Override
     @NotNull
-    public Optional<DecodeMaybeProxy<DecodeType>> getReturnType()
+    public Option<DecodeMaybeProxy<DecodeType>> returnType()
     {
         return returnType;
     }
 
     @NotNull
     @Override
-    public Optional<Integer> getId()
+    public Option<Integer> id()
     {
         return id;
     }
 
     @NotNull
     @Override
-    public List<DecodeCommandArgument> getArguments()
+    public List<DecodeCommandArgument> arguments()
     {
         return arguments;
     }
 
     @NotNull
     @Override
-    public Optional<DecodeName> getOptionalName()
+    public Option<DecodeName> optionalName()
     {
-        return Optional.of(name);
+        return Option.apply(name);
     }
 
     @NotNull
     @Override
-    public DecodeNameImpl getName()
+    public DecodeName name()
     {
         return name;
     }
@@ -71,13 +69,13 @@ public class ImmutableDecodeCommand extends AbstractDecodeOptionalInfoAware impl
     public String toString()
     {
         return String.format("%s{name=%s, arguments=%s, info=%s}", ImmutableDecodeCommand.class.getName(), name,
-                arguments, info);
+                arguments, info());
     }
 
-    private ImmutableDecodeCommand(@NotNull DecodeNameImpl name, @NotNull Optional<Integer> id,
-                                   @NotNull Optional<String> info,
+    private ImmutableDecodeCommand(@NotNull DecodeName name, @NotNull Option<Integer> id,
+                                   @NotNull Option<String> info,
                                    @NotNull List<DecodeCommandArgument> arguments,
-                                   @NotNull Optional<DecodeMaybeProxy<DecodeType>> returnType)
+                                   @NotNull Option<DecodeMaybeProxy<DecodeType>> returnType)
     {
         super(info);
         this.name = name;

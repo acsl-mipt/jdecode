@@ -1,9 +1,12 @@
 package ru.mipt.acsl.decode.model.domain
 
-import ru.mipt.acsl.decode.model.domain.impl.`type`.DecodeFqnImpl
-import ru.mipt.acsl.decode.model.domain.proxy.DecodeMaybeProxy
+import com.google.common.base.Preconditions
+import ru.mipt.acsl.decode.model.domain.impl.DecodeParameterWalker
+import ru.mipt.acsl.decode.model.domain.impl.`type`.{AbstractDecodeOptionalInfoAware, DecodeFqnImpl}
+import ru.mipt.acsl.decode.model.domain.message.DecodeMessageParameter
 
 import scala.collection.immutable.HashSet
+import scala.collection.mutable
 
 /**
   * @author Artem Shein
@@ -56,17 +59,17 @@ trait DecodeFqn {
 trait DecodeNamespace extends DecodeReferenceable with DecodeNameAware {
   def asString: String
 
-  def units: Seq[DecodeUnit]
+  def units: mutable.Buffer[DecodeUnit]
 
-  def types: Seq[DecodeType]
+  def types: mutable.Buffer[DecodeType]
 
-  def types_= (types: Seq[DecodeType])
+  def types_= (types: mutable.Buffer[DecodeType])
 
-  def subNamespaces: Seq[DecodeNamespace]
+  def subNamespaces: mutable.Buffer[DecodeNamespace]
 
   def parent: Option[DecodeNamespace]
 
-  def components: Seq[DecodeComponent]
+  def components: mutable.Buffer[DecodeComponent]
 
   def accept[T](visitor: DecodeReferenceableVisitor[T]): T = visitor.visit(this)
 
@@ -114,11 +117,6 @@ trait DecodeReferenceableVisitor[T] {
 object TypeKind extends Enumeration {
   type TypeKind = Value
   val Int, Uint, Float, Bool = Value
-}
-
-trait DecodeType extends DecodeReferenceable with DecodeOptionalNameAndOptionalInfoAware with DecodeNamespaceAware {
-
-  import TypeKind._
 
   def typeKindByName(name: String): Option[TypeKind.Value] = {
     name match {
@@ -138,7 +136,9 @@ trait DecodeType extends DecodeReferenceable with DecodeOptionalNameAndOptionalI
       case Bool => "bool"
     }
   }
+}
 
+trait DecodeType extends DecodeReferenceable with DecodeOptionalNameAndOptionalInfoAware with DecodeNamespaceAware {
   def accept[T](visitor: DecodeTypeVisitor[T]): T
 
   def accept[T](visitor: DecodeReferenceableVisitor[T] ): T = visitor.visit(this)
@@ -159,14 +159,15 @@ object DecodeNativeType {
   val MANGLED_TYPE_NAMES: Set[String] = HashSet[String]()
 }
 
-trait DecodeAliasType extends DecodeType with DecodeNameAware {
-  def accept[T](visitor: DecodeTypeVisitor[T]): T = visitor.visit(this)
-  def `type`: DecodeMaybeProxy[DecodeType]
+trait BaseTyped {
+  def baseType: DecodeMaybeProxy[DecodeType]
 }
 
-trait DecodeSubType extends DecodeType {
-  def baseType: DecodeMaybeProxy[DecodeType]
+trait DecodeAliasType extends DecodeType with DecodeNameAware with BaseTyped {
+  def accept[T](visitor: DecodeTypeVisitor[T]): T = visitor.visit(this)
+}
 
+trait DecodeSubType extends DecodeType with BaseTyped {
   def accept[T](visitor: DecodeTypeVisitor[T]): T = visitor.visit(this)
 }
 
@@ -175,10 +176,8 @@ trait DecodeEnumConstant extends DecodeOptionalInfoAware {
   def value: String
 }
 
-trait DecodeEnumType extends DecodeType {
-  def baseType: DecodeMaybeProxy[DecodeType]
-
-  def constants: Set[DecodeEnumConstant]
+trait DecodeEnumType extends DecodeType with BaseTyped {
+  def constants: mutable.Set[DecodeEnumConstant]
 
   override def accept[T](visitor: DecodeTypeVisitor[T]): T = visitor.visit(this)
 }
@@ -188,10 +187,8 @@ trait ArraySize {
   def maxLength: Long
 }
 
-trait DecodeArrayType extends DecodeType {
+trait DecodeArrayType extends DecodeType with BaseTyped {
   def size: ArraySize
-
-  def baseType: DecodeMaybeProxy[DecodeType]
 
   def isFixedSize: Boolean = {
     val thisSize: ArraySize = size
@@ -203,7 +200,7 @@ trait DecodeArrayType extends DecodeType {
 }
 
 trait DecodeStructField extends DecodeNameAware with DecodeOptionalInfoAware {
-  def `type`: DecodeMaybeProxy[DecodeType]
+  def fieldType: DecodeMaybeProxy[DecodeType]
 
   def unit: Option[DecodeMaybeProxy[DecodeUnit]]
 }
@@ -250,4 +247,58 @@ trait DecodeCommand extends DecodeOptionalInfoAware with DecodeNameAware {
   def returnType: Option[DecodeMaybeProxy[DecodeType]]
   def id: Option[Int]
   def arguments: Seq[DecodeCommandArgument]
+}
+
+// TODO: replace with case classes?
+trait DecodeMessageVisitor[T] {
+  def visit (eventMessage: DecodeEventMessage): T
+  def visit (statusMessage: DecodeStatusMessage): T
+}
+
+trait DecodeMessage extends DecodeOptionalInfoAware with DecodeNameAware {
+  def accept[T](visitor: DecodeMessageVisitor[T] ): T
+
+  def parameters: Seq[DecodeMessageParameter]
+
+  def component: DecodeComponent
+
+  def id: Option[Integer]
+}
+
+trait DecodeStatusMessage extends DecodeMessage {
+  def accept[T](visitor: DecodeMessageVisitor[T]): T = visitor.visit(this)
+}
+
+abstract class AbstractDecodeMessage(info: Option[String]) extends AbstractDecodeOptionalInfoAware(info)
+with DecodeMessage
+
+trait DecodeComponentRef {
+  def component: DecodeMaybeProxy[DecodeComponent]
+
+  def alias: Option[String]
+}
+
+trait DecodeEventMessage extends DecodeMessage {
+  def accept[T](visitor: DecodeMessageVisitor[T]): T = visitor.visit(this)
+}
+
+trait DecodeComponent extends DecodeOptionalInfoAware with DecodeNameAware with DecodeReferenceable
+  with DecodeNamespaceAware {
+
+  def messages: Seq[DecodeMessage]
+  def commands: Seq[DecodeCommand]
+  def baseType: Option[DecodeMaybeProxy[DecodeStructType]]
+  def subComponents: Seq[DecodeComponentRef]
+  def id: Option[Int]
+  override def accept[T](visitor: DecodeReferenceableVisitor[T]): T = visitor.visit(this)
+  def getTypeForParameter(parameter: DecodeMessageParameter): DecodeType = {
+    val walker = new DecodeParameterWalker(parameter)
+    val componentWalker = new DecodeComponentWalker(this)
+    while (walker.hasNext)
+    {
+      val token = walker.next()
+      componentWalker.walk(token)
+    }
+    Preconditions.checkNotNull(componentWalker.getType).get()
+  }
 }

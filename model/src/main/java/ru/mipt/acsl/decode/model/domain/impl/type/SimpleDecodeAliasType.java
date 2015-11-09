@@ -1,11 +1,7 @@
 package ru.mipt.acsl.decode.model.domain.impl.type;
 
 import org.jetbrains.annotations.NotNull;
-import ru.mipt.acsl.decode.model.domain.DecodeAliasType;
-import ru.mipt.acsl.decode.model.domain.DecodeName;
-import ru.mipt.acsl.decode.model.domain.DecodeNamespace;
-import ru.mipt.acsl.decode.model.domain.DecodeType;
-import ru.mipt.acsl.decode.model.domain.proxy.DecodeMaybeProxy;
+import ru.mipt.acsl.decode.model.domain.*;
 import scala.Option;
 
 import java.util.Optional;
@@ -41,21 +37,21 @@ public class SimpleDecodeAliasType extends AbstractDecodeOptionalInfoAware imple
 
     @NotNull
     @Override
-    public Option<DecodeName> getOptionalName()
+    public Option<DecodeName> optionalName()
     {
         return Option.apply(name);
     }
 
     @NotNull
     @Override
-    public DecodeMaybeProxy<DecodeType> type()
+    public DecodeMaybeProxy<DecodeType> baseType()
     {
         return type;
     }
 
     @NotNull
     @Override
-    public DecodeName getName()
+    public DecodeName name()
     {
 
         return name;
@@ -66,18 +62,18 @@ public class SimpleDecodeAliasType extends AbstractDecodeOptionalInfoAware imple
     public String toString()
     {
         return String.format("%s{name=%s, namespace=%s, type=%s, info=%s}", SimpleDecodeAliasType.class.getName(), name,
-                namespace.getFqn(), type, info());
+                namespace.fqn(), type, info());
     }
 
     @NotNull
     @Override
-    public DecodeNamespace getNamespace()
+    public DecodeNamespace namespace()
     {
         return namespace;
     }
 
     @Override
-    public void setNamespace(@NotNull DecodeNamespace namespace)
+    public void namespace_$eq(@NotNull DecodeNamespace namespace)
     {
         this.namespace = namespace;
     }

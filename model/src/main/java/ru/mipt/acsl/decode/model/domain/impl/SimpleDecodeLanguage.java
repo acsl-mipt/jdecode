@@ -3,6 +3,8 @@ package ru.mipt.acsl.decode.model.domain.impl;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import ru.mipt.acsl.decode.model.domain.*;
+import ru.mipt.acsl.decode.model.domain.impl.type.AbstractDecodeNameNamespaceOptionalInfoAware;
+import scala.Option;
 
 import java.util.Optional;
 
@@ -13,16 +15,16 @@ public class SimpleDecodeLanguage extends AbstractDecodeNameNamespaceOptionalInf
 {
     private final boolean isDefault;
 
-    private SimpleDecodeLanguage(@NotNull DecodeNameImpl name, @NotNull DecodeNamespace namespace, boolean isDefault,
-                                 @NotNull Optional<String> info)
+    private SimpleDecodeLanguage(@NotNull DecodeName name, @NotNull DecodeNamespace namespace, boolean isDefault,
+                                 @NotNull Option<String> info)
     {
         super(name, namespace, info);
         this.isDefault = isDefault;
     }
 
-    public static DecodeLanguage newInstance(@NotNull DecodeNameImpl name, @NotNull DecodeNamespace namespace,
+    public static DecodeLanguage newInstance(@NotNull DecodeName name, @NotNull DecodeNamespace namespace,
                                              boolean isDefault,
-                                             @NotNull Optional<String> info)
+                                             @NotNull Option<String> info)
     {
         return new SimpleDecodeLanguage(name, namespace, isDefault, info);
     }

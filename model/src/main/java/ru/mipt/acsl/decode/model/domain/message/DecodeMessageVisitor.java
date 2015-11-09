@@ -5,8 +5,4 @@ import org.jetbrains.annotations.NotNull;
 /**
  * @author Artem Shein
  */
-public interface DecodeMessageVisitor<T>
-{
-    T visit(@NotNull DecodeEventMessage eventMessage);
-    T visit(@NotNull DecodeStatusMessage statusMessage);
-}
+

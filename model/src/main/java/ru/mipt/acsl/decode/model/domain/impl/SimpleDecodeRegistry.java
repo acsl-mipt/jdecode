@@ -1,21 +1,20 @@
 package ru.mipt.acsl.decode.model.domain.impl;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
-import ru.mipt.acsl.decode.model.domain.impl.proxy.ProvidePrimitivesAndNativeTypesDecodeProxyResolver;
-import ru.mipt.acsl.decode.model.domain.proxy.DecodeProxyResolver;
-import ru.mipt.acsl.decode.model.domain.impl.proxy.FindExistingDecodeProxyResolver;
-import ru.mipt.acsl.decode.model.domain.proxy.DecodeResolvingResult;
 import org.jetbrains.annotations.NotNull;
-import ru.mipt.acsl.decode.model.domain.DecodeConstants;
-import ru.mipt.acsl.decode.model.domain.DecodeNamespace;
-import ru.mipt.acsl.decode.model.domain.DecodeReferenceable;
-import ru.mipt.acsl.decode.model.domain.DecodeRegistry;
+import ru.mipt.acsl.decode.model.domain.*;
+import ru.mipt.acsl.decode.model.domain.impl.proxy.FindExistingDecodeProxyResolver;
+import ru.mipt.acsl.decode.model.domain.impl.proxy.ProvidePrimitivesAndNativeTypesDecodeProxyResolver;
+import ru.mipt.acsl.decode.model.domain.impl.type.DecodeNamespaceImpl;
+import scala.Option;
+import scala.collection.Iterator;
+import scala.collection.JavaConversions;
+import scala.collection.Seq;
+import scala.collection.mutable.ArrayBuffer;
+import scala.collection.mutable.Buffer;
 
 import java.net.URI;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.Arrays;
 
 /**
  * @author Artem Shein
@@ -23,9 +22,9 @@ import java.util.Optional;
 public class SimpleDecodeRegistry implements DecodeRegistry
 {
     @NotNull
-    private final List<DecodeNamespace> rootNamespaces = new ArrayList<>();
+    private final Buffer<DecodeNamespace> rootNamespaces = new ArrayBuffer<>();
     @NotNull
-    private final List<DecodeProxyResolver> proxyResolvers = new ArrayList<>();
+    private final Buffer<DecodeProxyResolver> proxyResolvers = new ArrayBuffer<>();
 
     public static DecodeRegistry newInstance()
     {
@@ -34,16 +33,16 @@ public class SimpleDecodeRegistry implements DecodeRegistry
 
     private SimpleDecodeRegistry(@NotNull DecodeProxyResolver... resolvers)
     {
-        proxyResolvers.addAll(Lists.newArrayList(resolvers));
+        proxyResolvers.append(JavaConversions.asScalaBuffer(Arrays.asList(resolvers)));
         Preconditions.checkState(DecodeConstants.SYSTEM_NAMESPACE_FQN.size() == 1, "not implemented");
-        rootNamespaces.add(SimpleDecodeNamespace.newInstance(DecodeConstants.SYSTEM_NAMESPACE_FQN.getLast(),
-                Optional.<DecodeNamespace>empty()));
+        rootNamespaces.$plus$eq(DecodeNamespaceImpl.apply(DecodeConstants.SYSTEM_NAMESPACE_FQN.last(),
+                Option.<DecodeNamespace>empty()));
 
     }
 
     @NotNull
     @Override
-    public List<DecodeNamespace> getRootNamespaces()
+    public Buffer<DecodeNamespace> rootNamespaces()
     {
         return rootNamespaces;
     }
@@ -52,10 +51,11 @@ public class SimpleDecodeRegistry implements DecodeRegistry
     @Override
     public <T extends DecodeReferenceable> DecodeResolvingResult<T> resolve(@NotNull URI uri, @NotNull Class<T> cls)
     {
-        for (DecodeProxyResolver resolver : proxyResolvers)
+        Iterator<DecodeProxyResolver> iterator = proxyResolvers.iterator();
+        while (iterator.hasNext())
         {
-            DecodeResolvingResult<T> result = resolver.resolve(this, uri, cls);
-            if (result.getResolvedObject().isPresent())
+            DecodeResolvingResult<T> result = iterator.next().resolve(this, uri, cls);
+            if (result.resolvedObject().isDefined())
             {
                 return result;
             }

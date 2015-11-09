@@ -1,12 +1,10 @@
 package ru.mipt.acsl.decode.model.domain.impl.type;
 
 import org.jetbrains.annotations.NotNull;
-import ru.mipt.acsl.decode.model.domain.DecodeNamespace;
-import ru.mipt.acsl.decode.model.domain.DecodeName;
+import ru.mipt.acsl.decode.model.domain.*;
 import ru.mipt.acsl.decode.model.domain.proxy.DecodeMaybeProxy;
-import ru.mipt.acsl.decode.model.domain.type.DecodeGenericType;
-import ru.mipt.acsl.decode.model.domain.type.DecodeGenericTypeSpecialized;
-import ru.mipt.acsl.decode.model.domain.type.DecodeType;
+import scala.Option;
+import scala.collection.immutable.Seq;
 
 import java.util.List;
 import java.util.Optional;
@@ -21,9 +19,9 @@ public class ImmutableDecodeGenericTypeSpecialized extends AbstractDecodeType im
     @NotNull
     private List<Optional<DecodeMaybeProxy<DecodeType>>> genericTypeArguments;
 
-    public static DecodeGenericTypeSpecialized newInstance(@NotNull Optional<DecodeName> name,
+    public static DecodeGenericTypeSpecialized newInstance(@NotNull Option<DecodeName> name,
                                                            @NotNull DecodeNamespace namespace,
-                                                           @NotNull Optional<String> info,
+                                                           @NotNull Option<String> info,
                                                            @NotNull DecodeMaybeProxy<DecodeGenericType> genericType,
                                                            @NotNull
                                                            List<Optional<DecodeMaybeProxy<DecodeType>>> genericTypeArguments)
@@ -40,14 +38,14 @@ public class ImmutableDecodeGenericTypeSpecialized extends AbstractDecodeType im
 
     @NotNull
     @Override
-    public List<Optional<DecodeMaybeProxy<DecodeType>>> getGenericTypeArguments()
+    public Seq<Option<DecodeMaybeProxy<DecodeType>>> getGenericTypeArguments()
     {
         return genericTypeArguments;
     }
 
-    private ImmutableDecodeGenericTypeSpecialized(@NotNull Optional<DecodeName> name,
+    private ImmutableDecodeGenericTypeSpecialized(@NotNull Option<DecodeName> name,
                                                   @NotNull DecodeNamespace namespace,
-                                                  @NotNull Optional<String> info,
+                                                  @NotNull Option<String> info,
                                                   @NotNull DecodeMaybeProxy<DecodeGenericType> genericType,
                                                   @NotNull
                                                   List<Optional<DecodeMaybeProxy<DecodeType>>> genericTypeArguments)

@@ -843,7 +843,7 @@ type file_transfer_protocol struct info 'File transfer message'(
   uint8_t             targetNetwork       info 'Network ID (0 for broadcast)',
   uint8_t             targetSystem        info 'System ID (0 for broadcast)',
   uint8_t             targetComponent     info 'Component ID (0 for broadcast)',
-  [uint8_t, 251]      payload             info 'Variable length payload. The length is defined by the remaining message length when subtracting the header and other fields.  The entire content of this block is opaque unless you understand any the encoding message_type.  The particular encoding used can be extension specific and might not always be documented as part of the mavlink specification.',
+  [uint8_t, 251]      payload             info 'Variable length payload. The length is defined by the remaining message length when subtracting the header and other fields.  The entire content of this block is opaque unless you understand any the encoding message_type.  The particular encoding used can be extension specific and might not always be documented as name of the mavlink specification.',
 )
 
 type timesync struct info 'Time synchronization message.'(
@@ -1158,7 +1158,7 @@ type v2_extension struct info 'Message implementing parts of the V2 payload spec
   uint8_t             targetNetwork       info 'Network ID (0 for broadcast)',
   uint8_t             targetSystem        info 'System ID (0 for broadcast)',
   uint8_t             targetComponent     info 'Component ID (0 for broadcast)',
-  [uint8_t, 249]      payload             info 'Variable length payload. The length is defined by the remaining message length when subtracting the header and other fields.  The entire content of this block is opaque unless you understand any the encoding message_type.  The particular encoding used can be extension specific and might not always be documented as part of the mavlink specification.',
+  [uint8_t, 249]      payload             info 'Variable length payload. The length is defined by the remaining message length when subtracting the header and other fields.  The entire content of this block is opaque unless you understand any the encoding message_type.  The particular encoding used can be extension specific and might not always be documented as name of the mavlink specification.',
 )
 
 type memory_vect struct info 'Send raw controller memory. The use of this message is discouraged for normal packets, but a quite efficient way for testing new messages and getting experimental debug output.'(
@@ -1508,7 +1508,7 @@ type mav_param_type_uint8_t enum uint8_t info 'Specifies the datatype of a MAVLi
 	MAV_PARAM_TYPE_REAL64 = 10               info '64-bit floating-point',
 )
 
-type mav_cmd_uint16_t enum uint16_t info 'Commands to be executed by the MAV. They can be executed on user request, or as part of a mission script. If the action is used in a mission, the parameter mapping to the waypoint/mission message is as follows: Param 1, Param 2, Param 3, Param 4, X: Param 5, Y:Param 6, Z:Param 7. This command list is similar what ARINC 424 is for commercial aircraft: A data format how to interpret waypoint/mission data.' (
+type mav_cmd_uint16_t enum uint16_t info 'Commands to be executed by the MAV. They can be executed on user request, or as name of a mission script. If the action is used in a mission, the parameter mapping to the waypoint/mission message is as follows: Param 1, Param 2, Param 3, Param 4, X: Param 5, Y:Param 6, Z:Param 7. This command list is similar what ARINC 424 is for commercial aircraft: A data format how to interpret waypoint/mission data.' (
 	MAV_CMD_NAV_WAYPOINT = 16                info 'Navigate to MISSION.',
 	MAV_CMD_NAV_LOITER_UNLIM = 17            info 'Loiter around this MISSION an unlimited amount of time',
 	MAV_CMD_NAV_LOITER_TURNS = 18            info 'Loiter around this MISSION for X turns',

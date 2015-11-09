@@ -26,7 +26,6 @@ import ru.mipt.acsl.decode.model.exporter.DecodeSqlite3ExporterConfiguration;
 import ru.mipt.acsl.decode.model.domain.DecodeReferenceable;
 import ru.mipt.acsl.decode.model.domain.DecodeRegistry;
 import ru.mipt.acsl.decode.model.domain.impl.SimpleDecodeRegistry;
-import ru.mipt.acsl.decode.model.domain.impl.proxy.SimpleDecodeDomainModelResolver;
 import ru.mipt.acsl.decode.modeling.TransformationResult;
 import ru.mipt.acsl.decode.parser.DecodeFileType;
 

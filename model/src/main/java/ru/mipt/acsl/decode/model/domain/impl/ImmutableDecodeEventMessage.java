@@ -1,11 +1,13 @@
 package ru.mipt.acsl.decode.model.domain.impl;
 
 import ru.mipt.acsl.decode.model.domain.DecodeComponent;
+import ru.mipt.acsl.decode.model.domain.DecodeMaybeProxy;
+import ru.mipt.acsl.decode.model.domain.DecodeName;
+import ru.mipt.acsl.decode.model.domain.DecodeType;
 import ru.mipt.acsl.decode.model.domain.message.DecodeEventMessage;
 import ru.mipt.acsl.decode.model.domain.message.DecodeMessageParameter;
 import org.jetbrains.annotations.NotNull;
-import ru.mipt.acsl.decode.model.domain.proxy.DecodeMaybeProxy;
-import ru.mipt.acsl.decode.model.domain.type.DecodeType;
+import scala.Option;
 
 import java.util.List;
 import java.util.Optional;
@@ -19,8 +21,8 @@ public class ImmutableDecodeEventMessage extends AbstractImmutableDecodeMessage 
     protected final DecodeMaybeProxy<DecodeType> eventType;
 
     @NotNull
-    public static DecodeEventMessage newInstance(@NotNull DecodeComponent component, @NotNull DecodeNameImpl name,
-                                                 @NotNull Optional<Integer> id, @NotNull Optional<String> info,
+    public static DecodeEventMessage newInstance(@NotNull DecodeComponent component, @NotNull DecodeName name,
+                                                 @NotNull Option<Integer> id, @NotNull Option<String> info,
                                                  @NotNull List<DecodeMessageParameter> parameters,
                                                  @NotNull DecodeMaybeProxy<DecodeType> eventType)
     {
@@ -32,12 +34,12 @@ public class ImmutableDecodeEventMessage extends AbstractImmutableDecodeMessage 
     public String toString()
     {
         return String.format("%s{name=%s, id=%s, info=%s, parameters=%s, eventType=%s}", ImmutableDecodeEventMessage.class.getName(),
-                name, id, info, parameters, eventType);
+                name, id, info(), parameters, eventType);
     }
 
-    private ImmutableDecodeEventMessage(@NotNull DecodeComponent component, @NotNull DecodeNameImpl name,
-                                        @NotNull Optional<Integer> id,
-                                        @NotNull Optional<String> info,
+    private ImmutableDecodeEventMessage(@NotNull DecodeComponent component, @NotNull DecodeName name,
+                                        @NotNull Option<Integer> id,
+                                        @NotNull Option<String> info,
                                         @NotNull List<DecodeMessageParameter> parameters,
                                         @NotNull DecodeMaybeProxy<DecodeType> eventType)
     {

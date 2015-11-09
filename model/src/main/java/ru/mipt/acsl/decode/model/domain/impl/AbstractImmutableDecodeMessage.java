@@ -1,9 +1,12 @@
 package ru.mipt.acsl.decode.model.domain.impl;
 
+import ru.mipt.acsl.decode.model.domain.AbstractDecodeMessage;
 import ru.mipt.acsl.decode.model.domain.DecodeComponent;
 import ru.mipt.acsl.decode.model.domain.DecodeName;
 import ru.mipt.acsl.decode.model.domain.message.DecodeMessageParameter;
 import org.jetbrains.annotations.NotNull;
+import scala.Option;
+import scala.collection.Seq;
 
 import java.util.List;
 import java.util.Optional;
@@ -14,54 +17,54 @@ import java.util.Optional;
 public abstract class AbstractImmutableDecodeMessage extends AbstractDecodeMessage
 {
     @NotNull
-    protected final DecodeNameImpl name;
+    protected final DecodeName name;
     @NotNull
-    protected final Optional<Integer> id;
+    protected final Option<Integer> id;
     @NotNull
-    protected final List<DecodeMessageParameter> parameters;
+    protected final Seq<DecodeMessageParameter> parameters;
     @NotNull
     protected final DecodeComponent component;
 
     @NotNull
     @Override
-    public DecodeComponent getComponent()
+    public DecodeComponent component()
     {
         return component;
     }
 
     @Override
     @NotNull
-    public Optional<Integer> getId()
+    public Option<Integer> id()
     {
         return id;
     }
 
     @Override
     @NotNull
-    public DecodeNameImpl getName()
+    public DecodeName name()
     {
         return name;
     }
 
     @Override
     @NotNull
-    public List<DecodeMessageParameter> getParameters()
+    public Seq<DecodeMessageParameter> parameters()
     {
         return parameters;
     }
 
     @NotNull
     @Override
-    public Optional<DecodeName> getOptionalName()
+    public Option<DecodeName> optionalName()
     {
-        return Optional.of(name);
+        return Option.apply(name);
     }
 
 
-    protected AbstractImmutableDecodeMessage(@NotNull DecodeComponent component, @NotNull DecodeNameImpl name,
-                                             @NotNull Optional<Integer> id,
-                                             @NotNull Optional<String> info,
-                                             @NotNull List<DecodeMessageParameter> parameters)
+    protected AbstractImmutableDecodeMessage(@NotNull DecodeComponent component, @NotNull DecodeName name,
+                                             @NotNull Option<Integer> id,
+                                             @NotNull Option<String> info,
+                                             @NotNull Seq<DecodeMessageParameter> parameters)
     {
         super(info);
         this.component = component;

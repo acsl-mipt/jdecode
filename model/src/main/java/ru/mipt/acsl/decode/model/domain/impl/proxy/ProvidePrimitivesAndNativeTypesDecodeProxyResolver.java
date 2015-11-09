@@ -1,17 +1,22 @@
 package ru.mipt.acsl.decode.model.domain.impl.proxy;
 
 import com.google.common.base.Preconditions;
-import ru.mipt.acsl.decode.model.domain.*;
-import ru.mipt.acsl.decode.model.domain.impl.*;
-import ru.mipt.acsl.decode.model.domain.impl.type.*;
-import ru.mipt.acsl.decode.model.domain.proxy.DecodeMaybeProxy;
-import ru.mipt.acsl.decode.model.domain.proxy.DecodeProxyResolver;
-import ru.mipt.acsl.decode.model.domain.proxy.DecodeResolvingResult;
-import ru.mipt.acsl.decode.model.domain.type.*;
 import org.jetbrains.annotations.NotNull;
+import ru.mipt.acsl.decode.model.domain.*;
+import ru.mipt.acsl.decode.model.domain.impl.DecodeNameImpl;
+import ru.mipt.acsl.decode.model.domain.impl.DecodeUtils;
+import ru.mipt.acsl.decode.model.domain.impl.SimpleDecodeResolvingResult;
+import ru.mipt.acsl.decode.model.domain.impl.type.*;
+import scala.Enumeration;
+import scala.Option;
+import scala.collection.mutable.ArrayBuffer;
+import scala.collection.mutable.Buffer;
 
 import java.net.URI;
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -22,7 +27,7 @@ import java.util.stream.Stream;
 public class ProvidePrimitivesAndNativeTypesDecodeProxyResolver implements DecodeProxyResolver
 {
     @NotNull
-    private final Map<DecodeNameImpl, DecodeType> knownTypeByNameMap = new HashMap<>();
+    private final Map<DecodeName, DecodeType> knownTypeByNameMap = new HashMap<>();
     @NotNull
     private final Map<String, DecodeGenericTypeSpecialized> genericTypeSpecializedByTypeNameMap = new HashMap<>();
 
@@ -45,29 +50,25 @@ public class ProvidePrimitivesAndNativeTypesDecodeProxyResolver implements Decod
                 int index = typeName.indexOf(":");
                 String typeKind = typeName.substring(0, index);
                 long bitLength = Long.parseLong(typeName.substring(index + 1));
-                Optional<DecodeType.TypeKind> typeKindOptional = DecodeType.TypeKind.forName(typeKind);
-                if (typeKindOptional.isPresent())
+                Option<Enumeration.Value> typeKindOptional = TypeKind.typeKindByName(typeKind);
+                if (typeKindOptional.isDefined())
                 {
-                    DecodeNameImpl name = DecodeNameImpl.newFromMangledName(typeName);
+                    DecodeName name = DecodeNameImpl.newFromMangledName(typeName);
                     DecodeNamespace namespace = namespaceOptional.get();
                     DecodeType nativeOrPrimitiveType = knownTypeByNameMap.computeIfAbsent(name,
-                            (nameKey) -> SimpleDecodePrimitiveType
-                                    .newInstance(Optional.of(nameKey), namespace, typeKindOptional.get(),
-                                            bitLength,
-                                            Optional.<String>empty()));
+                            (nameKey) -> new DecodePrimitiveTypeImpl(Option.apply(nameKey), namespace, Option.empty(), typeKindOptional.get(),
+                                            bitLength));
                     Preconditions.checkState(nativeOrPrimitiveType instanceof DecodePrimitiveType);
                     DecodePrimitiveType primitiveType = (DecodePrimitiveType) nativeOrPrimitiveType;
-                    Optional<DecodeName> primitiveTypeOptionalName = primitiveType.getOptionalName();
-                    if (primitiveTypeOptionalName.isPresent()
-                            && !namespace.getTypes().stream()
-                            .filter(t -> t.getOptionalName().equals(primitiveTypeOptionalName))
-                            .findAny().isPresent())
+                    Option<DecodeName> primitiveTypeOptionalName = primitiveType.optionalName();
+                    if (primitiveTypeOptionalName.isDefined()
+                            && !namespace.types().find(t -> t.optionalName().equals(primitiveTypeOptionalName)).isDefined())
                     {
-                        List<DecodeType> types = new ArrayList<>();
-                        types.add(primitiveType);
-                        namespace.setTypes(types);
+                        Buffer<DecodeType> types = new ArrayBuffer<>();
+                        types.$plus$eq(primitiveType);
+                        namespace.types_$eq(types);
                     }
-                    return SimpleDecodeResolvingResult.newInstance(Optional.of(primitiveType)
+                    return SimpleDecodeResolvingResult.newInstance(Option.apply(primitiveType)
                             .filter(cls::isInstance).map(cls::cast));
                 }
             }
@@ -93,48 +94,46 @@ public class ProvidePrimitivesAndNativeTypesDecodeProxyResolver implements Decod
                     return (DecodeResolvingResult<T>) result;
                 }
                 return SimpleDecodeResolvingResult
-                        .newInstance(Optional.of(genericTypeSpecializedByTypeNameMap.computeIfAbsent(typeName,
-                                tn -> ImmutableDecodeGenericTypeSpecialized.newInstance(Optional.empty(),
-                                        genericTypeOptional.get().getObject().getNamespace(), Optional.empty(),
+                        .newInstance(Option.apply(genericTypeSpecializedByTypeNameMap.computeIfAbsent(typeName,
+                                tn -> ImmutableDecodeGenericTypeSpecialized.newInstance(Option.empty(),
+                                        genericTypeOptional.get().obj().namespace(), Option.empty(),
                                         genericTypeOptional.get(), Stream.of(genericArgumentsString.split(Pattern.quote(",")))
                                                 .map(DecodeUtils::uriToOptionalMaybeProxyType)
                                                 .collect(Collectors.toList())))).filter(cls::isInstance)
-                                .map(cls::cast));
+                                .map(t -> cls.isInstance(t)? cls.cast(t) : null));
             }
             // Native type
-            else if (DecodeNativeType.MANGLED_TYPE_NAMES.contains(typeName))
+            else if (DecodeNativeType$.MODULE$.MANGLED_TYPE_NAMES().contains(typeName))
             {
                 DecodeNameImpl name = DecodeNameImpl.newFromMangledName(typeName);
                 DecodeNamespace namespace = namespaceOptional.get();
                 DecodeType knownType = knownTypeByNameMap.computeIfAbsent(name,
                         (nameKey) -> {
-                            if (nameKey.equals(ImmutableDecodeBerType.MANGLED_NAME))
+                            if (nameKey.equals(DecodeBerType.MANGLED_NAME()))
                             {
-                                return ImmutableDecodeBerType
-                                        .newInstance(Optional.of(nameKey), namespace, Optional.<String>empty());
+                                return DecodeBerType.apply(namespace, Option.empty());
                             }
                             else if (nameKey.equals(DecodeOptionalType.MANGLED_NAME()))
                             {
-                                return new DecodeOptionalType(Optional.of(nameKey), namespace, Optional.empty());
+                                return new DecodeOptionalType(Option.apply(nameKey), namespace, Option.empty());
                             }
-                            else if (nameKey.equals(ImmutableDecodeOrType.MANGLED_NAME))
+                            else if (nameKey.equals(DecodeOrType.MANGLED_NAME()))
                             {
-                                return ImmutableDecodeOrType.newInstance(Optional.of(nameKey), namespace, Optional.empty());
+                                return new DecodeOrType(Option.apply(nameKey), namespace, Option.empty());
                             }
                             throw new AssertionError();
                         });
-                Optional<DecodeName> nativeTypeOptionalName = knownType.getOptionalName();
-                if (nativeTypeOptionalName.isPresent()
-                        && !namespace.getTypes().stream().filter(t -> t.getOptionalName().equals(
-                        nativeTypeOptionalName))
-                        .findAny().isPresent())
+                Option<DecodeName> nativeTypeOptionalName = knownType.optionalName();
+                if (nativeTypeOptionalName.isDefined()
+                        && !namespace.types().find(t -> t.optionalName().equals(
+                        nativeTypeOptionalName)).isDefined())
                 {
-                    List<DecodeType> types = new ArrayList<>();
-                    types.add(knownType);
-                    namespace.setTypes(types);
+                    Buffer<DecodeType> types = new ArrayBuffer<>();
+                    types.$plus$eq(knownType);
+                    namespace.types_$eq(types);
                 }
-                return SimpleDecodeResolvingResult.newInstance(Optional.of(knownType)
-                        .filter(cls::isInstance).map(cls::cast));
+                return SimpleDecodeResolvingResult.newInstance(Option.apply(knownType)
+                        .map(t -> cls.isInstance(t) ? cls.cast(t) : null));
             }
         }
         return SimpleDecodeResolvingResult.immutableEmpty();

@@ -1,13 +1,12 @@
 package ru.mipt.acsl.decode.model.domain;
 
-import ru.mipt.acsl.decode.model.domain.impl.DecodeNameImpl;
-import ru.mipt.acsl.decode.model.domain.message.DecodeMessage;
-import ru.mipt.acsl.decode.model.domain.proxy.DecodeResolvingResult;
 import org.jetbrains.annotations.NotNull;
+import ru.mipt.acsl.decode.model.domain.impl.DecodeNameImpl;
+import scala.Option;
+import scala.collection.mutable.ArrayBuffer;
+import scala.collection.mutable.Buffer;
 
 import java.net.URI;
-import java.util.List;
-import java.util.Optional;
 import java.util.regex.Pattern;
 
 /**
@@ -16,48 +15,57 @@ import java.util.regex.Pattern;
 public interface DecodeRegistry
 {
     @NotNull
-    List<DecodeNamespace> getRootNamespaces();
+    Buffer<DecodeNamespace> rootNamespaces();
 
     @NotNull
     <T extends DecodeReferenceable> DecodeResolvingResult<T> resolve(@NotNull URI uri, @NotNull Class<T> cls);
 
     @NotNull
-    default Optional<DecodeComponent> getComponent(@NotNull String fqn)
+    default Option<DecodeComponent> getComponent(@NotNull String fqn)
     {
         int dotPos = fqn.lastIndexOf('.');
-        Optional<DecodeNamespace> namespaceOptional = getNamespace(fqn.substring(0, dotPos));
-        if (!namespaceOptional.isPresent())
+        Option<DecodeNamespace> namespaceOptional = getNamespace(fqn.substring(0, dotPos));
+        if (!namespaceOptional.isDefined())
         {
-            return Optional.empty();
+            return Option.empty();
         }
         DecodeName componentName = DecodeNameImpl.newFromMangledName(fqn.substring(dotPos + 1, fqn.length()));
-        return namespaceOptional.get().getComponents().stream().filter((c) -> c.getName().equals(componentName)).findAny();
+        return namespaceOptional.get().components().find((c) -> c.name().equals(componentName));
     }
 
     @NotNull
-    default Optional<DecodeNamespace> getNamespace(@NotNull String fqn)
+    default Option<DecodeNamespace> getNamespace(@NotNull String fqn)
     {
-        List<DecodeNamespace> currentNamespaces = getRootNamespaces();
-        Optional<DecodeNamespace> currentNamespace = Optional.empty();
+        Buffer<DecodeNamespace> currentNamespaces = new ArrayBuffer<>();
+        currentNamespaces.append(rootNamespaces());
+        Option<DecodeNamespace> currentNamespace = Option.empty();
         for (String namespaceName : fqn.split(Pattern.quote(".")))
         {
             if (currentNamespaces == null)
             {
-                return Optional.empty();
+                return Option.empty();
             }
             DecodeName decodeName = DecodeNameImpl.newFromMangledName(namespaceName);
-            currentNamespace = currentNamespaces.stream().filter((n) -> n.getName().equals(decodeName)).findAny();
-            currentNamespaces = currentNamespace.isPresent() ? currentNamespace.get().getSubNamespaces() : null;
+            currentNamespace = currentNamespaces.find((n) -> n.name().equals(decodeName));
+            if (currentNamespace.isDefined())
+            {
+                currentNamespaces.clear();
+                currentNamespaces.append(currentNamespace.get().subNamespaces());
+            }
+            else
+            {
+                currentNamespaces = null;
+            }
         }
         return currentNamespace;
     }
 
     @NotNull
-    default Optional<DecodeMessage> getMessage(@NotNull String fqn)
+    default Option<DecodeMessage> getMessage(@NotNull String fqn)
     {
         int dotPos = fqn.lastIndexOf('.');
         DecodeName decodeName = DecodeNameImpl.newFromMangledName(fqn.substring(dotPos + 1, fqn.length()));
-        return getComponent(fqn.substring(0, dotPos)).map((c) -> c.getMessages().stream().filter((m) -> m.getName().equals(decodeName)).findAny().orElse(null));
+        return getComponent(fqn.substring(0, dotPos)).map((c) -> c.messages().find((m) -> m.name().equals(decodeName)).getOrElse(() -> null));
     }
 
     @NotNull

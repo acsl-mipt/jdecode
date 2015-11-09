@@ -19,18 +19,18 @@ import java.util.List;
 /**
  * @author Artem Shein
  */
-public class DecodeParameterWalker implements Iterator<Either<String, Integer>>
+public class DecodeParameterWalker implements Iterator<scala.util.Either<String, Integer>>
 {
     @NotNull
     private final DecodeMessageParameter parameter;
-    private final List<Either<String, Integer>> tokens;
+    private final List<scala.util.Either<String, Integer>> tokens;
     private int currentIndex;
 
     public DecodeParameterWalker(@NotNull DecodeMessageParameter parameter)
     {
         this.parameter = parameter;
         this.currentIndex = 0;
-        ParsingResult<List<Either<String, Integer>>> result = new TracingParseRunner<List<Either<String, Integer>>>(Parboiled.createParser(ParameterParser.class).Parameter()).run(
+        ParsingResult<List<scala.util.Either<String, Integer>>> result = new TracingParseRunner<List<scala.util.Either<String, Integer>>>(Parboiled.createParser(ParameterParser.class).Parameter()).run(
                 parameter.getValue());
         Preconditions.checkState(result.matched && !result.hasErrors());
         tokens = result.resultValue;
@@ -43,7 +43,7 @@ public class DecodeParameterWalker implements Iterator<Either<String, Integer>>
     }
 
     @Override
-    public Either<String, Integer> next()
+    public scala.util.Either<String, Integer> next()
     {
         return tokens.get(currentIndex++);
     }
