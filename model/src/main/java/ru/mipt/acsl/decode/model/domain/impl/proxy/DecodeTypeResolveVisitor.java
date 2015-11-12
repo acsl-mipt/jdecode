@@ -104,9 +104,15 @@ public class DecodeTypeResolveVisitor implements DecodeTypeVisitor<Void>
         resolvingResultList
                 .$plus$eq(DecodeModelResolver
                         .resolveWithTypeCheck(genericTypeSpecialized.genericType(), registry, DecodeGenericType.class));
-        genericTypeSpecialized.genericTypeArguments().filter(Option::isDefined).foreach(
-                arg -> resolvingResultList.$plus$eq(
-                        DecodeModelResolver.resolveWithTypeCheck(arg.get(), registry, DecodeType.class)));
+        Iterator<Option<DecodeMaybeProxy<DecodeType>>> taIt = genericTypeSpecialized.genericTypeArguments().iterator();
+        while (taIt.hasNext())
+        {
+            Option<DecodeMaybeProxy<DecodeType>> ta = taIt.next();
+            if (ta.isDefined())
+                resolvingResultList.$plus$eq(
+                                DecodeModelResolver.resolveWithTypeCheck(ta.get(), registry, DecodeType.class));
+
+        }
         return null;
     }
 }

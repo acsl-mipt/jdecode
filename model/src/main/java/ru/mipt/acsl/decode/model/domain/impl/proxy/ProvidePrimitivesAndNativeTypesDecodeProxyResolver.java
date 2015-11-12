@@ -40,9 +40,9 @@ public class ProvidePrimitivesAndNativeTypesDecodeProxyResolver implements Decod
         Preconditions.checkState(DecodeConstants.SYSTEM_NAMESPACE_FQN.size() == 1, "not implemented");
         if (parts.size() == 2 && parts.get(0).equals(DecodeConstants.SYSTEM_NAMESPACE_FQN.asString()))
         {
-            Optional<DecodeNamespace> namespaceOptional = DecodeUtils.getNamespaceByFqn(registry,
+            Option<DecodeNamespace> namespaceOptional = DecodeUtils.getNamespaceByFqn(registry,
                     DecodeConstants.SYSTEM_NAMESPACE_FQN);
-            Preconditions.checkState(namespaceOptional.isPresent(), "system namespace not found");
+            Preconditions.checkState(namespaceOptional.isDefined(), "system namespace not found");
             String typeName = parts.get(1);
             // Primitive type
             if (typeName.contains(":"))

@@ -9,6 +9,7 @@ import ru.mipt.acsl.decode.model.domain.message.DecodeMessageParameter;
 import ru.mipt.acsl.decode.model.exporter.TableName;
 import ru.mipt.acsl.decode.model.domain.impl.proxy.SimpleDecodeMaybeProxy;
 import ru.mipt.acsl.decode.model.exporter.ModelExportingException;
+import scala.Int;
 import scala.Option;
 import scala.collection.JavaConversions;
 import scala.collection.mutable.*;
@@ -50,7 +51,7 @@ public class DecodeSqlProvider
                 .getConnection(config.getConnectionUrl()))
         {
             this.connection = connection;
-            DecodeRegistry registry = SimpleDecodeRegistry.newInstance();
+            DecodeRegistry registry = DecodeRegistryImpl.apply();
             readNamespaces(registry);
             return registry;
         }
@@ -142,10 +143,10 @@ public class DecodeSqlProvider
                         "namespace not found");
                 long baseTypeId = componentRs.getLong("base_type_id");
                 Option<DecodeMaybeProxy<DecodeStructType>> baseType =
-                        componentRs.wasNull() ? Optional.<DecodeMaybeProxy<DecodeType>>empty()
-                                : Optional.of(SimpleDecodeMaybeProxy.<DecodeStructType>object((DecodeStructType) ensureTypeLoaded(baseTypeId)));
+                        componentRs.wasNull() ? Option.<DecodeMaybeProxy<DecodeStructType>>empty()
+                                : Option.apply(SimpleDecodeMaybeProxy.object((DecodeStructType) ensureTypeLoaded(baseTypeId)));
 
-                List<DecodeComponentRef> subComponentRefs = new ArrayList<>();
+                Buffer<DecodeComponentRef> subComponentRefs = new ArrayBuffer<>();
                 try(PreparedStatement subComponentsSelect = connection.prepareStatement(
                         String.format(
                                 "SELECT sub_component_id FROM %s WHERE component_id = ? ORDER BY sub_component_id ASC",
@@ -157,13 +158,14 @@ public class DecodeSqlProvider
                         while (subComponentsRs.next())
                         {
                             subComponentRefs
-                                    .add(ImmutableDecodeComponentRef.newInstance(SimpleDecodeMaybeProxy
-                                            .object(ensureComponentLoaded(subComponentsRs.getLong("sub_component_id")))));
+                                    .$plus$eq(new DecodeComponentRefImpl(SimpleDecodeMaybeProxy
+                                            .object(ensureComponentLoaded(subComponentsRs.getLong("sub_component_id"))),
+                                            Option.empty()));
                         }
                     }
                 }
 
-                List<DecodeCommand> commands = new ArrayList<>();
+                Buffer<DecodeCommand> commands = new ArrayBuffer<>();
                 try (PreparedStatement commandsSelect = connection.prepareStatement(
                         String.format("SELECT id, name, command_id, info FROM %s WHERE component_id = ?",
                                 TableName.COMMAND)))
@@ -176,7 +178,7 @@ public class DecodeSqlProvider
                     {
                         while (commandsSelectRs.next())
                         {
-                            List<DecodeCommandArgument> arguments = new ArrayList<>();
+                            Buffer<DecodeCommandArgument> arguments = new ArrayBuffer<>();
                             long commandId = commandsSelectRs.getLong("id");
                             argumentsSelect.setLong(1, commandId);
                             try (ResultSet commandArgumentsRs = argumentsSelect.executeQuery())
@@ -189,7 +191,7 @@ public class DecodeSqlProvider
                                             : Option.apply(SimpleDecodeMaybeProxy.object(
                                             Preconditions.checkNotNull(unitById.get(unitId), "unit not found")));
 
-                                    arguments.add(new DecodeCommandArgumentImpl(
+                                    arguments.$plus$eq(new DecodeCommandArgumentImpl(
                                             DecodeNameImpl.newFromMangledName(
                                                     commandArgumentsRs.getString("name")),
                                             Option.apply(commandArgumentsRs.getString("info")),
@@ -199,18 +201,20 @@ public class DecodeSqlProvider
                                 }
                             }
                             Option<Long> returnTypeIdOptional = getOptionalLong(commandsSelectRs, "return_type_id");
-                            commands.add(ImmutableDecodeCommand.newInstance(
+                            commands.$plus$eq(ImmutableDecodeCommand.newInstance(
                                     DecodeNameImpl.newFromMangledName(commandsSelectRs.getString("name")),
                                     getOptionalInt(commandsSelectRs, "command_id"),
                                     Option.apply(commandsSelectRs.getString("info")), arguments,
-                                    returnTypeIdOptional.map(rti -> SimpleDecodeMaybeProxy.object(
-                                            Preconditions.checkNotNull(typeById.get(rti), "type not found")))));
+                                    Option.apply(returnTypeIdOptional.isDefined()
+                                            ? SimpleDecodeMaybeProxy.object(
+                                            Preconditions.checkNotNull(typeById.get(returnTypeIdOptional.get()), "type not found"))
+                                            : null)));
                         }
 
                     }
                 }
 
-                List<DecodeMessage> messages = new ArrayList<>();
+                Buffer<DecodeMessage> messages = new ArrayBuffer<>();
                 int componentForcedId = componentRs.getInt("component_id");
                 boolean isComponentForcedIdProvided = !componentRs.wasNull();
                 component = new DecodeComponentImpl(
@@ -234,28 +238,27 @@ public class DecodeSqlProvider
                         while (messagesSelectRs.next())
                         {
                             messageParametersSelect.setLong(1, messagesSelectRs.getLong("id"));
-                            List<DecodeMessageParameter> parameters = new ArrayList<>();
+                            Buffer<DecodeMessageParameter> parameters = new ArrayBuffer<>();
                             try (ResultSet messageParametersRs = messageParametersSelect.executeQuery())
                             {
                                 while (messageParametersRs.next())
                                 {
-                                    parameters.add(ImmutableDecodeMessageParameter.newInstance(
+                                    parameters.$plus$eq(ImmutableDecodeMessageParameter.newInstance(
                                             messageParametersRs.getString("name")));
                                 }
                             }
 
                             DecodeNameImpl messageName = DecodeNameImpl
                                     .newFromMangledName(messagesSelectRs.getString("name"));
-                            Option<Integer> messageId = getOptionalInt(messagesSelectRs, "message_id");
-                            Option<String> messageInfo = Optional.ofNullable(messagesSelectRs.getString("info"));
+                            Option<Object> messageId = getOptionalInt(messagesSelectRs, "message_id");
+                            Option<String> messageInfo = Option.apply(messagesSelectRs.getString("info"));
 
                             DecodeMessage message = null;
 
                             messagesSelectRs.getLong("s_message_id");
                             if (!messagesSelectRs.wasNull())
                             {
-                                message = ImmutableDecodeStatusMessage
-                                        .newInstance(component, messageName, messageId, messageInfo,
+                                message = new DecodeStatusMessageImpl(component, messageName, messageId, messageInfo,
                                                 parameters);
                             }
 
@@ -263,12 +266,11 @@ public class DecodeSqlProvider
                             if (!messagesSelectRs.wasNull())
                             {
                                 Preconditions.checkState(message == null, "invalid message");
-                                message = ImmutableDecodeEventMessage
-                                        .newInstance(component, messageName, messageId, messageInfo,
+                                message = new DecodeEventMessageImpl(component, messageName, messageId, messageInfo,
                                                 parameters, SimpleDecodeMaybeProxy.object(Preconditions.checkNotNull(typeById.get(messagesSelectRs.getLong("e_event_type_id")))));
                             }
 
-                            messages.add(Preconditions.checkNotNull(message, "invalid message"));
+                            messages.$plus$eq(Preconditions.checkNotNull(message, "invalid message"));
                         }
                     }
                 }
@@ -288,10 +290,10 @@ public class DecodeSqlProvider
     }
 
     @NotNull
-    private Option<Integer> getOptionalInt(@NotNull ResultSet rs, @NotNull String fieldName) throws SQLException
+    private Option<Object> getOptionalInt(@NotNull ResultSet rs, @NotNull String fieldName) throws SQLException
     {
         int value = rs.getInt(fieldName);
-        return rs.wasNull() ?  Option.<Integer>empty() : Option.apply(value);
+        return rs.wasNull() ?  Option.empty() : Option.apply(Int.box(value));
     }
 
     private DecodeType ensureTypeLoaded(long typeId) throws SQLException
@@ -320,8 +322,8 @@ public class DecodeSqlProvider
                 Preconditions.checkState(typeRs.next(), "type not found");
                 DecodeNamespace namespace = Preconditions.checkNotNull(namespaceById.get(typeRs.getLong("namespace_id")),
                         "namespace not found for type");
-                Option<DecodeName> name = Option.apply(typeRs.getString("name")).map(
-                        DecodeNameImpl::newFromMangledName);
+                Option<String> nameStr = Option.apply(typeRs.getString("name"));
+                Option<DecodeName> name = Option.apply(nameStr.isDefined()? DecodeNameImpl.newFromMangledName(nameStr.get()) : null);
                 Option<String> info = Option.apply(typeRs.getString("info"));
                 String primitiveKind = typeRs.getString("kind");
 
@@ -335,7 +337,7 @@ public class DecodeSqlProvider
                 if (!typeRs.wasNull())
                 {
                     Preconditions.checkState(type == null, "invalid type");
-                    type = SimpleDecodeAliasType.newInstance(name.get(), namespace,
+                    type = new DecodeAliasTypeImpl(name.get(), namespace,
                             SimpleDecodeMaybeProxy.object(ensureTypeLoaded(aliasBaseTypeId)), info);
                 }
 
@@ -343,8 +345,8 @@ public class DecodeSqlProvider
                 if (!typeRs.wasNull())
                 {
                     Preconditions.checkState(type == null, "invalid type");
-                    type = SimpleDecodeSubType.newInstance(name, namespace,
-                            SimpleDecodeMaybeProxy.object(ensureTypeLoaded(subTypeBaseTypeId)), info);
+                    type = new DecodeSubTypeImpl(name, namespace, info,
+                            SimpleDecodeMaybeProxy.object(ensureTypeLoaded(subTypeBaseTypeId)));
                 }
 
                 long enumBaseTypeId = typeRs.getLong("e_base_type_id");
@@ -372,8 +374,8 @@ public class DecodeSqlProvider
                 if (!typeRs.wasNull())
                 {
                     Preconditions.checkState(type == null, "invalid type");
-                    type = new DecodeArrayTypeImpl(name, namespace,
-                            SimpleDecodeMaybeProxy.object(ensureTypeLoaded(arrayBaseTypeId)), info,
+                    type = new DecodeArrayTypeImpl(name, namespace, info,
+                            SimpleDecodeMaybeProxy.object(ensureTypeLoaded(arrayBaseTypeId)),
                             new ArraySizeImpl(typeRs.getLong("min_length"),
                                     typeRs.getLong("max_length")));
                 }
@@ -397,7 +399,7 @@ public class DecodeSqlProvider
                                 DecodeNameImpl.newFromMangledName(
                                         structFieldsRs.getString(1)),
                                 SimpleDecodeMaybeProxy.object(ensureTypeLoaded(structFieldsRs.getLong(
-                                        2))), unit.map(SimpleDecodeMaybeProxy::object), info));
+                                        2))), Option.apply(unit.isDefined() ? SimpleDecodeMaybeProxy.object(unit.get()) : null), info));
                     }
                     Preconditions.checkState(!fields.isEmpty(), "struct must not be empty");
                     type = new DecodeStructTypeImpl(name, namespace, info, fields);

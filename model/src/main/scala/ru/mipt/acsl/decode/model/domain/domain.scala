@@ -1,12 +1,15 @@
 package ru.mipt.acsl.decode.model.domain
 
+import java.net.URI
+
 import com.google.common.base.Preconditions
-import ru.mipt.acsl.decode.model.domain.impl.DecodeParameterWalker
+import ru.mipt.acsl.decode.model.domain.impl.{DecodeComponentWalker, DecodeNameImpl, DecodeParameterWalker}
 import ru.mipt.acsl.decode.model.domain.impl.`type`.{AbstractDecodeOptionalInfoAware, DecodeFqnImpl}
 import ru.mipt.acsl.decode.model.domain.message.DecodeMessageParameter
 
 import scala.collection.immutable.HashSet
 import scala.collection.mutable
+import scala.collection.mutable.ArrayBuffer
 
 /**
   * @author Artem Shein
@@ -240,7 +243,7 @@ trait DecodeTypeVisitor[T] {
 // Components
 trait DecodeCommandArgument extends DecodeNameAware with DecodeOptionalInfoAware {
   def unit: Option[DecodeMaybeProxy[DecodeUnit]]
-  def `type`: DecodeMaybeProxy[DecodeType]
+  def argType: DecodeMaybeProxy[DecodeType]
 }
 
 trait DecodeCommand extends DecodeOptionalInfoAware with DecodeNameAware {
@@ -251,8 +254,8 @@ trait DecodeCommand extends DecodeOptionalInfoAware with DecodeNameAware {
 
 // TODO: replace with case classes?
 trait DecodeMessageVisitor[T] {
-  def visit (eventMessage: DecodeEventMessage): T
-  def visit (statusMessage: DecodeStatusMessage): T
+  def visit(eventMessage: DecodeEventMessage): T
+  def visit(statusMessage: DecodeStatusMessage): T
 }
 
 trait DecodeMessage extends DecodeOptionalInfoAware with DecodeNameAware {
@@ -262,7 +265,7 @@ trait DecodeMessage extends DecodeOptionalInfoAware with DecodeNameAware {
 
   def component: DecodeComponent
 
-  def id: Option[Integer]
+  def id: Option[Int]
 }
 
 trait DecodeStatusMessage extends DecodeMessage {
@@ -299,6 +302,59 @@ trait DecodeComponent extends DecodeOptionalInfoAware with DecodeNameAware with 
       val token = walker.next()
       componentWalker.walk(token)
     }
-    Preconditions.checkNotNull(componentWalker.getType).get()
+    if (componentWalker.`type`.isEmpty)
+      sys.error("fail")
+    componentWalker.`type`.get
+  }
+}
+
+trait DecodeRegistry {
+  def rootNamespaces: mutable.Buffer[DecodeNamespace]
+
+  def resolve[T <: DecodeReferenceable](uri: URI, cls: Class[T]): DecodeResolvingResult[T]
+
+  def getComponent(fqn: String): Option[DecodeComponent] = {
+    val dotPos = fqn.lastIndexOf('.')
+    val namespaceOptional = getNamespace(fqn.substring(0, dotPos))
+    if (namespaceOptional.isEmpty)
+    {
+      return Option.empty
+    }
+    val componentName = DecodeNameImpl.newFromMangledName(fqn.substring(dotPos + 1, fqn.length()))
+    namespaceOptional.get.components.find(_.name == componentName)
+  }
+
+  def getNamespace(fqn: String): Option[DecodeNamespace] = {
+    var currentNamespaces: Option[ArrayBuffer[DecodeNamespace]] = Some(new ArrayBuffer[DecodeNamespace]())
+    currentNamespaces.get ++= rootNamespaces
+    var currentNamespace = Option.empty[DecodeNamespace]
+    "\\.".r.split(fqn).foreach(nsName => {
+      if (currentNamespaces.isEmpty)
+      {
+        return Option.empty
+      }
+      val decodeName = DecodeNameImpl.newFromMangledName(nsName)
+      currentNamespace = currentNamespaces.get.find(_.name == decodeName)
+      if (currentNamespace.isDefined)
+      {
+        currentNamespaces.get.clear()
+        currentNamespaces.get ++= currentNamespace.get.subNamespaces
+      }
+      else
+      {
+        currentNamespaces = Option.empty[ArrayBuffer[DecodeNamespace]]
+      }
+    })
+    currentNamespace
+  }
+
+  def getMessage(fqn: String): Option[DecodeMessage] = {
+    val dotPos = fqn.lastIndexOf('.')
+    val decodeName = DecodeNameImpl.newFromMangledName(fqn.substring(dotPos + 1, fqn.length()))
+    getComponent(fqn.substring(0, dotPos)).map(_.messages.find(_.name == decodeName).orNull)
+  }
+
+  def getMessageOrThrow(fqn: String): DecodeMessage = {
+    getMessage(fqn).get
   }
 }

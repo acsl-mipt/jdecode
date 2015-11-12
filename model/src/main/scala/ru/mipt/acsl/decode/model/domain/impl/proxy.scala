@@ -47,7 +47,7 @@ object DecodeModelResolver {
   }
 
   def resolve(registry: DecodeRegistry): DecodeResolvingResult[DecodeReferenceable] = {
-    registry.rootNamespaces().flatMap(resolve(_, registry)).reduce[DecodeResolvingResult[DecodeReferenceable]](SimpleDecodeResolvingResult.merge)
+    registry.rootNamespaces.flatMap(resolve(_, registry)).reduce[DecodeResolvingResult[DecodeReferenceable]](SimpleDecodeResolvingResult.merge)
   }
 
   def resolve(component: DecodeComponent, registry: DecodeRegistry): Seq[DecodeResolvingResult[DecodeReferenceable]] = {
@@ -64,7 +64,7 @@ object DecodeModelResolver {
         resultList += resolveWithTypeCheck(rt, registry, classOf[DecodeType])
       })
       cmd.arguments.foreach(arg => {
-        resultList += resolveWithTypeCheck(arg.`type`, registry, classOf[DecodeType])
+        resultList += resolveWithTypeCheck(arg.argType, registry, classOf[DecodeType])
         arg.unit.map(u => {
           resultList += resolveWithTypeCheck(u, registry, classOf[DecodeUnit])
         })

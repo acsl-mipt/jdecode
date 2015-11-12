@@ -4,6 +4,7 @@ import org.jetbrains.annotations.NotNull;
 import ru.mipt.acsl.decode.model.domain.*;
 import ru.mipt.acsl.decode.model.domain.impl.type.AbstractDecodeOptionalInfoAware;
 import scala.Option;
+import scala.collection.Seq;
 
 import java.util.List;
 import java.util.Optional;
@@ -14,17 +15,17 @@ import java.util.Optional;
 public class ImmutableDecodeCommand extends AbstractDecodeOptionalInfoAware implements DecodeCommand
 {
     @NotNull
-    private final List<DecodeCommandArgument> arguments;
+    private final Seq<DecodeCommandArgument> arguments;
     @NotNull
     private final DecodeName name;
     @NotNull
-    private final Option<Integer> id;
+    private final Option<Object> id;
     @NotNull
     private final Option<DecodeMaybeProxy<DecodeType>> returnType;
 
     @NotNull
-    public static DecodeCommand newInstance(@NotNull DecodeName name, @NotNull Option<Integer> id, @NotNull Option<String> info,
-                                            @NotNull List<DecodeCommandArgument> arguments,
+    public static DecodeCommand newInstance(@NotNull DecodeName name, @NotNull Option<Object> id, @NotNull Option<String> info,
+                                            @NotNull Seq<DecodeCommandArgument> arguments,
                                             @NotNull Option<DecodeMaybeProxy<DecodeType>> returnType)
     {
         return new ImmutableDecodeCommand(name, id, info, arguments, returnType);
@@ -39,14 +40,14 @@ public class ImmutableDecodeCommand extends AbstractDecodeOptionalInfoAware impl
 
     @NotNull
     @Override
-    public Option<Integer> id()
+    public Option<Object> id()
     {
         return id;
     }
 
     @NotNull
     @Override
-    public List<DecodeCommandArgument> arguments()
+    public Seq<DecodeCommandArgument> arguments()
     {
         return arguments;
     }
@@ -72,9 +73,9 @@ public class ImmutableDecodeCommand extends AbstractDecodeOptionalInfoAware impl
                 arguments, info());
     }
 
-    private ImmutableDecodeCommand(@NotNull DecodeName name, @NotNull Option<Integer> id,
+    private ImmutableDecodeCommand(@NotNull DecodeName name, @NotNull Option<Object> id,
                                    @NotNull Option<String> info,
-                                   @NotNull List<DecodeCommandArgument> arguments,
+                                   @NotNull Seq<DecodeCommandArgument> arguments,
                                    @NotNull Option<DecodeMaybeProxy<DecodeType>> returnType)
     {
         super(info);

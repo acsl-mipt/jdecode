@@ -11,6 +11,7 @@ import org.parboiled.support.ParsingResult;
 import org.parboiled.support.Var;
 import ru.mipt.acsl.common.Either;
 import ru.mipt.acsl.decode.model.domain.message.DecodeMessageParameter;
+import scala.Int;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -19,7 +20,7 @@ import java.util.List;
 /**
  * @author Artem Shein
  */
-public class DecodeParameterWalker implements Iterator<scala.util.Either<String, Integer>>
+public class DecodeParameterWalker implements Iterator<scala.util.Either<String, Int>>
 {
     @NotNull
     private final DecodeMessageParameter parameter;
@@ -43,7 +44,7 @@ public class DecodeParameterWalker implements Iterator<scala.util.Either<String,
     }
 
     @Override
-    public scala.util.Either<String, Integer> next()
+    public scala.util.Either<String, Int> next()
     {
         return tokens.get(currentIndex++);
     }

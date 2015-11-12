@@ -105,6 +105,12 @@ public class SimpleDecodeMaybeProxy<T extends DecodeReferenceable> extends Eithe
         return isRight();
     }
 
+    @Override
+    public boolean isResolved()
+    {
+        return isLeft();
+    }
+
     @NotNull
     @Override
     public T obj()

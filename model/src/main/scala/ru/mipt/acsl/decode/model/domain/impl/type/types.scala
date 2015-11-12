@@ -64,6 +64,16 @@ class DecodePrimitiveTypeImpl(name: Option[DecodeName], namespace: DecodeNamespa
                               val kind: TypeKind.Value, val bitLength: Long = 0)
   extends AbstractDecodeType(name, namespace, info) with DecodePrimitiveType
 
+class DecodeAliasTypeImpl(val name: DecodeName, var namespace: DecodeNamespace, val baseType: DecodeMaybeProxy[DecodeType],
+                          info: Option[String])
+  extends AbstractDecodeOptionalInfoAware(info) with DecodeAliasType with BaseTyped {
+  def optionalName = Some(name)
+}
+
+class DecodeSubTypeImpl(optionName: Option[DecodeName], namespace: DecodeNamespace, info: Option[String],
+                        val baseType: DecodeMaybeProxy[DecodeType])
+  extends AbstractDecodeType(optionName, namespace, info) with DecodeSubType
+
 class DecodeEnumTypeImpl(name: Option[DecodeName], namespace: DecodeNamespace, baseType: DecodeMaybeProxy[DecodeType],
                               info: Option[String], var constants: mutable.Set[DecodeEnumConstant])
   extends AbstractDecodeTypeWithBaseType(name, namespace, info, baseType) with DecodeEnumType {
@@ -90,6 +100,10 @@ class DecodeArrayTypeImpl(optionName: Option[DecodeName], ns: DecodeNamespace, i
                           val baseType: DecodeMaybeProxy[DecodeType], val size: ArraySize)
   extends AbstractDecodeType(optionName, ns, info) with DecodeArrayType
 
+class DecodeGenericTypeSpecializedImpl(optionName: Option[DecodeName], namespace: DecodeNamespace, info: Option[String],
+  val genericType: DecodeMaybeProxy[DecodeGenericType], val genericTypeArguments: Seq[Option[DecodeMaybeProxy[DecodeType]]])
+  extends AbstractDecodeType(optionName, namespace, info) with DecodeGenericTypeSpecialized
+
 class DecodeOrType(name: Option[DecodeName], namespace: DecodeNamespace, info: Option[String])
   extends AbstractDecodeType(name, namespace, info) with DecodeGenericType {
 
@@ -113,7 +127,7 @@ object DecodeOptionalType {
 }
 
 // Components
-class DecodeCommandArgumentImpl(name: DecodeName, info: Option[String], val `type`: DecodeMaybeProxy[DecodeType],
+class DecodeCommandArgumentImpl(name: DecodeName, info: Option[String], val argType: DecodeMaybeProxy[DecodeType],
                                 val unit: Option[DecodeMaybeProxy[DecodeUnit]])
   extends AbstractDecodeNameAndOptionalInfoAware(name, info) with DecodeCommandArgument
 
