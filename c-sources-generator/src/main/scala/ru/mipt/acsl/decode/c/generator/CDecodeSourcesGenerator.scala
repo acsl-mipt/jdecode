@@ -5,14 +5,11 @@ import java.security.MessageDigest
 import java.util.Optional
 
 import com.typesafe.scalalogging.LazyLogging
-import ru.mipt.acsl.decode.model.domain.`type`.DecodeType.TypeKind
-import ru.mipt.acsl.decode.model.domain.`type`._
+import ru.mipt.acsl.decode.model.domain.TypeKind
 import ru.mipt.acsl.decode.model.domain._
-import ru.mipt.acsl.decode.model.domain.proxy.DecodeMaybeProxy
 import ru.mipt.acsl.generation.Generator
 import ru.mipt.acsl.generator.c.ast._
 
-import scala.collection.JavaConversions._
 import resource._
 
 import scala.collection.mutable
@@ -25,12 +22,12 @@ class CDecodeGeneratorConfiguration(val outputDir: File, val registry: DecodeReg
 
 class CDecodeSourcesGenerator(val config: CDecodeGeneratorConfiguration) extends Generator[CDecodeGeneratorConfiguration] with LazyLogging {
   override def generate() {
-    generateRootComponent(config.registry.getComponent(config.rootComponentFqn).get())
+    generateRootComponent(config.registry.getComponent(config.rootComponentFqn).get)
   }
 
   def dirForNs(ns: DecodeNamespace): File = {
     new File(config.outputDir,
-      config.namespaceAlias.getOrElse(ns.getFqn, ns.getFqn).getParts.toList.map(_.asString()).mkString("/"))
+      config.namespaceAlias.getOrElse(ns.fqn, ns.fqn).parts.toList.map(_.asString()).mkString("/"))
   }
 
   def ensureDirForNsExists(ns: DecodeNamespace): File = {
@@ -55,16 +52,16 @@ class CDecodeSourcesGenerator(val config: CDecodeGeneratorConfiguration) extends
 
   def generateNs(ns: DecodeNamespace) {
     val nsDir = ensureDirForNsExists(ns)
-    ns.getSubNamespaces.toTraversable.foreach(generateNs)
+    ns.subNamespaces.toTraversable.foreach(generateNs)
     val typesHeader = HFile()
-    ns.getTypes.toTraversable.foreach(t => {
+    ns.types.toTraversable.foreach(t => {
       generateType(t).map({
-        if (t.getOptionalName.isPresent)
-          typesHeader ++= Seq(HComment(t.getOptionalName.get().asString()), HEol)
+        if (t.optionalName.isDefined)
+          typesHeader ++= Seq(HComment(t.optionalName.get.asString()), HEol)
         typesHeader ++= Seq(_, HEol)
       })
     })
-    writeFileIfNotEmptyWithComment(new File(nsDir, "types.h"), protectDoubleIncludeFile(typesHeader), s"Types of ${ns.getFqn.asString()} namespace")
+    writeFileIfNotEmptyWithComment(new File(nsDir, "types.h"), protectDoubleIncludeFile(typesHeader), s"Types of ${ns.fqn.asString()} namespace")
     //ns.getComponents.toTraversable.foreach(generateRootComponent)
   }
 
@@ -73,16 +70,16 @@ class CDecodeSourcesGenerator(val config: CDecodeGeneratorConfiguration) extends
   private val typeNameVisitor: DecodeTypeVisitor[String] = new DecodeTypeVisitor[String] {
     override def visit(primitiveType: DecodePrimitiveType): String = primitiveTypeToCTypeApplication(primitiveType).name
 
-    override def visit(nativeType: DecodeNativeType): String = nativeType.getName.asString()
+    override def visit(nativeType: DecodeNativeType): String = nativeType.name.asString()
 
-    override def visit(subType: DecodeSubType): String = cTypeNameFromOptionalName(subType.getOptionalName)
+    override def visit(subType: DecodeSubType): String = cTypeNameFromOptionalName(subType.optionalName)
 
-    override def visit(enumType: DecodeEnumType): String = cTypeNameFromOptionalName(enumType.getOptionalName)
+    override def visit(enumType: DecodeEnumType): String = cTypeNameFromOptionalName(enumType.optionalName)
 
     override def visit(arrayType: DecodeArrayType): String = {
-      val baseCType: String = arrayType.getBaseType.getObject.accept(typeNameVisitor)
-      val min = arrayType.getSize.getMinLength
-      val max = arrayType.getSize.getMaxLength
+      val baseCType: String = arrayType.baseType.obj.accept(typeNameVisitor)
+      val min = arrayType.size.minLength
+      val max = arrayType.size.maxLength
       "DECODE_ARRAY_TYPE_" + ((arrayType.isFixedSize, min, max) match {
         case (true, 0, _) | (false, 0, 0) => s"NAME($baseCType)"
         case (true, _, _) => s"FIXED_SIZE_NAME($baseCType, $min)"
@@ -92,19 +89,19 @@ class CDecodeSourcesGenerator(val config: CDecodeGeneratorConfiguration) extends
       })
     }
 
-    override def visit(structType: DecodeStructType): String = cTypeNameFromOptionalName(structType.getOptionalName)
+    override def visit(structType: DecodeStructType): String = cTypeNameFromOptionalName(structType.optionalName)
 
-    override def visit(typeAlias: DecodeAliasType): String = typeAlias.getName.asString()
+    override def visit(typeAlias: DecodeAliasType): String = typeAlias.name.asString()
 
-    override def visit(genericType: DecodeGenericType): String = cTypeNameFromOptionalName(genericType.getOptionalName)
+    override def visit(genericType: DecodeGenericType): String = cTypeNameFromOptionalName(genericType.optionalName)
 
     override def visit(genericTypeSpecialized: DecodeGenericTypeSpecialized): String =
-      cTypeNameFor(genericTypeSpecialized.getGenericType.getObject) + "_" +
-        genericTypeSpecialized.getGenericTypeArguments.to[Iterable].map(tp => if (tp.isPresent) cTypeNameFor(tp.get().getObject) else "void").mkString("_")
+      cTypeNameFor(genericTypeSpecialized.genericType.obj) + "_" +
+        genericTypeSpecialized.genericTypeArguments.to[Iterable].map(tp => if (tp.isDefined) cTypeNameFor(tp.get.obj) else "void").mkString("_")
   }
 
-  private def cTypeNameFromOptionalName(name: Optional[DecodeName]): String = {
-    if (name.isPresent) {
+  private def cTypeNameFromOptionalName(name: Option[DecodeName]): String = {
+    if (name.isDefined) {
       name.get.asString()
     } else {
       typeNameId += 1
@@ -126,33 +123,23 @@ class CDecodeSourcesGenerator(val config: CDecodeGeneratorConfiguration) extends
   }
 
   private def primitiveTypeToCTypeApplication(primitiveType: DecodePrimitiveType): CTypeApplication = {
-    primitiveType.getKind match {
-      case TypeKind.BOOL => primitiveType.getBitLength match {
-        case 8 => CTypeApplication("b8")
-        case 16 => CTypeApplication("b16")
-        case 32 => CTypeApplication("b32")
-        case 64 => CTypeApplication("b64")
-        case _ => sys.error("illegal bit length")
-      }
-      case TypeKind.FLOAT => primitiveType.getBitLength match {
-        case 32 => CFloatType
-        case 64 => CDoubleType
-        case _ => sys.error("illegal bit length")
-      }
-      case TypeKind.INT => primitiveType.getBitLength match {
-        case 8 => CUnsignedCharType
-        case 16 => CUnsignedShortType
-        case 32 => CUnsignedIntType
-        case 64 => CUnsignedLongType
-        case _ => sys.error("illegal bit length")
-      }
-      case TypeKind.UINT => primitiveType.getBitLength match {
-        case 8 => CSignedCharType
-        case 16 => CSignedShortType
-        case 32 => CSignedIntType
-        case 64 => CSignedLongType
-        case _ => sys.error("illegal bit length")
-      }
+    import TypeKind._
+    (primitiveType.kind, primitiveType.bitLength) match {
+      case (Bool, 8) => CTypeApplication("b8")
+      case (Bool, 16) => CTypeApplication("b16")
+      case (Bool, 32) => CTypeApplication("b32")
+      case (Bool, 64) => CTypeApplication("b64")
+      case (Float, 32) => CFloatType
+      case (Float, 64) => CDoubleType
+      case (Int, 8) => CUnsignedCharType
+      case (Int, 16) => CUnsignedShortType
+      case (Int, 32) => CUnsignedIntType
+      case (Int, 64) => CUnsignedLongType
+      case (Uint, 8) => CSignedCharType
+      case (Uint, 16) => CSignedShortType
+      case (Uint, 32) => CSignedIntType
+      case (Uint, 64) => CSignedLongType
+      case _ => sys.error("illegal bit length")
     }
   }
 
@@ -184,19 +171,19 @@ class CDecodeSourcesGenerator(val config: CDecodeGeneratorConfiguration) extends
 
       override def visit(nativeType: DecodeNativeType) = Some(CTypeDefStmt(cTypeNameFor(t), CVoidType.ptr()))
 
-      override def visit(subType: DecodeSubType) = Some(CTypeDefStmt(cTypeNameFor(t), subType.getBaseType.getObject.accept(refTypeVisitor)))
+      override def visit(subType: DecodeSubType) = Some(CTypeDefStmt(cTypeNameFor(t), subType.baseType.obj.accept(refTypeVisitor)))
 
       override def visit(enumType: DecodeEnumType) = Some(CTypeDefStmt(cTypeNameFor(t),
-        CEnumTypeDef(enumType.getConstants.toIterable.map(c => CEnumTypeDefConst(c.getName.asString(), c.getValue.toInt)))))
+        CEnumTypeDef(enumType.constants.toIterable.map(c => CEnumTypeDefConst(c.name.asString(), c.value.toInt)))))
 
       override def visit(arrayType: DecodeArrayType) = Some(CTypeDefStmt(cTypeNameFor(t), CVoidType.ptr()))
 
       override def visit(structType: DecodeStructType) = Some(CTypeDefStmt(cTypeNameFor(t),
-        CStructTypeDef(structType.getFields.toIterable.map(f => CStructTypeDefField(f.getName.asString(), f.getType.getObject.accept(refTypeVisitor))))))
+        CStructTypeDef(structType.fields.toIterable.map(f => CStructTypeDefField(f.name.asString(), f.fieldType.obj.accept(refTypeVisitor))))))
 
       override def visit(typeAlias: DecodeAliasType) = {
         val newName: String = cTypeNameFor(t)
-        val oldName: String = cTypeNameFor(typeAlias.getType.getObject)
+        val oldName: String = cTypeNameFor(typeAlias.baseType.obj)
         if (newName equals oldName) Some(HComment("omitted due name clash")) else Some(CDefine(newName, oldName))
       }
 
@@ -207,47 +194,47 @@ class CDecodeSourcesGenerator(val config: CDecodeGeneratorConfiguration) extends
 
   }
 
-  private def collectNsForType(t: DecodeMaybeProxy[DecodeType], set: mutable.Set[DecodeNamespace]) {
-    require(t.isResolved, s"Proxy not resolved error for ${t.getProxy.toString}")
-    collectNsForType(t.getObject, set)
+  private def collectNsForType[T <: DecodeType](t: DecodeMaybeProxy[T], set: mutable.Set[DecodeNamespace]) {
+    require(t.isResolved, s"Proxy not resolved error for ${t.proxy.toString}")
+    collectNsForType(t.obj, set)
   }
 
   private def collectNsForType(t: DecodeType, set: mutable.Set[DecodeNamespace]) {
-    set += t.getNamespace
+    set += t.namespace
     t.accept(new DecodeTypeVisitor[Unit] {
       override def visit(primitiveType: DecodePrimitiveType) {}
 
       override def visit(nativeType: DecodeNativeType) {}
 
-      override def visit(subType: DecodeSubType) = collectNsForType(subType.getBaseType, set)
+      override def visit(subType: DecodeSubType) = collectNsForType(subType.baseType, set)
 
-      override def visit(enumType: DecodeEnumType) = collectNsForType(enumType.getBaseType, set)
+      override def visit(enumType: DecodeEnumType) = collectNsForType(enumType.baseType, set)
 
-      override def visit(arrayType: DecodeArrayType) = collectNsForType(arrayType.getBaseType, set)
+      override def visit(arrayType: DecodeArrayType) = collectNsForType(arrayType.baseType, set)
 
-      override def visit(structType: DecodeStructType) = structType.getFields.to[Iterable].foreach(f => collectNsForType(f.getType, set))
+      override def visit(structType: DecodeStructType) = structType.fields.to[Iterable].foreach(f => collectNsForType(f.fieldType, set))
 
-      override def visit(typeAlias: DecodeAliasType) = collectNsForType(typeAlias.getType, set)
+      override def visit(typeAlias: DecodeAliasType) = collectNsForType(typeAlias.baseType, set)
 
       override def visit(genericType: DecodeGenericType) {}
 
-      override def visit(genericTypeSpecialized: DecodeGenericTypeSpecialized) = genericTypeSpecialized.getGenericTypeArguments.to[Iterable].filter(_.isPresent).foreach(a => collectNsForType(a.get(), set))
+      override def visit(genericTypeSpecialized: DecodeGenericTypeSpecialized) = genericTypeSpecialized.genericTypeArguments.filter(_.isDefined).foreach(a => collectNsForType(a.get, set))
     })
   }
 
   private def collectNsForTypes(comp: DecodeComponent, set: mutable.Set[DecodeNamespace]) {
-    comp.getSubComponents.foreach(cr => collectNsForTypes(cr.getComponent.getObject, set))
-    if (comp.getBaseType.isPresent)
-      collectNsForType(comp.getBaseType.get, set)
-    comp.getCommands.to[Iterable].foreach(cmd => {
-      cmd.getArguments.to[Iterable].foreach(arg => collectNsForType(arg.getType, set))
-      if (cmd.getReturnType.isPresent)
-        collectNsForType(cmd.getReturnType.get(), set)
+    comp.subComponents.foreach(cr => collectNsForTypes(cr.component.obj, set))
+    if (comp.baseType.isDefined)
+      collectNsForType(comp.baseType.get, set)
+    comp.commands.foreach(cmd => {
+      cmd.arguments.foreach(arg => collectNsForType(arg.argType, set))
+      if (cmd.returnType.isDefined)
+        collectNsForType(cmd.returnType.get, set)
     })
   }
 
   private def generateRootComponent(comp: DecodeComponent) {
-    logger.debug(s"Generating component ${comp.getName.asString()}")
+    logger.debug(s"Generating component ${comp.name.asString()}")
     val nsSet = mutable.HashSet[DecodeNamespace]()
     collectNsForTypes(comp, nsSet)
     nsSet.foreach(generateNs)
@@ -255,9 +242,9 @@ class CDecodeSourcesGenerator(val config: CDecodeGeneratorConfiguration) extends
   }
 
   private def generateComponent(comp: DecodeComponent) {
-    val dir = dirForNs(comp.getNamespace)
-    val hFile = new File(dir, comp.getName.asString() + "Component.h")
-    val cFile = new File(dir, comp.getName.asString() + "Component.c")
+    val dir = dirForNs(comp.namespace)
+    val hFile = new File(dir, comp.name.asString() + "Component.h")
+    val cFile = new File(dir, comp.name.asString() + "Component.c")
     writeFileIfNotEmptyWithComment(hFile, protectDoubleIncludeFile(HFile()), "Component header")
     writeFileIfNotEmptyWithComment(cFile, CFile(HEol), "Component header")
   }

@@ -11,6 +11,7 @@ import org.parboiled.annotations.BuildParseTree;
 import org.parboiled.support.Var;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import ru.mipt.acsl.ScalaToJava;
 import ru.mipt.acsl.decode.model.domain.*;
 import ru.mipt.acsl.decode.model.domain.impl.*;
 import ru.mipt.acsl.decode.model.domain.impl.proxy.SimpleDecodeMaybeProxy;
@@ -18,14 +19,15 @@ import ru.mipt.acsl.decode.model.domain.impl.type.*;
 import ru.mipt.acsl.parsing.ParsingException;
 import scala.Int;
 import scala.Option;
-import scala.collection.mutable.ArrayBuffer;
-import scala.collection.mutable.Buffer;
+import scala.Some;
+import scala.collection.JavaConversions;
+import scala.collection.mutable.*;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
-import java.util.*;
 import java.util.stream.Collectors;
 
+import static ru.mipt.acsl.ScalaToJava.asOptional;
 import static ru.mipt.acsl.decode.model.domain.impl.proxy.SimpleDecodeMaybeProxy.*;
 
 /**
@@ -100,22 +102,22 @@ public class DecodeParboiledParser extends BaseParser<Object>
 
     boolean addImport(@NotNull Var<DecodeFqn> namespaceFqnVar, @NotNull ImportPart importPart)
     {
-        Preconditions.checkState(!imports.containsKey(importPart.getAlias()));
+        Preconditions.checkState(!imports.contains(importPart.getAlias()));
         imports.put(importPart.getAlias(), SimpleDecodeMaybeProxy.proxy(namespaceFqnVar.get(), importPart.getOriginalName()));
         return true;
     }
 
     boolean addImport(@NotNull DecodeFqn fqn)
     {
-        Preconditions.checkState(!imports.containsKey(fqn.last().asString()));
+        Preconditions.checkState(!imports.contains(fqn.last().asString()));
         imports.put(fqn.last().asString(), SimpleDecodeMaybeProxy.proxy(fqn.copyDropLast(), fqn.last()));
         return true;
     }
 
     Rule ImportPartAsImportPart()
     {
-        return Sequence(ElementNameAsName(), FirstOf(Sequence(OptEW(), "as", OptEW(), ElementNameAsName(), push(new ImportPartNameAlias((DecodeNameImpl) pop(1), (DecodeNameImpl) pop()))),
-                push(new ImportPartName((DecodeNameImpl) pop()))));
+        return Sequence(ElementNameAsName(), FirstOf(Sequence(OptEW(), "as", OptEW(), ElementNameAsName(), push(new ImportPartNameAlias((DecodeName) pop(1), (DecodeName) pop()))),
+                push(new ImportPartName((DecodeName) pop()))));
     }
 
     Rule LanguageAsLanguage(@NotNull Var<DecodeNamespace> namespaceVar, @NotNull Var<String> infoVar)
@@ -123,7 +125,7 @@ public class DecodeParboiledParser extends BaseParser<Object>
         Var<Boolean> defaultVar = new Var<>(false);
         return Sequence("language", EW(), ElementNameAsName(),
                 Optional(EW(), "default", defaultVar.set(true)),
-                push(SimpleDecodeLanguage.newInstance((DecodeNameImpl) pop(), namespaceVar.get(), defaultVar.get(),
+                push(SimpleDecodeLanguage.newInstance((DecodeName) pop(), namespaceVar.get(), defaultVar.get(),
                         Option.apply(infoVar.get()))));
     }
 
@@ -131,7 +133,7 @@ public class DecodeParboiledParser extends BaseParser<Object>
     {
         return Sequence("alias", EW(), ElementNameAsName(), EW(), push(namespaceVar.get()), TypeApplicationAsOptionalProxyType(),
                 push(new DecodeAliasTypeImpl((DecodeNameImpl) pop(1), namespaceVar.get(),
-                        getOrThrow((Optional<DecodeMaybeProxy<DecodeType>>) pop()), Option.apply(infoVar.get()))));
+                        getOrThrow((Option<DecodeMaybeProxy<DecodeType>>) pop()), Option.apply(infoVar.get()))));
     }
 
     Rule NamespaceAsNamespace(@NotNull Var<String> infoVar)
@@ -186,8 +188,8 @@ public class DecodeParboiledParser extends BaseParser<Object>
                                         : Option.<DecodeMaybeProxy<DecodeStructType>>empty(), Option.apply(infoVar.get()),
                                 subComponentsVar.get(), commandsVar.get(), messagesVar.get())),
                 ZeroOrMore(OptEW(),
-                        FirstOf(Sequence(CommandAsCommand(namespaceVar), commandsVar.get().add((DecodeCommand) pop())),
-                                Sequence(MessageAsMessage(componentVar), messagesVar.get().add((DecodeMessage) pop())))),
+                        FirstOf(Sequence(CommandAsCommand(namespaceVar), commandsVar.get().$plus$eq((DecodeCommand) pop())),
+                                Sequence(MessageAsMessage(componentVar), messagesVar.get().$plus$eq((DecodeMessage) pop())))),
                 OptEW(), '}',
                 push(componentVar.get()));
     }
@@ -195,40 +197,39 @@ public class DecodeParboiledParser extends BaseParser<Object>
     Rule ComponentParametersAsType(@NotNull Var<DecodeNamespace> namespaceVar,
                                    @NotNull Var<DecodeName> nameVar)
     {
-        Var<List<DecodeStructField>> fieldsVar = new Var<>(new ArrayList<>());
+        Var<Buffer<DecodeStructField>> fieldsVar = new Var<>(new ArrayBuffer<>());
         Var<String> infoVar = new Var<>();
         return Sequence(OptInfoEw(infoVar), "parameters", OptEW(),
-                StructTypeFields(namespaceVar, fieldsVar), push(new DecodeStructTypeImpl(makeNewSystemName(nameVar.get()), namespaceVar.get(),
-                                Option.apply(infoVar.get()), fieldsVar.get())));
+                StructTypeFields(namespaceVar, fieldsVar), push(new DecodeStructTypeImpl(makeNewSystemName(Option.apply(nameVar.get())), namespaceVar.get(),
+                                Option.apply(infoVar.get()), fieldsVar.get().toSeq())));
     }
 
     @NotNull
-    static Optional<DecodeName> makeNewSystemName(@Nullable DecodeName name)
+    static Option<DecodeName> makeNewSystemName(@NotNull Option<DecodeName> name)
     {
-        return Optional.ofNullable(name).map(DecodeName::asString).map(n -> DecodeNameImpl
-                .newFromSourceName(n + "$"));
+        return Option.apply(name.isDefined() ? DecodeNameImpl.newFromSourceName(name.get().asString() + "$") : null);
     }
 
     Rule CommandAsCommand(@NotNull Var<DecodeNamespace> namespaceVar)
     {
-        Var<List<DecodeCommandArgument>> argsVar = new Var<>(new ArrayList<>());
+        Var<Buffer<DecodeCommandArgument>> argsVar = new Var<>(new ArrayBuffer<>());
         Var<String> infoVar = new Var<>();
-        Var<Integer> idVar = new Var<>();
-        Var<Optional<DecodeMaybeProxy<DecodeType>>> returnTypeVar = new Var<>(Optional.empty());
+        Var<Int> idVar = new Var<>();
+        Var<Option<DecodeMaybeProxy<DecodeType>>> returnTypeVar = new Var<>(Option.empty());
         return Sequence(OptInfoEw(infoVar), "command", EW(), ElementNameAsName(), OptEW(),
-                Optional(':', OptEW(), NonNegativeNumberAsInteger(), idVar.set(((ImmutableDecodeElementWrapper<Integer>) pop()).getValue()), OptEW()),
+                Optional(':', OptEW(), NonNegativeNumberAsInteger(), idVar.set((Int) pop()), OptEW()),
                 '(', Optional(OptEW(), CommandArgs(namespaceVar, argsVar)), OptEW(), ')',
                 Optional(OptEW(), "->", OptEW(), push(namespaceVar.get()), TypeApplicationAsOptionalProxyType(),
-                        returnTypeVar.set((Optional<DecodeMaybeProxy<DecodeType>>) pop())),
+                        returnTypeVar.set((Option<DecodeMaybeProxy<DecodeType>>) pop())),
                 push(ImmutableDecodeCommand.newInstance((DecodeNameImpl) pop(),
                         Option.apply(idVar.get()), Option.apply(infoVar.get()),
-                        argsVar.get(), returnTypeVar.get())));
+                        argsVar.get().toSeq(), returnTypeVar.get())));
     }
 
-    Rule CommandArgs(@NotNull Var<DecodeNamespace> namespaceVar, @NotNull Var<List<DecodeCommandArgument>> argsVar)
+    Rule CommandArgs(@NotNull Var<DecodeNamespace> namespaceVar, @NotNull Var<Buffer<DecodeCommandArgument>> argsVar)
     {
-        return Sequence(CommandArgAsCommandArg(namespaceVar), argsVar.get().add((DecodeCommandArgument) pop()),
-                ZeroOrMore(OptEW(), ',', OptEW(), CommandArgAsCommandArg(namespaceVar), argsVar.get().add(
+        return Sequence(CommandArgAsCommandArg(namespaceVar), argsVar.get().$plus$eq((DecodeCommandArgument) pop()),
+                ZeroOrMore(OptEW(), ',', OptEW(), CommandArgAsCommandArg(namespaceVar), argsVar.get().$plus$eq(
                         (DecodeCommandArgument) pop())), Optional(OptEW(), ','));
     }
 
@@ -237,9 +238,8 @@ public class DecodeParboiledParser extends BaseParser<Object>
         Var<DecodeMaybeProxy<DecodeUnit>> unitVar = new Var<>();
         Var<String> infoVar = new Var<>();
         return Sequence(OptInfoEw(infoVar), TypeUnitApplicationAsProxyType(namespaceVar, unitVar), EW(), ElementNameAsName(),
-                push(new DecodeCommandArgumentImpl((DecodeNameImpl) pop(), getOrThrow((Option<DecodeMaybeProxy<DecodeType>>) pop()),
-                                Option.apply(unitVar.get()),
-                                Option.apply(infoVar.get()))));
+                push(new DecodeCommandArgumentImpl((DecodeName) pop(), Option.apply(infoVar.get()), getOrThrow((Option<DecodeMaybeProxy<DecodeType>>) pop()),
+                                Option.apply(unitVar.get()))));
     }
 
     Rule StructFieldAsStructField(@NotNull Var<DecodeNamespace> namespaceVar)
@@ -264,16 +264,16 @@ public class DecodeParboiledParser extends BaseParser<Object>
     @NotNull
     DecodeMaybeProxy<DecodeUnit> unitForFqn(@NotNull DecodeFqn unitFqn, @NotNull DecodeNamespace namespace)
     {
-        if (unitFqn.size() == 1 && imports.containsKey(unitFqn.asString()))
+        if (unitFqn.size() == 1 && imports.contains(unitFqn.asString()))
         {
-            return (DecodeMaybeProxy<DecodeUnit>) (DecodeMaybeProxy<?>) imports.get(unitFqn.asString());
+            return (DecodeMaybeProxy<DecodeUnit>) (DecodeMaybeProxy<?>) imports.get(unitFqn.asString()).get();
         }
         return proxyDefaultNamespace(unitFqn, namespace);
     }
 
     Rule TypeApplicationAsOptionalProxyType()
     {
-        Var<List<Optional<DecodeMaybeProxy<DecodeReferenceable>>>> genericTypesVar = new Var<>(new ArrayList<>());
+        Var<Buffer<Option<DecodeMaybeProxy<DecodeReferenceable>>>> genericTypesVar = new Var<>(new ArrayBuffer<>());
         Var<DecodeNamespace> namespaceVar = new Var<>();
         return Sequence(
                 // FIXME: Parboiled bug
@@ -285,34 +285,34 @@ public class DecodeParboiledParser extends BaseParser<Object>
                         Sequence(push(namespaceVar.get()),
                                 ArrayTypeApplicationAsOptionalProxyType()),
                         Sequence(ElementIdAsFqn(),
-                                push(Optional.of(proxyForTypeFqn(namespaceVar.get(), (DecodeFqn) pop()))))),
+                                push(Option.apply(proxyForTypeFqn(namespaceVar.get(), (DecodeFqn) pop()))))),
                 Optional(OptEW(), '<', push(namespaceVar.get()), TypeApplicationAsOptionalProxyType(),
-                        genericTypesVar.get().add((Optional<DecodeMaybeProxy<DecodeReferenceable>>) pop()),
+                        genericTypesVar.get().$plus$eq((Option<DecodeMaybeProxy<DecodeReferenceable>>) pop()),
                         ZeroOrMore(OptEW(), ',', OptEW(), push(namespaceVar.get()), TypeApplicationAsOptionalProxyType(),
-                                genericTypesVar.get().add((Optional<DecodeMaybeProxy<DecodeReferenceable>>) pop())),
-                        Optional(OptEW(), ','), OptEW(), '>', push(Optional.of(SimpleDecodeMaybeProxy.proxyForTypeUriString(
-                                getOrThrow((Optional<DecodeMaybeProxy<DecodeReferenceable>>) pop()).proxy().uri() + "%3C" +
+                                genericTypesVar.get().$plus$eq((Option<DecodeMaybeProxy<DecodeReferenceable>>) pop())),
+                        Optional(OptEW(), ','), OptEW(), '>', push(Option.apply(SimpleDecodeMaybeProxy.proxyForTypeUriString(
+                                getOrThrow((Option<DecodeMaybeProxy<DecodeReferenceable>>) pop()).proxy().uri() + "%3C" +
                                         genericTypesListToTypesUriString(genericTypesVar.get()) + "%3E", namespaceVar.get().fqn())))),
                 Optional(OptEW(), '?',
-                        push(Optional.of(proxyForSystem(DecodeNameImpl.newFromSourceName("optional<"
-                                + getOrThrow((Optional<DecodeMaybeProxy<DecodeReferenceable>>) pop()).proxy().uri().toString()
+                        push(Option.apply(proxyForSystem(DecodeNameImpl.newFromSourceName("optional<"
+                                + getOrThrow((Option<DecodeMaybeProxy<DecodeReferenceable>>) pop()).proxy().uri().toString()
                                 + ">"))))));
     }
 
     DecodeMaybeProxy<DecodeReferenceable> proxyForTypeFqn(@NotNull DecodeNamespace namespace,
                                                           @NotNull DecodeFqn typeFqn)
     {
-        if (typeFqn.size() == 1 && imports.containsKey(typeFqn.last().asString()))
+        if (typeFqn.size() == 1 && imports.contains(typeFqn.last().asString()))
         {
-            return imports.get(typeFqn.last().asString());
+            return imports.get(typeFqn.last().asString()).get();
         }
         return proxyDefaultNamespace(typeFqn, namespace);
     }
 
     @NotNull
-    static String genericTypesListToTypesUriString(@NotNull List<Optional<DecodeMaybeProxy<DecodeReferenceable>>> genericTypesVar)
+    static String genericTypesListToTypesUriString(@NotNull Buffer<Option<DecodeMaybeProxy<DecodeReferenceable>>> genericTypesVar)
     {
-        String result = genericTypesVar.stream().map(op -> op.map(DecodeMaybeProxy::proxy)
+        String result = JavaConversions.asJavaCollection(genericTypesVar).stream().map(op -> asOptional(op).map(DecodeMaybeProxy::proxy)
                 .map(DecodeProxy::uri).map(Object::toString).map(s -> {
                     try
                     {
@@ -335,15 +335,15 @@ public class DecodeParboiledParser extends BaseParser<Object>
 
     Rule NativeTypeApplicationAsOptionalProxyType()
     {
-        return FirstOf(Sequence("void", push(Optional.empty())),
+        return FirstOf(Sequence("void", push(Option.empty())),
                 Sequence("ber",
-                        push(Optional.of(proxyForSystem(DecodeNameImpl.newFromSourceName(match()))))));
+                        push(Some.apply(proxyForSystem(DecodeNameImpl.newFromSourceName(match()))))));
     }
 
     Rule PrimitiveTypeApplicationAsOptionalProxyType()
     {
         return Sequence(Sequence(PrimitiveTypeKind(), ':', NonNegativeNumber()),
-                push(Optional.of(proxyForSystem(DecodeNameImpl.newFromSourceName(match())))));
+                push(Some.apply(proxyForSystem(DecodeNameImpl.newFromSourceName(match())))));
     }
 
     // FIXME: uses DecodeNamespace ref from stack, should use Var, parboiled bug
@@ -354,35 +354,36 @@ public class DecodeParboiledParser extends BaseParser<Object>
         return Sequence(
                 Sequence(namespaceVar.set((DecodeNamespace) pop()), '[', OptEW(),
                         push(namespaceVar.get()),
-                        TypeApplicationAsOptionalProxyType(), typeApplicationVar.set(getOrThrow((Optional<DecodeMaybeProxy<DecodeType>>) pop())),
+                        TypeApplicationAsOptionalProxyType(), typeApplicationVar.set(getOrThrow((Option<DecodeMaybeProxy<DecodeType>>) pop())),
                         Optional(OptEW(), ',', OptEW(),
                                 Sequence(LengthFrom(), Optional(OptEW(), "..", OptEW(), LengthTo()))),
                         OptEW(), ']'),
-                push(Optional.of(proxy(DecodeUtils.getNamespaceFqnFromUri(typeApplicationVar.get().proxy().uri()), DecodeNameImpl
+                push(Option.apply(proxy(DecodeUtils.getNamespaceFqnFromUri(typeApplicationVar.get().proxy().uri()), DecodeNameImpl
                         .newFromSourceName(match())))));
     }
 
-    static <T> T getOrThrow(@NotNull Option<T> optional)
+    @NotNull
+    static <T> T getOrThrow(@NotNull Option<T> option)
     {
-        return optional.orElse(() -> { throw new ParsingException("void type is not allowed here"); });
+        return asOptional(option).orElseThrow(() -> new ParsingException("void type is not allowed here"));
     }
 
-    Rule StructTypeFields(@NotNull Var<DecodeNamespace> namespaceVar, @NotNull Var<List<DecodeStructField>> fieldsVar)
+    Rule StructTypeFields(@NotNull Var<DecodeNamespace> namespaceVar, @NotNull Var<Buffer<DecodeStructField>> fieldsVar)
     {
         return Sequence('(', OptEW(),
-                StructFieldAsStructField(namespaceVar), fieldsVar.get().add((DecodeStructField) pop()),
+                StructFieldAsStructField(namespaceVar), fieldsVar.get().$plus$eq((DecodeStructField) pop()),
                 ZeroOrMore(OptEW(), ',', OptEW(), StructFieldAsStructField(namespaceVar),
-                        fieldsVar.get().add((DecodeStructField) pop())),
+                        fieldsVar.get().$plus$eq((DecodeStructField) pop())),
                 Optional(OptEW(), ','), OptEW(), ')');
     }
 
-    Rule StructTypeDeclAsStructType(@NotNull Var<DecodeNamespace> namespaceVar, @NotNull Var<DecodeNameImpl> nameVar)
+    Rule StructTypeDeclAsStructType(@NotNull Var<DecodeNamespace> namespaceVar, @NotNull Var<DecodeName> nameVar)
     {
         Var<String> infoVar = new Var<>();
-        Var<List<DecodeStructField>> fieldsVar = new Var<>(new ArrayList<>());
+        Var<Buffer<DecodeStructField>> fieldsVar = new Var<>(new ArrayBuffer<>());
         return Sequence("struct", OptEW(), StructTypeFields(namespaceVar, fieldsVar),
                 push(new DecodeStructTypeImpl(Option.apply(nameVar.get()), namespaceVar.get(),
-                                Option.apply(infoVar.get()), fieldsVar.get())));
+                                Option.apply(infoVar.get()), fieldsVar.get().toSeq())));
     }
 
     Rule ElementIdAsFqn()
@@ -390,7 +391,7 @@ public class DecodeParboiledParser extends BaseParser<Object>
         Var<Buffer<DecodeName>> names = new Var<>();
         return Sequence(ElementNameAsName(), names.set(new ArrayBuffer<>()), names.get().$plus$eq((DecodeName) pop()),
                 ZeroOrMore('.', ElementNameAsName(), names.get().$plus$eq((DecodeName) pop())),
-                push(DecodeFqnImpl.apply(names.get())));
+                push(DecodeFqnImpl.apply(names.get().toSeq())));
     }
 
     Rule MessageAsMessage(@NotNull Var<DecodeComponent> componentVar)
@@ -401,36 +402,36 @@ public class DecodeParboiledParser extends BaseParser<Object>
                         EventMessageAsMessage(componentVar, infoVar)));
     }
 
-    Rule MessageNameId(@NotNull Var<DecodeNameImpl> nameVar, @NotNull Var<Integer> idVar)
+    Rule MessageNameId(@NotNull Var<DecodeName> nameVar, @NotNull Var<Int> idVar)
     {
-        return Sequence(ElementNameAsName(), nameVar.set((DecodeNameImpl) pop()),
+        return Sequence(ElementNameAsName(), nameVar.set((DecodeName) pop()),
             Optional(OptEW(), ':', OptEW(),
-                    NonNegativeNumberAsInteger(), idVar.set(((ImmutableDecodeElementWrapper<Integer>) pop()).getValue())));
+                    NonNegativeNumberAsInteger(), idVar.set((Int) pop())));
     }
 
     Rule StatusMessageAsMessage(@NotNull Var<DecodeComponent> componentVar, @NotNull Var<String> infoVar)
     {
-        Var<List<DecodeMessageParameter>> parametersVar = new Var<>(new ArrayList<>());
-        Var<DecodeNameImpl> nameVar = new Var<>();
-        Var<Integer> idVar = new Var<>();
+        Var<Buffer<DecodeMessageParameter>> parametersVar = new Var<>(new ArrayBuffer<>());
+        Var<DecodeName> nameVar = new Var<>();
+        Var<Int> idVar = new Var<>();
         return Sequence("status", EW(), MessageNameId(nameVar, idVar), OptEW(), MessageParameters(parametersVar),
                 push(new DecodeStatusMessageImpl(componentVar.get(), nameVar.get(), Option.apply(idVar.get()),
-                        Option.apply(infoVar.get()), parametersVar.get())));
+                        Option.apply(infoVar.get()), parametersVar.get().toSeq())));
     }
 
-    Rule MessageParameters(@NotNull Var<List<DecodeMessageParameter>> parametersVar)
+    Rule MessageParameters(@NotNull Var<Buffer<DecodeMessageParameter>> parametersVar)
     {
-        return Sequence('(', OptEW(), ParameterAsParameter(), parametersVar.get().add((DecodeMessageParameter) pop()),
-                        ZeroOrMore(OptEW(), ',', OptEW(), ParameterAsParameter(), parametersVar.get().add(
+        return Sequence('(', OptEW(), ParameterAsParameter(), parametersVar.get().$plus$eq((DecodeMessageParameter) pop()),
+                        ZeroOrMore(OptEW(), ',', OptEW(), ParameterAsParameter(), parametersVar.get().$plus$eq(
                                 (DecodeMessageParameter) pop())),
                         Optional(OptEW(), ','), OptEW(), ')');
     }
 
     Rule EventMessageAsMessage(@NotNull Var<DecodeComponent> componentVar, @NotNull Var<String> infoVar)
     {
-        @NotNull Var<DecodeNameImpl> nameVar = new Var<>();
-        @NotNull Var<Integer> idVar = new Var<>();
-        Var<List<DecodeMessageParameter>> parametersVar = new Var<>(new ArrayList<>());
+        @NotNull Var<DecodeName> nameVar = new Var<>();
+        @NotNull Var<Int> idVar = new Var<>();
+        Var<Buffer<DecodeMessageParameter>> parametersVar = new Var<>(new ArrayBuffer<>());
         return Sequence("event", EW(), MessageNameId(nameVar, idVar), EW(), push(componentVar.get().namespace()), TypeApplicationAsOptionalProxyType(), OptEW(), MessageParameters(parametersVar),
                 push(new DecodeEventMessageImpl(componentVar.get(), nameVar.get(), Option.apply(idVar.get()),
                         Option.apply(infoVar.get()), parametersVar.get(), getOrThrow((Option<DecodeMaybeProxy<DecodeType>>) pop()))));
@@ -480,15 +481,14 @@ public class DecodeParboiledParser extends BaseParser<Object>
                             @NotNull DecodeNamespace namespace)
     {
         String alias = fqn.asString();
-        if (fqn.size() == 1 && imports.containsKey(alias))
+        if (fqn.size() == 1 && imports.contains(alias))
         {
-            componentRefs.$plus$eq(new DecodeComponentRefImpl(alias,
-                    (DecodeMaybeProxy<DecodeComponent>) (DecodeMaybeProxy<?>) Preconditions.checkNotNull(imports.get(
-                    alias))));
+            componentRefs.$plus$eq(new DecodeComponentRefImpl((DecodeMaybeProxy<DecodeComponent>) (DecodeMaybeProxy<?>) Preconditions.checkNotNull(imports.get(
+                    alias)), Some.apply(alias)));
         }
         else
         {
-            componentRefs.$plus$eq(new DecodeComponentRef(proxyDefaultNamespace(fqn, namespace)));
+            componentRefs.$plus$eq(new DecodeComponentRefImpl(proxyDefaultNamespace(fqn, namespace), Option.<String>empty()));
         }
         return true;
     }
@@ -500,12 +500,12 @@ public class DecodeParboiledParser extends BaseParser<Object>
                         displayVar.set(((ImmutableDecodeElementWrapper<String>) pop()).getValue())),
                 Optional(EW(), "placement", EW(), FirstOf("before", "after")),
                 push(new DecodeUnitImpl((DecodeName) pop(), namespaceVar.get(),
-                        displayVar.get(), infoVar.get())));
+                        Option.apply(displayVar.get()), Option.apply(infoVar.get()))));
     }
 
     Rule TypeDeclAsType(@NotNull Var<DecodeNamespace> namespaceVar, @NotNull Var<String> infoVar)
     {
-        Var<DecodeNameImpl> nameVar = new Var<>();
+        Var<DecodeName> nameVar = new Var<>();
         return Sequence("type", EW(), ElementNameAsName(), nameVar.set((DecodeNameImpl) pop()), EW(),
                 TypeDeclBodyAsType(namespaceVar, nameVar, infoVar));
     }
@@ -525,18 +525,17 @@ public class DecodeParboiledParser extends BaseParser<Object>
         return FirstOf(NonNegativeNumber(), '*');
     }
 
-    Rule TypeDeclBodyAsType(@NotNull Var<DecodeNamespace> namespaceVar, @NotNull Var<DecodeNameImpl> nameVar, @NotNull Var<String> infoVar)
+    Rule TypeDeclBodyAsType(@NotNull Var<DecodeNamespace> namespaceVar, @NotNull Var<DecodeName> nameVar, @NotNull Var<String> infoVar)
     {
         return FirstOf(
                 EnumTypeDeclAsType(namespaceVar, nameVar),
                 StructTypeDeclAsStructType(namespaceVar, nameVar),
                 Sequence(push(namespaceVar.get()), TypeApplicationAsOptionalProxyType(),
-                        push(new DecodeSubTypeImpl(Option.apply(nameVar.get()), namespaceVar.get(),
-                                        getOrThrow((Option<DecodeMaybeProxy<DecodeType>>) pop()), Option.apply(
-                                                infoVar.get())))));
+                        push(new DecodeSubTypeImpl(Option.apply(nameVar.get()), namespaceVar.get(), Option.apply(
+                                infoVar.get()), getOrThrow((Option<DecodeMaybeProxy<DecodeType>>) pop())))));
     }
 
-    Rule EnumTypeDeclAsType(@NotNull Var<DecodeNamespace> namespaceVar, @NotNull Var<DecodeNameImpl> nameVar)
+    Rule EnumTypeDeclAsType(@NotNull Var<DecodeNamespace> namespaceVar, @NotNull Var<DecodeName> nameVar)
     {
         Var<String> infoVar = new Var<>();
         Var<Set<DecodeEnumConstant>> enumConstantsVar = new Var<>(new HashSet<>());
@@ -577,7 +576,7 @@ public class DecodeParboiledParser extends BaseParser<Object>
 
     Rule NonNegativeNumberAsInteger()
     {
-        return Sequence(NonNegativeNumber(), push(ImmutableDecodeElementWrapper.newInstance(Integer.parseInt(match()))));
+        return Sequence(NonNegativeNumber(), push(Int.box(Integer.parseInt(match()))));
     }
 
     Rule NonNegativeNumber()
@@ -590,15 +589,15 @@ public class DecodeParboiledParser extends BaseParser<Object>
         @NotNull
         String getAlias();
         @NotNull
-        DecodeNameImpl getOriginalName();
+        DecodeName getOriginalName();
     }
 
     static class ImportPartName implements ImportPart
     {
         @NotNull
-        private final DecodeNameImpl name;
+        private final DecodeName name;
 
-        public ImportPartName(@NotNull DecodeNameImpl name)
+        public ImportPartName(@NotNull DecodeName name)
         {
             this.name = name;
         }
@@ -612,7 +611,7 @@ public class DecodeParboiledParser extends BaseParser<Object>
 
         @NotNull
         @Override
-        public DecodeNameImpl getOriginalName()
+        public DecodeName getOriginalName()
         {
             return name;
         }
@@ -621,11 +620,11 @@ public class DecodeParboiledParser extends BaseParser<Object>
     static class ImportPartNameAlias implements ImportPart
     {
         @NotNull
-        private final DecodeNameImpl name;
+        private final DecodeName name;
         @NotNull
-        private final DecodeNameImpl alias;
+        private final DecodeName alias;
 
-        public ImportPartNameAlias(@NotNull DecodeNameImpl name, @NotNull DecodeNameImpl alias)
+        public ImportPartNameAlias(@NotNull DecodeName name, @NotNull DecodeName alias)
         {
             this.name = name;
             this.alias = alias;
@@ -640,7 +639,7 @@ public class DecodeParboiledParser extends BaseParser<Object>
 
         @NotNull
         @Override
-        public DecodeNameImpl getOriginalName()
+        public DecodeName getOriginalName()
         {
             return name;
         }

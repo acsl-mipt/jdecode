@@ -9,8 +9,10 @@
       <sourceFolder url="file://$MODULE_DIR$/gen" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
     </content>
-    <orderEntry type="jdk" jdkName="IntelliJ IDEA Community Edition IC-141.178.9" jdkType="IDEA JDK" />
+    <orderEntry type="jdk" jdkName="IntelliJ IDEA Community Edition IC-141.1532.4" jdkType="IDEA JDK" />
     <orderEntry type="sourceFolder" forTests="false" />
+    <orderEntry type="library" name="Maven: org.parboiled:parboiled_2.11:2.1.0" level="project" />
+    <orderEntry type="library" name="Maven: com.chuusai:shapeless_2.11:2.1.0" level="project" />
     <orderEntry type="module" module-name="model" />
     <orderEntry type="module" module-name="common" />
     <orderEntry type="library" name="Maven: com.jsuereth:scala-arm_2.11:1.4" level="project" />

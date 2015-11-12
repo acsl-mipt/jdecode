@@ -7,15 +7,11 @@ import com.intellij.notification.Notifications;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiWhiteSpace;
 import org.apache.commons.lang.NotImplementedException;
+import ru.mipt.acsl.JavaToScala;
+import ru.mipt.acsl.ScalaToJava;
 import ru.mipt.acsl.decode.model.domain.*;
 import ru.mipt.acsl.decode.model.domain.impl.*;
-import ru.mipt.acsl.decode.model.domain.impl.type.ImmutableDecodeEnumConstant;
-import ru.mipt.acsl.decode.model.domain.impl.type.ImmutableDecodeStructField;
-import ru.mipt.acsl.decode.model.domain.impl.type.SimpleDecodeAliasType;
-import ru.mipt.acsl.decode.model.domain.impl.type.SimpleDecodeStructType;
-import ru.mipt.acsl.decode.model.domain.message.DecodeMessageParameter;
-import ru.mipt.acsl.decode.model.domain.proxy.DecodeMaybeProxy;
-import ru.mipt.acsl.decode.model.domain.type.*;
+import ru.mipt.acsl.decode.model.domain.impl.type.*;
 import ru.mipt.acsl.decode.modeling.ModelingMessage;
 import ru.mipt.acsl.decode.modeling.TransformationMessage;
 import ru.mipt.acsl.decode.modeling.TransformationResult;
@@ -23,10 +19,15 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import ru.mipt.acsl.decode.parser.psi.*;
 import ru.mipt.acsl.decode.parser.psi.DecodeUnit;
+import scala.Option;
+import scala.collection.mutable.ArrayBuffer;
+import scala.collection.mutable.Buffer;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static ru.mipt.acsl.JavaToScala.asOption;
+import static ru.mipt.acsl.ScalaToJava.asOptional;
 import static ru.mipt.acsl.decode.model.domain.impl.proxy.SimpleDecodeMaybeProxy.object;
 import static ru.mipt.acsl.decode.model.domain.impl.proxy.SimpleDecodeMaybeProxy.proxy;
 import static ru.mipt.acsl.decode.model.domain.impl.proxy.SimpleDecodeMaybeProxy.proxyForSystem;
@@ -75,8 +76,8 @@ public class DecodeFileProcessor
 
             if (element instanceof DecodeUnitDecl)
             {
-                namespace.getUnits().add(
-                        SimpleDecodeUnit.newInstance(
+                namespace.units().$plus$eq(
+                        new DecodeUnitImpl(
                                 DecodeNameImpl.newFromSourceName(
                                         ((DecodeUnitDecl) element).getElementNameRule().getText()),
                                 namespace,
@@ -85,7 +86,7 @@ public class DecodeFileProcessor
             }
             else if (element instanceof DecodeTypeDecl)
             {
-                namespace.getTypes().add(newType((DecodeTypeDecl) element, namespace));
+                namespace.types().$plus$eq(newType((DecodeTypeDecl) element, namespace));
             }
             else if (element instanceof DecodeComponentDecl)
             {
@@ -93,8 +94,8 @@ public class DecodeFileProcessor
             }
             else if (element instanceof DecodeAliasDecl)
             {
-                namespace.getTypes()
-                        .add(SimpleDecodeAliasType.newInstance(DecodeNameImpl.newFromSourceName(
+                namespace.types()
+                        .$plus$eq(new DecodeAliasTypeImpl(DecodeNameImpl.newFromSourceName(
                                         ((DecodeAliasDecl) element).getElementId().getText()),
                                 namespace,
                                 makeProxyForTypeApplication(((DecodeAliasDecl) element).getTypeApplication(), namespace),
@@ -285,9 +286,9 @@ public class DecodeFileProcessor
             String name = genericTypeApplication.getElementId().getText();
             if (name.contains("."))
             {
-                return ImmutableDecodeFqn.newInstanceFromSource(name.substring(0, name.lastIndexOf('.') - 1));
+                return DecodeFqnImpl.newFromSource(name.substring(0, name.lastIndexOf('.') - 1));
             }
-            return namespace.getFqn();
+            return namespace.fqn();
         }
         throw new AssertionError();
     }
@@ -311,13 +312,13 @@ public class DecodeFileProcessor
             return ImmutableList.of(ImmutableDecodeAllParameters.INSTANCE);
         }*/
         return messageParametersDecl.getParameterDeclList().stream()
-                .map(param -> Optional.ofNullable(param.getParameterElement())
-                        .map(e -> ImmutableDecodeMessageParameter.newInstance(e.getText())).orElse(ImmutableDecodeAllParameters.INSTANCE))
+                .map(DecodeParameterDecl::getParameterElement)
+                        .map(e -> ImmutableDecodeMessageParameter.newInstance(e.getText()))
                         .collect(Collectors.toList());
     }
 
     @NotNull
-    private DecodeMaybeProxy<DecodeType> findExistingOrCreateType(@NotNull Optional<DecodeName> name, @NotNull DecodeTypeDeclBody typeDeclBody,
+    private DecodeMaybeProxy<DecodeType> findExistingOrCreateType(@NotNull Option<DecodeName> name, @NotNull DecodeTypeDeclBody typeDeclBody,
                                                                   @NotNull DecodeNamespace namespace)
     {
         DecodeTypeApplication typeApplication = typeDeclBody.getTypeApplication();
@@ -339,7 +340,7 @@ public class DecodeFileProcessor
     }
 
     @NotNull
-    private DecodeType newType(@NotNull Optional<DecodeName> name, @NotNull DecodeTypeDeclBody typeDeclBody,
+    private DecodeType newType(@NotNull Option<DecodeName> name, @NotNull DecodeTypeDeclBody typeDeclBody,
                                @NotNull DecodeNamespace namespace)
     {
         DecodeTypeApplication typeApplication = typeDeclBody.getTypeApplication();
@@ -365,34 +366,34 @@ public class DecodeFileProcessor
     private DecodeType newType(@NotNull DecodeTypeDecl typeDecl, @NotNull DecodeNamespace namespace)
     {
         return newType(
-                Optional.of(DecodeNameImpl.newFromSourceName(typeDecl.getElementNameRule().getText())),
+                Option.apply(DecodeNameImpl.newFromSourceName(typeDecl.getElementNameRule().getText())),
                 typeDecl.getTypeDeclBody(), namespace);
     }
 
     @NotNull
     private DecodeStructType newStructType(
-            @NotNull Optional<DecodeName> name,
+            @NotNull Option<DecodeName> name,
             @NotNull DecodeStructTypeDecl structTypeDecl,
             @NotNull DecodeNamespace namespace)
     {
-        List<DecodeStructField> fields = new ArrayList<>();
+        Buffer<DecodeStructField> fields = new ArrayBuffer<>();
         for (DecodeCommandArg fieldElement : structTypeDecl.getCommandArgs().getCommandArgList())
         {
             DecodeTypeUnitApplication typeUnitApplication = fieldElement.getTypeUnitApplication();
             DecodeUnit unit = typeUnitApplication.getUnit();
-            fields.add(ImmutableDecodeStructField.newInstance(DecodeNameImpl.newFromSourceName(
+            fields.$plus$eq(ImmutableDecodeStructField.newInstance(DecodeNameImpl.newFromSourceName(
                             fieldElement.getElementNameRule().getText()),
                     makeProxyForTypeApplication(typeUnitApplication.getTypeApplication(), namespace),
-                    Optional.ofNullable(unit).map(u -> proxy(namespace.getFqn(),
-                            DecodeNameImpl.newFromSourceName(u.getElementId().getText()))),
+                    asOption(Optional.ofNullable(unit).map(u -> proxy(namespace.fqn(),
+                            DecodeNameImpl.newFromSourceName(u.getElementId().getText())))),
                     getText(fieldElement.getInfoString())));
         }
-        return SimpleDecodeStructType.newInstance(name, namespace, getText(structTypeDecl.getInfoString()), fields);
+        return new DecodeStructTypeImpl(name, namespace, getText(structTypeDecl.getInfoString()), fields);
     }
 
     @NotNull
-    private DecodeSubType newSubTypeForTypeApplication(@NotNull Optional<DecodeName> name,
-                                                      @NotNull Optional<String> info,
+    private DecodeSubType newSubTypeForTypeApplication(@NotNull Option<DecodeName> name,
+                                                      @NotNull Option<String> info,
                                                       @NotNull DecodeTypeApplication newTypeDeclBody,
                                                       @NotNull DecodeNamespace namespace)
     {
@@ -457,7 +458,7 @@ public class DecodeFileProcessor
     }
 
     @NotNull
-    private static DecodeType newEnumType(@NotNull Optional<DecodeName> name, @NotNull DecodeEnumTypeDecl enumTypeDecl,
+    private static DecodeType newEnumType(@NotNull Option<DecodeName> name, @NotNull DecodeEnumTypeDecl enumTypeDecl,
                                           @NotNull DecodeNamespace namespace)
     {
         Set<DecodeEnumConstant> values = enumTypeDecl.getEnumTypeValues().getEnumTypeValueList().stream()
@@ -503,23 +504,23 @@ public class DecodeFileProcessor
     }
 
     @NotNull
-    private static Optional<String> getText(@Nullable DecodeInfoString infoString)
+    private static Option<String> getText(@Nullable DecodeInfoString infoString)
     {
-        return getText(Optional.ofNullable(infoString)
-                .map(DecodeInfoString::getStringValue));
+        return getText(asOption(Optional.ofNullable(infoString)
+                .map(DecodeInfoString::getStringValue)));
     }
 
     @NotNull
-    private static Optional<String> getText(@Nullable DecodeStringValue stringValue)
+    private static Option<String> getText(@Nullable DecodeStringValue stringValue)
     {
-        return getText(Optional.ofNullable(stringValue));
+        return getText(Option.apply(stringValue));
     }
 
     @NotNull
-    private static Optional<String> getText(@NotNull Optional<DecodeStringValue> stringValue)
+    private static Option<String> getText(@NotNull Option<DecodeStringValue> stringValue)
     {
-        return stringValue.map(str -> Optional.ofNullable(str.getString()).orElse(str.getStringUnaryQuotes())).map(
-                PsiElement::getText).map(text -> text.substring(1, text.length() - 1));
+        return asOption(asOptional(stringValue).map(str -> Optional.ofNullable(str.getString()).orElse(str.getStringUnaryQuotes())).map(
+                PsiElement::getText).map(text -> text.substring(1, text.length() - 1)));
     }
 
     private void error(@NotNull String msg, Object... params)

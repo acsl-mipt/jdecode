@@ -77,7 +77,7 @@ trait DecodeNamespace extends DecodeReferenceable with DecodeNameAware {
 
   def languages: mutable.Buffer[DecodeLanguage]
 
-  def fqn(): DecodeFqn = {
+  def fqn: DecodeFqn = {
     val parts: scala.collection.mutable.Buffer[DecodeName] = scala.collection.mutable.Buffer[DecodeName]()
     var currentNamespace: DecodeNamespace = this
     while (currentNamespace.parent.isDefined) {
@@ -309,6 +309,10 @@ trait DecodeComponent extends DecodeOptionalInfoAware with DecodeNameAware with 
       sys.error("fail")
     componentWalker.`type`.get
   }
+}
+
+trait DecodeDomainModelResolver {
+  def resolve(decodeRegistry: DecodeRegistry): DecodeResolvingResult[DecodeReferenceable]
 }
 
 trait DecodeRegistry {
