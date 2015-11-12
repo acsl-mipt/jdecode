@@ -2,10 +2,9 @@ package ru.mipt.acsl.decode.model.domain
 
 import java.net.URI
 
-import com.google.common.base.Preconditions
-import ru.mipt.acsl.decode.model.domain.impl.{DecodeComponentWalker, DecodeNameImpl, DecodeParameterWalker}
+import ru.mipt.acsl.decode.model.domain.impl.`type`.DecodeParameterWalker
 import ru.mipt.acsl.decode.model.domain.impl.`type`.{AbstractDecodeOptionalInfoAware, DecodeFqnImpl}
-import ru.mipt.acsl.decode.model.domain.message.DecodeMessageParameter
+import ru.mipt.acsl.decode.model.domain.impl.{DecodeComponentWalker, DecodeNameImpl}
 
 import scala.collection.immutable.HashSet
 import scala.collection.mutable
@@ -76,7 +75,7 @@ trait DecodeNamespace extends DecodeReferenceable with DecodeNameAware {
 
   def accept[T](visitor: DecodeReferenceableVisitor[T]): T = visitor.visit(this)
 
-  def languages: Seq[DecodeLanguage]
+  def languages: mutable.Buffer[DecodeLanguage]
 
   def fqn(): DecodeFqn = {
     val parts: scala.collection.mutable.Buffer[DecodeName] = scala.collection.mutable.Buffer[DecodeName]()
@@ -281,6 +280,10 @@ trait DecodeComponentRef {
   def alias: Option[String]
 }
 
+trait DecodeMessageParameter {
+  def value: String
+}
+
 trait DecodeEventMessage extends DecodeMessage {
   def accept[T](visitor: DecodeMessageVisitor[T]): T = visitor.visit(this)
 }
@@ -299,7 +302,7 @@ trait DecodeComponent extends DecodeOptionalInfoAware with DecodeNameAware with 
     val componentWalker = new DecodeComponentWalker(this)
     while (walker.hasNext)
     {
-      val token = walker.next()
+      val token = walker.next
       componentWalker.walk(token)
     }
     if (componentWalker.`type`.isEmpty)

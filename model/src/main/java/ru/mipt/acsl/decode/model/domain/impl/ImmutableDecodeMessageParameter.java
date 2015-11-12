@@ -1,7 +1,7 @@
 package ru.mipt.acsl.decode.model.domain.impl;
 
-import ru.mipt.acsl.decode.model.domain.message.DecodeMessageParameter;
 import org.jetbrains.annotations.NotNull;
+import ru.mipt.acsl.decode.model.domain.DecodeMessageParameter;
 
 /**
  * @author Artem Shein
@@ -23,7 +23,7 @@ public class ImmutableDecodeMessageParameter implements DecodeMessageParameter
 
     @Override
     @NotNull
-    public String getValue()
+    public String value()
     {
         return text;
     }

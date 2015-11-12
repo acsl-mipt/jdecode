@@ -5,7 +5,6 @@ import org.jetbrains.annotations.NotNull;
 import ru.mipt.acsl.decode.model.domain.*;
 import ru.mipt.acsl.decode.model.domain.impl.*;
 import ru.mipt.acsl.decode.model.domain.impl.type.*;
-import ru.mipt.acsl.decode.model.domain.message.DecodeMessageParameter;
 import ru.mipt.acsl.decode.model.exporter.TableName;
 import ru.mipt.acsl.decode.model.domain.impl.proxy.SimpleDecodeMaybeProxy;
 import ru.mipt.acsl.decode.model.exporter.ModelExportingException;

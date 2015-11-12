@@ -6,12 +6,16 @@ import com.google.common.io.Resources;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import ru.mipt.acsl.JavaToScala;
 import ru.mipt.acsl.decode.model.domain.DecodeElement;
 import ru.mipt.acsl.decode.model.domain.DecodeNamespace;
 import ru.mipt.acsl.decode.model.domain.DecodeRegistry;
-import ru.mipt.acsl.decode.model.domain.impl.DecodeUtils;
-import ru.mipt.acsl.decode.model.domain.impl.SimpleDecodeRegistry;
+import ru.mipt.acsl.decode.model.domain.impl.DecodeRegistryImpl;
+import ru.mipt.acsl.decode.model.domain.impl.DecodeUtil;
 import ru.mipt.acsl.parsing.ParsingException;
+import scala.collection.JavaConversions;
+import scala.collection.mutable.ArrayBuffer;
+import scala.collection.mutable.Buffer;
 
 import java.io.IOException;
 import java.util.stream.Collectors;
@@ -30,13 +34,12 @@ public class DecodeSourceProvider
         final DecodeParser parser = new DecodeParser();
         try
         {
-            DecodeRegistry registry = SimpleDecodeRegistry.newInstance();
+            DecodeRegistry registry = new DecodeRegistryImpl();
             registry
-                    .getRootNamespaces().addAll(
-                    DecodeUtils.mergeRootNamespaces(
-                            Resources.readLines(Resources.getResource(resourcePath), Charsets.UTF_8)
+                    .rootNamespaces().$plus$plus$eq(
+                    DecodeUtil.mergeRootNamespaces(JavaConversions.asScalaBuffer(Resources.readLines(Resources.getResource(resourcePath), Charsets.UTF_8)
                                     .stream().filter((name) -> name.endsWith(".decode")).map(
-                                    (name) -> {
+                                    name -> {
                                         try
                                         {
                                             LOG.debug("Parsing resource '{}'", resourcePath + "/" + name);
@@ -51,7 +54,7 @@ public class DecodeSourceProvider
                                         {
                                             throw new ParsingException(e);
                                         }
-                                    }).collect(Collectors.toList())));
+                                    }).collect(Collectors.<DecodeNamespace>toList()))));
             return registry;
         }
         catch (IOException e)

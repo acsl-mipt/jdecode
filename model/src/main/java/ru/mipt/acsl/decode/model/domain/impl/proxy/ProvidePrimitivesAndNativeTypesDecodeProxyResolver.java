@@ -2,6 +2,7 @@ package ru.mipt.acsl.decode.model.domain.impl.proxy;
 
 import com.google.common.base.Preconditions;
 import org.jetbrains.annotations.NotNull;
+import ru.mipt.acsl.JavaToScala;
 import ru.mipt.acsl.decode.model.domain.*;
 import ru.mipt.acsl.decode.model.domain.impl.DecodeNameImpl;
 import ru.mipt.acsl.decode.model.domain.impl.DecodeUtils;
@@ -9,6 +10,8 @@ import ru.mipt.acsl.decode.model.domain.impl.SimpleDecodeResolvingResult;
 import ru.mipt.acsl.decode.model.domain.impl.type.*;
 import scala.Enumeration;
 import scala.Option;
+import scala.collection.Iterator;
+import scala.collection.JavaConversions;
 import scala.collection.mutable.ArrayBuffer;
 import scala.collection.mutable.Buffer;
 
@@ -20,6 +23,8 @@ import java.util.Optional;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
+import static ru.mipt.acsl.JavaToScala.asOption;
 
 /**
  * @author Artem Shein
@@ -62,14 +67,14 @@ public class ProvidePrimitivesAndNativeTypesDecodeProxyResolver implements Decod
                     DecodePrimitiveType primitiveType = (DecodePrimitiveType) nativeOrPrimitiveType;
                     Option<DecodeName> primitiveTypeOptionalName = primitiveType.optionalName();
                     if (primitiveTypeOptionalName.isDefined()
-                            && !namespace.types().find(t -> t.optionalName().equals(primitiveTypeOptionalName)).isDefined())
+                            && !findTypeForName(namespace.types(), primitiveTypeOptionalName.get()).isPresent())
                     {
                         Buffer<DecodeType> types = new ArrayBuffer<>();
                         types.$plus$eq(primitiveType);
                         namespace.types_$eq(types);
                     }
-                    return SimpleDecodeResolvingResult.newInstance(Option.apply(primitiveType)
-                            .filter(cls::isInstance).map(cls::cast));
+                    return SimpleDecodeResolvingResult.newInstance(asOption(Optional.of(primitiveType)
+                            .filter(cls::isInstance).map(cls::cast)));
                 }
             }
             // Generic type
@@ -94,13 +99,13 @@ public class ProvidePrimitivesAndNativeTypesDecodeProxyResolver implements Decod
                     return (DecodeResolvingResult<T>) result;
                 }
                 return SimpleDecodeResolvingResult
-                        .newInstance(Option.apply(genericTypeSpecializedByTypeNameMap.computeIfAbsent(typeName,
-                                tn -> ImmutableDecodeGenericTypeSpecialized.newInstance(Option.empty(),
+                        .newInstance(asOption(Optional.of(genericTypeSpecializedByTypeNameMap.computeIfAbsent(typeName,
+                                tn -> new DecodeGenericTypeSpecializedImpl(Option.empty(),
                                         genericTypeOptional.get().obj().namespace(), Option.empty(),
-                                        genericTypeOptional.get(), Stream.of(genericArgumentsString.split(Pattern.quote(",")))
-                                                .map(DecodeUtils::uriToOptionalMaybeProxyType)
-                                                .collect(Collectors.toList())))).filter(cls::isInstance)
-                                .map(t -> cls.isInstance(t)? cls.cast(t) : null));
+                                        genericTypeOptional.get(), JavaConversions.asScalaBuffer(Stream.of(genericArgumentsString.split(Pattern.quote(",")))
+                                                .map(DecodeUtils::uriToOptionalMaybeProxyType).map(o -> Option.apply(o.orElse(null)))
+                                                .collect(Collectors.toList())))))
+                                .filter(cls::isInstance).map(cls::cast)));
             }
             // Native type
             else if (DecodeNativeType$.MODULE$.MANGLED_TYPE_NAMES().contains(typeName))
@@ -125,17 +130,29 @@ public class ProvidePrimitivesAndNativeTypesDecodeProxyResolver implements Decod
                         });
                 Option<DecodeName> nativeTypeOptionalName = knownType.optionalName();
                 if (nativeTypeOptionalName.isDefined()
-                        && !namespace.types().find(t -> t.optionalName().equals(
-                        nativeTypeOptionalName)).isDefined())
+                        && !findTypeForName(namespace.types(), nativeTypeOptionalName.get()).isPresent())
                 {
                     Buffer<DecodeType> types = new ArrayBuffer<>();
                     types.$plus$eq(knownType);
                     namespace.types_$eq(types);
                 }
-                return SimpleDecodeResolvingResult.newInstance(Option.apply(knownType)
-                        .map(t -> cls.isInstance(t) ? cls.cast(t) : null));
+                return SimpleDecodeResolvingResult.newInstance(asOption(Optional.of(knownType)
+                        .filter(cls::isInstance).map(cls::cast)));
             }
         }
         return SimpleDecodeResolvingResult.immutableEmpty();
+    }
+
+    @NotNull
+    private Optional<DecodeType> findTypeForName(Buffer<DecodeType> types, DecodeName name)
+    {
+        Iterator<DecodeType> it = types.iterator();
+        while (it.hasNext())
+        {
+            DecodeType type = it.next();
+            if (name.equals(type.optionalName()))
+                return Optional.of(type);
+        }
+        return Optional.empty();
     }
 }

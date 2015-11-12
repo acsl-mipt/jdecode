@@ -1,6 +1,9 @@
 package ru.mipt.acsl.decode.model.domain.impl.proxy;
 
 import com.google.common.base.Preconditions;
+import org.apache.maven.wagon.Streams;
+import ru.mipt.acsl.JavaToScala;
+import ru.mipt.acsl.ScalaToJava;
 import ru.mipt.acsl.decode.model.domain.*;
 import ru.mipt.acsl.decode.model.domain.impl.*;
 import ru.mipt.acsl.decode.model.domain.impl.type.ArraySizeImpl;
@@ -8,16 +11,23 @@ import ru.mipt.acsl.decode.model.domain.impl.type.DecodeArrayTypeImpl;
 import org.jetbrains.annotations.NotNull;
 import scala.Function1;
 import scala.Option;
+import scala.collection.JavaConversions;
 import scala.collection.Seq;
 import scala.collection.mutable.ArrayBuffer;
 import scala.collection.mutable.Buffer;
+import scala.runtime.Null$;
 
 import java.net.URI;
 import java.util.Iterator;
 import java.util.Optional;
+import java.util.function.Predicate;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
+import static ru.mipt.acsl.JavaToScala.asOption;
+import static ru.mipt.acsl.ScalaToJava.asOptional;
 import static ru.mipt.acsl.decode.model.domain.impl.proxy.SimpleDecodeMaybeProxy.proxy;
+import static scala.collection.JavaConversions.asJavaCollection;
 
 /**
  * @author Artem Shein
@@ -45,9 +55,10 @@ public class FindExistingDecodeProxyResolver implements DecodeProxyResolver
             }
             else
             {
-                current = SimpleDecodeResolvingResult.newInstance(registry.rootNamespaces()
-                        .find(n -> n.name().asString().equals(part))
-                        .map(DecodeReferenceable.class::cast));
+                current = SimpleDecodeResolvingResult.newInstance(Option.apply(
+                        asJavaCollection(registry.rootNamespaces()).stream()
+                        .filter(n -> n.name().asString().equals(part)).findAny()
+                        .map(DecodeReferenceable.class::cast).orElse(null)));
             }
             if (!current.resolvedObject().isDefined())
             {
@@ -55,8 +66,10 @@ public class FindExistingDecodeProxyResolver implements DecodeProxyResolver
             }
         }
         return SimpleDecodeResolvingResult
-                .newInstance(current.resolvedObject().map(o -> cls.isInstance(o) ? cls.cast(o) : null));
+                .newInstance(asOption(asOptional(current.resolvedObject()).filter(cls::isInstance).map(cls::cast)));
     }
+
+
 
     private static class ResolveDecodeReferenceableVisitor
             implements DecodeReferenceableVisitor<DecodeResolvingResult<DecodeReferenceable>>
@@ -76,14 +89,14 @@ public class FindExistingDecodeProxyResolver implements DecodeProxyResolver
         @NotNull
         public DecodeResolvingResult<DecodeReferenceable> visit(@NotNull DecodeNamespace namespace)
         {
-            Function1<DecodeReferenceable, Object> pred = (DecodeReferenceable nameAware) -> {
+            Predicate<DecodeReferenceable> pred = (DecodeReferenceable nameAware) -> {
                 Option<DecodeName> nameOption = nameAware.optionalName();
                 return nameOption.isDefined() && nameOption.get().equals(part);
             };
-            Option<DecodeReferenceable> resolvedObject = ((Seq<DecodeReferenceable>) (Seq<?>) namespace.subNamespaces()).find(pred);
-            resolvedObject = resolvedObject.orElse(() -> ((Seq<DecodeReferenceable>) (Seq<?>) namespace.units()).find(pred));
-            resolvedObject = resolvedObject.orElse(() -> ((Seq<DecodeReferenceable>) (Seq<?>) namespace.types()).find(pred));
-            resolvedObject = resolvedObject.orElse(() -> ((Seq<DecodeReferenceable>) (Seq<?>) namespace.components()).find(pred));
+            Option<DecodeReferenceable> resolvedObject = asOption(Stream.concat(asJavaCollection(namespace.subNamespaces()).stream(),
+                    Stream.concat(asJavaCollection(namespace.units()).stream(),
+                            Stream.concat(asJavaCollection(namespace.types()).stream(),
+                                asJavaCollection(namespace.components()).stream()))).filter(pred).findAny());
             if (resolvedObject.isDefined())
             {
                 return SimpleDecodeResolvingResult.newInstance(resolvedObject);
@@ -111,10 +124,10 @@ public class FindExistingDecodeProxyResolver implements DecodeProxyResolver
                 }
                 final long finalMinLength = minLength;
                 final long finalMaxLength = maxLength;
-                DecodeArrayType newArrayType = namespace.types().find(t -> {
+                DecodeArrayType newArrayType = asJavaCollection(namespace.types()).stream().filter(t -> {
                     Option<DecodeName> nameOption = t.optionalName();
                     return nameOption.isDefined() && nameOption.get().equals(part) && (t instanceof DecodeArrayType);
-                }).getOrElse(() -> new DecodeArrayTypeImpl(
+                }).findAny().map(DecodeArrayType.class::cast).orElseGet(() -> new DecodeArrayTypeImpl(
                                 Option.apply(part),
                                 namespace,
                                 Option.empty(),

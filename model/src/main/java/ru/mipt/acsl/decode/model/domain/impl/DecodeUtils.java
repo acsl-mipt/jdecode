@@ -3,6 +3,7 @@ package ru.mipt.acsl.decode.model.domain.impl;
 import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
 import org.jetbrains.annotations.NotNull;
+import ru.mipt.acsl.JavaToScala;
 import ru.mipt.acsl.decode.model.domain.*;
 import ru.mipt.acsl.decode.model.domain.impl.proxy.SimpleDecodeMaybeProxy;
 import ru.mipt.acsl.decode.model.domain.impl.type.DecodeFqnImpl;
@@ -22,11 +23,15 @@ import java.net.URI;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
+import static ru.mipt.acsl.JavaToScala.asOption;
+import static scala.collection.JavaConversions.asJavaCollection;
 
 /**
  * @author Artem Shein
@@ -39,13 +44,14 @@ public final class DecodeUtils
     {
         Preconditions.checkArgument(!namespaceFqn.isEmpty());
 
-        Buffer<DecodeNamespace> namespaces = registry.rootNamespaces();
+        Collection<DecodeNamespace>
+                namespaces = asJavaCollection(registry.rootNamespaces());
         DecodeNamespace namespace = null;
 
         for (String namespaceName : namespaceFqn.split(Pattern.quote(".")))
         {
             final DecodeNamespace parentNamespace = namespace;
-            namespace = namespaces.find(ns -> ns.name().asString().equals(namespaceName)).getOrElse(() -> {
+            namespace = namespaces.stream().filter(ns -> ns.name().asString().equals(namespaceName)).findAny().orElseGet(() -> {
                 DecodeNamespace newNamespace = DecodeNamespaceImpl.apply(
                         DecodeNameImpl.newFromMangledName(namespaceName),
                         Option.apply(parentNamespace));
@@ -55,7 +61,7 @@ public final class DecodeUtils
                 }
                 else
                 {
-                    namespaces.$plus$eq(newNamespace);
+                    registry.rootNamespaces().$plus$eq(newNamespace);
                 }
                 return newNamespace;
             });
@@ -68,20 +74,20 @@ public final class DecodeUtils
     public static Option<DecodeNamespace> getNamespaceByFqn(@NotNull DecodeRegistry registry,
                                                              @NotNull DecodeFqn namespaceFqn)
     {
-        Buffer<DecodeNamespace> namespaces = registry.rootNamespaces();
+        Collection<DecodeNamespace> namespaces = asJavaCollection(registry.rootNamespaces());
         Option<DecodeNamespace> namespace = Option.empty();
         Iterator<DecodeName> iterator = namespaceFqn.parts().iterator();
         while (iterator.hasNext())
         {
             DecodeName namespaceName = iterator.next();
-            namespace = namespaces.find(ns -> ns.name().equals(namespaceName));
+            namespace = asOption(namespaces.stream().filter(ns -> ns.name().equals(namespaceName)).findAny());
             if (!namespace.isDefined())
             {
                 return namespace;
             }
             else
             {
-                namespaces = namespace.get().subNamespaces();
+                namespaces = asJavaCollection(namespace.get().subNamespaces());
             }
         }
         return  namespace;
@@ -90,7 +96,7 @@ public final class DecodeUtils
     @NotNull
     public static URI getUriForNamespaceAndName(@NotNull DecodeFqn namespaceFqn, @NotNull DecodeName name)
     {
-        List<DecodeName> namespaceNameParts = new ArrayList<>(JavaConversions.asJavaCollection(namespaceFqn.parts()));
+        List<DecodeName> namespaceNameParts = new ArrayList<>(asJavaCollection(namespaceFqn.parts()));
         namespaceNameParts.add(name);
             return URI.create("/" + String.join("/",
                     namespaceNameParts.stream().map(DecodeName::asString).map(s -> {
@@ -121,70 +127,11 @@ public final class DecodeUtils
         }).collect(Collectors.toList());
     }
 
-    @NotNull
-    public static Buffer<DecodeNamespace> mergeRootNamespaces(@NotNull Buffer<DecodeNamespace> namespaces)
-    {
-        Buffer<DecodeNamespace> result = new ArrayBuffer<>();
-        namespaces.foreach(n -> { mergeNamespaceToNamespacesList(result, n); return null; });
-        return result;
-    }
 
-    private static void mergeNamespaceToNamespacesList(@NotNull Buffer<DecodeNamespace> list,
-                                                       @NotNull DecodeNamespace namespace)
-    {
-        Option<DecodeNamespace> targetNamespace = list.find(n -> n.name().equals(namespace.name()));
-        if (targetNamespace.isDefined())
-        {
-            mergeNamespaceTo(targetNamespace.get(), namespace);
-        }
-        else
-        {
-            list.$plus$eq(namespace);
-        }
-    }
 
-    private static void mergeNamespaceTo(@NotNull DecodeNamespace targetNamespace, @NotNull DecodeNamespace namespace)
-    {
-        Buffer<DecodeNamespace> subNamespaces = targetNamespace.subNamespaces();
-        namespace.subNamespaces().foreach(v1 -> {
-            mergeNamespaceToNamespacesList(subNamespaces, v1);
-            v1.parent_$eq(Option.apply(targetNamespace));
-            return null;
-        });
 
-        Buffer<DecodeUnit> units = targetNamespace.units();
-        namespace.units().foreach(u ->
-        {
-            DecodeName name = u.name();
-            Preconditions.checkState(units.find(u2 -> u2.name().equals(name)).isEmpty(),
-                    "unit name collision '%s'", name);
-            u.namespace_$eq(targetNamespace);
-            return null;
-        });
-        units.$plus$plus$eq(namespace.units());
 
-        Buffer<DecodeType> types = targetNamespace.types();
-        namespace.types().foreach(t ->
-        {
-            Option<DecodeName> name = t.optionalName();
-            Preconditions.checkState(types.find(t2 -> t2.optionalName().equals(name)).isEmpty(),
-                    "type name collision '%s'", name);
-            t.namespace_$eq(targetNamespace);
-            return null;
-        });
-        types.$plus$plus$eq(namespace.types());
 
-        Buffer<DecodeComponent> components = targetNamespace.components();
-        namespace.components().foreach(c ->
-        {
-            DecodeName name = c.name();
-            Preconditions.checkState(components.find(c2 -> c2.name().equals(name)).isEmpty(),
-                    "component name collision '%s'", name);
-            c.namespace_$eq(targetNamespace);
-            return null;
-        });
-        components.$plus$plus$eq(namespace.components());
-    }
 
     @NotNull
     public static DecodeNamespace newRootDecodeNamespaceForFqn(@NotNull DecodeFqn namespaceFqn)
@@ -251,7 +198,7 @@ public final class DecodeUtils
                                                                   @NotNull DecodeName typeName,
                                                                   @NotNull String typeGenericArguments)
     {
-        List<DecodeName> namespaceNameParts = new ArrayList<>(JavaConversions.asJavaCollection(namespaceFqn.parts()));
+        List<DecodeName> namespaceNameParts = new ArrayList<>(asJavaCollection(namespaceFqn.parts()));
         namespaceNameParts.add(typeName);
         try
         {

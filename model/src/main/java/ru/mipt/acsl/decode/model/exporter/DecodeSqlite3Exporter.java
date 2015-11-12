@@ -2,7 +2,6 @@ package ru.mipt.acsl.decode.model.exporter;
 
 import com.google.common.base.Preconditions;
 import ru.mipt.acsl.decode.model.domain.*;
-import ru.mipt.acsl.decode.model.domain.message.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import scala.Int;
@@ -55,11 +54,11 @@ public class DecodeSqlite3Exporter
         {
             this.connection = connection;
             connection.setAutoCommit(false);
-            Buffer<DecodeNamespace> namespacesStream = registry.rootNamespaces();
-            namespacesStream.foreach(this::insertNamespaceAndSubNamespaces);
-            namespacesStream.foreach(this::insertUnits);
-            namespacesStream.foreach(this::insertTypes);
-            namespacesStream.foreach(this::insertComponents);
+            Collection<DecodeNamespace> namespacesStream = JavaConversions.asJavaCollection(registry.rootNamespaces());
+            namespacesStream.forEach(this::insertNamespaceAndSubNamespaces);
+            namespacesStream.forEach(this::insertUnits);
+            namespacesStream.forEach(this::insertTypes);
+            namespacesStream.forEach(this::insertComponents);
             connection.commit();
         }
         catch (SQLException e)
@@ -97,16 +96,16 @@ public class DecodeSqlite3Exporter
 
     private Void insertComponents(@NotNull DecodeNamespace namespace)
     {
-        namespace.components().foreach(this::insertComponent);
-        namespace.subNamespaces().foreach(this::insertComponents);
+        JavaConversions.asJavaCollection(namespace.components()).forEach(this::insertComponent);
+        JavaConversions.asJavaCollection(namespace.subNamespaces()).forEach(this::insertComponents);
         return null;
     }
 
-    private Void insertComponent(@NotNull DecodeComponent component)
+    private void insertComponent(@NotNull DecodeComponent component)
     {
         if (componentKeyByComponentMap.containsKey(component))
         {
-            return null;
+            return;
         }
         try(PreparedStatement insertComponent = connection.prepareStatement(
                 String.format("INSERT INTO %s (namespace_id, name, base_type_id, info) VALUES (?, ?, ?, ?)", TableName.COMPONENT)))
@@ -156,7 +155,7 @@ public class DecodeSqlite3Exporter
                 {
                     insertCommand.setLong(1, componentKey);
                     insertCommand.setString(2, command.name().asString());
-                    setLongOrNull(insertCommand, 3, command.id().map(i -> (long)i));
+                    setLongOrNull(insertCommand, 3, Option.apply(command.id().isDefined() ? (long) command.id().get() : null));
                     setStringOrNull(insertCommand, 4, command.info());
                     insertCommand.execute();
                     commandKey = getGeneratedKey(insertCommand);
@@ -190,24 +189,26 @@ public class DecodeSqlite3Exporter
                         String.format("INSERT INTO %s (message_id, component_id, name, info) VALUES (?, ?, ?, ?)",
                                 TableName.MESSAGE)))
                 {
-                    setIntOrNull(insertMessage, 1, message.id());
+                    setIntOrNull(insertMessage, 1, Option.apply(message.id().isDefined()? (Int) message.id().get() : null));
                     insertMessage.setLong(2, componentKey);
                     insertMessage.setString(3, message.name().asString());
-                    setStringOrNull(insertMessage, 4, message.getInfo());
+                    setStringOrNull(insertMessage, 4, message.info());
                     insertMessage.execute();
                     messageKey = getGeneratedKey(insertMessage);
                 }
                 message.accept(new DecodeInsertMessageVisitor(messageKey, connection));
                 long index = 0;
-                for (DecodeMessageParameter parameter : message.getParameters())
+                Iterator<DecodeMessageParameter> parIt = message.parameters().iterator();
+                while (parIt.hasNext())
                 {
+                    DecodeMessageParameter parameter = parIt.next();
                     try (PreparedStatement insertParameter = connection.prepareStatement(
                             String.format("INSERT INTO %s (message_id, parameter_index, name) VALUES (?, ?, ?)",
                                     TableName.MESSAGE_PARAMETER)))
                     {
                         insertParameter.setLong(1, messageKey);
                         insertParameter.setLong(2, index++);
-                        insertParameter.setString(3, parameter.getValue());
+                        insertParameter.setString(3, parameter.value());
                         insertParameter.execute();
                     }
                 }
@@ -237,7 +238,7 @@ public class DecodeSqlite3Exporter
     {
         if (integerOptional.isDefined())
         {
-            statement.setInt(index, integerOptional.get().toInt());
+            statement.setInt(index, Int.unbox(integerOptional.get()));
         }
         else
         {
@@ -260,8 +261,8 @@ public class DecodeSqlite3Exporter
 
     private Void insertTypes(@NotNull DecodeNamespace namespace)
     {
-        namespace.types().foreach(this::insertType);
-        namespace.subNamespaces().foreach(this::insertTypes);
+        JavaConversions.asJavaCollection(namespace.types()).forEach(this::insertType);
+        JavaConversions.asJavaCollection(namespace.subNamespaces()).forEach(this::insertTypes);
         return null;
     }
 
@@ -269,14 +270,14 @@ public class DecodeSqlite3Exporter
     {
         if (typeKeyByType.containsKey(type))
         {
-            return;
+            return null;
         }
         System.out.println("--");
         try(PreparedStatement insertType = connection.prepareStatement(
                 String.format("INSERT INTO %s (namespace_id, name, info) VALUES (?, ?, ?)", TableName.TYPE)))
         {
             insertType.setLong(1, namespaceKeyByNamespaceMap.get(type.namespace()));
-            setStringOrNull(insertType, 2, type.optionalName().map(DecodeName::asString));
+            setStringOrNull(insertType, 2, Option.apply(type.optionalName().isDefined()? type.optionalName().get().asString() : null));
             setStringOrNull(insertType, 3, type.info());
             insertType.execute();
             typeKeyByType.put(type, getGeneratedKey(insertType));
@@ -304,8 +305,8 @@ public class DecodeSqlite3Exporter
 
     private Void insertUnits(@NotNull DecodeNamespace namespace)
     {
-        namespace.units().foreach(this::insertUnit);
-        namespace.subNamespaces().foreach(this::insertUnits);
+        JavaConversions.asJavaCollection(namespace.units()).forEach(this::insertUnit);
+        JavaConversions.asJavaCollection(namespace.subNamespaces()).forEach(this::insertUnits);
         return null;
     }
 
@@ -369,8 +370,8 @@ public class DecodeSqlite3Exporter
                     String.format("INSERT INTO %s (type_id, kind, bit_length) VALUES (?, ?, ?)", TableName.PRIMITIVE_TYPE)))
             {
                 insertPrimitiveType.setLong(1, typeKeyByType.get(primitiveType));
-                insertPrimitiveType.setString(2, primitiveType.getKind().getName());
-                insertPrimitiveType.setLong(3, primitiveType.getBitLength());
+                insertPrimitiveType.setString(2, TypeKind.nameForTypeKind(primitiveType.kind()));
+                insertPrimitiveType.setLong(3, primitiveType.bitLength());
                 insertPrimitiveType.execute();
             }
             catch (SQLException e)
@@ -399,14 +400,14 @@ public class DecodeSqlite3Exporter
         @Override
         public Void visit(@NotNull DecodeSubType subType)
         {
-            insertType(subType.getBaseType().getObject());
+            insertType(subType.baseType().obj());
             try(PreparedStatement insertSubType = connection.prepareStatement(
                     String.format("INSERT INTO %s (type_id, base_type_id) VALUES " +
                                     "(?, ?)",
                             TableName.SUB_TYPE)))
             {
                 insertSubType.setLong(1, typeKeyByType.get(subType));
-                insertSubType.setLong(2, typeKeyByType.get(subType.getBaseType().getObject()));
+                insertSubType.setLong(2, typeKeyByType.get(subType.baseType().obj()));
                 insertSubType.execute();
             }
             catch (SQLException e)
@@ -420,25 +421,27 @@ public class DecodeSqlite3Exporter
         @Override
         public Void visit(@NotNull DecodeEnumType enumType)
         {
-            insertType(enumType.getBaseType().getObject());
+            insertType(enumType.baseType().obj());
             try(PreparedStatement insertEnumType = connection.prepareStatement(
                     String.format("INSERT INTO %s (type_id, base_type_id) VALUES (?, ?)",
                             TableName.ENUM_TYPE)))
             {
                 insertEnumType.setLong(1, typeKeyByType.get(enumType));
-                insertEnumType.setLong(2, typeKeyByType.get(enumType.getBaseType().getObject()));
+                insertEnumType.setLong(2, typeKeyByType.get(enumType.baseType().obj()));
                 insertEnumType.execute();
                 long enumKey = getGeneratedKey(insertEnumType);
                 try(PreparedStatement insertEnumConstant = connection.prepareStatement(
                         String.format("INSERT INTO %s (enum_type_id, name, value, info) VALUES (?, ?, ?, ?)",
                                 TableName.ENUM_TYPE_CONSTANT)))
                 {
-                    for (DecodeEnumConstant constant : enumType.getConstants())
+                    Iterator<DecodeEnumConstant> constIt = enumType.constants().iterator();
+                    while (constIt.hasNext())
                     {
+                        DecodeEnumConstant constant = constIt.next();
                         insertEnumConstant.setLong(1, enumKey);
-                        insertEnumConstant.setString(2, constant.getName().asString());
-                        insertEnumConstant.setString(3, constant.getValue());
-                        setStringOrNull(insertEnumConstant, 4, constant.getInfo());
+                        insertEnumConstant.setString(2, constant.name().asString());
+                        insertEnumConstant.setString(3, constant.value());
+                        setStringOrNull(insertEnumConstant, 4, constant.info());
                         insertEnumConstant.execute();
                     }
                 }
@@ -453,15 +456,15 @@ public class DecodeSqlite3Exporter
         @Override
         public Void visit(@NotNull DecodeArrayType arrayType)
         {
-            insertType(arrayType.getBaseType().getObject());
+            insertType(arrayType.baseType().obj());
             try(PreparedStatement insertArrayType = connection.prepareStatement(
                     String.format("INSERT INTO %s (type_id, base_type_id, min_length, max_length) VALUES (?, ?, ?, ?)",
                             TableName.ARRAY_TYPE)))
             {
                 insertArrayType.setLong(1, typeKeyByType.get(arrayType));
-                insertArrayType.setLong(2, typeKeyByType.get(arrayType.getBaseType().getObject()));
-                insertArrayType.setLong(3, arrayType.getSize().getMinLength());
-                insertArrayType.setLong(4, arrayType.getSize().getMaxLength());
+                insertArrayType.setLong(2, typeKeyByType.get(arrayType.baseType().obj()));
+                insertArrayType.setLong(3, arrayType.size().minLength());
+                insertArrayType.setLong(4, arrayType.size().maxLength());
                 insertArrayType.execute();
             }
             catch (SQLException e)
@@ -485,18 +488,19 @@ public class DecodeSqlite3Exporter
                                 TableName.STRUCT_TYPE_FIELD, TableName.UNIT)))
                 {
                     long index = 0;
-                    Preconditions.checkState(!structType.getFields().isEmpty(), "struct must not be empty");
-                    for (DecodeStructField field : structType.getFields())
+                    Preconditions.checkState(!structType.fields().isEmpty(), "struct must not be empty");
+                    Iterator<DecodeStructField> fIt = structType.fields().iterator();
+                    while (fIt.hasNext())
                     {
+                        DecodeStructField field = fIt.next();
                         insertField.setLong(1, structKey);
                         insertField.setLong(2, index++);
-                        insertField.setString(3, field.getName().asString());
-                        insertType(field.getType().getObject());
-                        insertField.setLong(4, typeKeyByType.get(field.getType().getObject()));
-                        insertField.setLong(5, namespaceKeyByNamespaceMap.get(structType.getNamespace()));
-                        setStringOrNull(insertField, 6, field.getUnit().map(DecodeMaybeProxy::getObject).map(
-                                DecodeUnit::getName).map(DecodeName::asString));
-                        setStringOrNull(insertField, 7, field.getInfo());
+                        insertField.setString(3, field.name().asString());
+                        insertType(field.fieldType().obj());
+                        insertField.setLong(4, typeKeyByType.get(field.fieldType().obj()));
+                        insertField.setLong(5, namespaceKeyByNamespaceMap.get(structType.namespace()));
+                        setStringOrNull(insertField, 6, Option.apply(field.unit().isDefined() ? field.unit().get().obj().name().asString() : null));
+                        setStringOrNull(insertField, 7, field.info());
                         insertField.execute();
                     }
                 }
@@ -511,13 +515,13 @@ public class DecodeSqlite3Exporter
         @Override
         public Void visit(@NotNull DecodeAliasType typeAlias)
         {
-            insertType(typeAlias.getType().getObject());
+            insertType(typeAlias.baseType().obj());
             try(PreparedStatement insertArrayType = connection.prepareStatement(
                     String.format("INSERT INTO %s (type_id, base_type_id) VALUES (?, ?)",
                             TableName.ALIAS_TYPE)))
             {
                 insertArrayType.setLong(1, typeKeyByType.get(typeAlias));
-                insertArrayType.setLong(2, typeKeyByType.get(typeAlias.getType().getObject()));
+                insertArrayType.setLong(2, typeKeyByType.get(typeAlias.baseType().obj()));
                 insertArrayType.execute();
             }
             catch (SQLException e)

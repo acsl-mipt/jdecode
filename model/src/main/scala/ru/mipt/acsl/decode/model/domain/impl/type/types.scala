@@ -1,9 +1,10 @@
 package ru.mipt.acsl.decode.model.domain.impl.`type`
 
 import ru.mipt.acsl.decode.model.domain._
-import ru.mipt.acsl.decode.model.domain.impl.DecodeNameImpl
+import ru.mipt.acsl.decode.model.domain.impl.{ParameterParser, DecodeNameImpl}
 
 import scala.collection.mutable
+import scala.collection.mutable.ArrayBuffer
 
 /**
   * @author Artem Shein
@@ -40,7 +41,7 @@ class DecodeUnitImpl(name: DecodeName, var namespace: DecodeNamespace, var displ
 class DecodeNamespaceImpl(var name: DecodeName, var parent: Option[DecodeNamespace] = None,
                           var types: mutable.Buffer[DecodeType] = mutable.Buffer(), var units: mutable.Buffer[DecodeUnit] = mutable.Buffer(),
                           var subNamespaces: mutable.Buffer[DecodeNamespace] = mutable.Buffer(), var components: mutable.Buffer[DecodeComponent] = mutable.Buffer(),
-                          var languages: Seq[DecodeLanguage] = mutable.Buffer())
+                          var languages: mutable.Buffer[DecodeLanguage] = mutable.Buffer())
   extends DecodeNameAware with DecodeNamespace {
   override def optionalName: Option[DecodeName] = Some(name)
   override def asString: String = name.asString()
@@ -136,3 +137,20 @@ class DecodeComponentImpl(name: DecodeName, namespace: DecodeNamespace, var id: 
                             var subComponents: Seq[DecodeComponentRef], var commands: Seq[DecodeCommand],
                             var messages: Seq[DecodeMessage])
   extends AbstractDecodeNameNamespaceOptionalInfoAware(name, namespace, info) with DecodeComponent
+
+class DecodeParameterWalker(var parameter: DecodeMessageParameter)
+{
+  private var currentIndex = 0
+  private val tokens = ArrayBuffer[Either[String, Int]]()
+
+  type Val = Seq[Either[String, Int]]
+
+  val result = new ParameterParser(parameter.value).Parameter.run()
+  if (result.isFailure)
+    sys.error("parsing fails")
+  tokens ++= result.get
+
+  def hasNext: Boolean = currentIndex < tokens.size
+
+  def next: Either[String, Int] = { currentIndex += 1; tokens(currentIndex - 1) }
+}

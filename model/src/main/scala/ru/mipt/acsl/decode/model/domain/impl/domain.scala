@@ -5,7 +5,6 @@ import java.net.URI
 import ru.mipt.acsl.decode.model.domain._
 import ru.mipt.acsl.decode.model.domain.impl.`type`.DecodeNamespaceImpl
 import ru.mipt.acsl.decode.model.domain.impl.proxy.{ProvidePrimitivesAndNativeTypesDecodeProxyResolver, FindExistingDecodeProxyResolver}
-import ru.mipt.acsl.decode.model.domain.message.DecodeMessageParameter
 
 import scala.collection.mutable
 
