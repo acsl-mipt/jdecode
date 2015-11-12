@@ -85,7 +85,7 @@ public class SimpleDecodeMaybeProxy<T extends DecodeReferenceable> extends Eithe
     @Override
     public DecodeResolvingResult<T> resolve(@NotNull DecodeRegistry registry, @NotNull Class<T> cls)
     {
-        if (!isProxy())
+        if (isResolved())
         {
             return SimpleDecodeResolvingResult.newInstance(resolvedObject);
         }

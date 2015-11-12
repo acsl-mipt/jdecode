@@ -2,6 +2,9 @@ package ru.mipt.acsl.decode.model.domain
 
 import java.net.URI
 
+import ru.mipt.acsl.decode.model.domain.impl.`type`.DecodeBerType
+import ru.mipt.acsl.decode.model.domain.impl.`type`.DecodeOptionalType
+import ru.mipt.acsl.decode.model.domain.impl.`type`.DecodeOrType
 import ru.mipt.acsl.decode.model.domain.impl.`type`.DecodeParameterWalker
 import ru.mipt.acsl.decode.model.domain.impl.`type`.{AbstractDecodeOptionalInfoAware, DecodeFqnImpl}
 import ru.mipt.acsl.decode.model.domain.impl.{DecodeComponentWalker, DecodeNameImpl}
@@ -158,7 +161,7 @@ trait DecodeNativeType extends DecodeType with DecodeNameAware {
 }
 
 object DecodeNativeType {
-  val MANGLED_TYPE_NAMES: Set[String] = HashSet[String]()
+  val MANGLED_TYPE_NAMES: Set[String] = HashSet[String](DecodeBerType.NAME, DecodeOrType.NAME, DecodeOptionalType.NAME)
 }
 
 trait BaseTyped {

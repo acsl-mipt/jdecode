@@ -34,7 +34,7 @@ object DecodeModelResolver {
   }
 
   def resolveWithTypeCheck[T <: DecodeReferenceable](maybeProxy: DecodeMaybeProxy[T], registry: DecodeRegistry, cls: Class[T]): DecodeResolvingResult[DecodeReferenceable] = {
-    // TODO: this is dumb copypaste from Java, Scala can do better, i believe
+    // TODO: this is dumb copypaste from Java, Scala can do better i believe
     maybeProxy.resolve(registry, cls) match {
       case a: DecodeResolvingResult[DecodeReferenceable] => a
       case _ => sys.error("wtf")
@@ -44,11 +44,11 @@ object DecodeModelResolver {
   def resolve(t: DecodeType, registry: DecodeRegistry):  DecodeResolvingResult[DecodeReferenceable] = {
     val resolvingResultList = new ArrayBuffer[DecodeResolvingResult[DecodeReferenceable]]()
     t.accept(new DecodeTypeResolveVisitor(registry, resolvingResultList))
-    resolvingResultList.reduce[DecodeResolvingResult[DecodeReferenceable]](SimpleDecodeResolvingResult.merge)
+    resolvingResultList.foldLeft(SimpleDecodeResolvingResult.newInstance[DecodeReferenceable](None))(SimpleDecodeResolvingResult.merge)
   }
 
   def resolve(registry: DecodeRegistry): DecodeResolvingResult[DecodeReferenceable] = {
-    registry.rootNamespaces.flatMap(resolve(_, registry)).reduce[DecodeResolvingResult[DecodeReferenceable]](SimpleDecodeResolvingResult.merge)
+    registry.rootNamespaces.flatMap(resolve(_, registry)).foldLeft(SimpleDecodeResolvingResult.newInstance[DecodeReferenceable](None))(SimpleDecodeResolvingResult.merge)
   }
 
   def resolve(component: DecodeComponent, registry: DecodeRegistry): Seq[DecodeResolvingResult[DecodeReferenceable]] = {

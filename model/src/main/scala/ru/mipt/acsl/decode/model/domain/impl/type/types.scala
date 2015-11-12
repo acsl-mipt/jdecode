@@ -15,7 +15,7 @@ case class DecodeFqnImpl(parts: Seq[DecodeName]) extends DecodeFqn {
 }
 
 object DecodeFqnImpl {
-  def newFromSource(sourceText: String): DecodeFqn = new DecodeFqnImpl(".".r.split(sourceText).map(DecodeNameImpl.newFromSourceName))
+  def newFromSource(sourceText: String): DecodeFqn = new DecodeFqnImpl("\\.".r.split(sourceText).map(DecodeNameImpl.newFromSourceName))
 }
 
 abstract class AbstractDecodeOptionalInfoAware(val info: Option[String]) extends DecodeOptionalInfoAware
@@ -112,8 +112,9 @@ class DecodeOrType(name: Option[DecodeName], namespace: DecodeNamespace, info: O
 }
 
 object DecodeOrType {
-  val MANGLED_NAME: DecodeName = DecodeNameImpl.newFromMangledName ("or")
-  private val typeParameters: Seq[Option[DecodeName]] = Seq(Some(DecodeNameImpl.newFromMangledName ("L")), Some(DecodeNameImpl.newFromMangledName("R")))
+  val NAME = "or"
+  val MANGLED_NAME: DecodeName = DecodeNameImpl.newFromMangledName(NAME)
+  private val typeParameters: Seq[Option[DecodeName]] = Seq(Some(DecodeNameImpl.newFromMangledName("L")), Some(DecodeNameImpl.newFromMangledName("R")))
 }
 
 class DecodeOptionalType(name: Option[DecodeName], ns: DecodeNamespace, info: Option[String])

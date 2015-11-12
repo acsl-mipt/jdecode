@@ -4,6 +4,7 @@ import com.google.common.base.Preconditions;
 import org.apache.maven.wagon.Streams;
 import ru.mipt.acsl.JavaToScala;
 import ru.mipt.acsl.ScalaToJava;
+import ru.mipt.acsl.decode.ScalaUtil;
 import ru.mipt.acsl.decode.model.domain.*;
 import ru.mipt.acsl.decode.model.domain.impl.*;
 import ru.mipt.acsl.decode.model.domain.impl.type.ArraySizeImpl;
@@ -26,6 +27,7 @@ import java.util.stream.Stream;
 
 import static ru.mipt.acsl.JavaToScala.asOption;
 import static ru.mipt.acsl.ScalaToJava.asOptional;
+import static ru.mipt.acsl.decode.ScalaUtil.appendToBuffer;
 import static ru.mipt.acsl.decode.model.domain.impl.proxy.SimpleDecodeMaybeProxy.proxy;
 import static scala.collection.JavaConversions.asJavaCollection;
 
@@ -141,7 +143,7 @@ public class FindExistingDecodeProxyResolver implements DecodeProxyResolver
                 {
                     Buffer<DecodeType> types = new ArrayBuffer<>();
                     types.append(namespace.types());
-                    types.$plus$eq(newArrayType);
+                    appendToBuffer(types, newArrayType);
                     namespace.types_$eq(types);
                     return SimpleDecodeResolvingResult.newInstance(Option.apply(newArrayType));
                 }

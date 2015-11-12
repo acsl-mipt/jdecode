@@ -3,6 +3,7 @@ package ru.mipt.acsl.decode.model.domain.impl.proxy;
 import com.google.common.base.Preconditions;
 import org.jetbrains.annotations.NotNull;
 import ru.mipt.acsl.JavaToScala;
+import ru.mipt.acsl.decode.ScalaUtil;
 import ru.mipt.acsl.decode.model.domain.*;
 import ru.mipt.acsl.decode.model.domain.impl.DecodeNameImpl;
 import ru.mipt.acsl.decode.model.domain.impl.DecodeUtils;
@@ -25,6 +26,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static ru.mipt.acsl.JavaToScala.asOption;
+import static ru.mipt.acsl.decode.ScalaUtil.appendToBuffer;
 
 /**
  * @author Artem Shein
@@ -70,7 +72,7 @@ public class ProvidePrimitivesAndNativeTypesDecodeProxyResolver implements Decod
                             && !findTypeForName(namespace.types(), primitiveTypeOptionalName.get()).isPresent())
                     {
                         Buffer<DecodeType> types = new ArrayBuffer<>();
-                        types.$plus$eq(primitiveType);
+                        appendToBuffer(types, primitiveType);
                         namespace.types_$eq(types);
                     }
                     return SimpleDecodeResolvingResult.newInstance(asOption(Optional.of(primitiveType)
@@ -133,7 +135,7 @@ public class ProvidePrimitivesAndNativeTypesDecodeProxyResolver implements Decod
                         && !findTypeForName(namespace.types(), nativeTypeOptionalName.get()).isPresent())
                 {
                     Buffer<DecodeType> types = new ArrayBuffer<>();
-                    types.$plus$eq(knownType);
+                    appendToBuffer(types, knownType);
                     namespace.types_$eq(types);
                 }
                 return SimpleDecodeResolvingResult.newInstance(asOption(Optional.of(knownType)

@@ -59,17 +59,16 @@ class DecodeEventMessageImpl(component: DecodeComponent, name: DecodeName, id: O
                                   parameters: Seq[DecodeMessageParameter], val eventType: DecodeMaybeProxy[DecodeType])
   extends AbstractImmutableDecodeMessage(component, name, id, info, parameters) with DecodeEventMessage
 
-class DecodeRegistryImpl extends DecodeRegistry {
-  private val _rootNamespaces = new mutable.ArrayBuffer[DecodeNamespace]()
-  private val _proxyResolvers = new mutable.ArrayBuffer[DecodeProxyResolver]()
-  def this(resolvers: DecodeProxyResolver*) = {
-    this()
-    _proxyResolvers ++= resolvers
-    if (DecodeConstants.SYSTEM_NAMESPACE_FQN.size != 1)
-      sys.error("not implemented")
-    _rootNamespaces += DecodeNamespaceImpl.apply(DecodeConstants.SYSTEM_NAMESPACE_FQN.last,
-      Option.empty)
-  }
+class DecodeRegistryImpl(resolvers: DecodeProxyResolver*) extends DecodeRegistry {
+  if (DecodeConstants.SYSTEM_NAMESPACE_FQN.size != 1)
+    sys.error("not implemented")
+
+  private val _rootNamespaces = new mutable.ArrayBuffer[DecodeNamespace]() += DecodeNamespaceImpl.apply(DecodeConstants.SYSTEM_NAMESPACE_FQN.last,
+    Option.empty)
+  private val _proxyResolvers = new mutable.ArrayBuffer[DecodeProxyResolver]() ++= resolvers
+
+  def this() = this(new FindExistingDecodeProxyResolver(), new ProvidePrimitivesAndNativeTypesDecodeProxyResolver())
+
   def rootNamespaces: mutable.Buffer[DecodeNamespace] = _rootNamespaces
   def resolve[T <: DecodeReferenceable](uri: URI, cls: Class[T]): DecodeResolvingResult[T] = {
     for (resolver <- _proxyResolvers)
@@ -85,7 +84,7 @@ class DecodeRegistryImpl extends DecodeRegistry {
 }
 
 object DecodeRegistryImpl {
-  def apply() = new DecodeRegistryImpl(new FindExistingDecodeProxyResolver(), new ProvidePrimitivesAndNativeTypesDecodeProxyResolver())
+  def apply() = new DecodeRegistryImpl()
 }
 
 class DecodeComponentWalker(var component: DecodeComponent) {
