@@ -4,6 +4,7 @@ import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
 import org.jetbrains.annotations.NotNull;
 import ru.mipt.acsl.JavaToScala;
+import ru.mipt.acsl.decode.ScalaUtil;
 import ru.mipt.acsl.decode.model.domain.*;
 import ru.mipt.acsl.decode.model.domain.impl.proxy.SimpleDecodeMaybeProxy;
 import ru.mipt.acsl.decode.model.domain.impl.type.DecodeFqnImpl;
@@ -31,6 +32,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static ru.mipt.acsl.JavaToScala.asOption;
+import static ru.mipt.acsl.decode.ScalaUtil.appendToBuffer;
 import static scala.collection.JavaConversions.asJavaCollection;
 
 /**
@@ -160,7 +162,7 @@ public final class DecodeUtils
             currentNamespace = DecodeNamespaceImpl.apply(iterator.next(), Option.apply(currentNamespace));
             if (currentNamespace.parent().isDefined())
             {
-                currentNamespace.parent().get().subNamespaces().$plus$eq(currentNamespace);
+                appendToBuffer(currentNamespace.parent().get().subNamespaces(), currentNamespace);
             }
         }
         return Preconditions.checkNotNull(currentNamespace);

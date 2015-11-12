@@ -13,6 +13,7 @@ import scala.collection.mutable.ArrayBuffer
   */
 class DecodeProxyImpl[T <: DecodeReferenceable](val uri: URI) extends DecodeProxy[T] {
   override def resolve(registry: DecodeRegistry, cls: Class[T]): DecodeResolvingResult[T] = registry.resolve(uri, cls)
+  override def toString: String = uri.toString
 }
 
 object DecodeProxyImpl {

@@ -43,12 +43,9 @@ public class DecodeSourceProvider
                                         try
                                         {
                                             LOG.debug("Parsing resource '{}'", resourcePath + "/" + name);
-                                            DecodeElement element = parser.parse(Resources
+                                            return parser.parse(Resources
                                                     .toString(Resources.getResource(resourcePath + "/" + name),
                                                             Charsets.UTF_8));
-                                            Preconditions.checkState(element instanceof DecodeNamespace,
-                                                    "must be an instance of DecodeNamespace");
-                                            return (DecodeNamespace) element;
                                         }
                                         catch (IOException e)
                                         {
