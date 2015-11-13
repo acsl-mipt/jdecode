@@ -3,10 +3,7 @@ package ru.mipt.acsl.decode.model.domain.impl.type;
 import org.jetbrains.annotations.NotNull;
 import ru.mipt.acsl.decode.model.domain.DecodeEnumConstant;
 import ru.mipt.acsl.decode.model.domain.DecodeName;
-import ru.mipt.acsl.decode.model.domain.impl.ImmutableDecodeElementWrapper;
 import scala.Option;
-
-import java.util.Optional;
 
 /**
  * @author Artem Shein
@@ -26,10 +23,10 @@ public class ImmutableDecodeEnumConstant extends AbstractDecodeOptionalInfoAware
 
     @NotNull
     public static DecodeEnumConstant newInstanceWrapper(@NotNull DecodeName name,
-                                                       @NotNull ImmutableDecodeElementWrapper<String> value,
+                                                       @NotNull String value,
                                                        @NotNull Option<String> info)
     {
-        return newInstance(name, value.getValue(), info);
+        return newInstance(name, value, info);
     }
 
     @NotNull

@@ -219,7 +219,7 @@ public class DecodeParboiledParser extends BaseParser<Object>
                 '(', Optional(OptEW(), CommandArgs(namespaceVar, argsVar)), OptEW(), ')',
                 Optional(OptEW(), "->", OptEW(), push(namespaceVar.get()), TypeApplicationAsOptionalProxyType(),
                         returnTypeVar.set((Option<DecodeMaybeProxy<DecodeType>>) pop())),
-                push(ImmutableDecodeCommand.newInstance((DecodeNameImpl) pop(),
+                push(new DecodeCommandImpl((DecodeNameImpl) pop(),
                         Option.apply(idVar.get()), Option.apply(infoVar.get()),
                         argsVar.get().toSeq(), returnTypeVar.get())));
     }
@@ -444,9 +444,8 @@ public class DecodeParboiledParser extends BaseParser<Object>
     Rule ParameterAsParameter()
     {
         Var<String> infoVar = new Var<>();
-        return Sequence(OptInfoEw(infoVar), ParameterElement(), push(ImmutableDecodeElementWrapper.newInstance(match())),
-                        push(ImmutableDecodeMessageParameter.newInstance(
-                                ((ImmutableDecodeElementWrapper<String>) pop()).getValue())));
+        return Sequence(OptInfoEw(infoVar), ParameterElement(), push(match()),
+                        push(ImmutableDecodeMessageParameter.newInstance((String) pop())));
     }
 
     Rule ParameterElement()
@@ -462,16 +461,16 @@ public class DecodeParboiledParser extends BaseParser<Object>
     Rule OptInfoEw(@NotNull Var<String> infoVar)
     {
         return Optional(StringValueAsString(),
-                infoVar.set(((ImmutableDecodeElementWrapper<String>) pop()).getValue()), EW());
+                infoVar.set((String) pop()), EW());
     }
 
     Rule StringValueAsString()
     {
         return FirstOf(Sequence('"', ZeroOrMore(FirstOf(NoneOf("\"\\"), Sequence('\\', ANY))),
-                        push(ImmutableDecodeElementWrapper.newInstance(match())),
+                        push(match()),
                         FirstOf('"', Sequence(drop(), NOTHING))),
                 Sequence('\'', ZeroOrMore(FirstOf(NoneOf("\'\\"), Sequence('\\', ANY))),
-                        push(ImmutableDecodeElementWrapper.newInstance(match())),
+                        push(match()),
                         FirstOf('\'', Sequence(drop(), NOTHING))));
     }
 
@@ -501,7 +500,7 @@ public class DecodeParboiledParser extends BaseParser<Object>
     {
         Var<String> displayVar = new Var<>();
         return Sequence("unit", EW(), ElementNameAsName(), Optional(EW(), "display", EW(), StringValueAsString(),
-                        displayVar.set(((ImmutableDecodeElementWrapper<String>) pop()).getValue())),
+                        displayVar.set((String) pop())),
                 Optional(EW(), "placement", EW(), FirstOf("before", "after")),
                 push(new DecodeUnitImpl((DecodeName) pop(), namespaceVar.get(),
                         Option.apply(displayVar.get()), Option.apply(infoVar.get()))));
@@ -561,13 +560,13 @@ public class DecodeParboiledParser extends BaseParser<Object>
         Var<String> infoVar = new Var<>();
         return Sequence(OptInfoEw(infoVar), ElementNameAsName(), OptEW(), '=', OptEW(), LiteralAsString(),
                 enumConstantsVar.get().add(ImmutableDecodeEnumConstant.newInstanceWrapper((DecodeNameImpl) pop(1),
-                        (ImmutableDecodeElementWrapper<String>) pop(), Option.apply(infoVar.get()))));
+                        (String) pop(), Option.apply(infoVar.get()))));
     }
 
     Rule LiteralAsString()
     {
         return Sequence(FirstOf(FloatLiteral(), NonNegativeNumber(), "true", "false"),
-                push(ImmutableDecodeElementWrapper.newInstance(match())));
+                push(match()));
     }
 
     Rule FloatLiteral()

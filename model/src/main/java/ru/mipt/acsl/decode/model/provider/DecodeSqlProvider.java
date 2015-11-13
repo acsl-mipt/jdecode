@@ -200,7 +200,7 @@ public class DecodeSqlProvider
                                 }
                             }
                             Option<Long> returnTypeIdOptional = getOptionalLong(commandsSelectRs, "return_type_id");
-                            commands.$plus$eq(ImmutableDecodeCommand.newInstance(
+                            commands.$plus$eq(new DecodeCommandImpl(
                                     DecodeNameImpl.newFromMangledName(commandsSelectRs.getString("name")),
                                     getOptionalInt(commandsSelectRs, "command_id"),
                                     Option.apply(commandsSelectRs.getString("info")), arguments,

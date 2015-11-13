@@ -61,6 +61,12 @@ trait DecodeFqn {
   def isEmpty: Boolean = parts.isEmpty
 }
 
+trait DecodeReferenceable extends DecodeOptionalNameAware {
+  def accept[T](visitor: DecodeReferenceableVisitor[T]): T
+}
+
+trait DecodeLanguage extends DecodeReferenceable with DecodeNamespaceAware
+
 trait DecodeNamespace extends DecodeReferenceable with DecodeNameAware {
   def asString: String
 

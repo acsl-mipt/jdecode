@@ -3,6 +3,7 @@ package ru.mipt.acsl.decode.model.domain.impl
 import java.net.URI
 
 import ru.mipt.acsl.decode.model.domain._
+import ru.mipt.acsl.decode.model.domain.impl.`type`.AbstractDecodeOptionalInfoAware
 import ru.mipt.acsl.decode.model.domain.impl.`type`.DecodeNamespaceImpl
 import ru.mipt.acsl.decode.model.domain.impl.proxy.{ProvidePrimitivesAndNativeTypesDecodeProxyResolver, FindExistingDecodeProxyResolver}
 
@@ -122,4 +123,10 @@ class DecodeComponentWalker(var component: DecodeComponent) {
       }
     }
   }
+}
+
+class DecodeCommandImpl(val name: DecodeName, val id: Option[Int], info: Option[String],
+                        val arguments: Seq[DecodeCommandArgument], val returnType: Option[DecodeMaybeProxy[DecodeType]])
+  extends AbstractDecodeOptionalInfoAware(info) with DecodeCommand {
+  override def optionalName: Option[DecodeName] = Some(name)
 }
