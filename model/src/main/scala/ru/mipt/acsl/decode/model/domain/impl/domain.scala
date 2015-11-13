@@ -3,6 +3,7 @@ package ru.mipt.acsl.decode.model.domain.impl
 import java.net.URI
 
 import ru.mipt.acsl.decode.model.domain._
+import ru.mipt.acsl.decode.model.domain.impl.`type`.AbstractDecodeNameNamespaceOptionalInfoAware
 import ru.mipt.acsl.decode.model.domain.impl.`type`.AbstractDecodeOptionalInfoAware
 import ru.mipt.acsl.decode.model.domain.impl.`type`.DecodeNamespaceImpl
 import ru.mipt.acsl.decode.model.domain.impl.proxy.{ProvidePrimitivesAndNativeTypesDecodeProxyResolver, FindExistingDecodeProxyResolver}
@@ -12,6 +13,15 @@ import scala.collection.mutable
 /**
   * @author Artem Shein
   */
+case class DecodeNameImpl(value: String) extends DecodeName {
+  override def asString(): String = value
+}
+
+object DecodeNameImpl {
+  def newFromSourceName(name: String) = DecodeNameImpl(DecodeName.mangleName(name))
+  def newFromMangledName(name: String) = DecodeNameImpl(name)
+}
+
 class TokenWalker(val token: Either[String, Int]) extends DecodeTypeVisitor[Option[DecodeType]] {
   override def visit(primitiveType: DecodePrimitiveType) = None
 
@@ -47,7 +57,7 @@ class TokenWalker(val token: Either[String, Int]) extends DecodeTypeVisitor[Opti
 
 abstract class AbstractImmutableDecodeMessage(val component: DecodeComponent, val name: DecodeName, val id: Option[Int],
   info: Option[String], val parameters: Seq[DecodeMessageParameter]) extends AbstractDecodeMessage(info) {
-  def optionalName = Some(name)
+  def optionName = Some(name)
 }
 
 class DecodeComponentRefImpl(val component: DecodeMaybeProxy[DecodeComponent], val alias: Option[String] = None)
@@ -64,7 +74,7 @@ class DecodeRegistryImpl(resolvers: DecodeProxyResolver*) extends DecodeRegistry
   if (DecodeConstants.SYSTEM_NAMESPACE_FQN.size != 1)
     sys.error("not implemented")
 
-  private val _rootNamespaces = new mutable.ArrayBuffer[DecodeNamespace]() += DecodeNamespaceImpl.apply(DecodeConstants.SYSTEM_NAMESPACE_FQN.last,
+  private val _rootNamespaces = new mutable.ArrayBuffer[DecodeNamespace]() += new DecodeNamespaceImpl(DecodeConstants.SYSTEM_NAMESPACE_FQN.last,
     Option.empty)
   private val _proxyResolvers = new mutable.ArrayBuffer[DecodeProxyResolver]() ++= resolvers
 
@@ -128,5 +138,12 @@ class DecodeComponentWalker(var component: DecodeComponent) {
 class DecodeCommandImpl(val name: DecodeName, val id: Option[Int], info: Option[String],
                         val arguments: Seq[DecodeCommandArgument], val returnType: Option[DecodeMaybeProxy[DecodeType]])
   extends AbstractDecodeOptionalInfoAware(info) with DecodeCommand {
-  override def optionalName: Option[DecodeName] = Some(name)
+  override def optionName: Option[DecodeName] = Some(name)
 }
+
+class DecodeLanguageImpl(name: DecodeName, nameespace: DecodeNamespace, val isDefault: Boolean, info: Option[String])
+  extends AbstractDecodeNameNamespaceOptionalInfoAware(name, nameespace, info) with DecodeLanguage {
+  override def accept[T](visitor: DecodeReferenceableVisitor[T]): T = visitor.visit(this)
+}
+
+class DecodeMessageParameterImpl(val value: String) extends DecodeMessageParameter

@@ -1,26 +1,17 @@
 package ru.mipt.acsl.decode.model.domain.impl.proxy;
 
 import com.google.common.base.Preconditions;
-import org.apache.maven.wagon.Streams;
-import ru.mipt.acsl.JavaToScala;
-import ru.mipt.acsl.ScalaToJava;
-import ru.mipt.acsl.decode.ScalaUtil;
 import ru.mipt.acsl.decode.model.domain.*;
 import ru.mipt.acsl.decode.model.domain.impl.*;
 import ru.mipt.acsl.decode.model.domain.impl.type.ArraySizeImpl;
 import ru.mipt.acsl.decode.model.domain.impl.type.DecodeArrayTypeImpl;
 import org.jetbrains.annotations.NotNull;
-import scala.Function1;
 import scala.Option;
-import scala.collection.JavaConversions;
-import scala.collection.Seq;
 import scala.collection.mutable.ArrayBuffer;
 import scala.collection.mutable.Buffer;
-import scala.runtime.Null$;
 
 import java.net.URI;
 import java.util.Iterator;
-import java.util.Optional;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
@@ -92,7 +83,7 @@ public class FindExistingDecodeProxyResolver implements DecodeProxyResolver
         public DecodeResolvingResult<DecodeReferenceable> visit(@NotNull DecodeNamespace namespace)
         {
             Predicate<DecodeReferenceable> pred = (DecodeReferenceable nameAware) -> {
-                Option<DecodeName> nameOption = nameAware.optionalName();
+                Option<DecodeName> nameOption = nameAware.optionName();
                 return nameOption.isDefined() && nameOption.get().equals(part);
             };
             Option<DecodeReferenceable> resolvedObject = asOption(Stream.concat(asJavaCollection(namespace.subNamespaces()).stream(),
@@ -127,7 +118,7 @@ public class FindExistingDecodeProxyResolver implements DecodeProxyResolver
                 final long finalMinLength = minLength;
                 final long finalMaxLength = maxLength;
                 DecodeArrayType newArrayType = asJavaCollection(namespace.types()).stream().filter(t -> {
-                    Option<DecodeName> nameOption = t.optionalName();
+                    Option<DecodeName> nameOption = t.optionName();
                     return nameOption.isDefined() && nameOption.get().equals(part) && (t instanceof DecodeArrayType);
                 }).findAny().map(DecodeArrayType.class::cast).orElseGet(() -> new DecodeArrayTypeImpl(
                                 Option.apply(part),

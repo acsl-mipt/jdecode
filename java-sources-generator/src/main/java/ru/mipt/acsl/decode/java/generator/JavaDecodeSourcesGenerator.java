@@ -12,7 +12,6 @@ import ru.mipt.acsl.generation.GenerationException;
 import ru.mipt.acsl.generation.Generator;
 import ru.mipt.acsl.generator.java.ast.*;
 import scala.Option;
-import scala.collection.JavaConversions;
 
 import java.io.*;
 import java.util.*;
@@ -86,7 +85,7 @@ public class JavaDecodeSourcesGenerator implements Generator<JavaDecodeSourcesGe
                         DecodeType baseType = subType.baseType().obj();
                         JavaClass javaClass = JavaClass.newBuilder(subType.namespace().fqn().asString(),
                                 // FIXME
-                                classNameFromTypeName(subType.optionalName().get().asString()))
+                                classNameFromTypeName(subType.optionName().get().asString()))
                                 .extendsClass(getJavaTypeForDecodeType(baseType, false))
                                 .build();
                         return Optional.of(javaClass);
@@ -98,7 +97,7 @@ public class JavaDecodeSourcesGenerator implements Generator<JavaDecodeSourcesGe
                     {
                         JavaEnum javaEnum = JavaEnum.newBuilder(enumType.namespace().fqn().asString(),
                                 // FIXME
-                                classNameFromEnumName(enumType.optionalName().get().asString())).build();
+                                classNameFromEnumName(enumType.optionName().get().asString())).build();
                         return Optional.of(javaEnum);
                     }
 
@@ -178,9 +177,9 @@ public class JavaDecodeSourcesGenerator implements Generator<JavaDecodeSourcesGe
     }
 
     @NotNull
-    private String getOrMakeUniqueName(DecodeOptionalNameAware optionalNameAware)
+    private String getOrMakeUniqueName(DecodeOptionNamed optionalNameAware)
     {
-        Option<DecodeName> optionalName = optionalNameAware.optionalName();
+        Option<DecodeName> optionalName = optionalNameAware.optionName();
         return optionalName.isDefined() ? optionalName.get().asString() : makeUniqueName();
     }
 

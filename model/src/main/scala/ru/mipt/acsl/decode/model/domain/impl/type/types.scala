@@ -18,16 +18,16 @@ object DecodeFqnImpl {
   def newFromSource(sourceText: String): DecodeFqn = new DecodeFqnImpl("\\.".r.split(sourceText).map(DecodeNameImpl.newFromSourceName))
 }
 
-abstract class AbstractDecodeOptionalInfoAware(val info: Option[String]) extends DecodeOptionalInfoAware
+abstract class AbstractDecodeOptionalInfoAware(val info: Option[String]) extends DecodeHasOptionInfo
 
-abstract class AbstractDecodeOptionalNameAndOptionalInfoAware(val optionalName: Option[DecodeName], info: Option[String])
+abstract class AbstractDecodeOptionalNameAndOptionalInfoAware(val optionName: Option[DecodeName], info: Option[String])
   extends AbstractDecodeOptionalInfoAware(info) with DecodeOptionalNameAndOptionalInfoAware {
 }
 
 class AbstractDecodeNameAndOptionalInfoAware(val _name: DecodeName, info: Option[String])
-  extends AbstractDecodeOptionalInfoAware(info) with DecodeNameAware {
+  extends AbstractDecodeOptionalInfoAware(info) with DecodeNamed {
   override def name: DecodeName = _name
-  override def optionalName: Option[DecodeName] = Some(_name)
+  override def optionName: Option[DecodeName] = Some(_name)
 }
 
 class AbstractDecodeNameNamespaceOptionalInfoAware(name: DecodeName, var namespace: DecodeNamespace, info: Option[String])
@@ -42,12 +42,11 @@ class DecodeNamespaceImpl(var name: DecodeName, var parent: Option[DecodeNamespa
                           var types: mutable.Buffer[DecodeType] = mutable.Buffer(), var units: mutable.Buffer[DecodeUnit] = mutable.Buffer(),
                           var subNamespaces: mutable.Buffer[DecodeNamespace] = mutable.Buffer(), var components: mutable.Buffer[DecodeComponent] = mutable.Buffer(),
                           var languages: mutable.Buffer[DecodeLanguage] = mutable.Buffer())
-  extends DecodeNameAware with DecodeNamespace {
-  override def optionalName: Option[DecodeName] = Some(name)
+  extends DecodeNamed with DecodeNamespace {
+  override def optionName: Option[DecodeName] = Some(name)
   override def asString: String = name.asString()
 }
 
-// TODO: remove me
 object DecodeNamespaceImpl {
   def apply(name: DecodeName, parent: Option[DecodeNamespace]) = new DecodeNamespaceImpl(name, parent)
 }
@@ -68,16 +67,25 @@ class DecodePrimitiveTypeImpl(name: Option[DecodeName], namespace: DecodeNamespa
 class DecodeAliasTypeImpl(val name: DecodeName, var namespace: DecodeNamespace, val baseType: DecodeMaybeProxy[DecodeType],
                           info: Option[String])
   extends AbstractDecodeOptionalInfoAware(info) with DecodeAliasType with BaseTyped {
-  def optionalName = Some(name)
+  def optionName = Some(name)
 }
 
 class DecodeSubTypeImpl(optionName: Option[DecodeName], namespace: DecodeNamespace, info: Option[String],
                         val baseType: DecodeMaybeProxy[DecodeType])
   extends AbstractDecodeType(optionName, namespace, info) with DecodeSubType
 
+class DecodeEnumConstantImpl(val name: DecodeName, val value: String, info: Option[String])
+  extends AbstractDecodeOptionalInfoAware(info) with DecodeEnumConstant
+
 class DecodeEnumTypeImpl(name: Option[DecodeName], namespace: DecodeNamespace, baseType: DecodeMaybeProxy[DecodeType],
                               info: Option[String], var constants: mutable.Set[DecodeEnumConstant])
   extends AbstractDecodeTypeWithBaseType(name, namespace, info, baseType) with DecodeEnumType {
+}
+
+class DecodeStructFieldImpl(val name: DecodeName, val fieldType: DecodeMaybeProxy[DecodeType],
+                            val unit: Option[DecodeMaybeProxy[DecodeUnit]], info: Option[String])
+  extends AbstractDecodeOptionalInfoAware(info) with DecodeStructField {
+  override def optionName: Option[DecodeName] = Some(name)
 }
 
 class DecodeStructTypeImpl(name: Option[DecodeName], namespace: DecodeNamespace, info: Option[String], var fields: Seq[DecodeStructField])

@@ -53,11 +53,11 @@ class JavaDecodeTypeVisitor(val genericUse: Boolean) extends DecodeTypeVisitor[J
 
   def visit(subType: DecodeSubType) = new JavaTypeApplication(subType.namespace.fqn.asString() + "." + JavaDecodeTypeVisitor.classNameFromTypeName(
       // FIXME: handle Option
-      subType.optionalName.get.asString()))
+      subType.optionName.get.asString()))
 
   def visit(enumType: DecodeEnumType) = new JavaTypeApplication(enumType.namespace.fqn.asString() + "." +
       // FIXME: handle Option
-    JavaDecodeTypeVisitor.classNameFromTypeName(enumType.optionalName.get.asString()))
+    JavaDecodeTypeVisitor.classNameFromTypeName(enumType.optionName.get.asString()))
 
   def visit(arrayType: DecodeArrayType) = new JavaTypeApplication(
       arrayType.namespace.fqn.asString() + "." + JavaDecodeTypeVisitor.classNameFromArrayType(arrayType),
@@ -65,7 +65,7 @@ class JavaDecodeTypeVisitor(val genericUse: Boolean) extends DecodeTypeVisitor[J
 
   def visit(structType: DecodeStructType) = new JavaTypeApplication(structType.namespace.fqn.asString() + "." +
       // FIXME: handle Option
-    JavaDecodeTypeVisitor.classNameFromTypeName(structType.optionalName.get.asString()))
+    JavaDecodeTypeVisitor.classNameFromTypeName(structType.optionName.get.asString()))
 
   def visit(typeAlias: DecodeAliasType) = JavaDecodeTypeVisitor.getJavaTypeForDecodeType(typeAlias.baseType.obj, genericUse)
 

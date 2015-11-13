@@ -8,7 +8,6 @@ import scala.Int;
 import scala.Option;
 import scala.collection.*;
 import scala.collection.Iterator;
-import scala.collection.mutable.Buffer;
 
 import java.sql.*;
 import java.util.*;
@@ -277,7 +276,7 @@ public class DecodeSqlite3Exporter
                 String.format("INSERT INTO %s (namespace_id, name, info) VALUES (?, ?, ?)", TableName.TYPE)))
         {
             insertType.setLong(1, namespaceKeyByNamespaceMap.get(type.namespace()));
-            setStringOrNull(insertType, 2, Option.apply(type.optionalName().isDefined()? type.optionalName().get().asString() : null));
+            setStringOrNull(insertType, 2, Option.apply(type.optionName().isDefined()? type.optionName().get().asString() : null));
             setStringOrNull(insertType, 3, type.info());
             insertType.execute();
             typeKeyByType.put(type, getGeneratedKey(insertType));

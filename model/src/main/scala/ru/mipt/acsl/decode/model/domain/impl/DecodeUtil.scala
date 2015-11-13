@@ -25,8 +25,8 @@ object DecodeUtil {
 
     val types = targetNamespace.types
     namespace.types.foreach(t => {
-        val name = t.optionalName
-        if (types.exists(t2 => t2.optionalName == name))
+        val name = t.optionName
+        if (types.exists(t2 => t2.optionName == name))
           sys.error(s"type name collision '$name'")
         t.namespace = targetNamespace
     })

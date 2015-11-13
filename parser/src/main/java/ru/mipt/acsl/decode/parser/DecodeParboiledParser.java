@@ -123,7 +123,7 @@ public class DecodeParboiledParser extends BaseParser<Object>
         Var<Boolean> defaultVar = new Var<>(false);
         return Sequence("language", EW(), ElementNameAsName(),
                 Optional(EW(), "default", defaultVar.set(true)),
-                push(SimpleDecodeLanguage.newInstance((DecodeName) pop(), namespaceVar.get(), defaultVar.get(),
+                push(new DecodeLanguageImpl((DecodeName) pop(), namespaceVar.get(), defaultVar.get(),
                         Option.apply(infoVar.get()))));
     }
 
@@ -246,8 +246,8 @@ public class DecodeParboiledParser extends BaseParser<Object>
         Var<String> infoVar = new Var<>();
         return Sequence(OptInfoEw(infoVar), TypeUnitApplicationAsProxyType(namespaceVar,
                         unitVar), EW(), ElementNameAsName(),
-                push(ImmutableDecodeStructField
-                        .newInstance((DecodeNameImpl) pop(), getOrThrow((Option<DecodeMaybeProxy<DecodeType>>) pop()),
+                push(new DecodeStructFieldImpl((DecodeNameImpl) pop(),
+                        getOrThrow((Option<DecodeMaybeProxy<DecodeType>>) pop()),
                                 Option.apply(unitVar.get()),
                                 Option.apply(infoVar.get()))));
     }
@@ -445,7 +445,7 @@ public class DecodeParboiledParser extends BaseParser<Object>
     {
         Var<String> infoVar = new Var<>();
         return Sequence(OptInfoEw(infoVar), ParameterElement(), push(match()),
-                        push(ImmutableDecodeMessageParameter.newInstance((String) pop())));
+                        push(new DecodeMessageParameterImpl((String) pop())));
     }
 
     Rule ParameterElement()
@@ -559,7 +559,7 @@ public class DecodeParboiledParser extends BaseParser<Object>
     {
         Var<String> infoVar = new Var<>();
         return Sequence(OptInfoEw(infoVar), ElementNameAsName(), OptEW(), '=', OptEW(), LiteralAsString(),
-                enumConstantsVar.get().add(ImmutableDecodeEnumConstant.newInstanceWrapper((DecodeNameImpl) pop(1),
+                enumConstantsVar.get().add(new DecodeEnumConstantImpl((DecodeNameImpl) pop(1),
                         (String) pop(), Option.apply(infoVar.get()))));
     }
 

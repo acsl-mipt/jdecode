@@ -2,8 +2,6 @@ package ru.mipt.acsl.decode.model.domain.impl.proxy;
 
 import com.google.common.base.Preconditions;
 import org.jetbrains.annotations.NotNull;
-import ru.mipt.acsl.JavaToScala;
-import ru.mipt.acsl.decode.ScalaUtil;
 import ru.mipt.acsl.decode.model.domain.*;
 import ru.mipt.acsl.decode.model.domain.impl.DecodeNameImpl;
 import ru.mipt.acsl.decode.model.domain.impl.DecodeUtils;
@@ -67,7 +65,7 @@ public class ProvidePrimitivesAndNativeTypesDecodeProxyResolver implements Decod
                                             bitLength));
                     Preconditions.checkState(nativeOrPrimitiveType instanceof DecodePrimitiveType);
                     DecodePrimitiveType primitiveType = (DecodePrimitiveType) nativeOrPrimitiveType;
-                    Option<DecodeName> primitiveTypeOptionalName = primitiveType.optionalName();
+                    Option<DecodeName> primitiveTypeOptionalName = primitiveType.optionName();
                     if (primitiveTypeOptionalName.isDefined()
                             && !findTypeForName(namespace.types(), primitiveTypeOptionalName.get()).isPresent())
                     {
@@ -130,7 +128,7 @@ public class ProvidePrimitivesAndNativeTypesDecodeProxyResolver implements Decod
                             }
                             throw new AssertionError();
                         });
-                Option<DecodeName> nativeTypeOptionalName = knownType.optionalName();
+                Option<DecodeName> nativeTypeOptionalName = knownType.optionName();
                 if (nativeTypeOptionalName.isDefined()
                         && !findTypeForName(namespace.types(), nativeTypeOptionalName.get()).isPresent())
                 {
@@ -152,7 +150,7 @@ public class ProvidePrimitivesAndNativeTypesDecodeProxyResolver implements Decod
         while (it.hasNext())
         {
             DecodeType type = it.next();
-            if (name.equals(type.optionalName()))
+            if (name.equals(type.optionName()))
                 return Optional.of(type);
         }
         return Optional.empty();

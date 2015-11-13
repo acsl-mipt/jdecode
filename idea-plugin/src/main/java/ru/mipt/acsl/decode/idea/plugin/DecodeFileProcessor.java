@@ -313,7 +313,7 @@ public class DecodeFileProcessor
         }*/
         return messageParametersDecl.getParameterDeclList().stream()
                 .map(DecodeParameterDecl::getParameterElement)
-                        .map(e -> ImmutableDecodeMessageParameter.newInstance(e.getText()))
+                        .map(e -> new DecodeMessageParameterImpl(e.getText()))
                         .collect(Collectors.toList());
     }
 
@@ -381,7 +381,7 @@ public class DecodeFileProcessor
         {
             DecodeTypeUnitApplication typeUnitApplication = fieldElement.getTypeUnitApplication();
             DecodeUnit unit = typeUnitApplication.getUnit();
-            fields.$plus$eq(ImmutableDecodeStructField.newInstance(DecodeNameImpl.newFromSourceName(
+            fields.$plus$eq(new DecodeStructFieldImpl(DecodeNameImpl.newFromSourceName(
                             fieldElement.getElementNameRule().getText()),
                     makeProxyForTypeApplication(typeUnitApplication.getTypeApplication(), namespace),
                     asOption(Optional.ofNullable(unit).map(u -> proxy(namespace.fqn(),
@@ -462,7 +462,7 @@ public class DecodeFileProcessor
                                           @NotNull DecodeNamespace namespace)
     {
         Set<DecodeEnumConstant> values = enumTypeDecl.getEnumTypeValues().getEnumTypeValueList().stream()
-                .map(child -> ImmutableDecodeEnumConstant.newInstance(
+                .map(child -> new DecodeEnumConstantImpl(
                         DecodeNameImpl.newFromSourceName(child.getElementNameRule().getText()),
                         child.getLiteral().getText(), getText(child.getInfoString()))).collect(Collectors.toSet());
         throw new AssertionError("not implemented");

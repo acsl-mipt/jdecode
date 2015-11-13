@@ -2,6 +2,7 @@ package ru.mipt.acsl.decode.model.provider;
 
 import com.google.common.base.Preconditions;
 import org.jetbrains.annotations.NotNull;
+import ru.mipt.acsl.decode.ScalaUtil;
 import ru.mipt.acsl.decode.model.domain.*;
 import ru.mipt.acsl.decode.model.domain.impl.*;
 import ru.mipt.acsl.decode.model.domain.impl.type.*;
@@ -20,6 +21,8 @@ import java.util.*;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
+
+import static ru.mipt.acsl.decode.ScalaUtil.appendToBuffer;
 
 /**
  * @author Artem Shein
@@ -242,7 +245,7 @@ public class DecodeSqlProvider
                             {
                                 while (messageParametersRs.next())
                                 {
-                                    parameters.$plus$eq(ImmutableDecodeMessageParameter.newInstance(
+                                    appendToBuffer(parameters, new DecodeMessageParameterImpl(
                                             messageParametersRs.getString("name")));
                                 }
                             }
@@ -269,13 +272,13 @@ public class DecodeSqlProvider
                                                 parameters, SimpleDecodeMaybeProxy.object(Preconditions.checkNotNull(typeById.get(messagesSelectRs.getLong("e_event_type_id")))));
                             }
 
-                            messages.$plus$eq(Preconditions.checkNotNull(message, "invalid message"));
+                            appendToBuffer(messages, Preconditions.checkNotNull(message, "invalid message"));
                         }
                     }
                 }
 
                 componentById.put(componentId, component);
-                namespace.components().$plus$eq(component);
+                appendToBuffer(namespace.components(), component);
                 return component;
             }
         }
@@ -360,8 +363,7 @@ public class DecodeSqlProvider
                     Set<DecodeEnumConstant> constants = new HashSet<>();
                     while (constantsRs.next())
                     {
-                        constants.add(ImmutableDecodeEnumConstant
-                                .newInstance(DecodeNameImpl.newFromMangledName(
+                        constants.add(new DecodeEnumConstantImpl(DecodeNameImpl.newFromMangledName(
                                                 Preconditions.checkNotNull(constantsRs.getString(0), "constant name")),
                                         constantsRs.getString(2), Option.apply(constantsRs.getString(1))));
                     }
@@ -394,7 +396,7 @@ public class DecodeSqlProvider
                         long unitId = structFieldsRs.getLong(3);
                         Option<DecodeUnit> unit = structFieldsRs.wasNull() ? Option.<DecodeUnit>empty() : Option.apply(
                                 unitById.get(unitId));
-                        fields.$plus$eq(ImmutableDecodeStructField.newInstance(
+                        fields.$plus$eq(new DecodeStructFieldImpl(
                                 DecodeNameImpl.newFromMangledName(
                                         structFieldsRs.getString(1)),
                                 SimpleDecodeMaybeProxy.object(ensureTypeLoaded(structFieldsRs.getLong(
