@@ -7,7 +7,7 @@ import ru.mipt.acsl.decode.modeling.ResolvingResult
 /**
   * @author Artem Shein
   */
-trait DecodeResolvingResult[T <: DecodeReferenceable] extends ResolvingResult {
+trait DecodeResolvingResult[+T <: DecodeReferenceable] extends ResolvingResult {
   def resolvedObject: Option[T]
 }
 

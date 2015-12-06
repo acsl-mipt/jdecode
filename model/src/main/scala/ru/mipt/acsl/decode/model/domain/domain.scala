@@ -2,20 +2,17 @@ package ru.mipt.acsl.decode.model.domain
 
 import java.net.URI
 
-import ru.mipt.acsl.decode.model.domain.impl.`type`.DecodeBerType
-import ru.mipt.acsl.decode.model.domain.impl.`type`.DecodeOptionalType
-import ru.mipt.acsl.decode.model.domain.impl.`type`.DecodeOrType
-import ru.mipt.acsl.decode.model.domain.impl.`type`.DecodeParameterWalker
-import ru.mipt.acsl.decode.model.domain.impl.`type`.{AbstractDecodeOptionalInfoAware, DecodeFqnImpl}
+import ru.mipt.acsl.decode.model.domain.impl.`type`._
 import ru.mipt.acsl.decode.model.domain.impl.{DecodeComponentWalker, DecodeNameImpl}
 
 import scala.collection.immutable.HashSet
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
-/**
-  * @author Artem Shein
-  */
+object DecodeConstants {
+  val SYSTEM_NAMESPACE_FQN: DecodeFqn = DecodeFqnImpl.newFromSource("decode")
+}
+
 trait DecodeName {
   def asString(): String
 }
