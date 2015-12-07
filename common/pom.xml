@@ -20,6 +20,13 @@
             <groupId>com.jsuereth</groupId>
             <artifactId>scala-arm_${scala.binary.version}</artifactId>
             <version>1.4</version>
+            <exclusions>
+                <exclusion>
+                    <!-- make sure wrong scala version is not pulled in -->
+                    <groupId>org.scala-lang</groupId>
+                    <artifactId>scala-library</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
     </dependencies>
 
