@@ -10,7 +10,6 @@ import scala.collection.mutable.ArrayBuffer
   * @author Artem Shein
   */
 case class DecodeFqnImpl(parts: Seq[DecodeName]) extends DecodeFqn {
-
   def copyDropLast(): DecodeFqn = DecodeFqnImpl(parts.dropRight(1))
 }
 

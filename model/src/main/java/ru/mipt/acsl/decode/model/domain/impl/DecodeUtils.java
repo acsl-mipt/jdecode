@@ -3,21 +3,16 @@ package ru.mipt.acsl.decode.model.domain.impl;
 import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
 import org.jetbrains.annotations.NotNull;
-import ru.mipt.acsl.JavaToScala;
-import ru.mipt.acsl.decode.ScalaUtil;
 import ru.mipt.acsl.decode.model.domain.*;
 import ru.mipt.acsl.decode.model.domain.impl.proxy.SimpleDecodeMaybeProxy;
 import ru.mipt.acsl.decode.model.domain.impl.type.DecodeFqnImpl;
 import ru.mipt.acsl.decode.model.domain.impl.type.DecodeNamespaceImpl;
 import ru.mipt.acsl.decode.model.exporter.ModelExportingException;
 import ru.mipt.acsl.decode.model.provider.ModelImportingException;
-import scala.Function1;
 import scala.Option;
 import scala.collection.Iterator;
 import scala.collection.JavaConversions;
 import scala.collection.Seq;
-import scala.collection.mutable.ArrayBuffer;
-import scala.collection.mutable.Buffer;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
@@ -129,12 +124,6 @@ public final class DecodeUtils
         }).collect(Collectors.toList());
     }
 
-
-
-
-
-
-
     @NotNull
     public static DecodeNamespace newRootDecodeNamespaceForFqn(@NotNull DecodeFqn namespaceFqn)
     {
@@ -230,7 +219,7 @@ public final class DecodeUtils
         if (typeString.endsWith("?"))
         {
             String genericTypes = typeString.substring(0, typeString.length() - 1);
-            typeString = DecodeConstants.SYSTEM_NAMESPACE_FQN.asString() + ".optional<"
+            typeString = DecodeConstants.SYSTEM_NAMESPACE_FQN().asString() + ".optional<"
                     + Stream.of(genericTypes.split(Pattern.quote(",")))
                         .map(DecodeUtils::processQuestionMarks).collect(Collectors.joining(","))
                     + ">";

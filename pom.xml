@@ -27,22 +27,6 @@
         <scala.binary.version>2.11</scala.binary.version>
     </properties>
 
-    <repositories>
-        <repository>
-            <id>scala-tools.org</id>
-            <name>Scala-tools Maven2 Repository</name>
-            <url>http://scala-tools.org/repo-releases</url>
-        </repository>
-    </repositories>
-
-    <pluginRepositories>
-        <pluginRepository>
-            <id>scala-tools.org</id>
-            <name>Scala-tools Maven2 Repository</name>
-            <url>http://scala-tools.org/repo-releases</url>
-        </pluginRepository>
-    </pluginRepositories>
-
     <build>
         <plugins>
             <plugin>
@@ -60,27 +44,19 @@
                 <version>3.2.1</version>
                 <executions>
                     <execution>
-                        <goals>
-                            <goal>compile</goal>
-                            <goal>testCompile</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>build-helper-maven-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <phase>generate-sources</phase>
+                        <id>scala-compile-first</id>
+                        <phase>process-resources</phase>
                         <goals>
                             <goal>add-source</goal>
+                            <goal>compile</goal>
                         </goals>
-                        <configuration>
-                            <sources>
-                                <source>src/main/scala</source>
-                            </sources>
-                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>scala-test-compile</id>
+                        <phase>process-test-resources</phase>
+                        <goals>
+                            <goal>testCompile</goal>
+                        </goals>
                     </execution>
                 </executions>
             </plugin>
@@ -89,9 +65,9 @@
 
     <dependencies>
         <dependency>
-            <groupId>org.codehaus.mojo</groupId>
-            <artifactId>build-helper-maven-plugin</artifactId>
-            <version>1.9.1</version>
+            <groupId>net.alchim31.maven</groupId>
+            <artifactId>scala-maven-plugin</artifactId>
+            <version>3.2.1</version>
         </dependency>
         <dependency>
             <groupId>junit</groupId>
@@ -130,5 +106,7 @@
             <version>1.1.2</version>
         </dependency>
     </dependencies>
+
+
 
 </project>

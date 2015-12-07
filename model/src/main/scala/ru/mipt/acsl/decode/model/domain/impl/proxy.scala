@@ -36,7 +36,7 @@ object DecodeModelResolver {
   def resolveWithTypeCheck[T <: DecodeReferenceable](maybeProxy: DecodeMaybeProxy[T], registry: DecodeRegistry, cls: Class[T]): DecodeResolvingResult[DecodeReferenceable] = {
     // TODO: this is dumb copypaste from Java, Scala can do better i believe
     maybeProxy.resolve(registry, cls) match {
-      case a: DecodeResolvingResult[DecodeReferenceable] => a
+      case a: DecodeResolvingResult[T] => a
       case _ => sys.error("wtf")
     }
   }

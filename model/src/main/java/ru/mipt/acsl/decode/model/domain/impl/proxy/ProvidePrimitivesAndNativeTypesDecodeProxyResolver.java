@@ -42,11 +42,11 @@ public class ProvidePrimitivesAndNativeTypesDecodeProxyResolver implements Decod
                                                                             @NotNull URI uri, @NotNull Class<T> cls)
     {
         List<String> parts = DecodeUtils.getUriParts(uri);
-        Preconditions.checkState(DecodeConstants.SYSTEM_NAMESPACE_FQN.size() == 1, "not implemented");
-        if (parts.size() == 2 && parts.get(0).equals(DecodeConstants.SYSTEM_NAMESPACE_FQN.asString()))
+        Preconditions.checkState(DecodeConstants.SYSTEM_NAMESPACE_FQN().size() == 1, "not implemented");
+        if (parts.size() == 2 && parts.get(0).equals(DecodeConstants.SYSTEM_NAMESPACE_FQN().asString()))
         {
             Option<DecodeNamespace> namespaceOptional = DecodeUtils.getNamespaceByFqn(registry,
-                    DecodeConstants.SYSTEM_NAMESPACE_FQN);
+                    DecodeConstants.SYSTEM_NAMESPACE_FQN());
             Preconditions.checkState(namespaceOptional.isDefined(), "system namespace not found");
             String typeName = parts.get(1);
             // Primitive type
@@ -91,7 +91,7 @@ public class ProvidePrimitivesAndNativeTypesDecodeProxyResolver implements Decod
                                 && !genericArgumentsString.contains("[")
                                 && !genericArgumentsString.contains("]"), "not implemented");
                 Optional<DecodeMaybeProxy<DecodeGenericType>> genericTypeOptional =
-                        (Optional<DecodeMaybeProxy<DecodeGenericType>>) (Optional<?>) DecodeUtils.uriToOptionalMaybeProxyType("/" + DecodeConstants.SYSTEM_NAMESPACE_FQN.asString() + "/" + genericTypeName);
+                        (Optional<DecodeMaybeProxy<DecodeGenericType>>) (Optional<?>) DecodeUtils.uriToOptionalMaybeProxyType("/" + DecodeConstants.SYSTEM_NAMESPACE_FQN().asString() + "/" + genericTypeName);
                 Preconditions.checkState(genericTypeOptional.isPresent(), "invalid generic type");
                 DecodeResolvingResult<?> result = genericTypeOptional.get().resolve(registry, DecodeGenericType.class);
                 if (result.hasError())

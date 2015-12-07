@@ -52,13 +52,13 @@ public class SimpleDecodeMaybeProxy<T extends DecodeReferenceable> extends Eithe
     public static <K extends DecodeReferenceable> DecodeMaybeProxy<K> proxyForSystemTypeString(@NotNull String typeString)
     {
         typeString = DecodeUtils.normalizeSourceTypeString(typeString);
-        return proxyForTypeString(typeString, DecodeConstants.SYSTEM_NAMESPACE_FQN);
+        return proxyForTypeString(typeString, DecodeConstants.SYSTEM_NAMESPACE_FQN());
     }
 
     @NotNull
     public static <K extends DecodeReferenceable> DecodeMaybeProxy<K> proxyForSystem(@NotNull DecodeName decodeName)
     {
-        return proxy(DecodeConstants.SYSTEM_NAMESPACE_FQN, decodeName);
+        return proxy(DecodeConstants.SYSTEM_NAMESPACE_FQN(), decodeName);
     }
 
     @NotNull
