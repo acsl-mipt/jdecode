@@ -5,7 +5,7 @@ import ru.mipt.acsl.decode.model.domain.impl.DecodeNameImpl
 import ru.mipt.acsl.decode.model.domain.impl.`type`.DecodeFqnImpl
 import ru.mipt.acsl.decode.model.domain.impl.`type`.DecodeNamespaceImpl
 import ru.mipt.acsl.decode.model.domain._
-import shapeless.HNil
+import ru.mipt.acsl.decode.model.domain.impl.proxy.SimpleDecodeMaybeProxy
 
 import scala.collection.mutable
 
@@ -15,36 +15,84 @@ class DecodeParboiled2Parser(val input: ParserInput) extends Parser {
   private val alphaNum = alpha ++ CharPredicate.Digit
   private val imports = mutable.HashMap[String, DecodeMaybeProxy[DecodeReferenceable]]()
 
-  def file: Rule1[DecodeNamespace] = rule {
-    run(() => imports.clear()) ~ namespace
-  }
-
-  def namespace: Rule1[DecodeNamespace] = rule { optInfoWs ~ "namespace" ~ ws ~ elementId ~> ((info: Option[String], fqn: DecodeFqn) => newNamespace(info, fqn)) }
-
-  def elementId: Rule1[DecodeFqn] = rule { elementName.+('.') ~> DecodeFqnImpl.apply _ }
-
-  def elementName: Rule1[DecodeName] = rule { optional('^') ~ capture(alpha ~ alphaNum.*) ~> DecodeNameImpl.newFromSourceName _ }
-
-  def stringValue: Rule1[String] = rule { quotedString('"') | quotedString('\'') }
-
-  def ws = rule { oneOrMore(anyOf(" \t\r\n")) }
-
-  def optInfoWs: Rule1[Option[String]] = rule { optional(stringValue ~ ws) }
+  val Ew = rule { anyOf(" \t\r\n").+ }
 
   def quotedString(quoteChar: Char): Rule1[String] = rule {
-    ch(quoteChar) ~ capture(zeroOrMore((!anyOf(quoteChar + "\\") ~ ANY) | ('\\' ~ ANY))) ~ ch(quoteChar)
+    atomic(ch(quoteChar) ~ capture(zeroOrMore(!anyOf(quoteChar + "\\") ~ ANY | '\\' ~ ANY)) ~ ch(quoteChar)).named("stringLiteral")
+  }
+
+  val StringValue: Rule1[String] = rule { quotedString('"') | quotedString('\'') }
+
+  /*
+  Rule ImportPartAsImportPart()
+    {
+        return Sequence(ElementNameAsName(), FirstOf(Sequence(OptEW(), "as", OptEW(), ElementNameAsName(), push(new ImportPartNameAlias((DecodeName) pop(1), (DecodeName) pop()))),
+                push(new ImportPartName((DecodeName) pop()))));
+    }
+  */
+
+  val OptInfoWs: Rule1[Option[String]] = rule { (StringValue ~ Ew).? }
+
+  /*
+  Rule Import()
+    {
+        Var<DecodeFqn> namespaceFqnVar = new Var<>();
+        return Sequence("import", EW(), ElementIdAsFqn(), namespaceFqnVar.set((DecodeFqn) pop()),
+                FirstOf(Sequence('.', OptEW(), '{', OptEW(), ImportPartAsImportPart(),
+                                addImport(namespaceFqnVar, (ImportPart) pop()),
+                                ZeroOrMore(OptEW(), ',', OptEW(), ImportPartAsImportPart(),
+                                        addImport(namespaceFqnVar, (ImportPart) pop())),
+                                Optional(OptEW(), ','), OptEW(), '}'),
+                        addImport(namespaceFqnVar.get())));
+    }
+  */
+
+  val ElementName: Rule1[DecodeName] = rule { '^'.? ~ capture(alpha ~ alphaNum.*) ~> DecodeNameImpl.newFromSourceName _ }
+
+  def ElementId: Rule1[DecodeFqn] = rule { ElementName.+('.') ~> DecodeFqnImpl.apply _ }
+
+  val Namespace: Rule1[DecodeNamespace] = rule { OptInfoWs ~ atomic("namespace") ~ Ew ~ ElementId ~> ((info: Option[String], fqn: DecodeFqn) => newNamespace(info, fqn)) }
+
+  private val ImportPart: Rule1[ImportPart] = rule {
+    ElementName ~ (Ew ~ atomic("as") ~ Ew ~ ElementName ~> ((as: DecodeName, name: DecodeName) => ImportPartNameAlias(name, as))
+      | MATCH ~> (ImportPartName(_: DecodeName)))
+  }
+
+  /*
+
+   boolean addImport(@NotNull Var<DecodeFqn> namespaceFqnVar, @NotNull ImportPart importPart)
+    {
+        Preconditions.checkState(!imports.contains(importPart.getAlias()));
+        imports.put(importPart.getAlias(), SimpleDecodeMaybeProxy.proxy(namespaceFqnVar.get(), importPart.getOriginalName()));
+        return true;
+    }
+  */
+
+  def addImport(fqn: DecodeFqn, importPart: ImportPart) {
+    require(!imports.contains(importPart.alias))
+    imports.put(importPart.alias, SimpleDecodeMaybeProxy.proxy(fqn, importPart.originalName))
+  }
+
+  def addImport(fqn: DecodeFqn) {
+    require(!imports.contains(fqn.last.asString()))
+    imports.put(fqn.last.asString(), SimpleDecodeMaybeProxy.proxy(fqn.copyDropLast(), fqn.last))
+  }
+
+  private var fqn: Option[DecodeFqn] = None
+  val Import: Rule0 = rule {
+    atomic("import") ~ Ew ~ ElementId ~> ((_fqn: DecodeFqn) => { fqn = Some(_fqn) }: Unit) ~
+      ( '.' ~ Ew.? ~ '{' ~!~ Ew.? ~ ImportPart
+        ~ (Ew.? ~ ',' ~ Ew.? ~ ImportPart ~> (addImport(fqn.get, _))).*
+        ~> (addImport(fqn.get, _)) ~ Ew.? ~ ','.? ~ Ew.? ~ '}'
+        | MATCH ~> (() => addImport(fqn.get)))
+  }
+
+  val File: Rule1[DecodeNamespace] = rule {
+    run(() => imports.clear()) ~ Namespace ~ (Ew ~ Import).*
   }
 
   def newNamespace(info: Option[String], fqn: DecodeFqn) = new DecodeNamespaceImpl(new DecodeNameImpl("not implemented"))
   /*
-
-Rule ElementIdAsFqn()
-    {
-        Var<Buffer<DecodeName>> names = new Var<>();
-        return Sequence(ElementNameAsName(), names.set(new ArrayBuffer<>()), append(names.get(), (DecodeName) pop()),
-                ZeroOrMore('.', ElementNameAsName(), append(names.get(), (DecodeName) pop())),
-                push(DecodeFqnImpl.apply(names.get().toSeq())));
-    }
 
     Rule W()
     {
@@ -90,37 +138,12 @@ Rule ElementIdAsFqn()
         return true;
     }
 
-    Rule Import()
-    {
-        Var<DecodeFqn> namespaceFqnVar = new Var<>();
-        return Sequence("import", EW(), ElementIdAsFqn(), namespaceFqnVar.set((DecodeFqn) pop()),
-                FirstOf(Sequence('.', OptEW(), '{', OptEW(), ImportPartAsImportPart(),
-                                addImport(namespaceFqnVar, (ImportPart) pop()),
-                                ZeroOrMore(OptEW(), ',', OptEW(), ImportPartAsImportPart(),
-                                        addImport(namespaceFqnVar, (ImportPart) pop())),
-                                Optional(OptEW(), ','), OptEW(), '}'),
-                        addImport(namespaceFqnVar.get())));
-    }
 
-    boolean addImport(@NotNull Var<DecodeFqn> namespaceFqnVar, @NotNull ImportPart importPart)
-    {
-        Preconditions.checkState(!imports.contains(importPart.getAlias()));
-        imports.put(importPart.getAlias(), SimpleDecodeMaybeProxy.proxy(namespaceFqnVar.get(), importPart.getOriginalName()));
-        return true;
-    }
 
-    boolean addImport(@NotNull DecodeFqn fqn)
-    {
-        Preconditions.checkState(!imports.contains(fqn.last().asString()));
-        imports.put(fqn.last().asString(), SimpleDecodeMaybeProxy.proxy(fqn.copyDropLast(), fqn.last()));
-        return true;
-    }
 
-    Rule ImportPartAsImportPart()
-    {
-        return Sequence(ElementNameAsName(), FirstOf(Sequence(OptEW(), "as", OptEW(), ElementNameAsName(), push(new ImportPartNameAlias((DecodeName) pop(1), (DecodeName) pop()))),
-                push(new ImportPartName((DecodeName) pop()))));
-    }
+
+
+
 
     Rule LanguageAsLanguage(@NotNull Var<DecodeNamespace> namespaceVar, @NotNull Var<String> infoVar)
     {
@@ -568,65 +591,19 @@ Rule ElementIdAsFqn()
         return OneOrMore(CharRange('0', '9'));
     }
 
-    private interface ImportPart
-    {
-        @NotNull
-        String getAlias();
-        @NotNull
-        DecodeName getOriginalName();
-    }
 
-    static class ImportPartName implements ImportPart
-    {
-        @NotNull
-        private final DecodeName name;
-
-        public ImportPartName(@NotNull DecodeName name)
-        {
-            this.name = name;
-        }
-
-        @NotNull
-        @Override
-        public String getAlias()
-        {
-            return name.asString();
-        }
-
-        @NotNull
-        @Override
-        public DecodeName getOriginalName()
-        {
-            return name;
-        }
-    }
-
-    static class ImportPartNameAlias implements ImportPart
-    {
-        @NotNull
-        private final DecodeName name;
-        @NotNull
-        private final DecodeName alias;
-
-        public ImportPartNameAlias(@NotNull DecodeName name, @NotNull DecodeName alias)
-        {
-            this.name = name;
-            this.alias = alias;
-        }
-
-        @NotNull
-        @Override
-        public String getAlias()
-        {
-            return alias.asString();
-        }
-
-        @NotNull
-        @Override
-        public DecodeName getOriginalName()
-        {
-            return name;
-        }
-    }
    */
+}
+
+private trait ImportPart {
+  def alias: String
+  def originalName: DecodeName
+}
+
+private case class ImportPartName(originalName: DecodeName) extends ImportPart {
+  def alias: String = originalName.asString()
+}
+
+private case class ImportPartNameAlias(originalName: DecodeName, _alias: DecodeName) extends ImportPart {
+  def alias: String = _alias.asString()
 }
