@@ -183,9 +183,9 @@ class CDecodeSourcesGenerator(val config: CDecodeGeneratorConfiguration) extends
   private def collectNsForType(t: DecodeType, set: mutable.Set[DecodeNamespace]) {
     set += t.namespace
     t match {
-      case baseTyped: BaseTyped => collectNsForType(baseTyped.baseType, set)
-      case structType: DecodeStructType => structType.fields.foreach(f => collectNsForType(f.fieldType, set))
-      case genericTypeSpecialized: DecodeGenericTypeSpecialized => genericTypeSpecialized.genericTypeArguments
+      case t: BaseTyped => collectNsForType(t.baseType, set)
+      case t: DecodeStructType => t.fields.foreach(f => collectNsForType(f.fieldType, set))
+      case t: DecodeGenericTypeSpecialized => t.genericTypeArguments
         .filter(_.isDefined).foreach(a => collectNsForType(a.get, set))
       case _ =>
     }
