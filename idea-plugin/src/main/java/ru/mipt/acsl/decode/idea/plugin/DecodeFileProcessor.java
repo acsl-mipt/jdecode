@@ -7,8 +7,6 @@ import com.intellij.notification.Notifications;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiWhiteSpace;
 import org.apache.commons.lang.NotImplementedException;
-import ru.mipt.acsl.JavaToScala;
-import ru.mipt.acsl.ScalaToJava;
 import ru.mipt.acsl.decode.model.domain.*;
 import ru.mipt.acsl.decode.model.domain.impl.*;
 import ru.mipt.acsl.decode.model.domain.impl.type.*;
@@ -28,7 +26,7 @@ import java.util.stream.Collectors;
 
 import static ru.mipt.acsl.JavaToScala.asOption;
 import static ru.mipt.acsl.ScalaToJava.asOptional;
-import static ru.mipt.acsl.decode.model.domain.impl.proxy.SimpleDecodeMaybeProxy.object;
+import static ru.mipt.acsl.decode.model.domain.impl.proxy.SimpleDecodeMaybeProxy.obj;
 import static ru.mipt.acsl.decode.model.domain.impl.proxy.SimpleDecodeMaybeProxy.proxy;
 import static ru.mipt.acsl.decode.model.domain.impl.proxy.SimpleDecodeMaybeProxy.proxyForSystem;
 
@@ -330,11 +328,11 @@ public class DecodeFileProcessor
         }
         if (enumType != null)
         {
-            return object(newEnumType(name, enumType, namespace));
+            return obj(newEnumType(name, enumType, namespace));
         }
         if (structType != null)
         {
-            return object(newStructType(name, structType, namespace));
+            return obj(newStructType(name, structType, namespace));
         }
         throw new AssertionError();
     }

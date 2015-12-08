@@ -43,7 +43,7 @@ class DecodeNamespaceImpl(var name: DecodeName, var parent: Option[DecodeNamespa
                           var languages: mutable.Buffer[DecodeLanguage] = mutable.Buffer())
   extends DecodeNamed with DecodeNamespace {
   override def optionName: Option[DecodeName] = Some(name)
-  override def asString: String = name.asString()
+  override def asString: String = name.asMangledString
 }
 
 object DecodeNamespaceImpl {
@@ -81,8 +81,10 @@ class DecodeEnumTypeImpl(name: Option[DecodeName], namespace: DecodeNamespace, b
   extends AbstractDecodeTypeWithBaseType(name, namespace, info, baseType) with DecodeEnumType {
 }
 
-class DecodeStructFieldImpl(val name: DecodeName, val fieldType: DecodeMaybeProxy[DecodeType],
-                            val unit: Option[DecodeMaybeProxy[DecodeUnit]], info: Option[String])
+class DecodeTypeUnitApplicationImpl(val t: DecodeMaybeProxy[DecodeType], val unit: Option[DecodeMaybeProxy[DecodeUnit]])
+  extends DecodeTypeUnitApplication
+
+class DecodeStructFieldImpl(val name: DecodeName, val typeUnit: DecodeTypeUnitApplication, info: Option[String])
   extends AbstractDecodeOptionalInfoAware(info) with DecodeStructField {
   override def optionName: Option[DecodeName] = Some(name)
 }
@@ -141,9 +143,10 @@ class DecodeCommandArgumentImpl(name: DecodeName, info: Option[String], val argT
   extends AbstractDecodeNameAndOptionalInfoAware(name, info) with DecodeCommandArgument
 
 class DecodeComponentImpl(name: DecodeName, namespace: DecodeNamespace, var id: Option[Int],
-                            var baseType: Option[DecodeMaybeProxy[DecodeStructType]], info: Option[String],
-                            var subComponents: Seq[DecodeComponentRef], var commands: Seq[DecodeCommand],
-                            var messages: Seq[DecodeMessage])
+                          var baseType: Option[DecodeMaybeProxy[DecodeStructType]], info: Option[String],
+                          var subComponents: Seq[DecodeComponentRef],
+                          var commands: mutable.Buffer[DecodeCommand] = mutable.Buffer(),
+                          var messages: mutable.Buffer[DecodeMessage] = mutable.Buffer())
   extends AbstractDecodeNameNamespaceOptionalInfoAware(name, namespace, info) with DecodeComponent
 
 class DecodeParameterWalker(var parameter: DecodeMessageParameter)

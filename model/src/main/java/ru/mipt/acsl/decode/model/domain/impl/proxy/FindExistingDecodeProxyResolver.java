@@ -50,7 +50,7 @@ public class FindExistingDecodeProxyResolver implements DecodeProxyResolver
             {
                 current = SimpleDecodeResolvingResult.newInstance(Option.apply(
                         asJavaCollection(registry.rootNamespaces()).stream()
-                        .filter(n -> n.name().asString().equals(part)).findAny()
+                        .filter(n -> n.name().asMangledString().equals(part)).findAny()
                         .map(DecodeReferenceable.class::cast).orElse(null)));
             }
             if (!current.resolvedObject().isDefined())
@@ -94,7 +94,7 @@ public class FindExistingDecodeProxyResolver implements DecodeProxyResolver
             {
                 return SimpleDecodeResolvingResult.newInstance(resolvedObject);
             }
-            String partString = part.asString();
+            String partString = part.asMangledString();
             if (partString.startsWith("["))
             {
                 Preconditions.checkState(partString.endsWith("]"), INVALID_MANGLED_ARRAY_NAME);

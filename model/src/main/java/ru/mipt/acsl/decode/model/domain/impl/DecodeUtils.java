@@ -48,7 +48,7 @@ public final class DecodeUtils
         for (String namespaceName : namespaceFqn.split(Pattern.quote(".")))
         {
             final DecodeNamespace parentNamespace = namespace;
-            namespace = namespaces.stream().filter(ns -> ns.name().asString().equals(namespaceName)).findAny().orElseGet(() -> {
+            namespace = namespaces.stream().filter(ns -> ns.name().asMangledString().equals(namespaceName)).findAny().orElseGet(() -> {
                 DecodeNamespace newNamespace = DecodeNamespaceImpl.apply(
                         DecodeNameImpl.newFromMangledName(namespaceName),
                         Option.apply(parentNamespace));
@@ -96,7 +96,7 @@ public final class DecodeUtils
         List<DecodeName> namespaceNameParts = new ArrayList<>(asJavaCollection(namespaceFqn.parts()));
         namespaceNameParts.add(name);
             return URI.create("/" + String.join("/",
-                    namespaceNameParts.stream().map(DecodeName::asString).map(s -> {
+                    namespaceNameParts.stream().map(DecodeName::asMangledString).map(s -> {
                         try
                         {
                             return URLEncoder.encode(s, Charsets.UTF_8.name());
@@ -194,7 +194,7 @@ public final class DecodeUtils
         try
         {
             return URI.create("/" + URLEncoder
-                    .encode(String.join("/", namespaceNameParts.stream().map(DecodeName::asString)
+                    .encode(String.join("/", namespaceNameParts.stream().map(DecodeName::asMangledString)
                             .map(s -> {
                                 try
                                 {
@@ -219,7 +219,7 @@ public final class DecodeUtils
         if (typeString.endsWith("?"))
         {
             String genericTypes = typeString.substring(0, typeString.length() - 1);
-            typeString = DecodeConstants.SYSTEM_NAMESPACE_FQN().asString() + ".optional<"
+            typeString = DecodeConstants.SYSTEM_NAMESPACE_FQN().asMangledString() + ".optional<"
                     + Stream.of(genericTypes.split(Pattern.quote(",")))
                         .map(DecodeUtils::processQuestionMarks).collect(Collectors.joining(","))
                     + ">";

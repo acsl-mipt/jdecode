@@ -72,16 +72,17 @@ public class DecodeTypeResolveVisitor implements DecodeTypeVisitor<Void>
         while (iterator.hasNext())
         {
             DecodeStructField field = iterator.next();
+            DecodeTypeUnitApplication typeUnit = field.typeUnit();
             appendToBuffer(resolvingResultList,
-                    DecodeModelResolver.resolveWithTypeCheck(field.fieldType(), registry, DecodeType.class));
-            if (!field.fieldType().isProxy())
+                    DecodeModelResolver.resolveWithTypeCheck(typeUnit.t(), registry, DecodeType.class));
+            if (!typeUnit.t().isProxy())
             {
-                appendToBuffer(resolvingResultList, DecodeModelResolver.resolve(field.fieldType().obj(), registry));
+                appendToBuffer(resolvingResultList, DecodeModelResolver.resolve(typeUnit.t().obj(), registry));
             }
-            if (field.unit().isDefined())
+            if (typeUnit.unit().isDefined())
             {
                 appendToBuffer(resolvingResultList,
-                        DecodeModelResolver.resolveWithTypeCheck(field.unit().get(), registry, DecodeUnit.class));
+                        DecodeModelResolver.resolveWithTypeCheck(typeUnit.unit().get(), registry, DecodeUnit.class));
             }
         }
         return null;

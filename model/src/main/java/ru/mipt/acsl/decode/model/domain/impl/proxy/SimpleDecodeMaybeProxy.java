@@ -70,7 +70,7 @@ public class SimpleDecodeMaybeProxy<T extends DecodeReferenceable> extends Eithe
     }
 
     @NotNull
-    public static <K extends DecodeReferenceable> DecodeMaybeProxy<K> object(@NotNull K object)
+    public static <K extends DecodeReferenceable> DecodeMaybeProxy<K> obj(@NotNull K object)
     {
         return new SimpleDecodeMaybeProxy<>(object);
     }
@@ -79,7 +79,7 @@ public class SimpleDecodeMaybeProxy<T extends DecodeReferenceable> extends Eithe
     public static <T extends DecodeReferenceable> DecodeMaybeProxy<T> proxyForTypeUriString(@NotNull String typeUriString,
                                                                                             @NotNull DecodeFqn defaultNsFqn)
     {
-        return new SimpleDecodeMaybeProxy<T>(DecodeProxyImpl.newInstanceFromTypeUriString(typeUriString, defaultNsFqn));
+        return new SimpleDecodeMaybeProxy<>(DecodeProxyImpl.newInstanceFromTypeUriString(typeUriString, defaultNsFqn));
     }
 
     @Override

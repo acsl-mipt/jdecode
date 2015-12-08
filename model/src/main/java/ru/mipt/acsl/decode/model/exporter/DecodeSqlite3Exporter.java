@@ -110,7 +110,7 @@ public class DecodeSqlite3Exporter
                 String.format("INSERT INTO %s (namespace_id, name, base_type_id, info) VALUES (?, ?, ?, ?)", TableName.COMPONENT)))
         {
             insertComponent.setLong(1, namespaceKeyByNamespaceMap.get(component.namespace()));
-            insertComponent.setString(2, component.name().asString());
+            insertComponent.setString(2, component.name().asMangledString());
             if (component.baseType().isDefined())
             {
                 insertType(component.baseType().get().obj());
@@ -153,7 +153,7 @@ public class DecodeSqlite3Exporter
                                 TableName.COMMAND)))
                 {
                     insertCommand.setLong(1, componentKey);
-                    insertCommand.setString(2, command.name().asString());
+                    insertCommand.setString(2, command.name().asMangledString());
                     setLongOrNull(insertCommand, 3, Option.apply(command.id().isDefined() ? (long) command.id().get() : null));
                     setStringOrNull(insertCommand, 4, command.info());
                     insertCommand.execute();
@@ -171,7 +171,7 @@ public class DecodeSqlite3Exporter
                     {
                         insertArgument.setLong(1, commandKey);
                         insertArgument.setLong(2, index++);
-                        insertArgument.setString(3, argument.name().asString());
+                        insertArgument.setString(3, argument.name().asMangledString());
                         insertArgument.setLong(4, typeKeyByType.get(argument.argType().obj()));
                         setUnit(insertArgument, 5, argument.unit());
                         setStringOrNull(insertArgument, 6, argument.info());
@@ -190,7 +190,7 @@ public class DecodeSqlite3Exporter
                 {
                     setIntOrNull(insertMessage, 1, Option.apply(message.id().isDefined()? (Int) message.id().get() : null));
                     insertMessage.setLong(2, componentKey);
-                    insertMessage.setString(3, message.name().asString());
+                    insertMessage.setString(3, message.name().asMangledString());
                     setStringOrNull(insertMessage, 4, message.info());
                     insertMessage.execute();
                     messageKey = getGeneratedKey(insertMessage);
@@ -276,7 +276,7 @@ public class DecodeSqlite3Exporter
                 String.format("INSERT INTO %s (namespace_id, name, info) VALUES (?, ?, ?)", TableName.TYPE)))
         {
             insertType.setLong(1, namespaceKeyByNamespaceMap.get(type.namespace()));
-            setStringOrNull(insertType, 2, Option.apply(type.optionName().isDefined()? type.optionName().get().asString() : null));
+            setStringOrNull(insertType, 2, Option.apply(type.optionName().isDefined()? type.optionName().get().asMangledString() : null));
             setStringOrNull(insertType, 3, type.info());
             insertType.execute();
             typeKeyByType.put(type, getGeneratedKey(insertType));
@@ -315,7 +315,7 @@ public class DecodeSqlite3Exporter
                 String.format("INSERT INTO %s (namespace_id, name, display) VALUES (?, ?, ?)", TableName.UNIT)))
         {
             insertUnit.setLong(1, namespaceKeyByNamespaceMap.get(unit.namespace()));
-            insertUnit.setString(2, unit.name().asString());
+            insertUnit.setString(2, unit.name().asMangledString());
             if (unit.display().isDefined())
             {
                 insertUnit.setString(3, unit.display().get());
@@ -339,7 +339,7 @@ public class DecodeSqlite3Exporter
         try(PreparedStatement insertNamespace = connection.prepareStatement(
                 String.format("INSERT INTO %s (name) VALUES (?)", TableName.NAMESPACE)))
         {
-            insertNamespace.setString(1, namespace.name().asString());
+            insertNamespace.setString(1, namespace.name().asMangledString());
             insertNamespace.execute();
             long generatedKey = getGeneratedKey(insertNamespace);
             namespaceKeyByNamespaceMap.put(namespace, generatedKey);
@@ -438,7 +438,7 @@ public class DecodeSqlite3Exporter
                     {
                         DecodeEnumConstant constant = constIt.next();
                         insertEnumConstant.setLong(1, enumKey);
-                        insertEnumConstant.setString(2, constant.name().asString());
+                        insertEnumConstant.setString(2, constant.name().asMangledString());
                         insertEnumConstant.setString(3, constant.value());
                         setStringOrNull(insertEnumConstant, 4, constant.info());
                         insertEnumConstant.execute();
@@ -492,13 +492,15 @@ public class DecodeSqlite3Exporter
                     while (fIt.hasNext())
                     {
                         DecodeStructField field = fIt.next();
+                        DecodeTypeUnitApplication typeUnit = field.typeUnit();
                         insertField.setLong(1, structKey);
                         insertField.setLong(2, index++);
-                        insertField.setString(3, field.name().asString());
-                        insertType(field.fieldType().obj());
-                        insertField.setLong(4, typeKeyByType.get(field.fieldType().obj()));
+                        insertField.setString(3, field.name().asMangledString());
+                        insertType(typeUnit.t().obj());
+                        insertField.setLong(4, typeKeyByType.get(typeUnit.t().obj()));
                         insertField.setLong(5, namespaceKeyByNamespaceMap.get(structType.namespace()));
-                        setStringOrNull(insertField, 6, Option.apply(field.unit().isDefined() ? field.unit().get().obj().name().asString() : null));
+                        setStringOrNull(insertField, 6, Option.apply(typeUnit.unit().isDefined()
+                                ? typeUnit.unit().get().obj().name().asMangledString() : null));
                         setStringOrNull(insertField, 7, field.info());
                         insertField.execute();
                     }

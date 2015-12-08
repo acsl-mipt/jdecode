@@ -14,7 +14,7 @@ object DecodeConstants {
 }
 
 trait DecodeName {
-  def asString(): String
+  def asMangledString: String
 }
 
 object DecodeName {
@@ -47,7 +47,7 @@ trait DecodeHasOptionInfo {
 trait DecodeFqn {
   def parts: Seq[DecodeName]
 
-  def asString(): String = parts.map(_.asString()).mkString(".")
+  def asMangledString(): String = parts.map(_.asMangledString).mkString(".")
 
   def last: DecodeName = parts.last
 
@@ -207,10 +207,13 @@ trait DecodeArrayType extends DecodeType with BaseTyped {
   def accept[T](visitor: DecodeTypeVisitor[T]): T = visitor.visit(this)
 }
 
-trait DecodeStructField extends DecodeNamed with DecodeHasOptionInfo {
-  def fieldType: DecodeMaybeProxy[DecodeType]
-
+trait DecodeTypeUnitApplication {
+  def t: DecodeMaybeProxy[DecodeType]
   def unit: Option[DecodeMaybeProxy[DecodeUnit]]
+}
+
+trait DecodeStructField extends DecodeNamed with DecodeHasOptionInfo {
+  def typeUnit: DecodeTypeUnitApplication
 }
 
 trait DecodeStructType extends DecodeType {
@@ -286,7 +289,7 @@ trait DecodeComponentRef {
   def alias: Option[String]
 }
 
-trait DecodeMessageParameter {
+trait DecodeMessageParameter extends DecodeHasOptionInfo {
   def value: String
 }
 

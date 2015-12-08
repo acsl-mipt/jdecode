@@ -182,7 +182,7 @@ public class DecodeParboiledParser extends BaseParser<Object>
                         typeVar.set((DecodeStructType) pop()), append(namespaceVar.get().types(), typeVar.get())),
                 componentVar.set(new DecodeComponentImpl((DecodeNameImpl) pop(), namespaceVar.get(), Option.apply(idVar.get()),
                                 typeVar.isSet()
-                                        ? Option.apply(SimpleDecodeMaybeProxy.object(typeVar.get()))
+                                        ? Option.apply(SimpleDecodeMaybeProxy.obj(typeVar.get()))
                                         : Option.<DecodeMaybeProxy<DecodeStructType>>empty(), Option.apply(infoVar.get()),
                                 subComponentsVar.get(), commandsVar.get(), messagesVar.get())),
                 ZeroOrMore(OptEW(),
@@ -300,9 +300,9 @@ public class DecodeParboiledParser extends BaseParser<Object>
     DecodeMaybeProxy<DecodeReferenceable> proxyForTypeFqn(@NotNull DecodeNamespace namespace,
                                                           @NotNull DecodeFqn typeFqn)
     {
-        if (typeFqn.size() == 1 && imports.contains(typeFqn.last().asString()))
+        if (typeFqn.size() == 1 && imports.contains(typeFqn.last().asMangledString()))
         {
-            return imports.get(typeFqn.last().asString()).get();
+            return imports.get(typeFqn.last().asMangledString()).get();
         }
         return proxyDefaultNamespace(typeFqn, namespace);
     }
@@ -483,10 +483,10 @@ public class DecodeParboiledParser extends BaseParser<Object>
     boolean addSubcomponent(@NotNull Buffer<DecodeComponentRef> componentRefs, @NotNull DecodeFqn fqn,
                             @NotNull DecodeNamespace namespace)
     {
-        String alias = fqn.asString();
+        String alias = fqn.asMangledString();
         if (fqn.size() == 1 && imports.contains(alias))
         {
-            appendToBuffer(componentRefs, new DecodeComponentRefImpl((DecodeMaybeProxy<DecodeComponent>) (DecodeMaybeProxy<?>) Preconditions.checkNotNull(imports.get(
+            appendToBuffer(componentRefs, new DecodeComponentRefImpl((DecodeMaybeProxy<DecodeComponent>) Preconditions.checkNotNull(imports.get(
                     alias)), Some.apply(alias)));
         }
         else

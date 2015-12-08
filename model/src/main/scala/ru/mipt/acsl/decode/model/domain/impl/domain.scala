@@ -14,7 +14,7 @@ import scala.collection.mutable
   * @author Artem Shein
   */
 case class DecodeNameImpl(value: String) extends DecodeName {
-  override def asString(): String = value
+  override def asMangledString: String = value
 }
 
 object DecodeNameImpl {
@@ -41,11 +41,11 @@ class TokenWalker(val token: Either[String, Int]) extends DecodeTypeVisitor[Opti
     if (token.isLeft)
       sys.error("invalid token")
     val name = token.left
-    Some(structType.fields.find(_.name.asString == name)
+    Some(structType.fields.find(_.name.asMangledString == name)
       .getOrElse({
       throw new AssertionError(
         String.format("Field '%s' not found in struct '%s'", name, structType))
-    }).fieldType.obj)
+    }).typeUnit.t.obj)
   }
 
   override def visit(typeAlias: DecodeAliasType) =  typeAlias.baseType.obj.accept(this)
@@ -118,7 +118,7 @@ class DecodeComponentWalker(var component: DecodeComponent) {
       val stringToken = token.left
       val subComponent = component.subComponents.find(cr => {
         val alias = cr.alias
-        (alias.isDefined && alias.get == stringToken.get) | cr.component.obj.name.asString() == stringToken.get
+        (alias.isDefined && alias.get == stringToken.get) | cr.component.obj.name.asMangledString == stringToken.get
       })
       if (subComponent.isDefined)
       {
@@ -146,4 +146,4 @@ class DecodeLanguageImpl(name: DecodeName, nameespace: DecodeNamespace, val isDe
   override def accept[T](visitor: DecodeReferenceableVisitor[T]): T = visitor.visit(this)
 }
 
-class DecodeMessageParameterImpl(val value: String) extends DecodeMessageParameter
+class DecodeMessageParameterImpl(val value: String, val info: Option[String] = None) extends DecodeMessageParameter

@@ -18,7 +18,7 @@ class DecodeProxyImpl[T <: DecodeReferenceable](val uri: URI) extends DecodeProx
 
 object DecodeProxyImpl {
   def newInstanceFromTypeUriString[T <: DecodeReferenceable](typeUriString: String, defaultNsFqn: DecodeFqn):  DecodeProxy[T] =
-    apply(URI.create(if (typeUriString.startsWith("/")) typeUriString else "/" + defaultNsFqn.parts.map(_.asString()).mkString("/") + typeUriString))
+    apply(URI.create(if (typeUriString.startsWith("/")) typeUriString else "/" + defaultNsFqn.parts.map(_.asMangledString).mkString("/") + typeUriString))
 
 
   def apply[T <: DecodeReferenceable](uri: URI): DecodeProxy[T] = new DecodeProxyImpl[T](uri)

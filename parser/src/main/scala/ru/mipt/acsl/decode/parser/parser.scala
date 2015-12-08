@@ -1,7 +1,17 @@
 package ru.mipt.acsl.decode.parser
 
 import org.parboiled2._
-import ru.mipt.acsl.decode.model.domain.impl.DecodeNameImpl
+import ru.mipt.acsl.decode.model.domain.impl._
+import ru.mipt.acsl.decode.model.domain.impl.`type`.DecodeAliasTypeImpl
+import ru.mipt.acsl.decode.model.domain.impl.`type`.DecodeCommandArgumentImpl
+import ru.mipt.acsl.decode.model.domain.impl.`type`.DecodeComponentImpl
+import ru.mipt.acsl.decode.model.domain.impl.`type`.DecodeEnumConstantImpl
+import ru.mipt.acsl.decode.model.domain.impl.`type`.DecodeEnumTypeImpl
+import ru.mipt.acsl.decode.model.domain.impl.`type`.DecodeStructFieldImpl
+import ru.mipt.acsl.decode.model.domain.impl.`type`.DecodeStructTypeImpl
+import ru.mipt.acsl.decode.model.domain.impl.`type`.DecodeSubTypeImpl
+import ru.mipt.acsl.decode.model.domain.impl.`type`.DecodeTypeUnitApplicationImpl
+import ru.mipt.acsl.decode.model.domain.impl.`type`.DecodeUnitImpl
 import ru.mipt.acsl.decode.model.domain.impl.`type`.DecodeFqnImpl
 import ru.mipt.acsl.decode.model.domain.impl.`type`.DecodeNamespaceImpl
 import ru.mipt.acsl.decode.model.domain._
@@ -23,50 +33,25 @@ class DecodeParboiled2Parser(val input: ParserInput) extends Parser {
 
   val StringValue: Rule1[String] = rule { quotedString('"') | quotedString('\'') }
 
-  /*
-  Rule ImportPartAsImportPart()
-    {
-        return Sequence(ElementNameAsName(), FirstOf(Sequence(OptEW(), "as", OptEW(), ElementNameAsName(), push(new ImportPartNameAlias((DecodeName) pop(1), (DecodeName) pop()))),
-                push(new ImportPartName((DecodeName) pop()))));
-    }
-  */
+  val OptInfoEw: Rule1[Option[String]] = rule { (StringValue ~ Ew).? }
 
-  val OptInfoWs: Rule1[Option[String]] = rule { (StringValue ~ Ew).? }
+  val ElementNameLiteral: Rule0 = rule { '^'.? ~ alpha ~ alphaNum.* }
 
-  /*
-  Rule Import()
-    {
-        Var<DecodeFqn> namespaceFqnVar = new Var<>();
-        return Sequence("import", EW(), ElementIdAsFqn(), namespaceFqnVar.set((DecodeFqn) pop()),
-                FirstOf(Sequence('.', OptEW(), '{', OptEW(), ImportPartAsImportPart(),
-                                addImport(namespaceFqnVar, (ImportPart) pop()),
-                                ZeroOrMore(OptEW(), ',', OptEW(), ImportPartAsImportPart(),
-                                        addImport(namespaceFqnVar, (ImportPart) pop())),
-                                Optional(OptEW(), ','), OptEW(), '}'),
-                        addImport(namespaceFqnVar.get())));
-    }
-  */
+  val ElementName: Rule1[DecodeName] = rule { capture(ElementNameLiteral) ~> DecodeNameImpl.newFromSourceName _ }
 
-  val ElementName: Rule1[DecodeName] = rule { '^'.? ~ capture(alpha ~ alphaNum.*) ~> DecodeNameImpl.newFromSourceName _ }
+  val ElementIdLiteral: Rule0 = rule { ElementNameLiteral.+('.') }
 
-  def ElementId: Rule1[DecodeFqn] = rule { ElementName.+('.') ~> DecodeFqnImpl.apply _ }
+  val ElementId: Rule1[DecodeFqn] = rule { ElementName.+('.') ~> DecodeFqnImpl.apply _ }
 
-  val Namespace: Rule1[DecodeNamespace] = rule { OptInfoWs ~ atomic("namespace") ~ Ew ~ ElementId ~> ((info: Option[String], fqn: DecodeFqn) => newNamespace(info, fqn)) }
+  val Namespace: Rule1[DecodeNamespace] = rule {
+    OptInfoEw ~ atomic("namespace") ~ Ew ~ ElementId ~>
+      ((info: Option[String], fqn: DecodeFqn) => newNamespace(info, fqn))
+  }
 
   private val ImportPart: Rule1[ImportPart] = rule {
     ElementName ~ (Ew ~ atomic("as") ~ Ew ~ ElementName ~> ((as: DecodeName, name: DecodeName) => ImportPartNameAlias(name, as))
       | MATCH ~> (ImportPartName(_: DecodeName)))
   }
-
-  /*
-
-   boolean addImport(@NotNull Var<DecodeFqn> namespaceFqnVar, @NotNull ImportPart importPart)
-    {
-        Preconditions.checkState(!imports.contains(importPart.getAlias()));
-        imports.put(importPart.getAlias(), SimpleDecodeMaybeProxy.proxy(namespaceFqnVar.get(), importPart.getOriginalName()));
-        return true;
-    }
-  */
 
   def addImport(fqn: DecodeFqn, importPart: ImportPart) {
     require(!imports.contains(importPart.alias))
@@ -74,114 +59,62 @@ class DecodeParboiled2Parser(val input: ParserInput) extends Parser {
   }
 
   def addImport(fqn: DecodeFqn) {
-    require(!imports.contains(fqn.last.asString()))
-    imports.put(fqn.last.asString(), SimpleDecodeMaybeProxy.proxy(fqn.copyDropLast(), fqn.last))
+    require(!imports.contains(fqn.last.asMangledString))
+    imports.put(fqn.last.asMangledString, SimpleDecodeMaybeProxy.proxy(fqn.copyDropLast(), fqn.last))
   }
 
   private var fqn: Option[DecodeFqn] = None
   val Import: Rule0 = rule {
     atomic("import") ~ Ew ~ ElementId ~> ((_fqn: DecodeFqn) => { fqn = Some(_fqn) }: Unit) ~
-      ( '.' ~ Ew.? ~ '{' ~!~ Ew.? ~ ImportPart
-        ~ (Ew.? ~ ',' ~ Ew.? ~ ImportPart ~> (addImport(fqn.get, _))).*
-        ~> (addImport(fqn.get, _)) ~ Ew.? ~ ','.? ~ Ew.? ~ '}'
+      ('.' ~ Ew.? ~ '{' ~ Ew.? ~ ImportPart.+(Ew.? ~ ',' ~ Ew.?)
+        ~> ((parts: Seq[ImportPart]) => parts.foreach(addImport(fqn.get, _)))
+        ~ Ew.? ~ ','.? ~ Ew.? ~ '}'
         | MATCH ~> (() => addImport(fqn.get)))
   }
 
-  val File: Rule1[DecodeNamespace] = rule {
-    run(() => imports.clear()) ~ Namespace ~ (Ew ~ Import).*
+  val NonNegativeIntegerLiteral : Rule0 = rule { CharPredicate.Digit.+ }
+
+  val NonNegativeIntegerAsInt: Rule1[Int] = rule { capture(NonNegativeIntegerLiteral) ~> (Integer.parseInt(_: String, 10)) }
+
+  private var ns: Option[DecodeNamespace] = None
+
+  def makeNewSystemName(name: DecodeName): DecodeName = {
+    DecodeNameImpl.newFromSourceName(name.asMangledString + '$')
   }
 
-  def newNamespace(info: Option[String], fqn: DecodeFqn) = new DecodeNamespaceImpl(new DecodeNameImpl("not implemented"))
+  def unitForFqn(unitFqn: DecodeFqn): DecodeMaybeProxy[DecodeUnit] = {
+    if (unitFqn.size == 1 && imports.contains(unitFqn.asMangledString()))
+      imports.get(unitFqn.asMangledString()).get.asInstanceOf[DecodeMaybeProxy[DecodeUnit]]
+    else
+      SimpleDecodeMaybeProxy.proxyDefaultNamespace(unitFqn, ns.get)
+  }
+
+  val UnitApplication: Rule1[DecodeFqn] = rule { '/' ~ ElementId ~ '/' }
+
+  val TypeUnitApplication: Rule1[DecodeTypeUnitApplication] = rule {
+    TypeApplication ~ (Ew.? ~ UnitApplication ~> (unitForFqn(_: DecodeFqn))).? ~>
+      ((t: Option[DecodeMaybeProxy[DecodeType]], unit: Option[DecodeMaybeProxy[DecodeUnit]])
+        => new DecodeTypeUnitApplicationImpl(t.get, unit))
+  }
+
+  val StructField: Rule1[DecodeStructField] = rule {
+    OptInfoEw ~ TypeUnitApplication ~ Ew ~ ElementName ~>
+      ((info: Option[String], typeUnit: DecodeTypeUnitApplication, name: DecodeName)
+        => new DecodeStructFieldImpl(name, typeUnit, info))
+  }
+
+  val StructTypeFields: Rule1[Seq[DecodeStructField]] = rule {
+    '(' ~ Ew.? ~ StructField.+(Ew.? ~ ',' ~ Ew.?) ~ (Ew.? ~ ',').? ~ Ew.? ~ ')'
+  }
+
+  var componentName: Option[DecodeName] = None
+  val ComponentParameters: Rule1[DecodeStructType] = rule {
+    OptInfoEw ~ atomic("parameters") ~ Ew ~ StructTypeFields ~>
+    ((info: Option[String], fields: Seq[DecodeStructField])
+      => new DecodeStructTypeImpl(Some(makeNewSystemName(componentName.get)), ns.get, info, fields))
+  }
+
   /*
-
-    Rule W()
-    {
-        return OneOrMore(AnyOf(" \t"));
-    }
-
-    Rule OptW()
-    {
-        return Optional(W());
-    }
-
-    Rule OptEW()
-    {
-        return Optional(EW());
-    }
-
-    Rule File()
-    {
-        Var<DecodeNamespace> namespaceVar = new Var<>();
-        Var<String> infoVar = new Var<>();
-        return Sequence(ACTION(resetImports()), OptInfoEw(infoVar), NamespaceAsNamespace(infoVar),
-                namespaceVar.set((DecodeNamespace) pop()),
-                ZeroOrMore(EW(), Import()),
-                ZeroOrMore(EW(),
-                        infoVar.set(null), OptInfoEw(infoVar),
-                        FirstOf(
-                                Sequence(ComponentAsComponent(namespaceVar, infoVar),
-                                        append(namespaceVar.get().components(), (DecodeComponent) pop())),
-                                Sequence(UnitDeclAsUnit(namespaceVar, infoVar),
-                                        append(namespaceVar.get().units(), (DecodeUnit) pop())),
-                                Sequence(TypeDeclAsType(namespaceVar, infoVar),
-                                        append(namespaceVar.get().types(), (DecodeType) pop())),
-                                Sequence(AliasAsAlias(namespaceVar, infoVar),
-                                        append(namespaceVar.get().types(), (DecodeType) pop())),
-                                Sequence(LanguageAsLanguage(namespaceVar, infoVar),
-                                        append(namespaceVar.get().languages(), (DecodeLanguage) pop())))),
-                OptEW(), EOI, push(namespaceVar.get().rootNamespace()));
-    }
-
-    boolean resetImports()
-    {
-        imports = new HashMap<>();
-        return true;
-    }
-
-
-
-
-
-
-
-
-    Rule LanguageAsLanguage(@NotNull Var<DecodeNamespace> namespaceVar, @NotNull Var<String> infoVar)
-    {
-        Var<Boolean> defaultVar = new Var<>(false);
-        return Sequence("language", EW(), ElementNameAsName(),
-                Optional(EW(), "default", defaultVar.set(true)),
-                push(new DecodeLanguageImpl((DecodeName) pop(), namespaceVar.get(), defaultVar.get(),
-                        Option.apply(infoVar.get()))));
-    }
-
-    Rule AliasAsAlias(@NotNull Var<DecodeNamespace> namespaceVar, @NotNull Var<String> infoVar)
-    {
-        return Sequence("alias", EW(), ElementNameAsName(), EW(), push(namespaceVar.get()), TypeApplicationAsOptionalProxyType(),
-                push(new DecodeAliasTypeImpl((DecodeNameImpl) pop(1), namespaceVar.get(),
-                        getOrThrow((Option<DecodeMaybeProxy<DecodeType>>) pop()), Option.apply(infoVar.get()))));
-    }
-
-
-
-    @NotNull
-    static DecodeNamespace newNamespace(@NotNull DecodeFqn fqn)
-    {
-        DecodeNamespace parentNamespace = null;
-        if (fqn.size() > 1)
-        {
-            parentNamespace = DecodeUtils.newNamespaceForFqn(fqn.copyDropLast());
-        }
-        DecodeNamespace
-                result = DecodeNamespaceImpl.apply(fqn.last(), Option.apply(parentNamespace));
-        if (parentNamespace != null)
-        {
-            appendToBuffer(parentNamespace.subNamespaces(), result);
-        }
-        return result;
-    }
-
-
-
     Rule ComponentAsComponent(@NotNull Var<DecodeNamespace> namespaceVar, @NotNull Var<String> infoVar)
     {
         Var<DecodeStructType> typeVar = new Var<>();
@@ -200,7 +133,7 @@ class DecodeParboiled2Parser(val input: ParserInput) extends Parser {
                         typeVar.set((DecodeStructType) pop()), append(namespaceVar.get().types(), typeVar.get())),
                 componentVar.set(new DecodeComponentImpl((DecodeNameImpl) pop(), namespaceVar.get(), Option.apply(idVar.get()),
                                 typeVar.isSet()
-                                        ? Option.apply(SimpleDecodeMaybeProxy.object(typeVar.get()))
+                                        ? Option.apply(SimpleDecodeMaybeProxy.obj(typeVar.get()))
                                         : Option.<DecodeMaybeProxy<DecodeStructType>>empty(), Option.apply(infoVar.get()),
                                 subComponentsVar.get(), commandsVar.get(), messagesVar.get())),
                 ZeroOrMore(OptEW(),
@@ -209,85 +142,173 @@ class DecodeParboiled2Parser(val input: ParserInput) extends Parser {
                 OptEW(), '}',
                 push(componentVar.get()));
     }
+  */
 
-    Rule ComponentParametersAsType(@NotNull Var<DecodeNamespace> namespaceVar,
-                                   @NotNull Var<DecodeName> nameVar)
+  val CommandArg: Rule1[DecodeCommandArgument] = rule {
+    OptInfoEw ~ TypeUnitApplication ~ Ew ~ ElementName ~>
+      ((info: Option[String], typeUnit: DecodeTypeUnitApplication, name: DecodeName)
+      => new DecodeCommandArgumentImpl(name, info, typeUnit.t, typeUnit.unit))
+  }
+
+  val CommandArgs: Rule1[Seq[DecodeCommandArgument]] = rule {
+    '(' ~ CommandArg.*(Ew.? ~ ',' ~ Ew.?) ~ (Ew.? ~ ',').? ~ Ew.? ~ ')'
+  }
+
+  val Command: Rule1[DecodeCommand] = rule {
+    definition("command") ~ Ew.? ~ (':' ~ Ew.? ~ NonNegativeIntegerAsInt).? ~ Ew.? ~ CommandArgs ~
+      (Ew.? ~ "->" ~ Ew.? ~ TypeApplication ~> (_.get)).? ~>
+      ((info: Option[String], name: DecodeName, id: Option[Int], args: Seq[DecodeCommandArgument], returnType: Option[DecodeMaybeProxy[DecodeType]])
+        => new DecodeCommandImpl(name, id, info, args, returnType))
+  }
+
+  val MessageParameterElement: Rule1[String] = rule {
+    capture(ElementIdLiteral ~ ('[' ~ Ew.? ~ NonNegativeIntegerLiteral ~ Ew.? ~
+      (atomic("..") ~ Ew.? ~ NonNegativeIntegerLiteral ~ Ew.?).? ~ ']'
+      | '.' ~ ElementIdLiteral).*)
+  }
+
+  val MessageParameter: Rule1[DecodeMessageParameter] = rule {
+    OptInfoEw ~ MessageParameterElement ~>
+      ((info: Option[String], value: String) => new DecodeMessageParameterImpl(value, info))
+  }
+
+  val MessageParameters: Rule1[Seq[DecodeMessageParameter]] = rule {
+    '(' ~ Ew.? ~ MessageParameter.+(Ew.? ~ ',' ~ Ew.?) ~ (Ew.? ~ ',').? ~ Ew.? ~ ')'
+  }
+
+  val MessageNameId: Rule2[DecodeName, Option[Int]] = rule {
+    ElementName ~ (Ew.? ~ ':' ~ Ew.? ~ NonNegativeIntegerAsInt).?
+  }
+
+  val EventMessage: Rule1[DecodeEventMessage] = rule {
+    OptInfoEw ~ atomic("event") ~ Ew ~ MessageNameId ~ Ew ~ TypeApplication ~ Ew.? ~ MessageParameters ~>
+      ((info: Option[String], name: DecodeName, id: Option[Int], baseType: Option[DecodeMaybeProxy[DecodeType]], parameters: Seq[DecodeMessageParameter])
+        => new DecodeEventMessageImpl(component.get, name, id, info, parameters, baseType.get))
+  }
+
+  val StatusMessage: Rule1[DecodeStatusMessage] = rule {
+    OptInfoEw ~ atomic("status") ~ Ew ~ MessageNameId ~ Ew.? ~ MessageParameters ~>
+      ((info: Option[String], name: DecodeName, id: Option[Int], parameters: Seq[DecodeMessageParameter])
+        => new DecodeStatusMessageImpl(component.get, name, id, info, parameters))
+  }
+
+  val Message: Rule1[DecodeMessage] = rule { StatusMessage | EventMessage }
+
+  var component: Option[DecodeComponent] = None
+
+  /*
+  boolean addSubcomponent(@NotNull Buffer<DecodeComponentRef> componentRefs, @NotNull DecodeFqn fqn,
+                            @NotNull DecodeNamespace namespace)
     {
-        Var<Buffer<DecodeStructField>> fieldsVar = new Var<>(new ArrayBuffer<>());
+        String alias = fqn.asString();
+        if (fqn.size() == 1 && imports.contains(alias))
+        {
+            appendToBuffer(componentRefs, new DecodeComponentRefImpl((DecodeMaybeProxy<DecodeComponent>) (DecodeMaybeProxy<?>) Preconditions.checkNotNull(imports.get(
+                    alias)), Some.apply(alias)));
+        }
+        else
+        {
+            appendToBuffer(componentRefs, new DecodeComponentRefImpl(proxyDefaultNamespace(fqn, namespace), Option.<String>empty()));
+        }
+        return true;
+    }
+   */
+
+  val Component: Rule1[DecodeComponent] = rule {
+    definition("component") ~> ((name: DecodeName) => { componentName = Some(name) }: Unit) ~ (Ew.? ~ ':' ~ NonNegativeIntegerAsInt).? ~
+      (Ew ~ atomic("with") ~ Ew ~ ElementId.+(Ew.? ~ ',' ~ Ew.?)).? ~
+      Ew.? ~ '{' ~ (Ew.? ~ ComponentParameters).? ~>
+      ((info: Option[String], id: Option[Int], subComponents: Seq[DecodeFqn], baseType: Option[DecodeStructType])
+        => new DecodeComponentImpl(componentName.get, ns.get, id, baseType.map(SimpleDecodeMaybeProxy.obj(_)), info,
+          subComponents.map((fqn: DecodeFqn) => {
+            val alias = fqn.asMangledString()
+            if (fqn.size == 1 && imports.contains(alias))
+              new DecodeComponentRefImpl(imports.get(alias).get.asInstanceOf[DecodeMaybeProxy[DecodeComponent]], Some(alias))
+            else
+              new DecodeComponentRefImpl(SimpleDecodeMaybeProxy.proxyDefaultNamespace(fqn, ns.get), None)
+          }))) ~
+      (Ew.? ~ (Command | Message)).* ~ Ew.? ~ '}'
+  }
+
+  val Unit_ : Rule1[DecodeUnit] = rule {
+    definition("unit") ~ (Ew ~ atomic("display") ~ Ew ~ StringValue).? ~
+      (Ew ~ atomic("placement") ~ Ew ~ atomic("before" | "after")).? ~>
+      ((display: Option[String], name: DecodeName, info: Option[String]) => new DecodeUnitImpl(name, ns.get, display, info))
+  }
+
+  /*
+  Rule TypeDeclBodyAsType(@NotNull Var<DecodeNamespace> namespaceVar, @NotNull Var<DecodeName> nameVar, @NotNull Var<String> infoVar)
+    {
+        return FirstOf(
+                EnumTypeDeclAsType(namespaceVar, nameVar),
+                StructTypeDeclAsStructType(namespaceVar, nameVar),
+                Sequence(push(namespaceVar.get()), TypeApplicationAsOptionalProxyType(),
+                        push(new DecodeSubTypeImpl(Option.apply(nameVar.get()), namespaceVar.get(), Option.apply(
+                                infoVar.get()), getOrThrow((Option<DecodeMaybeProxy<DecodeType>>) pop())))));
+    }
+   */
+
+  /*
+  Rule LiteralAsString()
+    {
+        return Sequence(FirstOf(FloatLiteral(), NonNegativeNumber(), "true", "false"),
+                push(match()));
+    }
+
+    Rule FloatLiteral()
+    {
+        return Sequence(Optional(FirstOf('+', '-')),
+                FirstOf(Sequence(NonNegativeNumber(), '.', Optional(NonNegativeNumber())),
+                        Sequence('.', NonNegativeNumber())),
+                Optional(AnyOf("eE"), Optional(AnyOf("+-")), NonNegativeNumber()));
+    }
+   */
+  val FloatLiteral: Rule0 = rule {
+    anyOf("+-").? ~ (NonNegativeIntegerLiteral ~ '.' ~ (NonNegativeIntegerLiteral).? | '.' ~ NonNegativeIntegerLiteral) ~
+      (anyOf("eE") ~ anyOf("+-").? ~ NonNegativeIntegerLiteral)
+  }
+
+  val Literal: Rule1[String] = rule { capture(FloatLiteral | NonNegativeIntegerLiteral | atomic("true" | "false")) }
+
+  val EnumTypeValue: Rule1[DecodeEnumConstant] = rule {
+    OptInfoEw ~ ElementName ~ Ew.? ~ '=' ~ Ew.? ~ Literal ~> (() => new DecodeEnumConstantImpl(name, value, info))
+  }
+
+  val EnumTypeValues: Rule1[Seq[DecodeEnumConstant]] = rule { EnumTypeValue.+(Ew.? ~ ',' ~ Ew.?) ~ (Ew.? ~ ',').? }
+
+  val EnumType: Rule1[DecodeEnumType] = rule {
+    atomic("enum") ~ Ew ~ TypeApplication ~ Ew.? ~ '(' ~ Ew.? ~ EnumTypeValues ~ Ew.? ~ ')' ~>
+      (() => new DecodeEnumTypeImpl(name, ns, t.get, info, constants))
+  }
+
+  /*
+  Rule StructTypeDeclAsStructType(@NotNull Var<DecodeNamespace> namespaceVar, @NotNull Var<DecodeName> nameVar)
+    {
         Var<String> infoVar = new Var<>();
-        return Sequence(OptInfoEw(infoVar), "parameters", OptEW(),
-                StructTypeFields(namespaceVar, fieldsVar), push(new DecodeStructTypeImpl(makeNewSystemName(Option.apply(nameVar.get())), namespaceVar.get(),
+        Var<Buffer<DecodeStructField>> fieldsVar = new Var<>(new ArrayBuffer<>());
+        return Sequence("struct", OptEW(), StructTypeFields(namespaceVar, fieldsVar),
+                push(new DecodeStructTypeImpl(Option.apply(nameVar.get()), namespaceVar.get(),
                                 Option.apply(infoVar.get()), fieldsVar.get().toSeq())));
     }
+   */
 
-    @NotNull
-    static Option<DecodeName> makeNewSystemName(@NotNull Option<DecodeName> name)
-    {
-        return Option.apply(name.isDefined() ? DecodeNameImpl.newFromSourceName(name.get().asString() + "$") : null);
-    }
+  val StructType: Rule1[DecodeStructType] = rule {
+    atomic("struct") ~ Ew.? ~ StructTypeFields ~>
+      ((fields: Seq[DecodeStructField], name: DecodeName, info: Option[String])
+        => new DecodeStructTypeImpl(Some(name), ns.get, info, fields))
+  }
 
-    Rule CommandAsCommand(@NotNull Var<DecodeNamespace> namespaceVar)
-    {
-        Var<Buffer<DecodeCommandArgument>> argsVar = new Var<>(new ArrayBuffer<>());
-        Var<String> infoVar = new Var<>();
-        Var<Integer> idVar = new Var<>();
-        Var<Option<DecodeMaybeProxy<DecodeType>>> returnTypeVar = new Var<>(Option.empty());
-        return Sequence(OptInfoEw(infoVar), "command", EW(), ElementNameAsName(), OptEW(),
-                Optional(':', OptEW(), NonNegativeNumberAsInteger(), idVar.set((Integer) pop()), OptEW()),
-                '(', Optional(OptEW(), CommandArgs(namespaceVar, argsVar)), OptEW(), ')',
-                Optional(OptEW(), "->", OptEW(), push(namespaceVar.get()), TypeApplicationAsOptionalProxyType(),
-                        returnTypeVar.set((Option<DecodeMaybeProxy<DecodeType>>) pop())),
-                push(new DecodeCommandImpl((DecodeNameImpl) pop(),
-                        Option.apply(idVar.get()), Option.apply(infoVar.get()),
-                        argsVar.get().toSeq(), returnTypeVar.get())));
-    }
+  val Type: Rule1[DecodeType] = rule {
+    definition("type") ~ Ew ~ (
+        EnumType
+      | StructType
+      | TypeApplication ~> (() => new DecodeSubTypeImpl()))
+  }
 
-    Rule CommandArgs(@NotNull Var<DecodeNamespace> namespaceVar, @NotNull Var<Buffer<DecodeCommandArgument>> argsVar)
-    {
-        return Sequence(CommandArgAsCommandArg(namespaceVar), append(argsVar.get(), (DecodeCommandArgument) pop()),
-                ZeroOrMore(OptEW(), ',', OptEW(), CommandArgAsCommandArg(namespaceVar), append(argsVar.get(),
-                        (DecodeCommandArgument) pop())), Optional(OptEW(), ','));
-    }
+  def definition(keyword: String) = rule { OptInfoEw ~ atomic(keyword) ~ Ew ~ ElementName }
 
-    Rule CommandArgAsCommandArg(@NotNull Var<DecodeNamespace> namespaceVar)
-    {
-        Var<DecodeMaybeProxy<DecodeUnit>> unitVar = new Var<>();
-        Var<String> infoVar = new Var<>();
-        return Sequence(OptInfoEw(infoVar), TypeUnitApplicationAsProxyType(namespaceVar, unitVar), EW(), ElementNameAsName(),
-                push(new DecodeCommandArgumentImpl((DecodeName) pop(), Option.apply(infoVar.get()), getOrThrow((Option<DecodeMaybeProxy<DecodeType>>) pop()),
-                                Option.apply(unitVar.get()))));
-    }
-
-    Rule StructFieldAsStructField(@NotNull Var<DecodeNamespace> namespaceVar)
-    {
-        Var<DecodeMaybeProxy<DecodeUnit>> unitVar = new Var<>();
-        Var<String> infoVar = new Var<>();
-        return Sequence(OptInfoEw(infoVar), TypeUnitApplicationAsProxyType(namespaceVar,
-                        unitVar), EW(), ElementNameAsName(),
-                push(new DecodeStructFieldImpl((DecodeNameImpl) pop(),
-                        getOrThrow((Option<DecodeMaybeProxy<DecodeType>>) pop()),
-                                Option.apply(unitVar.get()),
-                                Option.apply(infoVar.get()))));
-    }
-
-    Rule TypeUnitApplicationAsProxyType(@NotNull Var<DecodeNamespace> namespaceVar,
-                                        @NotNull Var<DecodeMaybeProxy<DecodeUnit>> unitVar)
-    {
-        return Sequence(push(namespaceVar.get()), TypeApplicationAsOptionalProxyType(), Optional(
-                OptEW(), UnitAsFqn(), unitVar.set(unitForFqn((DecodeFqn) pop(), namespaceVar.get()))));
-    }
-
-    @NotNull
-    DecodeMaybeProxy<DecodeUnit> unitForFqn(@NotNull DecodeFqn unitFqn, @NotNull DecodeNamespace namespace)
-    {
-        if (unitFqn.size() == 1 && imports.contains(unitFqn.asString()))
-        {
-            return (DecodeMaybeProxy<DecodeUnit>) (DecodeMaybeProxy<?>) imports.get(unitFqn.asString()).get();
-        }
-        return proxyDefaultNamespace(unitFqn, namespace);
-    }
-
-    Rule TypeApplicationAsOptionalProxyType()
+  /*
+  Rule TypeApplicationAsOptionalProxyType()
     {
         Var<Buffer<Option<DecodeMaybeProxy<DecodeReferenceable>>>> genericTypesVar = new Var<>(new ArrayBuffer<>());
         Var<DecodeNamespace> namespaceVar = new Var<>();
@@ -314,15 +335,97 @@ class DecodeParboiled2Parser(val input: ParserInput) extends Parser {
                                 + getOrThrow((Option<DecodeMaybeProxy<DecodeReferenceable>>) pop()).proxy().uri().toString()
                                 + ">"))))));
     }
+   */
 
-    DecodeMaybeProxy<DecodeReferenceable> proxyForTypeFqn(@NotNull DecodeNamespace namespace,
-                                                          @NotNull DecodeFqn typeFqn)
+  def proxyForTypeFqn(namespace: DecodeNamespace, typeFqn: DecodeFqn): DecodeMaybeProxy[DecodeReferenceable] = {
+    if (typeFqn.size == 1 && imports.contains(typeFqn.last.asMangledString))
+      imports.get(typeFqn.last.asMangledString).get
+    else
+      SimpleDecodeMaybeProxy.proxyDefaultNamespace(typeFqn, namespace)
+  }
+
+  val NativeTypeApplication: Rule1[Option[DecodeMaybeProxy[DecodeType]]] = rule {
+    atomic("void") ~> push(None) |
+      capture(atomic("ber")) ~> push(Some(SimpleDecodeMaybeProxy.proxyForSystem(DecodeNameImpl.newFromSourceName(_: String))))
+  }
+
+  val PrimitiveTypeKind: Rule0 = rule { atomic("uint" | "int" | "float" | "bool").named("primitiveTypeKind") }
+
+  val PrimitiveTypeApplication: Rule1[DecodeMaybeProxy[DecodeType]] = rule {
+    capture(PrimitiveTypeKind ~ ':' ~ NonNegativeIntegerLiteral) ~>
+      SimpleDecodeMaybeProxy.proxyForSystem(DecodeNameImpl.newFromSourceName(_: String))
+  }
+
+  val LengthTo: Rule1[String] = rule { capture(NonNegativeIntegerLiteral | '*') }
+
+  /*
+  Rule ArrayTypeApplicationAsOptionalProxyType()
     {
-        if (typeFqn.size() == 1 && imports.contains(typeFqn.last().asString()))
-        {
-            return imports.get(typeFqn.last().asString()).get();
-        }
-        return proxyDefaultNamespace(typeFqn, namespace);
+        Var<DecodeNamespace> namespaceVar = new Var<>();
+        Var<DecodeMaybeProxy<DecodeType>> typeApplicationVar = new Var<>();
+        return Sequence(
+                Sequence(namespaceVar.set((DecodeNamespace) pop()), '[', OptEW(),
+                        push(namespaceVar.get()),
+                        TypeApplicationAsOptionalProxyType(), typeApplicationVar.set(getOrThrow((Option<DecodeMaybeProxy<DecodeType>>) pop())),
+                        Optional(OptEW(), ',', OptEW(),
+                                Sequence(LengthFrom(), Optional(OptEW(), "..", OptEW(), LengthTo()))),
+                        OptEW(), ']'),
+                push(Option.apply(proxy(DecodeUtils.getNamespaceFqnFromUri(typeApplicationVar.get().proxy().uri()), DecodeNameImpl
+                        .newFromSourceName(match())))));
+    }
+   */
+
+  val ArrayTypeApplication: Rule1[Option[DecodeMaybeProxy[DecodeType]]] = rule {
+    capture('[' ~ Ew.? ~ TypeApplication ~ (Ew.? ~ ',' ~ Ew.? ~ NonNegativeIntegerAsInt
+      ~ (Ew.? ~ ".." ~ Ew.? ~ LengthTo).?).? ~ Ew.? ~ ']') ~>
+      ((capture: String, typeApplication: Option[DecodeMaybeProxy[DecodeType]])
+        => Some(SimpleDecodeMaybeProxy.proxy(DecodeUtils.getNamespaceFqnFromUri(typeApplication.get.proxy.uri),
+          DecodeNameImpl.newFromSource(capture))))
+  }
+
+  val TypeApplication: Rule1[Option[DecodeMaybeProxy[DecodeType]]] = rule {
+    PrimitiveTypeApplication | NativeTypeApplication | ArrayTypeApplication | ElementId ~> push(Some(proxyForTypeFqn(ns.get, _: DecodeFqn)))
+  }
+
+  val Alias: Rule1[DecodeAliasType] = rule {
+    definition("alias") ~ Ew ~ TypeApplication ~>
+      ((typeAppOption: Option[DecodeMaybeProxy[DecodeType]], name: DecodeName, info: Option[String]) =>
+        new DecodeAliasTypeImpl(name, ns, typeAppOption.get, info))
+  }
+
+  val Language: Rule1[DecodeLanguage] = rule {
+    definition("language") ~ (Ew ~ atomic("default") ~> push(true) | MATCH ~> push(false)) ~>
+      ((default: Boolean, name: DecodeName, info: Option[String]) => new DecodeLanguageImpl(name, ns, default, info))
+  }
+
+  val File: Rule1[DecodeNamespace] = rule {
+    run(() => imports.clear()) ~ Namespace ~> ((_ns: DecodeNamespace) => { ns = Some(_ns) }: Unit) ~ (Ew ~ Import).* ~
+      (Component | Unit_ | Type | Alias | Language) ~ Ew.? ~ EOI ~> push(ns.get)
+  }
+
+  def newNamespace(info: Option[String], fqn: DecodeFqn) = {
+    var parentNamespace: Option[DecodeNamespace] = None
+    if (fqn.size > 1)
+      parentNamespace = Some(DecodeUtils.newNamespaceForFqn(fqn.copyDropLast()))
+    var result: DecodeNamespace = DecodeNamespaceImpl(fqn.last, parentNamespace)
+    parentNamespace.foreach(_.subNamespaces += result)
+    result
+  }
+  /*
+
+    Rule W()
+    {
+        return OneOrMore(AnyOf(" \t"));
+    }
+
+    Rule OptW()
+    {
+        return Optional(W());
+    }
+
+    Rule OptEW()
+    {
+        return Optional(EW());
     }
 
     @NotNull
@@ -343,255 +446,6 @@ class DecodeParboiled2Parser(val input: ParserInput) extends Parser {
         Preconditions.checkState(!result.contains("/") && !result.contains("<"), "invalid types string");
         return result;
     }
-
-    Rule UnitAsFqn()
-    {
-        return Sequence('/', ElementIdAsFqn(), '/');
-    }
-
-    Rule NativeTypeApplicationAsOptionalProxyType()
-    {
-        return FirstOf(Sequence("void", push(Option.empty())),
-                Sequence("ber",
-                        push(Some.apply(proxyForSystem(DecodeNameImpl.newFromSourceName(match()))))));
-    }
-
-    Rule PrimitiveTypeApplicationAsOptionalProxyType()
-    {
-        return Sequence(Sequence(PrimitiveTypeKind(), ':', NonNegativeNumber()),
-                push(Some.apply(proxyForSystem(DecodeNameImpl.newFromSourceName(match())))));
-    }
-
-    // FIXME: uses DecodeNamespace ref from stack, should use Var, parboiled bug
-    Rule ArrayTypeApplicationAsOptionalProxyType()
-    {
-        Var<DecodeNamespace> namespaceVar = new Var<>();
-        Var<DecodeMaybeProxy<DecodeType>> typeApplicationVar = new Var<>();
-        return Sequence(
-                Sequence(namespaceVar.set((DecodeNamespace) pop()), '[', OptEW(),
-                        push(namespaceVar.get()),
-                        TypeApplicationAsOptionalProxyType(), typeApplicationVar.set(getOrThrow((Option<DecodeMaybeProxy<DecodeType>>) pop())),
-                        Optional(OptEW(), ',', OptEW(),
-                                Sequence(LengthFrom(), Optional(OptEW(), "..", OptEW(), LengthTo()))),
-                        OptEW(), ']'),
-                push(Option.apply(proxy(DecodeUtils.getNamespaceFqnFromUri(typeApplicationVar.get().proxy().uri()), DecodeNameImpl
-                        .newFromSourceName(match())))));
-    }
-
-    @NotNull
-    static <T> T getOrThrow(@NotNull Option<T> option)
-    {
-        return asOptional(option).orElseThrow(() -> new ParsingException("void type is not allowed here"));
-    }
-
-    Rule StructTypeFields(@NotNull Var<DecodeNamespace> namespaceVar, @NotNull Var<Buffer<DecodeStructField>> fieldsVar)
-    {
-        return Sequence('(', OptEW(),
-                StructFieldAsStructField(namespaceVar), append(fieldsVar.get(), (DecodeStructField) pop()),
-                ZeroOrMore(OptEW(), ',', OptEW(), StructFieldAsStructField(namespaceVar),
-                        append(fieldsVar.get(), (DecodeStructField) pop())),
-                Optional(OptEW(), ','), OptEW(), ')');
-    }
-
-    Rule StructTypeDeclAsStructType(@NotNull Var<DecodeNamespace> namespaceVar, @NotNull Var<DecodeName> nameVar)
-    {
-        Var<String> infoVar = new Var<>();
-        Var<Buffer<DecodeStructField>> fieldsVar = new Var<>(new ArrayBuffer<>());
-        return Sequence("struct", OptEW(), StructTypeFields(namespaceVar, fieldsVar),
-                push(new DecodeStructTypeImpl(Option.apply(nameVar.get()), namespaceVar.get(),
-                                Option.apply(infoVar.get()), fieldsVar.get().toSeq())));
-    }
-
-
-
-    public static <T> boolean append(@NotNull Buffer<T> buffer, T value)
-    {
-        appendToBuffer(buffer, value);
-        return true;
-    }
-
-    Rule MessageAsMessage(@NotNull Var<DecodeComponent> componentVar)
-    {
-        Var<String> infoVar = new Var<>();
-        return Sequence(OptInfoEw(infoVar),
-                FirstOf(StatusMessageAsMessage(componentVar, infoVar),
-                        EventMessageAsMessage(componentVar, infoVar)));
-    }
-
-    Rule MessageNameId(@NotNull Var<DecodeName> nameVar, @NotNull Var<Integer> idVar)
-    {
-        return Sequence(ElementNameAsName(), nameVar.set((DecodeName) pop()),
-            Optional(OptEW(), ':', OptEW(),
-                    NonNegativeNumberAsInteger(), idVar.set((Integer) pop())));
-    }
-
-    Rule StatusMessageAsMessage(@NotNull Var<DecodeComponent> componentVar, @NotNull Var<String> infoVar)
-    {
-        Var<Buffer<DecodeMessageParameter>> parametersVar = new Var<>(new ArrayBuffer<>());
-        Var<DecodeName> nameVar = new Var<>();
-        Var<Integer> idVar = new Var<>();
-        return Sequence("status", EW(), MessageNameId(nameVar, idVar), OptEW(), MessageParameters(parametersVar),
-                push(new DecodeStatusMessageImpl(componentVar.get(), nameVar.get(), Option.apply(idVar.get()),
-                        Option.apply(infoVar.get()), parametersVar.get().toSeq())));
-    }
-
-    Rule MessageParameters(@NotNull Var<Buffer<DecodeMessageParameter>> parametersVar)
-    {
-        return Sequence('(', OptEW(), ParameterAsParameter(), append(parametersVar.get(), (DecodeMessageParameter) pop()),
-                        ZeroOrMore(OptEW(), ',', OptEW(), ParameterAsParameter(), append(parametersVar.get(),
-                                (DecodeMessageParameter) pop())),
-                        Optional(OptEW(), ','), OptEW(), ')');
-    }
-
-    Rule EventMessageAsMessage(@NotNull Var<DecodeComponent> componentVar, @NotNull Var<String> infoVar)
-    {
-        @NotNull Var<DecodeName> nameVar = new Var<>();
-        @NotNull Var<Integer> idVar = new Var<>();
-        Var<Buffer<DecodeMessageParameter>> parametersVar = new Var<>(new ArrayBuffer<>());
-        return Sequence("event", EW(), MessageNameId(nameVar, idVar), EW(), push(componentVar.get().namespace()), TypeApplicationAsOptionalProxyType(), OptEW(), MessageParameters(parametersVar),
-                push(new DecodeEventMessageImpl(componentVar.get(), nameVar.get(), Option.apply(idVar.get()),
-                        Option.apply(infoVar.get()), parametersVar.get(), getOrThrow((Option<DecodeMaybeProxy<DecodeType>>) pop()))));
-    }
-
-    Rule ParameterAsParameter()
-    {
-        Var<String> infoVar = new Var<>();
-        return Sequence(OptInfoEw(infoVar), ParameterElement(), push(match()),
-                        push(new DecodeMessageParameterImpl((String) pop())));
-    }
-
-    Rule ParameterElement()
-    {
-        return Sequence(ElementIdAsFqn(), drop(),
-                Optional(OneOrMore('[', OptEW(), NonNegativeNumber(), OptEW(),
-                                Optional("..", OptEW(), NonNegativeNumber(), OptEW()), ']'),
-                        ZeroOrMore('.', ElementIdAsFqn(), drop(),
-                                Optional('[', OptEW(), NonNegativeNumber(), OptEW(),
-                                        Optional("..", OptEW(), NonNegativeNumber(), OptEW()), ']'))));
-    }
-
-    Rule OptInfoEw(@NotNull Var<String> infoVar)
-    {
-        return Optional(StringValueAsString(),
-                infoVar.set((String) pop()), EW());
-    }
-
-
-
-    Rule Subcomponent(@NotNull Var<DecodeNamespace> namespaceVar,
-                      @NotNull Var<Buffer<DecodeComponentRef>> subComponentsVar)
-    {
-        return Sequence(ElementIdAsFqn(), addSubcomponent(subComponentsVar.get(), (DecodeFqn) pop(), namespaceVar.get()));
-    }
-
-    boolean addSubcomponent(@NotNull Buffer<DecodeComponentRef> componentRefs, @NotNull DecodeFqn fqn,
-                            @NotNull DecodeNamespace namespace)
-    {
-        String alias = fqn.asString();
-        if (fqn.size() == 1 && imports.contains(alias))
-        {
-            appendToBuffer(componentRefs, new DecodeComponentRefImpl((DecodeMaybeProxy<DecodeComponent>) (DecodeMaybeProxy<?>) Preconditions.checkNotNull(imports.get(
-                    alias)), Some.apply(alias)));
-        }
-        else
-        {
-            appendToBuffer(componentRefs, new DecodeComponentRefImpl(proxyDefaultNamespace(fqn, namespace), Option.<String>empty()));
-        }
-        return true;
-    }
-
-    Rule UnitDeclAsUnit(@NotNull Var<DecodeNamespace> namespaceVar, @NotNull Var<String> infoVar)
-    {
-        Var<String> displayVar = new Var<>();
-        return Sequence("unit", EW(), ElementNameAsName(), Optional(EW(), "display", EW(), StringValueAsString(),
-                        displayVar.set((String) pop())),
-                Optional(EW(), "placement", EW(), FirstOf("before", "after")),
-                push(new DecodeUnitImpl((DecodeName) pop(), namespaceVar.get(),
-                        Option.apply(displayVar.get()), Option.apply(infoVar.get()))));
-    }
-
-    Rule TypeDeclAsType(@NotNull Var<DecodeNamespace> namespaceVar, @NotNull Var<String> infoVar)
-    {
-        Var<DecodeName> nameVar = new Var<>();
-        return Sequence("type", EW(), ElementNameAsName(), nameVar.set((DecodeNameImpl) pop()), EW(),
-                TypeDeclBodyAsType(namespaceVar, nameVar, infoVar));
-    }
-
-    Rule PrimitiveTypeKind()
-    {
-        return FirstOf("uint", "int", "float", "bool");
-    }
-
-    Rule LengthFrom()
-    {
-        return NonNegativeNumber();
-    }
-
-    Rule LengthTo()
-    {
-        return FirstOf(NonNegativeNumber(), '*');
-    }
-
-    Rule TypeDeclBodyAsType(@NotNull Var<DecodeNamespace> namespaceVar, @NotNull Var<DecodeName> nameVar, @NotNull Var<String> infoVar)
-    {
-        return FirstOf(
-                EnumTypeDeclAsType(namespaceVar, nameVar),
-                StructTypeDeclAsStructType(namespaceVar, nameVar),
-                Sequence(push(namespaceVar.get()), TypeApplicationAsOptionalProxyType(),
-                        push(new DecodeSubTypeImpl(Option.apply(nameVar.get()), namespaceVar.get(), Option.apply(
-                                infoVar.get()), getOrThrow((Option<DecodeMaybeProxy<DecodeType>>) pop())))));
-    }
-
-    Rule EnumTypeDeclAsType(@NotNull Var<DecodeNamespace> namespaceVar, @NotNull Var<DecodeName> nameVar)
-    {
-        Var<String> infoVar = new Var<>();
-        Var<Set<DecodeEnumConstant>> enumConstantsVar = new Var<>(new HashSet<>());
-        return Sequence("enum", EW(), push(namespaceVar.get()), TypeApplicationAsOptionalProxyType(), OptEW(), '(', OptEW(),
-                EnumTypeValues(enumConstantsVar), OptEW(), ')',
-                push(new DecodeEnumTypeImpl(Option.apply(nameVar.get()), namespaceVar.get(),
-                        getOrThrow((Option<DecodeMaybeProxy<DecodeType>>) pop()),
-                        Option.apply(infoVar.get()), enumConstantsVar.get())));
-    }
-
-    Rule EnumTypeValues(@NotNull Var<Set<DecodeEnumConstant>> enumConstantsVar)
-    {
-        return Sequence(EnumTypeValue(enumConstantsVar),
-                ZeroOrMore(OptEW(), ',', OptEW(), EnumTypeValue(enumConstantsVar)), Optional(OptEW(), ','));
-    }
-
-    Rule EnumTypeValue(@NotNull Var<Set<DecodeEnumConstant>> enumConstantsVar)
-    {
-        Var<String> infoVar = new Var<>();
-        return Sequence(OptInfoEw(infoVar), ElementNameAsName(), OptEW(), '=', OptEW(), LiteralAsString(),
-                enumConstantsVar.get().add(new DecodeEnumConstantImpl((DecodeNameImpl) pop(1),
-                        (String) pop(), Option.apply(infoVar.get()))));
-    }
-
-    Rule LiteralAsString()
-    {
-        return Sequence(FirstOf(FloatLiteral(), NonNegativeNumber(), "true", "false"),
-                push(match()));
-    }
-
-    Rule FloatLiteral()
-    {
-        return Sequence(Optional(FirstOf('+', '-')),
-                FirstOf(Sequence(NonNegativeNumber(), '.', Optional(NonNegativeNumber())),
-                        Sequence('.', NonNegativeNumber())),
-                Optional(AnyOf("eE"), Optional(AnyOf("+-")), NonNegativeNumber()));
-    }
-
-    Rule NonNegativeNumberAsInteger()
-    {
-        return Sequence(NonNegativeNumber(), push(Int.box(Integer.parseInt(match()))));
-    }
-
-    Rule NonNegativeNumber()
-    {
-        return OneOrMore(CharRange('0', '9'));
-    }
-
-
    */
 }
 
@@ -601,9 +455,9 @@ private trait ImportPart {
 }
 
 private case class ImportPartName(originalName: DecodeName) extends ImportPart {
-  def alias: String = originalName.asString()
+  def alias: String = originalName.asMangledString
 }
 
 private case class ImportPartNameAlias(originalName: DecodeName, _alias: DecodeName) extends ImportPart {
-  def alias: String = _alias.asString()
+  def alias: String = _alias.asMangledString
 }
