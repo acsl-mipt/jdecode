@@ -26,7 +26,7 @@ class CDecodeSourcesGenerator(val config: CDecodeGeneratorConfiguration) extends
   }
 
   def dirForNs(ns: DecodeNamespace): File = new File(config.outputDir,
-      config.namespaceAlias.getOrElse(ns.fqn, ns.fqn).parts.toList.map(_.asString()).mkString("/"))
+      config.namespaceAlias.getOrElse(ns.fqn, ns.fqn).parts.toList.map(_.asMangledString).mkString("/"))
 
   def ensureDirForNsExists(ns: DecodeNamespace): File = {
     val dir = dirForNs(ns)
@@ -53,7 +53,7 @@ class CDecodeSourcesGenerator(val config: CDecodeGeneratorConfiguration) extends
     ns.subNamespaces.toTraversable.foreach(generateNs)
     val typesHeader = HFile()
     ns.types.toTraversable.foreach(generateType(_, nsDir))
-    writeFileIfNotEmptyWithComment(new File(nsDir, "types.h"), protectDoubleIncludeFile(typesHeader), s"Types of ${ns.fqn.asString()} namespace")
+    writeFileIfNotEmptyWithComment(new File(nsDir, "types.h"), protectDoubleIncludeFile(typesHeader), s"Types of ${ns.fqn.asMangledString} namespace")
     //ns.getComponents.toTraversable.foreach(generateRootComponent)
   }
 
@@ -62,7 +62,7 @@ class CDecodeSourcesGenerator(val config: CDecodeGeneratorConfiguration) extends
 
   private def fileNameFromOptionName(name: Option[DecodeName]): String = {
     if (name.isDefined) {
-      name.get.asString()
+      name.get.asMangledString
     } else {
       fileNameId += 1
       "type" + fileNameId
@@ -71,7 +71,7 @@ class CDecodeSourcesGenerator(val config: CDecodeGeneratorConfiguration) extends
 
   private def cTypeNameFromOptionName(name: Option[DecodeName]): String = {
     if (name.isDefined) {
-      name.get.asString()
+      name.get.asMangledString
     } else {
       typeNameId += 1
       "type" + typeNameId
@@ -79,7 +79,7 @@ class CDecodeSourcesGenerator(val config: CDecodeGeneratorConfiguration) extends
   }
 
   private def fileNameFor(t: DecodeType): String = t match {
-    case t: DecodeNamed => t.name.asString()
+    case t: DecodeNamed => t.name.asMangledString
     case t: DecodeArrayType =>
       val baseTypeFileName: String = fileNameFor(t.baseType.obj)
       val min = t.size.minLength
@@ -100,7 +100,7 @@ class CDecodeSourcesGenerator(val config: CDecodeGeneratorConfiguration) extends
 
   private def cTypeNameFor(t: DecodeType): String = {
     t match {
-      case t: DecodeNamed => t.name.asString()
+      case t: DecodeNamed => t.name.asMangledString
       case t: DecodePrimitiveType => primitiveTypeToCTypeApplication(t).name
       case t: DecodeArrayType =>
         val baseCType: String = cTypeNameFor(t.baseType.obj)
@@ -164,9 +164,9 @@ class CDecodeSourcesGenerator(val config: CDecodeGeneratorConfiguration) extends
       case t: DecodeNativeType => cTypeDefForName(t, CVoidType.ptr())
       case t: DecodeSubType => cTypeDefForName(t, cTypeAppForTypeName(t.baseType.obj))
       case t: DecodeEnumType => cTypeDefForName(t,
-        CEnumTypeDef(t.constants.map(c => CEnumTypeDefConst(c.name.asString(), c.value.toInt))))
+        CEnumTypeDef(t.constants.map(c => CEnumTypeDefConst(c.name.asMangledString, c.value.toInt))))
       case t: DecodeArrayType => cTypeDefForName(t, CVoidType.ptr())
-      case t: DecodeStructType => cTypeDefForName(t, CStructTypeDef(t.fields.map(f => CStructTypeDefField(f.name.asString(), cTypeAppForTypeName(f.fieldType.obj)))))
+      case t: DecodeStructType => cTypeDefForName(t, CStructTypeDef(t.fields.map(f => CStructTypeDefField(f.name.asMangledString, cTypeAppForTypeName(f.typeUnit.t.obj)))))
       case t: DecodeAliasType =>
         val newName: String = cTypeNameFor(t)
         val oldName: String = cTypeNameFor(t.baseType.obj)
@@ -184,7 +184,7 @@ class CDecodeSourcesGenerator(val config: CDecodeGeneratorConfiguration) extends
     set += t.namespace
     t match {
       case t: BaseTyped => collectNsForType(t.baseType, set)
-      case t: DecodeStructType => t.fields.foreach(f => collectNsForType(f.fieldType, set))
+      case t: DecodeStructType => t.fields.foreach(f => collectNsForType(f.typeUnit.t, set))
       case t: DecodeGenericTypeSpecialized => t.genericTypeArguments
         .filter(_.isDefined).foreach(a => collectNsForType(a.get, set))
       case _ =>
@@ -203,7 +203,7 @@ class CDecodeSourcesGenerator(val config: CDecodeGeneratorConfiguration) extends
   }
 
   private def generateRootComponent(comp: DecodeComponent) {
-    logger.debug(s"Generating component ${comp.name.asString()}")
+    logger.debug(s"Generating component ${comp.name.asMangledString}")
     val nsSet = mutable.HashSet[DecodeNamespace]()
     collectNsForTypes(comp, nsSet)
     nsSet.foreach(generateNs)
@@ -212,8 +212,8 @@ class CDecodeSourcesGenerator(val config: CDecodeGeneratorConfiguration) extends
 
   private def generateComponent(comp: DecodeComponent) {
     val dir = dirForNs(comp.namespace)
-    val hFile = new File(dir, comp.name.asString() + "Component.h")
-    val cFile = new File(dir, comp.name.asString() + "Component.c")
+    val hFile = new File(dir, comp.name.asMangledString + "Component.h")
+    val cFile = new File(dir, comp.name.asMangledString + "Component.c")
     writeFileIfNotEmptyWithComment(hFile, protectDoubleIncludeFile(HFile()), "Component header")
     writeFileIfNotEmptyWithComment(cFile, CFile(HEol), "Component header")
   }

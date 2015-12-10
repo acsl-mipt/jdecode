@@ -180,6 +180,8 @@ class DecodeParboiled2Parser(val input: ParserInput) extends Parser {
     ElementName ~ (Ew.? ~ ':' ~ Ew.? ~ NonNegativeIntegerAsInt).?
   }
 
+  var component: Option[DecodeComponent] = None
+
   val EventMessage: Rule1[DecodeEventMessage] = rule {
     OptInfoEw ~ atomic("event") ~ Ew ~ MessageNameId ~ Ew ~ TypeApplication ~ Ew.? ~ MessageParameters ~>
       ((info: Option[String], name: DecodeName, id: Option[Int], baseType: Option[DecodeMaybeProxy[DecodeType]], parameters: Seq[DecodeMessageParameter])
@@ -193,8 +195,6 @@ class DecodeParboiled2Parser(val input: ParserInput) extends Parser {
   }
 
   val Message: Rule1[DecodeMessage] = rule { StatusMessage | EventMessage }
-
-  var component: Option[DecodeComponent] = None
 
   /*
   boolean addSubcomponent(@NotNull Buffer<DecodeComponentRef> componentRefs, @NotNull DecodeFqn fqn,
@@ -218,16 +218,18 @@ class DecodeParboiled2Parser(val input: ParserInput) extends Parser {
     definition("component") ~> ((name: DecodeName) => { componentName = Some(name) }: Unit) ~ (Ew.? ~ ':' ~ NonNegativeIntegerAsInt).? ~
       (Ew ~ atomic("with") ~ Ew ~ ElementId.+(Ew.? ~ ',' ~ Ew.?)).? ~
       Ew.? ~ '{' ~ (Ew.? ~ ComponentParameters).? ~>
-      ((info: Option[String], id: Option[Int], subComponents: Seq[DecodeFqn], baseType: Option[DecodeStructType])
+      ((info: Option[String], id: Option[Int], subComponents: Option[Seq[DecodeFqn]], baseType: Option[DecodeStructType])
         => new DecodeComponentImpl(componentName.get, ns.get, id, baseType.map(SimpleDecodeMaybeProxy.obj(_)), info,
-          subComponents.map((fqn: DecodeFqn) => {
+          subComponents.map(_.toBuffer).getOrElse(mutable.Buffer()).map((fqn: DecodeFqn) => {
             val alias = fqn.asMangledString()
             if (fqn.size == 1 && imports.contains(alias))
               new DecodeComponentRefImpl(imports.get(alias).get.asInstanceOf[DecodeMaybeProxy[DecodeComponent]], Some(alias))
             else
               new DecodeComponentRefImpl(SimpleDecodeMaybeProxy.proxyDefaultNamespace(fqn, ns.get), None)
           }))) ~
-      (Ew.? ~ (Command | Message)).* ~ Ew.? ~ '}'
+      (Ew.? ~ (Command ~> ((command: DecodeCommand) => { component.get.commands += command }: Unit)
+        | Message ~> ((message: DecodeMessage) => { component.get.messages += message }: Unit))).* ~
+      Ew.? ~ '}'
   }
 
   val Unit_ : Rule1[DecodeUnit] = rule {
@@ -268,17 +270,22 @@ class DecodeParboiled2Parser(val input: ParserInput) extends Parser {
       (anyOf("eE") ~ anyOf("+-").? ~ NonNegativeIntegerLiteral)
   }
 
-  val Literal: Rule1[String] = rule { capture(FloatLiteral | NonNegativeIntegerLiteral | atomic("true" | "false")) }
+  val Literal: Rule0 = rule {
+    FloatLiteral | NonNegativeIntegerLiteral | atomic("true") | atomic("false")
+  }
 
   val EnumTypeValue: Rule1[DecodeEnumConstant] = rule {
-    OptInfoEw ~ ElementName ~ Ew.? ~ '=' ~ Ew.? ~ Literal ~> (() => new DecodeEnumConstantImpl(name, value, info))
+    OptInfoEw ~ ElementName ~ Ew.? ~ '=' ~ Ew.? ~ capture(Literal) ~>
+      ((info: Option[String], name: DecodeName, value: String)
+        => new DecodeEnumConstantImpl(name, value, info))
   }
 
   val EnumTypeValues: Rule1[Seq[DecodeEnumConstant]] = rule { EnumTypeValue.+(Ew.? ~ ',' ~ Ew.?) ~ (Ew.? ~ ',').? }
 
-  val EnumType: Rule1[DecodeEnumType] = rule {
-    atomic("enum") ~ Ew ~ TypeApplication ~ Ew.? ~ '(' ~ Ew.? ~ EnumTypeValues ~ Ew.? ~ ')' ~>
-      (() => new DecodeEnumTypeImpl(name, ns, t.get, info, constants))
+  val EnumType = rule {
+    OptInfoEw ~ atomic("enum") ~ Ew ~ TypeApplication ~ Ew.? ~ '(' ~ Ew.? ~ EnumTypeValues ~ Ew.? ~ ')' ~>
+      ((name: DecodeName, info: Option[String], t: Option[DecodeMaybeProxy[DecodeType]], constants: Seq[DecodeEnumConstant])
+        => new DecodeEnumTypeImpl(Some(name), ns.get, t.get, info, constants.to[mutable.Set]))
   }
 
   /*
@@ -292,9 +299,9 @@ class DecodeParboiled2Parser(val input: ParserInput) extends Parser {
     }
    */
 
-  val StructType: Rule1[DecodeStructType] = rule {
+  val StructType = rule {
     atomic("struct") ~ Ew.? ~ StructTypeFields ~>
-      ((fields: Seq[DecodeStructField], name: DecodeName, info: Option[String])
+      ((info: Option[String], name: DecodeName, fields: Seq[DecodeStructField])
         => new DecodeStructTypeImpl(Some(name), ns.get, info, fields))
   }
 
@@ -302,7 +309,8 @@ class DecodeParboiled2Parser(val input: ParserInput) extends Parser {
     definition("type") ~ Ew ~ (
         EnumType
       | StructType
-      | TypeApplication ~> (() => new DecodeSubTypeImpl()))
+      | TypeApplication ~> ((info: Option[String], name: DecodeName, baseType: Option[DecodeMaybeProxy[DecodeType]])
+        => new DecodeSubTypeImpl(Some(name), ns.get, info, baseType.get)))
   }
 
   def definition(keyword: String) = rule { OptInfoEw ~ atomic(keyword) ~ Ew ~ ElementName }
@@ -337,26 +345,26 @@ class DecodeParboiled2Parser(val input: ParserInput) extends Parser {
     }
    */
 
-  def proxyForTypeFqn(namespace: DecodeNamespace, typeFqn: DecodeFqn): DecodeMaybeProxy[DecodeReferenceable] = {
+  def proxyForTypeFqn[T <: DecodeReferenceable](namespace: DecodeNamespace, typeFqn: DecodeFqn): DecodeMaybeProxy[T] = {
     if (typeFqn.size == 1 && imports.contains(typeFqn.last.asMangledString))
-      imports.get(typeFqn.last.asMangledString).get
+      imports.get(typeFqn.last.asMangledString).get.asInstanceOf[DecodeMaybeProxy[T]]
     else
       SimpleDecodeMaybeProxy.proxyDefaultNamespace(typeFqn, namespace)
   }
 
   val NativeTypeApplication: Rule1[Option[DecodeMaybeProxy[DecodeType]]] = rule {
-    atomic("void") ~> push(None) |
-      capture(atomic("ber")) ~> push(Some(SimpleDecodeMaybeProxy.proxyForSystem(DecodeNameImpl.newFromSourceName(_: String))))
+    atomic("void") ~> (() => None) |
+      capture(atomic("ber")) ~> ((t: String) => Some(SimpleDecodeMaybeProxy.proxyForSystem[DecodeType](DecodeNameImpl.newFromSourceName(t))))
   }
 
   val PrimitiveTypeKind: Rule0 = rule { atomic("uint" | "int" | "float" | "bool").named("primitiveTypeKind") }
 
   val PrimitiveTypeApplication: Rule1[DecodeMaybeProxy[DecodeType]] = rule {
     capture(PrimitiveTypeKind ~ ':' ~ NonNegativeIntegerLiteral) ~>
-      SimpleDecodeMaybeProxy.proxyForSystem(DecodeNameImpl.newFromSourceName(_: String))
+      ((t: String) => SimpleDecodeMaybeProxy.proxyForSystem[DecodeType](DecodeNameImpl.newFromSourceName(t)))
   }
 
-  val LengthTo: Rule1[String] = rule { capture(NonNegativeIntegerLiteral | '*') }
+  val LengthTo: Rule1[Int] = rule { NonNegativeIntegerAsInt | ch('*') ~> (() => -1) }
 
   /*
   Rule ArrayTypeApplicationAsOptionalProxyType()
@@ -377,30 +385,36 @@ class DecodeParboiled2Parser(val input: ParserInput) extends Parser {
 
   val ArrayTypeApplication: Rule1[Option[DecodeMaybeProxy[DecodeType]]] = rule {
     capture('[' ~ Ew.? ~ TypeApplication ~ (Ew.? ~ ',' ~ Ew.? ~ NonNegativeIntegerAsInt
-      ~ (Ew.? ~ ".." ~ Ew.? ~ LengthTo).?).? ~ Ew.? ~ ']') ~>
-      ((capture: String, typeApplication: Option[DecodeMaybeProxy[DecodeType]])
-        => Some(SimpleDecodeMaybeProxy.proxy(DecodeUtils.getNamespaceFqnFromUri(typeApplication.get.proxy.uri),
-          DecodeNameImpl.newFromSource(capture))))
+      ~ (Ew.? ~ ".." ~ Ew.? ~ LengthTo).? ~> ((_, _))).? ~ Ew.? ~ ']') ~>
+      ((typeApplication: Option[DecodeMaybeProxy[DecodeType]], fromTo: Option[(Int, Option[Int])], capture: String)
+        => Some(SimpleDecodeMaybeProxy.proxy[DecodeType](DecodeUtils.getNamespaceFqnFromUri(typeApplication.get.proxy.uri),
+          DecodeNameImpl.newFromSourceName(capture))))
   }
 
-  val TypeApplication: Rule1[Option[DecodeMaybeProxy[DecodeType]]] = rule {
-    PrimitiveTypeApplication | NativeTypeApplication | ArrayTypeApplication | ElementId ~> push(Some(proxyForTypeFqn(ns.get, _: DecodeFqn)))
+  def TypeApplication: Rule1[Option[DecodeMaybeProxy[DecodeType]]] = rule {
+    PrimitiveTypeApplication ~> (Some(_)) | NativeTypeApplication | ArrayTypeApplication | ElementId ~>
+      ((fqn: DecodeFqn) => Some(proxyForTypeFqn[DecodeType](ns.get, fqn)))
   }
 
   val Alias: Rule1[DecodeAliasType] = rule {
     definition("alias") ~ Ew ~ TypeApplication ~>
-      ((typeAppOption: Option[DecodeMaybeProxy[DecodeType]], name: DecodeName, info: Option[String]) =>
-        new DecodeAliasTypeImpl(name, ns, typeAppOption.get, info))
+      ((info: Option[String], name: DecodeName, typeAppOption: Option[DecodeMaybeProxy[DecodeType]]) =>
+        new DecodeAliasTypeImpl(name, ns.get, typeAppOption.get, info))
   }
 
   val Language: Rule1[DecodeLanguage] = rule {
-    definition("language") ~ (Ew ~ atomic("default") ~> push(true) | MATCH ~> push(false)) ~>
-      ((default: Boolean, name: DecodeName, info: Option[String]) => new DecodeLanguageImpl(name, ns, default, info))
+    definition("language") ~ (Ew ~ atomic("default") ~> (() => true) | MATCH ~> (() => false)) ~>
+      ((info: Option[String], name: DecodeName, default: Boolean) => new DecodeLanguageImpl(name, ns.get, default, info))
   }
 
   val File: Rule1[DecodeNamespace] = rule {
     run(() => imports.clear()) ~ Namespace ~> ((_ns: DecodeNamespace) => { ns = Some(_ns) }: Unit) ~ (Ew ~ Import).* ~
-      (Component | Unit_ | Type | Alias | Language) ~ Ew.? ~ EOI ~> push(ns.get)
+      (Component ~> ((c: DecodeComponent) => { ns.get.components += c }: Unit)
+        | Unit_ ~> ((u: DecodeUnit) => { ns.get.units += u }: Unit)
+        | Type ~> ((t: DecodeType) => { ns.get.types += t }: Unit)
+        | Alias ~> ((a: DecodeAliasType) => { ns.get.types += a }: Unit)
+        | Language ~> ((l: DecodeLanguage) => { ns.get.languages += l }: Unit)) ~
+      Ew.? ~ EOI ~> (() => ns.get)
   }
 
   def newNamespace(info: Option[String], fqn: DecodeFqn) = {

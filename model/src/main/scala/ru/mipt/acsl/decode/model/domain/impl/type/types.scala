@@ -144,7 +144,7 @@ class DecodeCommandArgumentImpl(name: DecodeName, info: Option[String], val argT
 
 class DecodeComponentImpl(name: DecodeName, namespace: DecodeNamespace, var id: Option[Int],
                           var baseType: Option[DecodeMaybeProxy[DecodeStructType]], info: Option[String],
-                          var subComponents: Seq[DecodeComponentRef],
+                          var subComponents: mutable.Buffer[DecodeComponentRef],
                           var commands: mutable.Buffer[DecodeCommand] = mutable.Buffer(),
                           var messages: mutable.Buffer[DecodeMessage] = mutable.Buffer())
   extends AbstractDecodeNameNamespaceOptionalInfoAware(name, namespace, info) with DecodeComponent

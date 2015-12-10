@@ -44,15 +44,15 @@ object JavaDecodeTypeVisitor {
       case (TypeKind.Float, _, false) => JavaType.Primitive.BOOLEAN
       case _ => sys.error("invalid bit length")
     }
-    case t: DecodeArrayType => new JavaTypeApplication(t.namespace.fqn.asString() + "." + JavaDecodeTypeVisitor.classNameFromArrayType(t),
+    case t: DecodeArrayType => new JavaTypeApplication(t.namespace.fqn.asMangledString + "." + JavaDecodeTypeVisitor.classNameFromArrayType(t),
       JavaDecodeTypeVisitor.getJavaTypeForDecodeType(t.baseType.obj, genericUse = true))
     case t: DecodeAliasType => getJavaTypeForDecodeType(t.baseType.obj, genericUse)
     case t: DecodeNativeType if t.isInstanceOf[DecodeBerType] => new JavaTypeApplication("decode.ber")
     case t: DecodeNativeType if t.isInstanceOf[DecodeOrType] => new JavaTypeApplication("decode.or")
     case t: DecodeNativeType if t.isInstanceOf[DecodeOptionalType] => new JavaTypeApplication("decode.optional")
-    case t: DecodeOptionNamed => new JavaTypeApplication(t.namespace.fqn.asString() + "." + JavaDecodeTypeVisitor.classNameFromTypeName(
+    case t: DecodeOptionNamed => new JavaTypeApplication(t.namespace.fqn.asMangledString + "." + JavaDecodeTypeVisitor.classNameFromTypeName(
       // FIXME: handle Option
-      t.optionName.get.asString()))
+      t.optionName.get.asMangledString))
     case _ => sys.error("not implemented")
   }
 }

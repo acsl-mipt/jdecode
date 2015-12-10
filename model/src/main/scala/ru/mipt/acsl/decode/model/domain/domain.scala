@@ -300,10 +300,10 @@ trait DecodeEventMessage extends DecodeMessage {
 trait DecodeComponent extends DecodeHasOptionInfo with DecodeNamed with DecodeReferenceable
   with DecodeNamespaceAware {
 
-  def messages: Seq[DecodeMessage]
-  def commands: Seq[DecodeCommand]
+  def messages: mutable.Buffer[DecodeMessage]
+  def commands: mutable.Buffer[DecodeCommand]
   def baseType: Option[DecodeMaybeProxy[DecodeStructType]]
-  def subComponents: Seq[DecodeComponentRef]
+  def subComponents: mutable.Buffer[DecodeComponentRef]
   def id: Option[Int]
   override def accept[T](visitor: DecodeReferenceableVisitor[T]): T = visitor.visit(this)
   def getTypeForParameter(parameter: DecodeMessageParameter): DecodeType = {

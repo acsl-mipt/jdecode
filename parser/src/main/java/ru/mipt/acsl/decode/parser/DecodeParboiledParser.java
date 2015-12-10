@@ -107,8 +107,8 @@ public class DecodeParboiledParser extends BaseParser<Object>
 
     boolean addImport(@NotNull DecodeFqn fqn)
     {
-        Preconditions.checkState(!imports.contains(fqn.last().asString()));
-        imports.put(fqn.last().asString(), SimpleDecodeMaybeProxy.proxy(fqn.copyDropLast(), fqn.last()));
+        Preconditions.checkState(!imports.contains(fqn.last().asMangledString()));
+        imports.put(fqn.last().asMangledString(), SimpleDecodeMaybeProxy.proxy(fqn.copyDropLast(), fqn.last()));
         return true;
     }
 
@@ -205,7 +205,7 @@ public class DecodeParboiledParser extends BaseParser<Object>
     @NotNull
     static Option<DecodeName> makeNewSystemName(@NotNull Option<DecodeName> name)
     {
-        return Option.apply(name.isDefined() ? DecodeNameImpl.newFromSourceName(name.get().asString() + "$") : null);
+        return Option.apply(name.isDefined() ? DecodeNameImpl.newFromSourceName(name.get().asMangledString() + "$") : null);
     }
 
     Rule CommandAsCommand(@NotNull Var<DecodeNamespace> namespaceVar)
@@ -246,9 +246,9 @@ public class DecodeParboiledParser extends BaseParser<Object>
         Var<String> infoVar = new Var<>();
         return Sequence(OptInfoEw(infoVar), TypeUnitApplicationAsProxyType(namespaceVar,
                         unitVar), EW(), ElementNameAsName(),
-                push(new DecodeStructFieldImpl((DecodeNameImpl) pop(),
+                push(new DecodeStructFieldImpl((DecodeNameImpl) pop(), new DecodeTypeUnitApplicationImpl(
                         getOrThrow((Option<DecodeMaybeProxy<DecodeType>>) pop()),
-                                Option.apply(unitVar.get()),
+                                Option.apply(unitVar.get())),
                                 Option.apply(infoVar.get()))));
     }
 
@@ -262,9 +262,9 @@ public class DecodeParboiledParser extends BaseParser<Object>
     @NotNull
     DecodeMaybeProxy<DecodeUnit> unitForFqn(@NotNull DecodeFqn unitFqn, @NotNull DecodeNamespace namespace)
     {
-        if (unitFqn.size() == 1 && imports.contains(unitFqn.asString()))
+        if (unitFqn.size() == 1 && imports.contains(unitFqn.asMangledString()))
         {
-            return (DecodeMaybeProxy<DecodeUnit>) (DecodeMaybeProxy<?>) imports.get(unitFqn.asString()).get();
+            return (DecodeMaybeProxy<DecodeUnit>) (DecodeMaybeProxy<?>) imports.get(unitFqn.asMangledString()).get();
         }
         return proxyDefaultNamespace(unitFqn, namespace);
     }
@@ -445,7 +445,7 @@ public class DecodeParboiledParser extends BaseParser<Object>
     {
         Var<String> infoVar = new Var<>();
         return Sequence(OptInfoEw(infoVar), ParameterElement(), push(match()),
-                        push(new DecodeMessageParameterImpl((String) pop())));
+                        push(new DecodeMessageParameterImpl((String) pop(), Option.empty())));
     }
 
     Rule ParameterElement()
@@ -609,7 +609,7 @@ public class DecodeParboiledParser extends BaseParser<Object>
         @Override
         public String getAlias()
         {
-            return name.asString();
+            return name.asMangledString();
         }
 
         @NotNull
@@ -637,7 +637,7 @@ public class DecodeParboiledParser extends BaseParser<Object>
         @Override
         public String getAlias()
         {
-            return alias.asString();
+            return alias.asMangledString();
         }
 
         @NotNull
