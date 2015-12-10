@@ -1,9 +1,7 @@
 package ru.mipt.acsl.decode.parser
 
-import java.io.{InputStream, IOException}
+import java.io.InputStream
 
-import com.google.common.base.Charsets
-import com.google.common.io.Resources
 import org.parboiled2._
 import ru.mipt.acsl.decode.model.domain.impl._
 import ru.mipt.acsl.decode.model.domain.impl.`type`.DecodeAliasTypeImpl
@@ -120,36 +118,6 @@ class DecodeParboiledParser(val input: ParserInput) extends Parser {
       => new DecodeStructTypeImpl(Some(makeNewSystemName(componentName.get)), ns.get, info, fields))
   }
 
-  /*
-    Rule ComponentAsComponent(@NotNull Var<DecodeNamespace> namespaceVar, @NotNull Var<String> infoVar)
-    {
-        Var<DecodeStructType> typeVar = new Var<>();
-        Var<Buffer<DecodeComponentRef>> subComponentsVar = new Var<>(new ArrayBuffer<>());
-        Var<Buffer<DecodeCommand>> commandsVar = new Var<>(new ArrayBuffer<>());
-        Var<Buffer<DecodeMessage>> messagesVar = new Var<>(new ArrayBuffer<>());
-        Var<DecodeName> baseTypeNameVar = new Var<>();
-        Var<DecodeComponent> componentVar = new Var<>();
-        Var<Integer> idVar = new Var<>();
-        return Sequence("component", EW(), ElementNameAsName(), baseTypeNameVar.set((DecodeNameImpl) peek()),
-                Optional(OptEW(), ':', NonNegativeNumberAsInteger(), idVar.set((Integer) pop())),
-                Optional(EW(), "with", OptEW(), Subcomponent(namespaceVar, subComponentsVar),
-                        ZeroOrMore(OptEW(), ',', OptEW(), Subcomponent(namespaceVar, subComponentsVar))),
-                OptEW(), '{',
-                Optional(OptEW(), ComponentParametersAsType(namespaceVar, baseTypeNameVar),
-                        typeVar.set((DecodeStructType) pop()), append(namespaceVar.get().types(), typeVar.get())),
-                componentVar.set(new DecodeComponentImpl((DecodeNameImpl) pop(), namespaceVar.get(), Option.apply(idVar.get()),
-                                typeVar.isSet()
-                                        ? Option.apply(SimpleDecodeMaybeProxy.obj(typeVar.get()))
-                                        : Option.<DecodeMaybeProxy<DecodeStructType>>empty(), Option.apply(infoVar.get()),
-                                subComponentsVar.get(), commandsVar.get(), messagesVar.get())),
-                ZeroOrMore(OptEW(),
-                        FirstOf(Sequence(CommandAsCommand(namespaceVar), append(commandsVar.get(), (DecodeCommand) pop())),
-                                Sequence(MessageAsMessage(componentVar), append(messagesVar.get(), (DecodeMessage) pop())))),
-                OptEW(), '}',
-                push(componentVar.get()));
-    }
-  */
-
   val CommandArg: Rule1[DecodeCommandArgument] = rule {
     OptInfoEw ~ TypeUnitApplication ~ Ew ~ ElementName ~>
       ((info: Option[String], typeUnit: DecodeTypeUnitApplication, name: DecodeName)
@@ -244,33 +212,6 @@ class DecodeParboiledParser(val input: ParserInput) extends Parser {
       ((display: Option[String], name: DecodeName, info: Option[String]) => new DecodeUnitImpl(name, ns.get, display, info))
   }
 
-  /*
-  Rule TypeDeclBodyAsType(@NotNull Var<DecodeNamespace> namespaceVar, @NotNull Var<DecodeName> nameVar, @NotNull Var<String> infoVar)
-    {
-        return FirstOf(
-                EnumTypeDeclAsType(namespaceVar, nameVar),
-                StructTypeDeclAsStructType(namespaceVar, nameVar),
-                Sequence(push(namespaceVar.get()), TypeApplicationAsOptionalProxyType(),
-                        push(new DecodeSubTypeImpl(Option.apply(nameVar.get()), namespaceVar.get(), Option.apply(
-                                infoVar.get()), getOrThrow((Option<DecodeMaybeProxy<DecodeType>>) pop())))));
-    }
-   */
-
-  /*
-  Rule LiteralAsString()
-    {
-        return Sequence(FirstOf(FloatLiteral(), NonNegativeNumber(), "true", "false"),
-                push(match()));
-    }
-
-    Rule FloatLiteral()
-    {
-        return Sequence(Optional(FirstOf('+', '-')),
-                FirstOf(Sequence(NonNegativeNumber(), '.', Optional(NonNegativeNumber())),
-                        Sequence('.', NonNegativeNumber())),
-                Optional(AnyOf("eE"), Optional(AnyOf("+-")), NonNegativeNumber()));
-    }
-   */
   val FloatLiteral: Rule0 = rule {
     anyOf("+-").? ~ (NonNegativeIntegerLiteral ~ '.' ~ (NonNegativeIntegerLiteral).? | '.' ~ NonNegativeIntegerLiteral) ~
       (anyOf("eE") ~ anyOf("+-").? ~ NonNegativeIntegerLiteral)
@@ -293,17 +234,6 @@ class DecodeParboiledParser(val input: ParserInput) extends Parser {
       ((name: DecodeName, info: Option[String], t: Option[DecodeMaybeProxy[DecodeType]], constants: Seq[DecodeEnumConstant])
         => new DecodeEnumTypeImpl(Some(name), ns.get, t.get, info, constants.to[mutable.Set]))
   }
-
-  /*
-  Rule StructTypeDeclAsStructType(@NotNull Var<DecodeNamespace> namespaceVar, @NotNull Var<DecodeName> nameVar)
-    {
-        Var<String> infoVar = new Var<>();
-        Var<Buffer<DecodeStructField>> fieldsVar = new Var<>(new ArrayBuffer<>());
-        return Sequence("struct", OptEW(), StructTypeFields(namespaceVar, fieldsVar),
-                push(new DecodeStructTypeImpl(Option.apply(nameVar.get()), namespaceVar.get(),
-                                Option.apply(infoVar.get()), fieldsVar.get().toSeq())));
-    }
-   */
 
   val StructType = rule {
     atomic("struct") ~ Ew.? ~ StructTypeFields ~>
@@ -371,23 +301,6 @@ class DecodeParboiledParser(val input: ParserInput) extends Parser {
   }
 
   val LengthTo: Rule1[Int] = rule { NonNegativeIntegerAsInt | ch('*') ~> (() => -1) }
-
-  /*
-  Rule ArrayTypeApplicationAsOptionalProxyType()
-    {
-        Var<DecodeNamespace> namespaceVar = new Var<>();
-        Var<DecodeMaybeProxy<DecodeType>> typeApplicationVar = new Var<>();
-        return Sequence(
-                Sequence(namespaceVar.set((DecodeNamespace) pop()), '[', OptEW(),
-                        push(namespaceVar.get()),
-                        TypeApplicationAsOptionalProxyType(), typeApplicationVar.set(getOrThrow((Option<DecodeMaybeProxy<DecodeType>>) pop())),
-                        Optional(OptEW(), ',', OptEW(),
-                                Sequence(LengthFrom(), Optional(OptEW(), "..", OptEW(), LengthTo()))),
-                        OptEW(), ']'),
-                push(Option.apply(proxy(DecodeUtils.getNamespaceFqnFromUri(typeApplicationVar.get().proxy().uri()), DecodeNameImpl
-                        .newFromSourceName(match())))));
-    }
-   */
 
   val ArrayTypeApplication: Rule1[Option[DecodeMaybeProxy[DecodeType]]] = rule {
     capture('[' ~ Ew.? ~ TypeApplication ~ (Ew.? ~ ',' ~ Ew.? ~ NonNegativeIntegerAsInt
