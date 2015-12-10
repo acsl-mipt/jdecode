@@ -48,7 +48,7 @@ public class DecodeSqlProvider
             throw new ModelExportingException(e);
         }
         try(Connection connection = DriverManager
-                .getConnection(config.getConnectionUrl()))
+                .getConnection(config.connectionUrl()))
         {
             this.connection = connection;
             DecodeRegistry registry = DecodeRegistryImpl.apply();

@@ -1,5 +1,9 @@
 package ru.mipt.acsl.decode.parser
 
+import java.io.{InputStream, IOException}
+
+import com.google.common.base.Charsets
+import com.google.common.io.Resources
 import org.parboiled2._
 import ru.mipt.acsl.decode.model.domain.impl._
 import ru.mipt.acsl.decode.model.domain.impl.`type`.DecodeAliasTypeImpl
@@ -18,8 +22,10 @@ import ru.mipt.acsl.decode.model.domain._
 import ru.mipt.acsl.decode.model.domain.impl.proxy.SimpleDecodeMaybeProxy
 
 import scala.collection.mutable
+import scala.io.Source
+import scala.util.{Try, Success, Failure}
 
-class DecodeParboiled2Parser(val input: ParserInput) extends Parser {
+class DecodeParboiledParser(val input: ParserInput) extends Parser {
 
   private val alpha = CharPredicate.Alpha ++ '_'
   private val alphaNum = alpha ++ CharPredicate.Digit
@@ -425,42 +431,6 @@ class DecodeParboiled2Parser(val input: ParserInput) extends Parser {
     parentNamespace.foreach(_.subNamespaces += result)
     result
   }
-  /*
-
-    Rule W()
-    {
-        return OneOrMore(AnyOf(" \t"));
-    }
-
-    Rule OptW()
-    {
-        return Optional(W());
-    }
-
-    Rule OptEW()
-    {
-        return Optional(EW());
-    }
-
-    @NotNull
-    static String genericTypesListToTypesUriString(@NotNull Buffer<Option<DecodeMaybeProxy<DecodeReferenceable>>> genericTypesVar)
-    {
-        String result = JavaConversions.asJavaCollection(genericTypesVar).stream().map(op -> asOptional(op).map(DecodeMaybeProxy::proxy)
-                .map(DecodeProxy::uri).map(Object::toString).map(s -> {
-                    try
-                    {
-                        return URLEncoder.encode(s, Charsets.UTF_8.name());
-                    }
-                    catch (UnsupportedEncodingException e)
-                    {
-                        throw new ParsingException(e);
-                    }
-                }).orElse("void")).collect(
-                Collectors.joining(","));
-        Preconditions.checkState(!result.contains("/") && !result.contains("<"), "invalid types string");
-        return result;
-    }
-   */
 }
 
 private trait ImportPart {
@@ -474,4 +444,28 @@ private case class ImportPartName(originalName: DecodeName) extends ImportPart {
 
 private case class ImportPartNameAlias(originalName: DecodeName, _alias: DecodeName) extends ImportPart {
   def alias: String = _alias.asMangledString
+}
+
+class DecodeParser extends ru.mipt.acsl.parsing.Parser[Try[DecodeNamespace]] {
+  override def parse(is: InputStream): Try[DecodeNamespace] = {
+    new DecodeParboiledParser(Source.fromInputStream(is).mkString).File.run()
+  }
+}
+
+case class DecodeSourceProviderConfiguration(resourcePath: String)
+
+class DecodeSourceProvider {
+  def provide(config: DecodeSourceProviderConfiguration): DecodeRegistry = {
+    val resourcePath = config.resourcePath
+    val parser = new DecodeParser()
+    val registry = new DecodeRegistryImpl()
+    registry.rootNamespaces ++= DecodeUtil.mergeRootNamespaces(Source.fromInputStream(getClass.getResourceAsStream(resourcePath)).getLines().
+      filter(_.endsWith(".decode")).map(name => {
+      parser.parse(getClass.getResourceAsStream(resourcePath + "/" + name)) match {
+        case Success(v) => v
+        case Failure(e) => throw e;
+      }
+    }).toTraversable)
+    registry
+  }
 }

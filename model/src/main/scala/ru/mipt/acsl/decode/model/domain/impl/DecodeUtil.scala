@@ -52,7 +52,7 @@ object DecodeUtil {
       list += namespace
   }
 
-  def mergeRootNamespaces(namespaces: mutable.Buffer[DecodeNamespace]): mutable.Buffer[DecodeNamespace] = {
+  def mergeRootNamespaces(namespaces: Traversable[DecodeNamespace]): mutable.Buffer[DecodeNamespace] = {
     val result = new ArrayBuffer[DecodeNamespace]()
     namespaces.foreach(mergeNamespaceToNamespacesList(result, _))
     result
