@@ -36,7 +36,7 @@
 
         <dependency>
             <groupId>org.parboiled</groupId>
-            <artifactId>parboiled_2.11</artifactId>
+            <artifactId>parboiled_${scala.binary.version}</artifactId>
             <version>2.1.0</version>
             <exclusions>
                 <exclusion>
@@ -45,6 +45,12 @@
                     <artifactId>scala-library</artifactId>
                 </exclusion>
             </exclusions>
+        </dependency>
+
+        <dependency>
+            <groupId>com.typesafe.scala-logging</groupId>
+            <artifactId>scala-logging_${scala.binary.version}</artifactId>
+            <version>3.1.0</version>
         </dependency>
     </dependencies>
 
