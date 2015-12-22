@@ -1,7 +1,9 @@
 package ru.mipt.acsl.decode.parser
 
 import java.io.InputStream
+import java.net.URLEncoder
 
+import com.google.common.base.Charsets
 import com.typesafe.scalalogging.LazyLogging
 import org.parboiled2.ParserInput.StringBasedParserInput
 import org.parboiled2._
@@ -25,11 +27,11 @@ import scala.collection.mutable
 import scala.io.Source
 import scala.util.{Try, Success, Failure}
 
-class DecodeParboiledParser(val input: ParserInput) extends Parser {
+class DecodeParboiledParser(val input: ParserInput) extends Parser with LazyLogging {
 
   private val alpha = CharPredicate.Alpha ++ '_'
   private val alphaNum = alpha ++ CharPredicate.Digit
-  private val imports = mutable.HashMap[String, DecodeMaybeProxy[DecodeReferenceable]]()
+  private val imports = mutable.HashMap.empty[String, DecodeMaybeProxy[DecodeReferenceable]]
 
   def Ew = rule { anyOf(" \t\r\n").+ }
 
@@ -127,7 +129,7 @@ class DecodeParboiledParser(val input: ParserInput) extends Parser {
   }
 
   def CommandArgs: Rule1[Seq[DecodeCommandArgument]] = rule {
-    '(' ~ CommandArg.*(Ew.? ~ ',' ~ Ew.?) ~ (Ew.? ~ ',').? ~ Ew.? ~ ')'
+    '(' ~ Ew.? ~ CommandArg.*(Ew.? ~ ',' ~ Ew.?) ~ (Ew.? ~ ',').? ~ Ew.? ~ ')'
   }
 
   def Command: Rule1[DecodeCommand] = rule {
@@ -312,9 +314,44 @@ class DecodeParboiledParser(val input: ParserInput) extends Parser {
           DecodeNameImpl.newFromSourceName(capture))))
   }
 
+  /*
+  @NotNull
+-    static String genericTypesListToTypesUriString(@NotNull Buffer<Option<DecodeMaybeProxy<DecodeReferenceable>>> genericTypesVar)
+-    {
+-        String result = JavaConversions.asJavaCollection(genericTypesVar).stream().map(op -> asOptional(op).map(DecodeMaybeProxy::proxy)
+-                .map(DecodeProxy::uri).map(Object::toString).map(s -> {
+-                    try
+-                    {
+-                        return URLEncoder.encode(s, Charsets.UTF_8.name());
+-                    }
+-                    catch (UnsupportedEncodingException e)
+-                    {
+-                        throw new ParsingException(e);
+-                    }
+-                }).orElse("void")).collect(
+-                Collectors.joining(","));
+-        Preconditions.checkState(!result.contains("/") && !result.contains("<"), "invalid types string");
+-        return result;
+-    }
+-
+   */
+
+  def genericTypesListToTypesUriString(genericTypesVar: Seq[Option[DecodeMaybeProxy[DecodeType]]]): String = {
+    genericTypesVar.map(
+      _.map({p: DecodeMaybeProxy[DecodeType] => URLEncoder.encode(p.proxy.uri.toString, Charsets.UTF_8.name)})
+        .getOrElse("void")).mkString(",")
+  }
+
   def TypeApplication: Rule1[Option[DecodeMaybeProxy[DecodeType]]] = rule {
-    PrimitiveTypeApplication ~> (Some(_)) | NativeTypeApplication | ArrayTypeApplication | ElementId ~>
-      ((fqn: DecodeFqn) => Some(proxyForTypeFqn[DecodeType](ns.get, fqn)))
+    (PrimitiveTypeApplication ~> (Some(_)) | NativeTypeApplication | ArrayTypeApplication
+      | ElementId ~> ((fqn: DecodeFqn) => Some(proxyForTypeFqn[DecodeType](ns.get, fqn)))) ~
+    (Ew.? ~ '<' ~ TypeApplication.+(Ew.? ~ ',' ~ Ew.?) ~ ','.? ~ Ew.? ~ '>'
+      ~> ((b: Option[DecodeMaybeProxy[DecodeType]], g: Seq[Option[DecodeMaybeProxy[DecodeType]]])
+      => Some(SimpleDecodeMaybeProxy.proxyForTypeUriString[DecodeType](
+      s"${b.get.proxy.uri}%3C${genericTypesListToTypesUriString(g)}%3E", ns.get.fqn)))).? ~
+    (Ew.? ~ '?' ~> ((t: Option[DecodeMaybeProxy[DecodeType]])
+    => Some(SimpleDecodeMaybeProxy.proxyForSystem[DecodeType](
+        DecodeNameImpl.newFromSourceName(s"optional<${t.get.proxy.uri}>"))))).?
   }
 
   def Alias: Rule1[DecodeAliasType] = rule {
@@ -329,14 +366,15 @@ class DecodeParboiledParser(val input: ParserInput) extends Parser {
   }
 
   def File: Rule1[DecodeNamespace] = rule {
-    run(() => imports.clear()) ~ Namespace ~> ((_ns: DecodeNamespace) => { ns = Some(_ns) }: Unit) ~
+    run(imports.clear()) ~ Namespace ~>
+      ((_ns: DecodeNamespace) => { ns = Some(_ns); ns.get }: DecodeNamespace) ~
       (Ew ~ Import).* ~
       (Ew.? ~ (Component ~> ((c: DecodeComponent) => { ns.get.components += c }: Unit)
         | Unit_ ~> ((u: DecodeUnit) => { ns.get.units += u }: Unit)
         | Type ~> ((t: DecodeType) => { ns.get.types += t }: Unit)
         | Alias ~> ((a: DecodeAliasType) => { ns.get.types += a }: Unit)
         | Language ~> ((l: DecodeLanguage) => { ns.get.languages += l }: Unit))).* ~
-      Ew.? ~ EOI ~> (() => ns.get)
+      Ew.? ~ EOI
   }
 
   def newNamespace(info: Option[String], fqn: DecodeFqn) = {
@@ -384,9 +422,11 @@ class DecodeSourceProvider extends LazyLogging {
       logger.debug(s"Parsing $resource...")
       val input: StringBasedParserInput = Source.fromInputStream(getClass.getResourceAsStream(resource)).mkString
       parser.parse(input) match {
-        case Success(v) => v
+        case Success(v) => v.rootNamespace
         case Failure(e) => e match {
-          case p: ParseError => logger.error(p.format(input))
+          case p: ParseError =>
+            val formatter: ErrorFormatter = new ErrorFormatter(showTraces = true)
+            logger.error(formatter.format(p, input))
         }
         throw e
       }
