@@ -1,4 +1,4 @@
-package ru.mipt.acsl.generator.c.ast
+package ru.mipt.acsl.generator.cpp.ast
 
 import ru.mipt.acsl.generation.Generatable
 
@@ -9,10 +9,10 @@ import scala.collection.mutable
  * @author Artem Shein
  */
 
-trait CAstElement extends Generatable[CGeneratorState]
+trait CppAstElement extends Generatable[CGeneratorState]
 
-trait CStmt extends CAstElement
-trait HStmt extends CStmt
+trait CppStmt extends CppAstElement
+trait HStmt extends CppStmt
 
 class HComment(val text: String) extends HStmt {
   override def generate(s: CGeneratorState): Unit = {
@@ -25,14 +25,12 @@ object HComment {
 }
 
 object HEol extends HStmt {
-  override def generate(s: CGeneratorState): Unit = {
-    s.eol()
-  }
+  override def generate(s: CGeneratorState): Unit = s.eol()
 }
 
-trait CMacroStmt extends HStmt
+trait CppMacroStmt extends HStmt
 
-class CDefine(val name: String, val value: Option[String]) extends CMacroStmt {
+class CppDefine(val name: String, val value: Option[String]) extends CppMacroStmt {
   override def generate(s: CGeneratorState): Unit = {
     s.append("#define ").append(name)
     value.map(s.append(" ").append)
@@ -40,45 +38,45 @@ class CDefine(val name: String, val value: Option[String]) extends CMacroStmt {
   }
 }
 
-object CDefine {
-  def apply(name: String) = new CDefine(name, None)
-  def apply(name: String, value: String) = new CDefine(name, Some(value))
+object CppDefine {
+  def apply(name: String) = new CppDefine(name, None)
+  def apply(name: String, value: String) = new CppDefine(name, Some(value))
 }
 
-class CIfNDef(val name: String, val statements: Seq[CStmt]) extends CMacroStmt {
+class CppIfNDef(val name: String, val statements: Seq[CppStmt]) extends CppMacroStmt {
   override def generate(s: CGeneratorState): Unit = {
     s.append("#ifndef ").append(name).eol()
     statements.foreach(stmt => { stmt.generate(s); s.eol() })
   }
 }
 
-object CIfNDef {
-  def apply(name: String, statements: Seq[CStmt]) = new CIfNDef(name, statements)
+object CppIfNDef {
+  def apply(name: String, statements: Seq[CppStmt]) = new CppIfNDef(name, statements)
 }
 
-class CEndIf extends CMacroStmt {
+class CppEndIf extends CppMacroStmt {
   override def generate(s: CGeneratorState): Unit = {
     s.append("#endif")
   }
 }
 
-object CEndIf {
-  val obj = new CEndIf()
+object CppEndIf {
+  val obj = new CppEndIf()
   def apply() = obj
 }
 
-trait CType extends CAstElement {
-  def ptr(): CPtrType = CPtrType(this)
+trait CppType extends CppAstElement {
+  def ptr(): CppPtrType = CppPtrType(this)
 }
 
-case class CPtrType(subType: CType) extends CType {
+case class CppPtrType(subType: CppType) extends CppType {
   override def generate(s: CGeneratorState): Unit = {
     subType.generate(s)
     s.append("*")
   }
 }
 
-case class CTypeDefStmt(name: String, t: CType) extends HStmt {
+case class CppTypeDefStmt(name: String, t: CppType) extends HStmt {
   override def generate(s: CGeneratorState): Unit = {
     s.append("typedef ")
     t.generate(s)
@@ -86,32 +84,32 @@ case class CTypeDefStmt(name: String, t: CType) extends HStmt {
   }
 }
 
-class CNativeType(name: String) extends CTypeApplication(name) {
+class CppNativeType(name: String) extends CppTypeApplication(name) {
   override def generate(s: CGeneratorState): Unit = {
     s.append(name)
   }
 }
 
-case object CVoidType extends CNativeType("void")
-case object CUnsignedCharType extends CNativeType("unsigned char")
-case object CSignedCharType extends CNativeType("signed char")
-case object CUnsignedShortType extends CNativeType("unsigned short")
-case object CSignedShortType extends CNativeType("signed short")
-case object CUnsignedIntType extends CNativeType("unsigned int")
-case object CSignedIntType extends CNativeType("signed int")
-case object CUnsignedLongType extends CNativeType("unsigned long")
-case object CSignedLongType extends CNativeType("signed long")
-case object CFloatType extends CNativeType("float")
-case object CDoubleType extends CNativeType("double")
+case object CppVoidType$ extends CppNativeType("void")
+case object CppUnsignedCharType$ extends CppNativeType("unsigned char")
+case object CppSignedCharType$ extends CppNativeType("signed char")
+case object CppUnsignedShortType$ extends CppNativeType("unsigned short")
+case object CppSignedShortType$ extends CppNativeType("signed short")
+case object CppUnsignedIntType$ extends CppNativeType("unsigned int")
+case object CppSignedIntType$ extends CppNativeType("signed int")
+case object CppUnsignedLongType$ extends CppNativeType("unsigned long")
+case object CppSignedLongType$ extends CppNativeType("signed long")
+case object CppFloatType$ extends CppNativeType("float")
+case object CppDoubleType$ extends CppNativeType("double")
 
-class CTypeApplication(val name: String) extends CType {
+class CppTypeApplication(val name: String) extends CppType {
   override def generate(s: CGeneratorState): Unit = {
     s.append(name)
   }
 }
 
-object CTypeApplication {
-  def apply(name: String): CTypeApplication = new CTypeApplication(name)
+object CppTypeApplication {
+  def apply(name: String): CppTypeApplication = new CppTypeApplication(name)
 }
 
 class CEnumTypeDefConst(val name: String, val value: Int) {
@@ -122,9 +120,9 @@ object CEnumTypeDefConst {
   def apply(name: String, value: Int) = new CEnumTypeDefConst(name, value)
 }
 
-trait CTypeDef extends CType
+trait CppTypeDef extends CppType
 
-class CEnumTypeDef(consts: Iterable[CEnumTypeDefConst], name: Option[String] = None) extends CTypeDef {
+class CppEnumTypeDef(consts: Iterable[CEnumTypeDefConst], name: Option[String] = None) extends CppTypeDef {
   override def generate(s: CGeneratorState): Unit = {
     s.append("enum")
     name.map(s.append(" ").append)
@@ -135,15 +133,15 @@ class CEnumTypeDef(consts: Iterable[CEnumTypeDefConst], name: Option[String] = N
   }
 }
 
-object CEnumTypeDef {
-  def apply(consts: Iterable[CEnumTypeDefConst]) = new CEnumTypeDef(consts)
+object CppEnumTypeDef {
+  def apply(consts: Iterable[CEnumTypeDefConst]) = new CppEnumTypeDef(consts)
 }
 
-case class CStructTypeDefField(name: String, t: CType) {
+case class CStructTypeDefField(name: String, t: CppType) {
 
 }
 
-case class CStructTypeDef(fields: Traversable[CStructTypeDefField], name: Option[String] = None) extends CType {
+case class CppStructTypeDef(fields: Traversable[CStructTypeDefField], name: Option[String] = None) extends CppType {
   override def generate(s: CGeneratorState): Unit = {
     s.append("struct ")
     name.map(s.append(_).append(" "))
@@ -164,12 +162,12 @@ case class CStructTypeDef(fields: Traversable[CStructTypeDefField], name: Option
   }
 }
 
-class AstFile[A <: CStmt](val statements: mutable.Buffer[A]) extends Growable[A] {
+class AstFile[A <: CppStmt](val statements: mutable.Buffer[A]) extends Growable[A] {
   override def +=(elem: A): AstFile.this.type = { statements += elem; this }
   override def clear(): Unit = statements.clear()
 }
 
-class CFile[A <: CStmt](statements: mutable.Buffer[A]) extends AstFile[A](statements) with Generatable[CGeneratorState] {
+class CFile[A <: CppStmt](statements: mutable.Buffer[A]) extends AstFile[A](statements) with Generatable[CGeneratorState] {
 
   override def generate(s: CGeneratorState): Unit = {
     statements.foreach(_.generate(s))
@@ -186,7 +184,7 @@ class CFile[A <: CStmt](statements: mutable.Buffer[A]) extends AstFile[A](statem
 }
 
 object CFile {
-  def apply(statements: CStmt*) = new CFile[CStmt](statements.to[mutable.Buffer])
+  def apply(statements: CppStmt*) = new CFile[CppStmt](statements.to[mutable.Buffer])
 }
 
 class HFile(statements: mutable.Buffer[HStmt]) extends CFile[HStmt](statements) {

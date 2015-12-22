@@ -47,7 +47,7 @@ trait DecodeHasOptionInfo {
 trait DecodeFqn {
   def parts: Seq[DecodeName]
 
-  def asMangledString(): String = parts.map(_.asMangledString).mkString(".")
+  def asMangledString: String = parts.map(_.asMangledString).mkString(".")
 
   def last: DecodeName = parts.last
 

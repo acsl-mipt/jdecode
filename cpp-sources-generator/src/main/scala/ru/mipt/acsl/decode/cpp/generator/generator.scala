@@ -1,26 +1,25 @@
-package ru.mipt.acsl.decode.c.generator
+package ru.mipt.acsl.decode.cpp.generator
 
 import java.io._
 import java.security.MessageDigest
-import java.util.Optional
 
 import com.typesafe.scalalogging.LazyLogging
 import ru.mipt.acsl.decode.model.domain.TypeKind
 import ru.mipt.acsl.decode.model.domain._
 import ru.mipt.acsl.generation.Generator
-import ru.mipt.acsl.generator.c.ast._
+import ru.mipt.acsl.generator.cpp.ast._
 
 import resource._
 
 import scala.collection.mutable
 import scala.util.Random
 
-class CDecodeGeneratorConfiguration(val outputDir: File, val registry: DecodeRegistry, val rootComponentFqn: String,
-                                    val namespaceAlias: Map[DecodeFqn, DecodeFqn] = Map()) {
+class CppGeneratorConfiguration(val outputDir: File, val registry: DecodeRegistry, val rootComponentFqn: String,
+                                val namespaceAlias: Map[DecodeFqn, DecodeFqn] = Map()) {
 
 }
 
-class CDecodeSourcesGenerator(val config: CDecodeGeneratorConfiguration) extends Generator[CDecodeGeneratorConfiguration] with LazyLogging {
+class CppSourcesGenerator(val config: CppGeneratorConfiguration) extends Generator[CppGeneratorConfiguration] with LazyLogging {
   override def generate() {
     generateRootComponent(config.registry.getComponent(config.rootComponentFqn).get)
   }
@@ -35,13 +34,13 @@ class CDecodeSourcesGenerator(val config: CDecodeGeneratorConfiguration) extends
     dir
   }
 
-  def writeFile[T <: CStmt](file: File, hfile: CFile[T]) {
+  def writeFile[T <: CppStmt](file: File, hfile: CFile[T]) {
     for (typeHeaderStream <- managed(new OutputStreamWriter(new FileOutputStream(file)))) {
       hfile.generate(CGeneratorState(typeHeaderStream))
     }
   }
 
-  def writeFileIfNotEmptyWithComment[A >: HStmt <: CStmt](file: File, cFile: CFile[A], comment: String) {
+  def writeFileIfNotEmptyWithComment[A >: HStmt <: CppStmt](file: File, cFile: CFile[A], comment: String) {
     if (cFile.statements.nonEmpty) {
       cFile.statements.prepend(HComment(comment), HEol)
       writeFile(file, cFile)
@@ -127,32 +126,32 @@ class CDecodeSourcesGenerator(val config: CDecodeGeneratorConfiguration) extends
     val bytes = Array[Byte](10)
     rand.nextBytes(bytes)
     val uniqueName: String = "__" ++ MessageDigest.getInstance("MD5").digest(bytes).map("%02x".format(_)).mkString ++ "__"
-    HFile(Seq(CIfNDef(uniqueName, Seq(CDefine(uniqueName)))) ++ file.statements ++ Seq(CEndIf()): _*)
+    HFile(Seq(CppIfNDef(uniqueName, Seq(CppDefine(uniqueName)))) ++ file.statements ++ Seq(CppEndIf()): _*)
   }
 
-  private def primitiveTypeToCTypeApplication(primitiveType: DecodePrimitiveType): CTypeApplication = {
+  private def primitiveTypeToCTypeApplication(primitiveType: DecodePrimitiveType): CppTypeApplication = {
     import TypeKind._
     (primitiveType.kind, primitiveType.bitLength) match {
-      case (Bool, 8) => CTypeApplication("b8")
-      case (Bool, 16) => CTypeApplication("b16")
-      case (Bool, 32) => CTypeApplication("b32")
-      case (Bool, 64) => CTypeApplication("b64")
-      case (Float, 32) => CFloatType
-      case (Float, 64) => CDoubleType
-      case (Int, 8) => CUnsignedCharType
-      case (Int, 16) => CUnsignedShortType
-      case (Int, 32) => CUnsignedIntType
-      case (Int, 64) => CUnsignedLongType
-      case (Uint, 8) => CSignedCharType
-      case (Uint, 16) => CSignedShortType
-      case (Uint, 32) => CSignedIntType
-      case (Uint, 64) => CSignedLongType
+      case (Bool, 8) => CppTypeApplication("b8")
+      case (Bool, 16) => CppTypeApplication("b16")
+      case (Bool, 32) => CppTypeApplication("b32")
+      case (Bool, 64) => CppTypeApplication("b64")
+      case (Float, 32) => CppFloatType$
+      case (Float, 64) => CppDoubleType$
+      case (Int, 8) => CppUnsignedCharType$
+      case (Int, 16) => CppUnsignedShortType$
+      case (Int, 32) => CppUnsignedIntType$
+      case (Int, 64) => CppUnsignedLongType$
+      case (Uint, 8) => CppSignedCharType$
+      case (Uint, 16) => CppSignedShortType$
+      case (Uint, 32) => CppSignedIntType$
+      case (Uint, 64) => CppSignedLongType$
       case _ => sys.error("illegal bit length")
     }
   }
 
-  def cTypeDefForName(t: DecodeType, cType: CType) = CTypeDefStmt(cTypeNameFor(t), cType)
-  def cTypeAppForTypeName(t: DecodeType): CTypeApplication = CTypeApplication(cTypeNameFor(t))
+  def cTypeDefForName(t: DecodeType, cType: CppType) = CppTypeDefStmt(cTypeNameFor(t), cType)
+  def cTypeAppForTypeName(t: DecodeType): CppTypeApplication = CppTypeApplication(cTypeNameFor(t))
 
   private def generateType(t: DecodeType, nsDir: File) {
     if (t.isInstanceOf[DecodePrimitiveType])
@@ -161,16 +160,16 @@ class CDecodeSourcesGenerator(val config: CDecodeGeneratorConfiguration) extends
     writeFileIfNotEmptyWithComment(tFile, HFile(
     t match {
       case t: DecodePrimitiveType => cTypeDefForName(t, cTypeAppForTypeName(t))
-      case t: DecodeNativeType => cTypeDefForName(t, CVoidType.ptr())
+      case t: DecodeNativeType => cTypeDefForName(t, CppVoidType$.ptr())
       case t: DecodeSubType => cTypeDefForName(t, cTypeAppForTypeName(t.baseType.obj))
       case t: DecodeEnumType => cTypeDefForName(t,
-        CEnumTypeDef(t.constants.map(c => CEnumTypeDefConst(c.name.asMangledString, c.value.toInt))))
-      case t: DecodeArrayType => cTypeDefForName(t, CVoidType.ptr())
-      case t: DecodeStructType => cTypeDefForName(t, CStructTypeDef(t.fields.map(f => CStructTypeDefField(f.name.asMangledString, cTypeAppForTypeName(f.typeUnit.t.obj)))))
+        CppEnumTypeDef(t.constants.map(c => CEnumTypeDefConst(c.name.asMangledString, c.value.toInt))))
+      case t: DecodeArrayType => cTypeDefForName(t, CppVoidType$.ptr())
+      case t: DecodeStructType => cTypeDefForName(t, CppStructTypeDef(t.fields.map(f => CStructTypeDefField(f.name.asMangledString, cTypeAppForTypeName(f.typeUnit.t.obj)))))
       case t: DecodeAliasType =>
         val newName: String = cTypeNameFor(t)
         val oldName: String = cTypeNameFor(t.baseType.obj)
-        if (newName equals oldName) HComment("omitted due name clash") else CDefine(newName, oldName)
+        if (newName equals oldName) HComment("omitted due name clash") else CppDefine(newName, oldName)
       case _ => sys.error("not implemented")
     }), "Type header")
   }
@@ -213,14 +212,14 @@ class CDecodeSourcesGenerator(val config: CDecodeGeneratorConfiguration) extends
   private def generateComponent(comp: DecodeComponent) {
     val dir = dirForNs(comp.namespace)
     val hFile = new File(dir, comp.name.asMangledString + "Component.h")
-    val cFile = new File(dir, comp.name.asMangledString + "Component.c")
+    val cFile = new File(dir, comp.name.asMangledString + "Component.cpp")
     writeFileIfNotEmptyWithComment(hFile, protectDoubleIncludeFile(HFile()), "Component header")
     writeFileIfNotEmptyWithComment(cFile, CFile(HEol), "Component header")
   }
 
-  override def getConfiguration: CDecodeGeneratorConfiguration = config
+  override def getConfiguration: CppGeneratorConfiguration = config
 }
 
-object CDecodeSourcesGenerator {
+object CppSourcesGenerator {
 
 }

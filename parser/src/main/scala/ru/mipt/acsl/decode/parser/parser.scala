@@ -91,8 +91,8 @@ class DecodeParboiledParser(val input: ParserInput) extends Parser with LazyLogg
   }
 
   def unitForFqn(unitFqn: DecodeFqn): DecodeMaybeProxy[DecodeUnit] = {
-    if (unitFqn.size == 1 && imports.contains(unitFqn.asMangledString()))
-      imports.get(unitFqn.asMangledString()).get.asInstanceOf[DecodeMaybeProxy[DecodeUnit]]
+    if (unitFqn.size == 1 && imports.contains(unitFqn.asMangledString))
+      imports.get(unitFqn.asMangledString).get.asInstanceOf[DecodeMaybeProxy[DecodeUnit]]
     else
       SimpleDecodeMaybeProxy.proxyDefaultNamespace(unitFqn, ns.get)
   }
@@ -199,7 +199,7 @@ class DecodeParboiledParser(val input: ParserInput) extends Parser with LazyLogg
       ((info: Option[String], id: Option[Int], subComponents: Option[Seq[DecodeFqn]], baseType: Option[DecodeStructType])
         => { component = Some(new DecodeComponentImpl(componentName.get, ns.get, id, baseType.map(SimpleDecodeMaybeProxy.obj(_)), info,
           subComponents.map(_.toBuffer).getOrElse(mutable.Buffer()).map((fqn: DecodeFqn) => {
-            val alias = fqn.asMangledString()
+            val alias = fqn.asMangledString
             if (fqn.size == 1 && imports.contains(alias))
               new DecodeComponentRefImpl(imports.get(alias).get.asInstanceOf[DecodeMaybeProxy[DecodeComponent]], Some(alias))
             else
