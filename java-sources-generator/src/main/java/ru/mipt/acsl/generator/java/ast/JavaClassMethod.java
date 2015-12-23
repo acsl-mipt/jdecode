@@ -47,16 +47,16 @@ public class JavaClassMethod implements JavaAstElement
     }
 
     @Override
-    public void generate(@NotNull JavaGeneratorState state, @NotNull Appendable appendable) throws IOException
+    public void generate(@NotNull JavaGeneratorState state)
     {
-        visibility.generate(state, appendable);
+        visibility.generate(state);
         if (isStatic)
         {
-            appendable.append(" static");
+            state.append(" static");
         }
-        appendable.append(" ");
-        returnType.generate(state, appendable);
-        appendable.append(" ").append(name).append("(");
+        state.append(" ");
+        returnType.generate(state);
+        state.append(" ").append(name).append("(");
         if (!arguments.isEmpty())
         {
             boolean isFirst = true;
@@ -68,12 +68,12 @@ public class JavaClassMethod implements JavaAstElement
                 }
                 else
                 {
-                    appendable.append(", ");
+                    state.append(", ");
                 }
-                argument.generate(state, appendable);
+                argument.generate(state);
             }
         }
-        appendable.append(")");
+        state.append(")");
         state.startBlock();
 
         if (!statements.isEmpty())
@@ -90,8 +90,8 @@ public class JavaClassMethod implements JavaAstElement
                     state.eol();
                 }
                 state.indent();
-                statement.generate(state, appendable);
-                appendable.append(";");
+                statement.generate(state);
+                state.append(";");
             }
         }
 

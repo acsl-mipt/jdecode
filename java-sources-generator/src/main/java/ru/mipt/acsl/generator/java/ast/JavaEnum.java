@@ -18,10 +18,10 @@ public class JavaEnum extends AbstractJavaBaseClass
     }
 
     @Override
-    public void generate(@NotNull JavaGeneratorState state, @NotNull Appendable appendable) throws IOException
+    public void generate(@NotNull JavaGeneratorState state)
     {
-        generateVisibility(state, appendable);
-        appendable.append("enum ").append(name);
+        generateVisibility(state);
+        state.append("enum ").append(name);
         state.startBlock();
 
         state.finishBlock();

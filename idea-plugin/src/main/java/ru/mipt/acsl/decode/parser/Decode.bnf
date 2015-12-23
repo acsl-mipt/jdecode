@@ -70,14 +70,22 @@
         FALSE = "false"
         WITH = "with"
         QUESTION = "?"
+        IMPORT = "import"
+        AS = "as"
+        LANGUAGE = "language"
+        DEFAULT = "default"
     ]
 }
 
-decodeFile ::= namespace_decl (component_decl | unit_decl | type_decl | alias_decl)*
+decodeFile ::= namespace_decl import_stmt* (component_decl | unit_decl | type_decl | alias_decl | language_decl)*
+
+import_stmt ::= IMPORT element_id (DOT (LEFT_BRACE import_element (COMMA import_element)* COMMA? RIGHT_BRACE | STAR))
+
+import_element ::= element_name_rule (AS element_name_rule)?
 
 alias_decl ::= info_string? ALIAS element_id type_application
 
-namespace_decl ::= NAMESPACE element_id
+namespace_decl ::= info_string? NAMESPACE element_id
 
 element_name_rule ::= ELEMENT_NAME_TOKEN | ESCAPED_NAME
 
@@ -118,7 +126,7 @@ message_parameters_decl ::= LEFT_PAREN parameter_decl (COMMA parameter_decl)* CO
 
 //all_parameters ::= STAR
 
-event_message ::= info_string? EVENT element_name_rule (COLON NON_NEGATIVE_NUMBER)? message_parameters_decl
+event_message ::= info_string? EVENT element_name_rule (COLON NON_NEGATIVE_NUMBER)? type_application message_parameters_decl
 
 //dynamic_status_message ::= DYNAMIC STATUS message_parameters_decl
 
@@ -147,7 +155,7 @@ length_to ::= NON_NEGATIVE_NUMBER
 
 type_decl_body ::= (info_string? type_application) | enum_type_decl | struct_type_decl
 
-enum_type_decl ::= info_string? ENUM (primitive_type_kind | native_type_kind) LEFT_PAREN enum_type_values RIGHT_PAREN
+enum_type_decl ::= info_string? ENUM type_application LEFT_PAREN enum_type_values RIGHT_PAREN
 
 enum_type_values ::= enum_type_value (COMMA enum_type_value)* COMMA?
 
@@ -156,3 +164,5 @@ enum_type_value ::= info_string? element_name_rule EQ_SIGN literal
 literal ::= float_literal | NON_NEGATIVE_NUMBER | TRUE | FALSE
 
 float_literal ::= (PLUS | MINUS)? (NON_NEGATIVE_NUMBER DOT NON_NEGATIVE_NUMBER? | DOT NON_NEGATIVE_NUMBER) (("e" | "E") (PLUS | MINUS)? NON_NEGATIVE_NUMBER)?
+
+language_decl ::= LANGUAGE element_name_rule DEFAULT?

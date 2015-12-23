@@ -23,7 +23,10 @@ public interface DecodeTypes {
   IElementType EVENT_MESSAGE = new DecodeElementType("EVENT_MESSAGE");
   IElementType FLOAT_LITERAL = new DecodeElementType("FLOAT_LITERAL");
   IElementType GENERIC_TYPE_APPLICATION = new DecodeElementType("GENERIC_TYPE_APPLICATION");
+  IElementType IMPORT_ELEMENT = new DecodeElementType("IMPORT_ELEMENT");
+  IElementType IMPORT_STMT = new DecodeElementType("IMPORT_STMT");
   IElementType INFO_STRING = new DecodeElementType("INFO_STRING");
+  IElementType LANGUAGE_DECL = new DecodeElementType("LANGUAGE_DECL");
   IElementType LENGTH_FROM = new DecodeElementType("LENGTH_FROM");
   IElementType LENGTH_TO = new DecodeElementType("LENGTH_TO");
   IElementType LITERAL = new DecodeElementType("LITERAL");
@@ -50,6 +53,7 @@ public interface DecodeTypes {
   IElementType ALIAS = new DecodeTokenType("alias");
   IElementType ARRAY = new DecodeTokenType("array");
   IElementType ARROW = new DecodeTokenType("->");
+  IElementType AS = new DecodeTokenType("as");
   IElementType BASE_TYPE = new DecodeTokenType("base_type");
   IElementType BEFORE = new DecodeTokenType("before");
   IElementType BER = new DecodeTokenType("ber");
@@ -59,6 +63,7 @@ public interface DecodeTypes {
   IElementType COMMAND = new DecodeTokenType("command");
   IElementType COMMENT = new DecodeTokenType("COMMENT");
   IElementType COMPONENT = new DecodeTokenType("component");
+  IElementType DEFAULT = new DecodeTokenType("default");
   IElementType DISPLAY = new DecodeTokenType("display");
   IElementType DOT = new DecodeTokenType(".");
   IElementType DOTS = new DecodeTokenType("..");
@@ -71,8 +76,10 @@ public interface DecodeTypes {
   IElementType FALSE = new DecodeTokenType("false");
   IElementType FLOAT = new DecodeTokenType("float");
   IElementType GT = new DecodeTokenType(">");
+  IElementType IMPORT = new DecodeTokenType("import");
   IElementType INFO = new DecodeTokenType("info");
   IElementType INT = new DecodeTokenType("int");
+  IElementType LANGUAGE = new DecodeTokenType("language");
   IElementType LEFT_BRACE = new DecodeTokenType("{");
   IElementType LEFT_BRACKET = new DecodeTokenType("[");
   IElementType LEFT_PAREN = new DecodeTokenType("(");
@@ -151,8 +158,17 @@ public interface DecodeTypes {
       else if (type == GENERIC_TYPE_APPLICATION) {
         return new DecodeGenericTypeApplicationImpl(node);
       }
+      else if (type == IMPORT_ELEMENT) {
+        return new DecodeImportElementImpl(node);
+      }
+      else if (type == IMPORT_STMT) {
+        return new DecodeImportStmtImpl(node);
+      }
       else if (type == INFO_STRING) {
         return new DecodeInfoStringImpl(node);
+      }
+      else if (type == LANGUAGE_DECL) {
+        return new DecodeLanguageDeclImpl(node);
       }
       else if (type == LENGTH_FROM) {
         return new DecodeLengthFromImpl(node);

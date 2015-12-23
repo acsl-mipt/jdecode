@@ -18,15 +18,16 @@ import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.openapi.vfs.VirtualFileWrapper;
 import com.intellij.psi.ClassFileViewProvider;
 import com.intellij.psi.PsiManager;
-import ru.mipt.acsl.decode.model.domain.proxy.DecodeResolvingResult;
+import ru.mipt.acsl.decode.model.domain.DecodeDomainModelResolver;
+import ru.mipt.acsl.decode.model.domain.DecodeResolvingResult;
+import ru.mipt.acsl.decode.model.domain.impl.DecodeModelResolver;
+import ru.mipt.acsl.decode.model.domain.impl.DecodeRegistryImpl;
 import ru.mipt.acsl.decode.parser.psi.DecodeFile;
 import ru.mipt.acsl.decode.model.exporter.ModelExportingException;
 import ru.mipt.acsl.decode.model.exporter.DecodeSqlite3Exporter;
 import ru.mipt.acsl.decode.model.exporter.DecodeSqlite3ExporterConfiguration;
 import ru.mipt.acsl.decode.model.domain.DecodeReferenceable;
 import ru.mipt.acsl.decode.model.domain.DecodeRegistry;
-import ru.mipt.acsl.decode.model.domain.impl.SimpleDecodeRegistry;
-import ru.mipt.acsl.decode.model.domain.impl.proxy.SimpleDecodeDomainModelResolver;
 import ru.mipt.acsl.decode.modeling.TransformationResult;
 import ru.mipt.acsl.decode.parser.DecodeFileType;
 
@@ -54,7 +55,7 @@ public class DecodeGenerateSqliteForDecodeSourcesAction extends AnAction
             return;
         }
         PsiManager psiManager = PsiManager.getInstance(project);
-        DecodeRegistry registry = SimpleDecodeRegistry.newInstance();
+        DecodeRegistry registry = new DecodeRegistryImpl();
         TransformationResult<DecodeRegistry> result = new DecodeTransformationResult(registry);
         ProjectRootManager.getInstance(project).getFileIndex().iterateContent(virtualFile -> {
             if (virtualFile.getFileType().equals(
@@ -69,8 +70,7 @@ public class DecodeGenerateSqliteForDecodeSourcesAction extends AnAction
         if (!result.hasError() && result.getResult().isPresent())
         {
             Preconditions.checkState(result.getResult().get() == registry);
-            DecodeResolvingResult<DecodeReferenceable> resolvingResult = SimpleDecodeDomainModelResolver.newInstance().resolve(
-                    registry);
+            DecodeResolvingResult<DecodeReferenceable> resolvingResult = DecodeModelResolver.resolve(registry);
             if (resolvingResult.hasError())
             {
                 resolvingResult.getMessages()
@@ -78,7 +78,7 @@ public class DecodeGenerateSqliteForDecodeSourcesAction extends AnAction
             }
         }
         FileSaverDialog fileChooserDialog = FileChooserFactory.getInstance().createSaveFileDialog(
-                new FileSaverDescriptor("Save file to", "", "sqlite"), (Project) null);
+                new FileSaverDescriptor("Save File to", "", "sqlite"), (Project) null);
         VirtualFileWrapper fileWrapper = fileChooserDialog.save(project.getBaseDir(), "decode.sqlite");
         if (fileWrapper == null)
         {

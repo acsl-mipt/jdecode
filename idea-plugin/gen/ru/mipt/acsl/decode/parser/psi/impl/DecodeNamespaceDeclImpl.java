@@ -28,4 +28,10 @@ public class DecodeNamespaceDeclImpl extends ASTWrapperPsiElement implements Dec
     return findNotNullChildByClass(DecodeElementId.class);
   }
 
+  @Override
+  @Nullable
+  public DecodeInfoString getInfoString() {
+    return findChildByClass(DecodeInfoString.class);
+  }
+
 }

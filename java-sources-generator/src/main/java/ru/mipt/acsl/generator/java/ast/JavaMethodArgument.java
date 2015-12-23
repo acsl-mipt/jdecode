@@ -27,10 +27,10 @@ public class JavaMethodArgument implements JavaAstElement
     }
 
     @Override
-    public void generate(@NotNull JavaGeneratorState state, @NotNull Appendable appendable) throws IOException
+    public void generate(@NotNull JavaGeneratorState state)
     {
-        type.generate(state, appendable);
-        appendable.append(" ").append(name);
+        type.generate(state);
+        state.append(" ").append(name);
     }
 
     public void setType(@NotNull JavaType type)

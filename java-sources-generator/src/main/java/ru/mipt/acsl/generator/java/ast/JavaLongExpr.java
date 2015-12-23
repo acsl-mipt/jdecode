@@ -17,8 +17,8 @@ public class JavaLongExpr implements JavaExpr
     }
 
     @Override
-    public void generate(@NotNull JavaGeneratorState state, @NotNull Appendable appendable) throws IOException
+    public void generate(@NotNull JavaGeneratorState state)
     {
-        appendable.append(Long.toString(value));
+        state.append(Long.toString(value));
     }
 }

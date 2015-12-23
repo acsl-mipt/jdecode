@@ -18,9 +18,9 @@ public class JavaReturnStatement implements JavaStatement
     }
 
     @Override
-    public void generate(@NotNull JavaGeneratorState state, @NotNull Appendable appendable) throws IOException
+    public void generate(@NotNull JavaGeneratorState state)
     {
-        appendable.append("return ");
-        expr.generate(state, appendable);
+        state.append("return ");
+        expr.generate(state);
     }
 }

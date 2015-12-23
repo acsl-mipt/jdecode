@@ -21,9 +21,9 @@ public class JavaClassFieldExpr implements JavaExpr
     }
 
     @Override
-    public void generate(@NotNull JavaGeneratorState state, @NotNull Appendable appendable) throws IOException
+    public void generate(@NotNull JavaGeneratorState state)
     {
-        typeApplication.generate(state, appendable);
-        appendable.append(".").append(fieldName);
+        typeApplication.generate(state);
+        state.append(".").append(fieldName);
     }
 }

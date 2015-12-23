@@ -12,8 +12,7 @@ public enum TableName
     ARRAY_TYPE("array_type"), ARRAY_TYPE_SIZE("array_type_size"), STRUCT_TYPE("struct_type"),
     STRUCT_TYPE_FIELD("struct_type_field"), COMPONENT("component"), SUB_COMPONENT("sub_component"), COMMAND("command"),
     COMMAND_ARGUMENT("command_argument"), MESSAGE("message"), EVENT_MESSAGE("event_message"), STATUS_MESSAGE("status_message"),
-    DYNAMIC_STATUS_MESSAGE("dynamic_status_message"), MESSAGE_PARAMETER("message_parameter"), SUB_TYPE("sub_type"),
-    ALIAS_TYPE("alias_type"), NATIVE_TYPE("native_type");
+    MESSAGE_PARAMETER("message_parameter"), SUB_TYPE("sub_type"), ALIAS_TYPE("alias_type"), NATIVE_TYPE("native_type");
 
     @NotNull
     private final String name;

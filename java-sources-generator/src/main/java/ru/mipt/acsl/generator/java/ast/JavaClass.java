@@ -26,17 +26,17 @@ public class JavaClass extends AbstractJavaBaseClass
     }
 
     @Override
-    public void generate(@NotNull JavaGeneratorState state, @NotNull Appendable appendable) throws IOException
+    public void generate(@NotNull JavaGeneratorState state)
     {
-        generateVisibility(state, appendable);
-        generateStatic(state, appendable);
-        appendable.append("class ").append(name);
-        generateGenericArguments(state, appendable);
+        generateVisibility(state);
+        generateStatic(state);
+        state.append("class ").append(name);
+        generateGenericArguments(state);
 
         if (extendsClass.isPresent())
         {
-            appendable.append(" extends ");
-            extendsClass.get().generate(state, appendable);
+            state.append(" extends ");
+            extendsClass.get().generate(state);
         }
 
         state.startBlock();
@@ -44,25 +44,25 @@ public class JavaClass extends AbstractJavaBaseClass
         for (JavaField field : fields)
         {
             state.indent();
-            field.generate(state, appendable);
+            field.generate(state);
             state.eol();
         }
 
         for (JavaConstructor constructor : constructors)
         {
             state.indent();
-            constructor.generate(state, appendable);
+            constructor.generate(state);
             state.eol();
         }
 
         for (JavaClassMethod method : methods)
         {
             state.indent();
-            method.generate(state, appendable);
+            method.generate(state);
             state.eol();
         }
 
-        generateInnerClasses(state, appendable);
+        generateInnerClasses(state);
 
         state.finishBlock();
     }

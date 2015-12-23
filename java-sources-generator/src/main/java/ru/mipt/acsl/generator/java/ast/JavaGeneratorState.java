@@ -19,30 +19,43 @@ public class JavaGeneratorState
         this.appendable = appendable;
     }
 
-    public void eol() throws IOException
+    public void eol()
     {
-        appendable.append("\n");
+        append("\n");
     }
 
-    public void indent() throws IOException
+    public void indent()
     {
-        appendable.append(StringUtils.repeat("\t", indentationDepth));
+        append(StringUtils.repeat("\t", indentationDepth));
     }
 
-    public void startBlock() throws IOException
+    public void startBlock()
     {
         eol();
         indent();
-        appendable.append("{");
+        append("{");
         eol();
         indentationDepth++;
     }
 
-    public void finishBlock() throws IOException
+    public void finishBlock()
     {
         eol();
         indentationDepth--;
         indent();
-        appendable.append("}");
+        append("}");
+    }
+
+    public JavaGeneratorState append(@NotNull String str)
+    {
+        try
+        {
+            appendable.append(str);
+            return this;
+        }
+        catch (IOException e)
+        {
+            throw new RuntimeException(e);
+        }
     }
 }

@@ -360,7 +360,7 @@
                </entry>
           </enum>
           <enum name="MAV_SYS_STATUS_SENSOR">
-               <description>These encode the sensors whose status is sent as part of the SYS_STATUS message.</description>
+               <description>These encode the sensors whose status is sent as name of the SYS_STATUS message.</description>
                <entry value="1" name="MAV_SYS_STATUS_SENSOR_3D_GYRO">
                     <description>0x01 3D gyro</description>
                </entry>
@@ -529,7 +529,7 @@
               <entry name="MAV_MOUNT_MODE_GPS_POINT" value="4"><description>Load neutral position and start to point to Lat,Lon,Alt</description></entry>
           </enum>
           <enum name="MAV_CMD">
-               <description>Commands to be executed by the MAV. They can be executed on user request, or as part of a mission script. If the action is used in a mission, the parameter mapping to the waypoint/mission message is as follows: Param 1, Param 2, Param 3, Param 4, X: Param 5, Y:Param 6, Z:Param 7. This command list is similar what ARINC 424 is for commercial aircraft: A data format how to interpret waypoint/mission data.</description>
+               <description>Commands to be executed by the MAV. They can be executed on user request, or as name of a mission script. If the action is used in a mission, the parameter mapping to the waypoint/mission message is as follows: Param 1, Param 2, Param 3, Param 4, X: Param 5, Y:Param 6, Z:Param 7. This command list is similar what ARINC 424 is for commercial aircraft: A data format how to interpret waypoint/mission data.</description>
                <entry value="16" name="MAV_CMD_NAV_WAYPOINT">
                     <description>Navigate to MISSION.</description>
                     <param index="1">Hold time in decimal seconds. (ignored by fixed wing, time to stay at MISSION for rotary wing)</param>
@@ -2338,7 +2338,7 @@
             <field type="uint8_t" name="target_network">Network ID (0 for broadcast)</field>
             <field type="uint8_t" name="target_system">System ID (0 for broadcast)</field>
             <field type="uint8_t" name="target_component">Component ID (0 for broadcast)</field>
-            <field type="uint8_t[251]" name="payload">Variable length payload. The length is defined by the remaining message length when subtracting the header and other fields.  The entire content of this block is opaque unless you understand any the encoding message_type.  The particular encoding used can be extension specific and might not always be documented as part of the mavlink specification.</field>
+            <field type="uint8_t[251]" name="payload">Variable length payload. The length is defined by the remaining message length when subtracting the header and other fields.  The entire content of this block is opaque unless you understand any the encoding message_type.  The particular encoding used can be extension specific and might not always be documented as name of the mavlink specification.</field>
         </message>
         <message id="111" name="TIMESYNC">
             <description>Time synchronization message.</description>
@@ -2651,7 +2651,7 @@
             <field type="uint8_t" name="target_system">System ID (0 for broadcast)</field>
             <field type="uint8_t" name="target_component">Component ID (0 for broadcast)</field>
             <field type="uint16_t" name="message_type">A code that identifies the software component that understands this message (analogous to usb device classes or mime type strings).  If this code is less than 32768, it is considered a 'registered' protocol extension and the corresponding entry should be added to https://github.com/mavlink/mavlink/extension-message-ids.xml.  Software creators can register blocks of message IDs as needed (useful for GCS specific metadata, etc...). Message_types greater than 32767 are considered local experiments and should not be checked in to any widely distributed codebase.</field>
-            <field type="uint8_t[249]" name="payload">Variable length payload. The length is defined by the remaining message length when subtracting the header and other fields.  The entire content of this block is opaque unless you understand any the encoding message_type.  The particular encoding used can be extension specific and might not always be documented as part of the mavlink specification.</field>
+            <field type="uint8_t[249]" name="payload">Variable length payload. The length is defined by the remaining message length when subtracting the header and other fields.  The entire content of this block is opaque unless you understand any the encoding message_type.  The particular encoding used can be extension specific and might not always be documented as name of the mavlink specification.</field>
         </message>
           <message id="249" name="MEMORY_VECT">
                <description>Send raw controller memory. The use of this message is discouraged for normal packets, but a quite efficient way for testing new messages and getting experimental debug output.</description>

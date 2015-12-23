@@ -1,14 +1,12 @@
 package ru.mipt.acsl.decode.model.domain.impl.proxy;
 
-import com.google.common.collect.Lists;
 import ru.mipt.acsl.common.Either;
+import ru.mipt.acsl.decode.model.domain.impl.DecodeProxyImpl;
 import ru.mipt.acsl.decode.model.domain.impl.DecodeUtils;
-import ru.mipt.acsl.decode.model.domain.impl.ImmutableDecodeFqn;
 import ru.mipt.acsl.decode.model.domain.impl.SimpleDecodeResolvingResult;
-import ru.mipt.acsl.decode.model.domain.proxy.DecodeMaybeProxy;
-import ru.mipt.acsl.decode.model.domain.proxy.DecodeResolvingResult;
 import org.jetbrains.annotations.NotNull;
 import ru.mipt.acsl.decode.model.domain.*;
+import scala.Option;
 
 import java.net.URI;
 import java.util.Optional;
@@ -20,9 +18,9 @@ public class SimpleDecodeMaybeProxy<T extends DecodeReferenceable> extends Eithe
         DecodeMaybeProxy<T>
 {
     @NotNull
-    private Optional<T> resolvedObject;
+    private Option<T> resolvedObject;
     @NotNull
-    private Optional<DecodeProxy<T>> proxy;
+    private Option<DecodeProxy<T>> proxy;
 
     @NotNull
     private static <K extends DecodeReferenceable> DecodeMaybeProxy<K> proxy(@NotNull DecodeProxy<K> proxy)
@@ -33,7 +31,7 @@ public class SimpleDecodeMaybeProxy<T extends DecodeReferenceable> extends Eithe
     @NotNull
     public static <K extends DecodeReferenceable> DecodeMaybeProxy<K> proxy(@NotNull URI uri)
     {
-        return proxy(SimpleDecodeProxy.newInstance(uri));
+        return proxy(DecodeProxyImpl.apply(uri));
     }
 
     @NotNull
@@ -44,36 +42,58 @@ public class SimpleDecodeMaybeProxy<T extends DecodeReferenceable> extends Eithe
     }
 
     @NotNull
-    public static <K extends DecodeReferenceable> DecodeMaybeProxy<K> proxyForSystem(@NotNull DecodeName decodeName)
+    public static <K extends DecodeReferenceable> DecodeMaybeProxy<K> proxyForTypeString(@NotNull String string,
+                                                                                         @NotNull DecodeFqn defaultNamespaceFqn)
     {
-        return proxy(ImmutableDecodeFqn.newInstance(Lists.newArrayList(DecodeConstants.SYSTEM_NAMESPACE_NAME)), decodeName);
+        return proxy(DecodeUtils.getUriForSourceTypeFqnString(string, defaultNamespaceFqn));
     }
 
+    @NotNull
+    public static <K extends DecodeReferenceable> DecodeMaybeProxy<K> proxyForSystemTypeString(@NotNull String typeString)
+    {
+        typeString = DecodeUtils.normalizeSourceTypeString(typeString);
+        return proxyForTypeString(typeString, DecodeConstants.SYSTEM_NAMESPACE_FQN());
+    }
+
+    @NotNull
+    public static <K extends DecodeReferenceable> DecodeMaybeProxy<K> proxyForSystem(@NotNull DecodeName decodeName)
+    {
+        return proxy(DecodeConstants.SYSTEM_NAMESPACE_FQN(), decodeName);
+    }
+
+    @NotNull
     public static <K extends DecodeReferenceable> DecodeMaybeProxy<K> proxyDefaultNamespace(@NotNull
                                                                                             DecodeFqn elementFqn, @NotNull
                                                                                             DecodeNamespace defaultNamespace)
     {
-        return elementFqn.size() > 1? proxy(elementFqn.copyDropLast(), elementFqn.getLast()) : proxy(defaultNamespace.getFqn(), elementFqn.getLast());
+        return elementFqn.size() > 1? proxy(elementFqn.copyDropLast(), elementFqn.last()) : proxy(defaultNamespace.fqn(), elementFqn.last());
     }
 
     @NotNull
-    public static <K extends DecodeReferenceable> DecodeMaybeProxy<K> object(@NotNull K object)
+    public static <K extends DecodeReferenceable> DecodeMaybeProxy<K> obj(@NotNull K object)
     {
         return new SimpleDecodeMaybeProxy<>(object);
+    }
+
+    @NotNull
+    public static <T extends DecodeReferenceable> DecodeMaybeProxy<T> proxyForTypeUriString(@NotNull String typeUriString,
+                                                                                            @NotNull DecodeFqn defaultNsFqn)
+    {
+        return new SimpleDecodeMaybeProxy<>(DecodeProxyImpl.newInstanceFromTypeUriString(typeUriString, defaultNsFqn));
     }
 
     @Override
     public DecodeResolvingResult<T> resolve(@NotNull DecodeRegistry registry, @NotNull Class<T> cls)
     {
-        if (!isProxy())
+        if (isResolved())
         {
             return SimpleDecodeResolvingResult.newInstance(resolvedObject);
         }
         DecodeResolvingResult<T> resolvingResult = proxy.get().resolve(registry, cls);
-        if (resolvingResult.getResolvedObject().isPresent())
+        if (resolvingResult.resolvedObject().isDefined())
         {
-            resolvedObject = resolvingResult.getResolvedObject();
-            proxy = Optional.empty();
+            resolvedObject = resolvingResult.resolvedObject();
+            proxy = Option.empty();
             return resolvingResult;
         }
         return SimpleDecodeResolvingResult.error("Can't resolve proxy '%s'", this);
@@ -85,16 +105,22 @@ public class SimpleDecodeMaybeProxy<T extends DecodeReferenceable> extends Eithe
         return isRight();
     }
 
+    @Override
+    public boolean isResolved()
+    {
+        return isLeft();
+    }
+
     @NotNull
     @Override
-    public T getObject()
+    public T obj()
     {
         return getLeft();
     }
 
     @NotNull
     @Override
-    public DecodeProxy<T> getProxy()
+    public DecodeProxy<T> proxy()
     {
         return proxy.get();
     }
@@ -102,13 +128,13 @@ public class SimpleDecodeMaybeProxy<T extends DecodeReferenceable> extends Eithe
     @Override
     public boolean isLeft()
     {
-        return resolvedObject.isPresent();
+        return resolvedObject.isDefined();
     }
 
     @Override
     public boolean isRight()
     {
-        return !resolvedObject.isPresent();
+        return !resolvedObject.isDefined();
     }
 
     @Override
@@ -127,14 +153,14 @@ public class SimpleDecodeMaybeProxy<T extends DecodeReferenceable> extends Eithe
 
     private SimpleDecodeMaybeProxy(@NotNull DecodeProxy<T> right)
     {
-        resolvedObject = Optional.empty();
-        proxy = Optional.of(right);
+        resolvedObject = Option.empty();
+        proxy = Option.apply(right);
     }
 
     private SimpleDecodeMaybeProxy(@NotNull T object)
     {
-        resolvedObject = Optional.of(object);
-        proxy = Optional.empty();
+        resolvedObject = Option.apply(object);
+        proxy = Option.empty();
     }
 
     @Override

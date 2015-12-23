@@ -21,10 +21,10 @@ public class JavaAssignStatement implements JavaStatement
     }
 
     @Override
-    public void generate(@NotNull JavaGeneratorState state, @NotNull Appendable appendable) throws IOException
+    public void generate(@NotNull JavaGeneratorState state)
     {
-        var.generate(state, appendable);
-        appendable.append(" = ");
-        expr.generate(state, appendable);
+        var.generate(state);
+        state.append(" = ");
+        expr.generate(state);
     }
 }

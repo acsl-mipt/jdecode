@@ -19,10 +19,10 @@ public class JavaConstructor extends JavaClassMethod
     }
 
     @Override
-    public void generate(@NotNull JavaGeneratorState state, @NotNull Appendable appendable) throws IOException
+    public void generate(@NotNull JavaGeneratorState state)
     {
-        visibility.generate(state, appendable);
-        appendable.append(" ").append(name).append("(");
+        visibility.generate(state);
+        state.append(" ").append(name).append("(");
         if (!arguments.isEmpty())
         {
             boolean isFirst = true;
@@ -34,12 +34,12 @@ public class JavaConstructor extends JavaClassMethod
                 }
                 else
                 {
-                    appendable.append(", ");
+                    state.append(", ");
                 }
-                argument.generate(state, appendable);
+                argument.generate(state);
             }
         }
-        appendable.append(")");
+        state.append(")");
         state.startBlock();
         if (!statements.isEmpty())
         {
@@ -55,8 +55,8 @@ public class JavaConstructor extends JavaClassMethod
                     state.eol();
                 }
                 state.indent();
-                statement.generate(state, appendable);
-                appendable.append(";");
+                statement.generate(state);
+                state.append(";");
             }
         }
         state.finishBlock();

@@ -66,22 +66,20 @@ public abstract class AbstractJavaBaseClass implements JavaAstElement
         return packageFqn;
     }
 
-    protected void generateVisibility(@NotNull JavaGeneratorState state, @NotNull Appendable appendable) throws
-            IOException
+    protected void generateVisibility(@NotNull JavaGeneratorState state)
     {
-        visibility.generate(state, appendable);
+        visibility.generate(state);
         if (visibility != JavaVisibility.PACKAGE_PRIVATE)
         {
-            appendable.append(" ");
+            state.append(" ");
         }
     }
 
-    protected void generateGenericArguments(@NotNull JavaGeneratorState state, @NotNull Appendable appendable) throws
-            IOException
+    protected void generateGenericArguments(@NotNull JavaGeneratorState state)
     {
         if (!genericArguments.isEmpty())
         {
-            appendable.append("<");
+            state.append("<");
             boolean isFirst = true;
             for (String genericArgument : genericArguments)
             {
@@ -91,23 +89,22 @@ public abstract class AbstractJavaBaseClass implements JavaAstElement
                 }
                 else
                 {
-                    appendable.append(", ");
+                    state.append(", ");
                 }
-                appendable.append(genericArgument);
+                state.append(genericArgument);
             }
-            appendable.append(">");
+            state.append(">");
         }
     }
 
-    protected void generateInnerClasses(@NotNull JavaGeneratorState state, @NotNull Appendable appendable) throws
-            IOException
+    protected void generateInnerClasses(@NotNull JavaGeneratorState state)
     {
         if (!innerClasses.isEmpty())
         {
             for (AbstractJavaBaseClass cls : innerClasses)
             {
                 state.indent();
-                cls.generate(state, appendable);
+                cls.generate(state);
                 state.eol();
             }
         }
@@ -148,11 +145,11 @@ public abstract class AbstractJavaBaseClass implements JavaAstElement
         return constructors;
     }
 
-    protected void generateStatic(@NotNull JavaGeneratorState state, @NotNull Appendable appendable) throws IOException
+    protected void generateStatic(@NotNull JavaGeneratorState state)
     {
         if (isStatic)
         {
-            appendable.append("static ");
+            state.append("static ");
         }
     }
 

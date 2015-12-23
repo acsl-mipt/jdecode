@@ -38,10 +38,10 @@ public class JavaClassMethodCallExpr implements JavaExpr
     }
 
     @Override
-    public void generate(@NotNull JavaGeneratorState state, @NotNull Appendable appendable) throws IOException
+    public void generate(@NotNull JavaGeneratorState state)
     {
-        type.generate(state, appendable);
-        appendable.append(".").append(name).append("(");
+        type.generate(state);
+        state.append(".").append(name).append("(");
         if (!params.isEmpty())
         {
             boolean isFirst = true;
@@ -53,11 +53,11 @@ public class JavaClassMethodCallExpr implements JavaExpr
                 }
                 else
                 {
-                    appendable.append(", ");
+                    state.append(", ");
                 }
-                param.generate(state, appendable);
+                param.generate(state);
             }
         }
-        appendable.append(")");
+        state.append(")");
     }
 }

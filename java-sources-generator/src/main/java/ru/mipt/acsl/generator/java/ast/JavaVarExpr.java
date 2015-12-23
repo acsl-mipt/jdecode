@@ -18,8 +18,8 @@ public class JavaVarExpr implements JavaExpr
     }
 
     @Override
-    public void generate(@NotNull JavaGeneratorState state, @NotNull Appendable appendable) throws IOException
+    public void generate(@NotNull JavaGeneratorState state)
     {
-        appendable.append(var);
+        state.append(var);
     }
 }
