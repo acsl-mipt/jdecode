@@ -7,6 +7,8 @@ import com.intellij.notification.Notifications;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiWhiteSpace;
 import org.apache.commons.lang.NotImplementedException;
+import ru.mipt.acsl.JavaToScala;
+import ru.mipt.acsl.ScalaToJava;
 import ru.mipt.acsl.decode.model.domain.*;
 import ru.mipt.acsl.decode.model.domain.impl.*;
 import ru.mipt.acsl.decode.model.domain.impl.type.*;
@@ -16,8 +18,10 @@ import ru.mipt.acsl.decode.modeling.TransformationResult;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import ru.mipt.acsl.decode.parser.psi.*;
+import ru.mipt.acsl.decode.parser.psi.DecodeTypeUnitApplication;
 import ru.mipt.acsl.decode.parser.psi.DecodeUnit;
 import scala.Option;
+import scala.Some;
 import scala.collection.mutable.ArrayBuffer;
 import scala.collection.mutable.Buffer;
 
@@ -25,7 +29,6 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import static ru.mipt.acsl.JavaToScala.asOption;
-import static ru.mipt.acsl.ScalaToJava.asOptional;
 import static ru.mipt.acsl.decode.model.domain.impl.proxy.SimpleDecodeMaybeProxy.obj;
 import static ru.mipt.acsl.decode.model.domain.impl.proxy.SimpleDecodeMaybeProxy.proxy;
 import static ru.mipt.acsl.decode.model.domain.impl.proxy.SimpleDecodeMaybeProxy.proxyForSystem;
@@ -277,7 +280,7 @@ public class DecodeFileProcessor
         }
         if (primitiveType != null)
         {
-            return DecodeConstants.SYSTEM_NAMESPACE_FQN;
+            return DecodeConstants.SYSTEM_NAMESPACE_FQN();
         }
         if (genericTypeApplication != null)
         {
@@ -311,7 +314,7 @@ public class DecodeFileProcessor
         }*/
         return messageParametersDecl.getParameterDeclList().stream()
                 .map(DecodeParameterDecl::getParameterElement)
-                        .map(e -> new DecodeMessageParameterImpl(e.getText()))
+                        .map(e -> new DecodeMessageParameterImpl(e.getText(), Option.empty()))
                         .collect(Collectors.toList());
     }
 
@@ -364,7 +367,7 @@ public class DecodeFileProcessor
     private DecodeType newType(@NotNull DecodeTypeDecl typeDecl, @NotNull DecodeNamespace namespace)
     {
         return newType(
-                Option.apply(DecodeNameImpl.newFromSourceName(typeDecl.getElementNameRule().getText())),
+                Some.<DecodeName>apply(DecodeNameImpl.newFromSourceName(typeDecl.getElementNameRule().getText())),
                 typeDecl.getTypeDeclBody(), namespace);
     }
 
@@ -381,12 +384,13 @@ public class DecodeFileProcessor
             DecodeUnit unit = typeUnitApplication.getUnit();
             fields.$plus$eq(new DecodeStructFieldImpl(DecodeNameImpl.newFromSourceName(
                             fieldElement.getElementNameRule().getText()),
-                    makeProxyForTypeApplication(typeUnitApplication.getTypeApplication(), namespace),
-                    asOption(Optional.ofNullable(unit).map(u -> proxy(namespace.fqn(),
-                            DecodeNameImpl.newFromSourceName(u.getElementId().getText())))),
+                    new DecodeTypeUnitApplicationImpl(
+                            makeProxyForTypeApplication(typeUnitApplication.getTypeApplication(), namespace),
+                            asOption(Optional.ofNullable(unit).map(u -> proxy(namespace.fqn(),
+                                    DecodeNameImpl.newFromSourceName(u.getElementId().getText()))))),
                     getText(fieldElement.getInfoString())));
         }
-        return new DecodeStructTypeImpl(name, namespace, getText(structTypeDecl.getInfoString()), fields);
+        return new DecodeStructTypeImpl(name, namespace, getText(structTypeDecl.getInfoString()), fields.toSeq());
     }
 
     @NotNull
@@ -504,21 +508,23 @@ public class DecodeFileProcessor
     @NotNull
     private static Option<String> getText(@Nullable DecodeInfoString infoString)
     {
-        return getText(asOption(Optional.ofNullable(infoString)
+        return getText(JavaToScala.<DecodeStringValue>asOption(Optional.ofNullable(infoString)
                 .map(DecodeInfoString::getStringValue)));
     }
 
     @NotNull
     private static Option<String> getText(@Nullable DecodeStringValue stringValue)
     {
-        return getText(Option.apply(stringValue));
+        return getText(Some.<DecodeStringValue>apply(stringValue));
     }
 
     @NotNull
     private static Option<String> getText(@NotNull Option<DecodeStringValue> stringValue)
     {
-        return asOption(asOptional(stringValue).map(str -> Optional.ofNullable(str.getString()).orElse(str.getStringUnaryQuotes())).map(
-                PsiElement::getText).map(text -> text.substring(1, text.length() - 1)));
+        return JavaToScala.<String>asOption(
+                ScalaToJava.<DecodeStringValue>asOptional(stringValue)
+                        .map(str -> Optional.ofNullable(str.getString()).orElse(str.getStringUnaryQuotes()))
+                        .map(PsiElement::getText).map(text -> text.substring(1, text.length() - 1)));
     }
 
     private void error(@NotNull String msg, Object... params)
