@@ -9,7 +9,7 @@ import org.parboiled2.ParserInput.StringBasedParserInput
 import org.parboiled2._
 import ru.mipt.acsl.decode.model.domain.impl._
 import ru.mipt.acsl.decode.model.domain.impl.`type`.DecodeAliasTypeImpl
-import ru.mipt.acsl.decode.model.domain.impl.`type`.DecodeCommandArgumentImpl
+import ru.mipt.acsl.decode.model.domain.impl.`type`.DecodeCommandParameterImpl
 import ru.mipt.acsl.decode.model.domain.impl.`type`.DecodeComponentImpl
 import ru.mipt.acsl.decode.model.domain.impl.`type`.DecodeEnumConstantImpl
 import ru.mipt.acsl.decode.model.domain.impl.`type`.DecodeEnumTypeImpl
@@ -122,20 +122,20 @@ class DecodeParboiledParser(val input: ParserInput) extends Parser with LazyLogg
       => new DecodeStructTypeImpl(Some(makeNewSystemName(componentName.get)), ns.get, info, fields))
   }
 
-  def CommandArg: Rule1[DecodeCommandArgument] = rule {
+  def CommandArg: Rule1[DecodeCommandParameter] = rule {
     InfoEw.? ~ TypeUnitApplication ~ Ew ~ ElementName ~>
       ((info: Option[String], typeUnit: DecodeTypeUnitApplication, name: DecodeName)
-      => new DecodeCommandArgumentImpl(name, info, typeUnit.t, typeUnit.unit))
+      => new DecodeCommandParameterImpl(name, info, typeUnit.t, typeUnit.unit))
   }
 
-  def CommandArgs: Rule1[Seq[DecodeCommandArgument]] = rule {
+  def CommandArgs: Rule1[Seq[DecodeCommandParameter]] = rule {
     '(' ~ Ew.? ~ CommandArg.*(Ew.? ~ ',' ~ Ew.?) ~ (Ew.? ~ ',').? ~ Ew.? ~ ')'
   }
 
   def Command: Rule1[DecodeCommand] = rule {
     definition("command") ~ Ew.? ~ (':' ~ Ew.? ~ NonNegativeIntegerAsInt).? ~ Ew.? ~ CommandArgs ~
       (Ew.? ~ "->" ~ Ew.? ~ TypeApplication ~> (_.get)).? ~>
-      ((info: Option[String], name: DecodeName, id: Option[Int], args: Seq[DecodeCommandArgument], returnType: Option[DecodeMaybeProxy[DecodeType]])
+      ((info: Option[String], name: DecodeName, id: Option[Int], args: Seq[DecodeCommandParameter], returnType: Option[DecodeMaybeProxy[DecodeType]])
         => new DecodeCommandImpl(name, id, info, args, returnType))
   }
 

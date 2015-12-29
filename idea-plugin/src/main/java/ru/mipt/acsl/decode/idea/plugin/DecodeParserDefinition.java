@@ -23,7 +23,8 @@ public class DecodeParserDefinition implements ParserDefinition
 {
     private static final IFileElementType FILE = new IFileElementType(
             Language.findInstance(DecodeLanguage.class));
-    private static final TokenSet WHITESPACES = TokenSet.create(TokenType.WHITE_SPACE, DecodeTypes.COMMENT, DecodeTypes.MULTILINE_COMMENT);
+    private static final TokenSet WHITESPACES = TokenSet.create(TokenType.WHITE_SPACE, DecodeTypes.COMMENT,
+            DecodeTypes.MULTILINE_COMMENT);
     private static final TokenSet COMMENTS = TokenSet.create(DecodeTypes.COMMENT, DecodeTypes.MULTILINE_COMMENT);
 
     @NotNull

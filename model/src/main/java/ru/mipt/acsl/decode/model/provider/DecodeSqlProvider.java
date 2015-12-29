@@ -178,7 +178,7 @@ public class DecodeSqlProvider
                     {
                         while (commandsSelectRs.next())
                         {
-                            Buffer<DecodeCommandArgument> arguments = new ArrayBuffer<>();
+                            Buffer<DecodeCommandParameter> arguments = new ArrayBuffer<>();
                             long commandId = commandsSelectRs.getLong("id");
                             argumentsSelect.setLong(1, commandId);
                             try (ResultSet commandArgumentsRs = argumentsSelect.executeQuery())
@@ -191,7 +191,7 @@ public class DecodeSqlProvider
                                             : Option.apply(SimpleDecodeMaybeProxy.obj(
                                             Preconditions.checkNotNull(unitById.get(unitId), "unit not found")));
 
-                                    arguments.$plus$eq(new DecodeCommandArgumentImpl(
+                                    arguments.$plus$eq(new DecodeCommandParameterImpl(
                                             DecodeNameImpl.newFromMangledName(
                                                     commandArgumentsRs.getString("name")),
                                             Option.apply(commandArgumentsRs.getString("info")),

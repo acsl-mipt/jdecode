@@ -138,9 +138,9 @@ object DecodeOptionalType {
 }
 
 // Components
-class DecodeCommandArgumentImpl(name: DecodeName, info: Option[String], val argType: DecodeMaybeProxy[DecodeType],
-                                val unit: Option[DecodeMaybeProxy[DecodeUnit]])
-  extends AbstractDecodeNameAndOptionalInfoAware(name, info) with DecodeCommandArgument
+class DecodeCommandParameterImpl(name: DecodeName, info: Option[String], val paramType: DecodeMaybeProxy[DecodeType],
+                                 val unit: Option[DecodeMaybeProxy[DecodeUnit]])
+  extends AbstractDecodeNameAndOptionalInfoAware(name, info) with DecodeCommandParameter
 
 class DecodeComponentImpl(name: DecodeName, namespace: DecodeNamespace, var id: Option[Int],
                           var baseType: Option[DecodeMaybeProxy[DecodeStructType]], info: Option[String],

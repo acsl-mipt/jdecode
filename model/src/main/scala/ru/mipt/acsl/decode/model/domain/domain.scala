@@ -249,15 +249,15 @@ trait DecodeTypeVisitor[T] {
 }
 
 // Components
-trait DecodeCommandArgument extends DecodeNamed with DecodeHasOptionInfo {
+trait DecodeCommandParameter extends DecodeNamed with DecodeHasOptionInfo {
   def unit: Option[DecodeMaybeProxy[DecodeUnit]]
-  def argType: DecodeMaybeProxy[DecodeType]
+  def paramType: DecodeMaybeProxy[DecodeType]
 }
 
 trait DecodeCommand extends DecodeHasOptionInfo with DecodeNamed {
   def returnType: Option[DecodeMaybeProxy[DecodeType]]
   def id: Option[Int]
-  def arguments: Seq[DecodeCommandArgument]
+  def parameters: Seq[DecodeCommandParameter]
 }
 
 // TODO: replace with case classes?

@@ -64,8 +64,8 @@ object DecodeModelResolver {
       cmd.returnType.foreach(rt => {
         resultList += resolveWithTypeCheck(rt, registry, classOf[DecodeType])
       })
-      cmd.arguments.foreach(arg => {
-        resultList += resolveWithTypeCheck(arg.argType, registry, classOf[DecodeType])
+      cmd.parameters.foreach(arg => {
+        resultList += resolveWithTypeCheck(arg.paramType, registry, classOf[DecodeType])
         arg.unit.map(u => {
           resultList += resolveWithTypeCheck(u, registry, classOf[DecodeUnit])
         })

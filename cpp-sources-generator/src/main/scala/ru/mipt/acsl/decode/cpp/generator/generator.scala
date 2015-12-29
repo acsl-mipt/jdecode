@@ -1,6 +1,7 @@
 package ru.mipt.acsl.decode.cpp.generator
 
-import java.io._
+import java.io
+import java.io.{OutputStreamWriter, FileOutputStream}
 import java.security.MessageDigest
 
 import com.typesafe.scalalogging.LazyLogging
@@ -14,45 +15,43 @@ import resource._
 import scala.collection.mutable
 import scala.util.Random
 
-class CppGeneratorConfiguration(val outputDir: File, val registry: DecodeRegistry, val rootComponentFqn: String,
-                                val namespaceAlias: Map[DecodeFqn, DecodeFqn] = Map()) {
-
-}
+class CppGeneratorConfiguration(val outputDir: io.File, val registry: DecodeRegistry, val rootComponentFqn: String,
+                                val namespaceAlias: Map[DecodeFqn, DecodeFqn] = Map())
 
 class CppSourcesGenerator(val config: CppGeneratorConfiguration) extends Generator[CppGeneratorConfiguration] with LazyLogging {
   override def generate() {
     generateRootComponent(config.registry.getComponent(config.rootComponentFqn).get)
   }
 
-  def dirForNs(ns: DecodeNamespace): File = new File(config.outputDir,
-      config.namespaceAlias.getOrElse(ns.fqn, ns.fqn).parts.toList.map(_.asMangledString).mkString("/"))
+  def nsOrAliasCppSourceParts(ns: DecodeNamespace): Seq[String] = config.namespaceAlias.getOrElse(ns.fqn, ns.fqn).parts.map(_.asMangledString)
 
-  def ensureDirForNsExists(ns: DecodeNamespace): File = {
+  def dirForNs(ns: DecodeNamespace): io.File = new io.File(config.outputDir, nsOrAliasCppSourceParts(ns).mkString("/"))
+
+  def ensureDirForNsExists(ns: DecodeNamespace): io.File = {
     val dir = dirForNs(ns)
     if (!(dir.exists() || dir.mkdirs()))
       sys.error(s"Can't create directory ${dir.getAbsolutePath}")
     dir
   }
 
-  def writeFile[T <: CppStmt](file: File, hfile: CFile[T]) {
+  def writeFile(file: io.File, cppFile: CppFile.Type) {
     for (typeHeaderStream <- managed(new OutputStreamWriter(new FileOutputStream(file)))) {
-      hfile.generate(CGeneratorState(typeHeaderStream))
+      cppFile.generate(CppGeneratorState(typeHeaderStream))
     }
   }
 
-  def writeFileIfNotEmptyWithComment[A >: HStmt <: CppStmt](file: File, cFile: CFile[A], comment: String) {
-    if (cFile.statements.nonEmpty) {
-      cFile.statements.prepend(HComment(comment), HEol)
-      writeFile(file, cFile)
+  def writeFileIfNotEmptyWithComment[A >: Statement <: CppStatement](file: io.File, cppFile: CppFile.Type, comment: String) {
+    if (cppFile.nonEmpty) {
+      writeFile(file, CppFile(cppFile.statements ++ Seq(Comment(comment), Eol.asInstanceOf[Statement])))
     }
   }
 
   def generateNs(ns: DecodeNamespace) {
     val nsDir = ensureDirForNsExists(ns)
     ns.subNamespaces.toTraversable.foreach(generateNs)
-    val typesHeader = HFile()
+    val typesHeader = File()
     ns.types.toTraversable.foreach(generateType(_, nsDir))
-    writeFileIfNotEmptyWithComment(new File(nsDir, "types.h"), protectDoubleIncludeFile(typesHeader), s"Types of ${ns.fqn.asMangledString} namespace")
+    writeFileIfNotEmptyWithComment(new io.File(nsDir, "types.h"), protectDoubleIncludeFile(typesHeader), s"Types of ${ns.fqn.asMangledString} namespace")
     //ns.getComponents.toTraversable.foreach(generateRootComponent)
   }
 
@@ -122,11 +121,11 @@ class CppSourcesGenerator(val config: CppGeneratorConfiguration) extends Generat
 
   private val rand = new Random()
 
-  private def protectDoubleIncludeFile(file: HFile): HFile = {
+  private def protectDoubleIncludeFile(file: File.Type): File.Type = {
     val bytes = Array[Byte](10)
     rand.nextBytes(bytes)
     val uniqueName: String = "__" ++ MessageDigest.getInstance("MD5").digest(bytes).map("%02x".format(_)).mkString ++ "__"
-    HFile(Seq(CppIfNDef(uniqueName, Seq(CppDefine(uniqueName)))) ++ file.statements ++ Seq(CppEndIf()): _*)
+    File(Seq(CppIfNDef(uniqueName, Seq(CppDefine(uniqueName)))) ++ file.statements ++ Seq(CppEndIf()): _*)
   }
 
   private def primitiveTypeToCTypeApplication(primitiveType: DecodePrimitiveType): CppTypeApplication = {
@@ -136,40 +135,40 @@ class CppSourcesGenerator(val config: CppGeneratorConfiguration) extends Generat
       case (Bool, 16) => CppTypeApplication("b16")
       case (Bool, 32) => CppTypeApplication("b32")
       case (Bool, 64) => CppTypeApplication("b64")
-      case (Float, 32) => CppFloatType$
-      case (Float, 64) => CppDoubleType$
-      case (Int, 8) => CppUnsignedCharType$
-      case (Int, 16) => CppUnsignedShortType$
-      case (Int, 32) => CppUnsignedIntType$
-      case (Int, 64) => CppUnsignedLongType$
-      case (Uint, 8) => CppSignedCharType$
-      case (Uint, 16) => CppSignedShortType$
-      case (Uint, 32) => CppSignedIntType$
-      case (Uint, 64) => CppSignedLongType$
+      case (Float, 32) => CppFloatType
+      case (Float, 64) => CppDoubleType
+      case (Int, 8) => CppUnsignedCharType
+      case (Int, 16) => CppUnsignedShortType
+      case (Int, 32) => CppUnsignedIntType
+      case (Int, 64) => CppUnsignedLongType
+      case (Uint, 8) => CppSignedCharType
+      case (Uint, 16) => CppSignedShortType
+      case (Uint, 32) => CppSignedIntType
+      case (Uint, 64) => CppSignedLongType
       case _ => sys.error("illegal bit length")
     }
   }
 
-  def cTypeDefForName(t: DecodeType, cType: CppType) = CppTypeDefStmt(cTypeNameFor(t), cType)
+  def cTypeDefForName(t: DecodeType, cType: CppType) = CppTypeDefStatement(cTypeNameFor(t), cType)
   def cTypeAppForTypeName(t: DecodeType): CppTypeApplication = CppTypeApplication(cTypeNameFor(t))
 
-  private def generateType(t: DecodeType, nsDir: File) {
+  private def generateType(t: DecodeType, nsDir: io.File) {
     if (t.isInstanceOf[DecodePrimitiveType])
       return
-    val tFile = new File(nsDir, fileNameFor(t) + ".h")
-    writeFileIfNotEmptyWithComment(tFile, HFile(
+    val tFile = new io.File(nsDir, fileNameFor(t) + ".h")
+    writeFileIfNotEmptyWithComment(tFile, File(
     t match {
       case t: DecodePrimitiveType => cTypeDefForName(t, cTypeAppForTypeName(t))
-      case t: DecodeNativeType => cTypeDefForName(t, CppVoidType$.ptr())
+      case t: DecodeNativeType => cTypeDefForName(t, CppVoidType.ptr())
       case t: DecodeSubType => cTypeDefForName(t, cTypeAppForTypeName(t.baseType.obj))
       case t: DecodeEnumType => cTypeDefForName(t,
         CppEnumTypeDef(t.constants.map(c => CEnumTypeDefConst(c.name.asMangledString, c.value.toInt))))
-      case t: DecodeArrayType => cTypeDefForName(t, CppVoidType$.ptr())
+      case t: DecodeArrayType => cTypeDefForName(t, CppVoidType.ptr())
       case t: DecodeStructType => cTypeDefForName(t, CppStructTypeDef(t.fields.map(f => CStructTypeDefField(f.name.asMangledString, cTypeAppForTypeName(f.typeUnit.t.obj)))))
       case t: DecodeAliasType =>
         val newName: String = cTypeNameFor(t)
         val oldName: String = cTypeNameFor(t.baseType.obj)
-        if (newName equals oldName) HComment("omitted due name clash") else CppDefine(newName, oldName)
+        if (newName equals oldName) Comment("omitted due name clash") else CppDefine(newName, oldName)
       case _ => sys.error("not implemented")
     }), "Type header")
   }
@@ -191,30 +190,54 @@ class CppSourcesGenerator(val config: CppGeneratorConfiguration) extends Generat
   }
 
   private def collectNsForTypes(comp: DecodeComponent, set: mutable.Set[DecodeNamespace]) {
-    comp.subComponents.foreach(cr => collectNsForTypes(cr.component.obj, set))
     if (comp.baseType.isDefined)
       collectNsForType(comp.baseType.get, set)
     comp.commands.foreach(cmd => {
-      cmd.arguments.foreach(arg => collectNsForType(arg.argType, set))
+      cmd.parameters.foreach(arg => collectNsForType(arg.paramType, set))
       if (cmd.returnType.isDefined)
         collectNsForType(cmd.returnType.get, set)
     })
   }
 
+  def collectNsForComponent(comp: DecodeComponent, nsSet: mutable.HashSet[DecodeNamespace]) {
+    comp.subComponents.foreach(cr => collectNsForComponent(cr.component.obj, nsSet))
+    collectNsForTypes(comp, nsSet)
+  }
+
+  def collectComponentsForComponent(comp: DecodeComponent, compSet: mutable.HashSet[DecodeComponent]): Unit = {
+    compSet += comp
+    comp.subComponents.foreach(cr => collectComponentsForComponent(cr.component.obj, compSet))
+  }
+
   private def generateRootComponent(comp: DecodeComponent) {
     logger.debug(s"Generating component ${comp.name.asMangledString}")
-    val nsSet = mutable.HashSet[DecodeNamespace]()
-    collectNsForTypes(comp, nsSet)
+    val nsSet = mutable.HashSet.empty[DecodeNamespace]
+    collectNsForComponent(comp, nsSet)
     nsSet.foreach(generateNs)
-    generateComponent(comp)
+    val compSet = mutable.HashSet.empty[DecodeComponent]
+    collectComponentsForComponent(comp, compSet)
+    compSet.foreach(generateComponent)
+  }
+
+  def cppTypeForDecodeType(t: DecodeType): Type = {
+    t.optionName.map{on => Type(on.asMangledString)}.getOrElse(Type("<not implemented>"))
   }
 
   private def generateComponent(comp: DecodeComponent) {
     val dir = dirForNs(comp.namespace)
-    val hFile = new File(dir, comp.name.asMangledString + "Component.h")
-    val cFile = new File(dir, comp.name.asMangledString + "Component.cpp")
-    writeFileIfNotEmptyWithComment(hFile, protectDoubleIncludeFile(HFile()), "Component header")
-    writeFileIfNotEmptyWithComment(cFile, CFile(HEol), "Component header")
+    val className = comp.name.asMangledString + "Component"
+    val hFileName = className + ".h"
+    val hFile = new io.File(dir, hFileName)
+    val cppFile = new io.File(dir, comp.name.asMangledString + "Component.cpp")
+    var hNs = nsOrAliasCppSourceParts(comp.namespace).foldLeft[Option[Namespace.Type]](None)(
+      (hNs: Option[Namespace.Type], part: String)
+      => hNs.map{ns => Namespace(part, Seq(ns))}.orElse(Some(Namespace(part)))).get
+    val methods = comp.commands.map{cmd => ClassMethodDef(cmd.name.asMangledString,
+      cmd.returnType.map{rt => cppTypeForDecodeType(rt.obj)}.getOrElse(Type("void")),
+      cmd.parameters.map{p => Parameter(p.name.asMangledString, cppTypeForDecodeType(p.paramType.obj))})}
+    hNs = Namespace(hNs.name, hNs.statements ++ Seq(ClassDef(className, methods), Eol))
+    writeFileIfNotEmptyWithComment(hFile, protectDoubleIncludeFile(File(hNs)), "Component header")
+    writeFileIfNotEmptyWithComment(cppFile, CppFile(Seq(CppInclude(hFileName))), "Component header")
   }
 
   override def getConfiguration: CppGeneratorConfiguration = config

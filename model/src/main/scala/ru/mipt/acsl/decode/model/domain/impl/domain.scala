@@ -136,7 +136,7 @@ class DecodeComponentWalker(var component: DecodeComponent) {
 }
 
 class DecodeCommandImpl(val name: DecodeName, val id: Option[Int], info: Option[String],
-                        val arguments: Seq[DecodeCommandArgument], val returnType: Option[DecodeMaybeProxy[DecodeType]])
+                        val parameters: Seq[DecodeCommandParameter], val returnType: Option[DecodeMaybeProxy[DecodeType]])
   extends AbstractDecodeOptionalInfoAware(info) with DecodeCommand {
   override def optionName: Option[DecodeName] = Some(name)
 }

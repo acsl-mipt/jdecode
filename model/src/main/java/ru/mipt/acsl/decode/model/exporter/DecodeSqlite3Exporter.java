@@ -160,10 +160,10 @@ public class DecodeSqlite3Exporter
                     commandKey = getGeneratedKey(insertCommand);
                 }
                 long index = 0;
-                Iterator<DecodeCommandArgument> argsIt = command.arguments().iterator();
+                Iterator<DecodeCommandParameter> argsIt = command.parameters().iterator();
                 while (argsIt.hasNext())
                 {
-                    DecodeCommandArgument argument = argsIt.next();
+                    DecodeCommandParameter argument = argsIt.next();
                     try (PreparedStatement insertArgument = connection.prepareStatement(
                             String.format(
                                     "INSERT INTO %s (command_id, argument_index, name, type_id, unit_id, info) VALUES (?, ?, ?, ?, ?, ?)",
@@ -172,7 +172,7 @@ public class DecodeSqlite3Exporter
                         insertArgument.setLong(1, commandKey);
                         insertArgument.setLong(2, index++);
                         insertArgument.setString(3, argument.name().asMangledString());
-                        insertArgument.setLong(4, typeKeyByType.get(argument.argType().obj()));
+                        insertArgument.setLong(4, typeKeyByType.get(argument.paramType().obj()));
                         setUnit(insertArgument, 5, argument.unit());
                         setStringOrNull(insertArgument, 6, argument.info());
                         insertArgument.execute();
