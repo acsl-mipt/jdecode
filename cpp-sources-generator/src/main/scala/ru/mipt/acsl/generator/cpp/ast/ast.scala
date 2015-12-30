@@ -7,12 +7,13 @@ import scala.collection.mutable
 import scala.collection.immutable
 
 /**
- * @author Artem Shein
- */
+  * @author Artem Shein
+  */
 
 trait CppAstElement extends Generatable[CppGeneratorState]
 
 trait CppStatement extends CppAstElement
+
 trait Statement extends CppStatement
 
 class Comment(val text: String) extends Statement {
@@ -41,18 +42,23 @@ class CppDefine(val name: String, val value: Option[String]) extends CppMacroSta
 
 object CppDefine {
   def apply(name: String) = new CppDefine(name, None)
+
   def apply(name: String, value: String) = new CppDefine(name, Some(value))
 }
 
 object CppIfNDef {
   type Type = CppStatementBuffer[CppStatement] with CppMacroStatement
+
   class Impl(val name: String, statements: immutable.Seq[CppStatement]) extends CppStatementBuffer(statements)
-    with CppMacroStatement {
+  with CppMacroStatement {
     override def generate(s: CppGeneratorState): Unit = {
       s.append("#ifndef ").append(name).eol()
-      statements.foreach(stmt => { stmt.generate(s); s.eol() })
+      statements.foreach(stmt => {
+        stmt.generate(s); s.eol()
+      })
     }
   }
+
   def apply(name: String, statements: Seq[CppStatement]): Type = new Impl(name, statements.to[immutable.Seq])
 }
 
@@ -62,11 +68,14 @@ class CppEndIf extends CppMacroStatement {
 
 object CppEndIf {
   val obj = new CppEndIf()
+
   def apply() = obj
 }
 
 class CppInclude(val path: String) extends CppMacroStatement {
-  override def generate(s: CppGeneratorState) { s.append("#include \"").append(path).append("\"") }
+  override def generate(s: CppGeneratorState) {
+    s.append("#include \"").append(path).append("\"")
+  }
 }
 
 object CppInclude {
@@ -99,15 +108,25 @@ class CppNativeType(name: String) extends CppTypeApplication(name) {
 }
 
 case object CppVoidType extends CppNativeType("void")
+
 case object CppUnsignedCharType extends CppNativeType("unsigned char")
+
 case object CppSignedCharType extends CppNativeType("signed char")
+
 case object CppUnsignedShortType extends CppNativeType("unsigned short")
+
 case object CppSignedShortType extends CppNativeType("signed short")
+
 case object CppUnsignedIntType extends CppNativeType("unsigned int")
+
 case object CppSignedIntType extends CppNativeType("signed int")
+
 case object CppUnsignedLongType extends CppNativeType("unsigned long")
+
 case object CppSignedLongType extends CppNativeType("signed long")
+
 case object CppFloatType extends CppNativeType("float")
+
 case object CppDoubleType extends CppNativeType("double")
 
 class CppTypeApplication(val name: String) extends CppType {
@@ -132,7 +151,9 @@ class CppEnumTypeDef(consts: Iterable[CEnumTypeDefConst], name: Option[String] =
     name.foreach(s.append(" ").append)
     s.append(" {")
     var first = true
-    consts.map(c => { if (first) first = !first else s.append(","); s.append(" ").append(c.name).append(" = ").append(c.value.toString);  })
+    consts.map(c => {
+      if (first) first = !first else s.append(","); s.append(" ").append(c.name).append(" = ").append(c.value.toString);
+    })
     s.append(" }")
   }
 }
@@ -185,40 +206,69 @@ object Parameter {
   def apply(name: String, t: Type) = new Parameter(name, t)
 }
 
-class ClassMethodDef(val name: String, val returnType: Type, val params: mutable.Buffer[Parameter])
+sealed abstract class Visibility(val name: String) extends Generatable[CppGeneratorState] {
+  override def generate(s: CppGeneratorState): Unit = s.append(name)
+}
+
+case object Public extends Visibility("public")
+
+case object Private extends Visibility("private")
+
+case object Protected extends Visibility("protected")
+
+class ClassMethodDef(val name: String, val returnType: Type, val params: mutable.Buffer[Parameter],
+                     val static: Boolean = false, val visibility: Visibility = Public)
   extends Generatable[CppGeneratorState] {
   override def generate(s: CppGeneratorState): Unit = {
+    if (static)
+      s.append("static ")
     returnType.generate(s)
     s.append(s" $name(")
     var first = true
-    params.foreach{p => if (first) first = false else s.append(", "); p.generate(s)}
+    params.foreach { p => if (first) first = false else s.append(", "); p.generate(s) }
     s.append(");")
   }
 }
 
 object ClassMethodDef {
-  def apply(name: String, returnType: Type, params: Seq[Parameter]) = new ClassMethodDef(name, returnType, params.to[mutable.Buffer])
+  def apply(name: String, returnType: Type, params: Seq[Parameter], static: Boolean = false) = new ClassMethodDef(name, returnType, params.to[mutable.Buffer], static)
 }
 
-class ClassDef(val name: String, val methods: mutable.Buffer[ClassMethodDef]) extends Statement {
-  override def generate(s: CppGeneratorState): Unit = {
-    s.append(s"class $name {").eol()
-    if (methods.nonEmpty) {
+class ClassDef(val name: String, val methods: mutable.Buffer[ClassMethodDef], val _extends: Seq[String]) extends Statement {
+  private def generateMethodsVisibility(s: CppGeneratorState, visibility: Visibility): Unit = {
+    val visibleMethods = methods.filter(_.visibility == visibility)
+    if (visibleMethods.nonEmpty) {
+      visibility.generate(s)
+      s.append(":").eol()
       s.incIndentation()
-      methods.foreach({m => s.indent(); m.generate(s); s.eol()})
+      visibleMethods.foreach({ m => s.indent(); m.generate(s); s.eol() })
       s.decIndentation()
     }
-    s.append("};")
+  }
+
+  override def generate(s: CppGeneratorState): Unit = {
+    s.append(s"class $name")
+    if (_extends.nonEmpty) {
+      s.append(" : public ").append(_extends.mkString(", public "))
+    }
+    s.eol().indent().append("{").eol()
+    if (methods.nonEmpty) {
+      generateMethodsVisibility(s, Public)
+      generateMethodsVisibility(s, Protected)
+      generateMethodsVisibility(s, Private)
+    }
+    s.indent().append("};")
   }
 }
 
 object ClassDef {
-  def apply(name: String, methods: Seq[ClassMethodDef]) = new ClassDef(name, methods.to[mutable.Buffer])
+  def apply(name: String, methods: Seq[ClassMethodDef], _extends: Seq[String] = Seq.empty) = new ClassDef(name, methods.to[mutable.Buffer], _extends)
 }
 
 abstract class CppStatementBuffer[+A <: CppStatement](val statements: immutable.Seq[A] = immutable.Seq.empty)
   extends CppStatement {
   def nonEmpty = statements.nonEmpty
+
   override def generate(s: CppGeneratorState): Unit = statements.foreach(_.generate(s))
 }
 
@@ -237,34 +287,45 @@ package object Aliases {
 
 object Namespace {
   type Type = AbstractNamespace[Statement] with Statement
+
   private class Impl(name: String, statements: immutable.Seq[Statement])
     extends AbstractNamespace[Statement](name, statements) with Statement
+
   def apply(name: String, statements: Seq[Statement] = Seq.empty): Type = new Impl(name, statements.to[immutable.Seq])
 }
 
 object CppNamespace {
   type Type = AbstractNamespace[CppStatement] with CppStatement
+
   private class Impl(name: String, statements: immutable.Seq[CppStatement])
     extends AbstractNamespace[CppStatement](name, statements) with CppStatement
+
   def apply(name: String, statements: CppStatement*): Type = new Impl(name, statements.to[immutable.Seq])
 }
 
 object CppFile {
   type Type = CppStatementBuffer[CppStatement]
+
   private class Impl(statements: immutable.Seq[CppStatement]) extends CppStatementBuffer[CppStatement](statements)
+
   def apply(statements: Seq[CppStatement]): Type = new Impl(statements.to[immutable.Seq])
 }
 
 
-
 object File {
   type Type = CppStatementBuffer[Statement]
+
   private class Impl(statements: immutable.Seq[Statement] = immutable.Seq.empty) extends CppStatementBuffer[Statement](statements)
+
   def apply(): Type = new Impl()
+
   def apply(statements: Statement*): Type = new Impl(statements.to[immutable.Seq])
 }
 
 class CppGeneratorState(var a: Appendable) {
+  var pos: Int = 0
+  var line: Int = 0
+  var linePos: Int = 0
   private var indentation: Int = 0
 
   def indent() = append("  " * indentation)
@@ -273,10 +334,20 @@ class CppGeneratorState(var a: Appendable) {
 
   def incIndentation() = indentation += 1
 
-  def append(s: String): CppGeneratorState = { a.append(s); this }
+  private def advance(s: String) {
+    pos += s.length
+    linePos += s.length
+  }
+
+  def append(s: String): CppGeneratorState = {
+    advance(s)
+    a.append(s); this
+  }
 
   def eol(): CppGeneratorState = {
     a.append("\n")
+    line += 1
+    linePos = 0
     this
   }
 }

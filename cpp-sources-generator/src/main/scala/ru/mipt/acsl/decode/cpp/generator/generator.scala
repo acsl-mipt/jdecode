@@ -96,12 +96,12 @@ class CppSourcesGenerator(val config: CppGeneratorConfiguration) extends Generat
     case _ => sys.error("not implemented")
   }
 
-  private def cTypeNameFor(t: DecodeType): String = {
+  private def cppTypeNameFor(t: DecodeType): String = {
     t match {
       case t: DecodeNamed => t.name.asMangledString
       case t: DecodePrimitiveType => primitiveTypeToCTypeApplication(t).name
       case t: DecodeArrayType =>
-        val baseCType: String = cTypeNameFor(t.baseType.obj)
+        val baseCType: String = cppTypeNameFor(t.baseType.obj)
         val min = t.size.minLength
         val max = t.size.maxLength
         "DECODE_ARRAY_TYPE_" + ((t.isFixedSize, min, max) match {
@@ -112,8 +112,8 @@ class CppSourcesGenerator(val config: CppGeneratorConfiguration) extends Generat
           case (false, _, _) => s"MIN_MAX_NAME($baseCType, $min, $max)"
         })
       case t: DecodeGenericTypeSpecialized =>
-        cTypeNameFor(t.genericType.obj) + "_" +
-        t.genericTypeArguments.map(tp => if (tp.isDefined) cTypeNameFor(tp.get.obj) else "void").mkString("_")
+        cppTypeNameFor(t.genericType.obj) + "_" +
+        t.genericTypeArguments.map(tp => if (tp.isDefined) cppTypeNameFor(tp.get.obj) else "void").mkString("_")
       case t: DecodeOptionNamed => cTypeNameFromOptionName(t.optionName)
       case _ => sys.error("not implemented")
     }
@@ -149,8 +149,8 @@ class CppSourcesGenerator(val config: CppGeneratorConfiguration) extends Generat
     }
   }
 
-  def cTypeDefForName(t: DecodeType, cType: CppType) = CppTypeDefStatement(cTypeNameFor(t), cType)
-  def cTypeAppForTypeName(t: DecodeType): CppTypeApplication = CppTypeApplication(cTypeNameFor(t))
+  def cTypeDefForName(t: DecodeType, cType: CppType) = CppTypeDefStatement(cppTypeNameFor(t), cType)
+  def cTypeAppForTypeName(t: DecodeType): CppTypeApplication = CppTypeApplication(cppTypeNameFor(t))
 
   private def generateType(t: DecodeType, nsDir: io.File) {
     if (t.isInstanceOf[DecodePrimitiveType])
@@ -166,8 +166,8 @@ class CppSourcesGenerator(val config: CppGeneratorConfiguration) extends Generat
       case t: DecodeArrayType => cTypeDefForName(t, CppVoidType.ptr())
       case t: DecodeStructType => cTypeDefForName(t, CppStructTypeDef(t.fields.map(f => CStructTypeDefField(f.name.asMangledString, cTypeAppForTypeName(f.typeUnit.t.obj)))))
       case t: DecodeAliasType =>
-        val newName: String = cTypeNameFor(t)
-        val oldName: String = cTypeNameFor(t.baseType.obj)
+        val newName: String = cppTypeNameFor(t)
+        val oldName: String = cppTypeNameFor(t.baseType.obj)
         if (newName equals oldName) Comment("omitted due name clash") else CppDefine(newName, oldName)
       case _ => sys.error("not implemented")
     }), "Type header")
@@ -223,9 +223,11 @@ class CppSourcesGenerator(val config: CppGeneratorConfiguration) extends Generat
     t.optionName.map{on => Type(on.asMangledString)}.getOrElse(Type("<not implemented>"))
   }
 
+  private def classNameForComponent(comp: DecodeComponent): String = comp.name.asMangledString + "Component"
+
   private def generateComponent(comp: DecodeComponent) {
     val dir = dirForNs(comp.namespace)
-    val className = comp.name.asMangledString + "Component"
+    val className = classNameForComponent(comp)
     val hFileName = className + ".h"
     val hFile = new io.File(dir, hFileName)
     val cppFile = new io.File(dir, comp.name.asMangledString + "Component.cpp")
@@ -235,7 +237,13 @@ class CppSourcesGenerator(val config: CppGeneratorConfiguration) extends Generat
     val methods = comp.commands.map{cmd => ClassMethodDef(cmd.name.asMangledString,
       cmd.returnType.map{rt => cppTypeForDecodeType(rt.obj)}.getOrElse(Type("void")),
       cmd.parameters.map{p => Parameter(p.name.asMangledString, cppTypeForDecodeType(p.paramType.obj))})}
-    hNs = Namespace(hNs.name, hNs.statements ++ Seq(ClassDef(className, methods), Eol))
+    methods ++= comp.messages.map{msg =>
+      ClassMethodDef("write" + msg.name.asMangledString.capitalize, Type("void"),
+        Seq(Parameter("writer", Type("Writer"))))}
+    methods ++= comp.baseType.map{bt => bt.obj.fields.map{f =>
+      ClassMethodDef(f.name.asMangledString, cppTypeForDecodeType(f.typeUnit.t.obj), Seq.empty)}}
+      .getOrElse(Seq.empty)
+    hNs = Namespace(hNs.name, hNs.statements ++ Seq(ClassDef(className, methods, comp.subComponents.map{ cr => classNameForComponent(cr.component.obj)}), Eol))
     writeFileIfNotEmptyWithComment(hFile, protectDoubleIncludeFile(File(hNs)), "Component header")
     writeFileIfNotEmptyWithComment(cppFile, CppFile(Seq(CppInclude(hFileName))), "Component header")
   }
