@@ -297,9 +297,11 @@ trait DecodeEventMessage extends DecodeMessage {
   def accept[T](visitor: DecodeMessageVisitor[T]): T = visitor.visit(this)
 }
 
-trait DecodeComponent extends DecodeHasOptionInfo with DecodeNamed with DecodeReferenceable
-  with DecodeNamespaceAware {
+trait DecodeFqned extends DecodeNamed with DecodeNamespaceAware {
+  def fqn: DecodeFqn = DecodeFqnImpl.newFromFqn(namespace.fqn, name)
+}
 
+trait DecodeComponent extends DecodeHasOptionInfo with DecodeFqned with DecodeReferenceable {
   def messages: mutable.Buffer[DecodeMessage]
   def commands: mutable.Buffer[DecodeCommand]
   def baseType: Option[DecodeMaybeProxy[DecodeStructType]]

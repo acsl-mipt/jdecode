@@ -13,19 +13,62 @@ import ru.mipt.acsl.generator.cpp.ast._
 import resource._
 
 import scala.collection.mutable
+import scala.collection.immutable
 import scala.util.Random
 
 class CppGeneratorConfiguration(val outputDir: io.File, val registry: DecodeRegistry, val rootComponentFqn: String,
-                                val namespaceAlias: Map[DecodeFqn, DecodeFqn] = Map())
+                                val namespaceAlias: Map[DecodeFqn, DecodeFqn] = Map(), val usePragmaOnce: Boolean = true)
+
+object CppSourcesGenerator {
+  private val voidType = CppTypeApplication("void")
+  private val stdSizeTType = CppTypeApplication("std::size_t")
+  private val stdStringType = CppTypeApplication("std::string")
+  private val commandExecuteResult = CppTypeApplication("decode::CommandExecutionResult")
+
+  private val readerParameter = Parameter("reader", RefType(CppTypeApplication("bmcl::Reader")))
+  private val writerParameter = Parameter("writer", RefType(CppTypeApplication("bmcl::Writer")))
+
+  private val readerVar = CppVar("reader")
+  private val writerVar = CppVar("writer")
+
+  private val executeCommandMethodName = "executeCommand"
+  private val executeCommandParameters = Seq(Parameter("commandId", stdSizeTType), readerParameter, writerParameter)
+}
 
 class CppSourcesGenerator(val config: CppGeneratorConfiguration) extends Generator[CppGeneratorConfiguration] with LazyLogging {
+
+  import CppSourcesGenerator._
+
+  private var nextComponentId = 0
+  private val componentByComponentId = mutable.HashMap.empty[Int, DecodeComponent]
+  private val componentIdByComponent = mutable.HashMap.empty[DecodeComponent, Int]
+
+  private def enumerateComponentsFrom(component: DecodeComponent): Unit = {
+    if (component.id.isDefined) {
+      assert(componentIdByComponent.put(component, component.id.get).isEmpty)
+      assert(componentByComponentId.put(component.id.get, component).isEmpty)
+    }
+    component.subComponents.foreach {cr => enumerateComponentsFrom(cr.component.obj)}
+    if (component.id.isEmpty) {
+      while (componentByComponentId.contains(nextComponentId))
+        nextComponentId += 1
+      componentByComponentId.put(nextComponentId, component)
+      componentIdByComponent.put(component, nextComponentId)
+      nextComponentId += 1
+    }
+  }
+
   override def generate() {
-    generateRootComponent(config.registry.getComponent(config.rootComponentFqn).get)
+    val component: DecodeComponent = config.registry.getComponent(config.rootComponentFqn).get
+    enumerateComponentsFrom(component)
+    generateRootComponent(component)
   }
 
   def nsOrAliasCppSourceParts(ns: DecodeNamespace): Seq[String] = config.namespaceAlias.getOrElse(ns.fqn, ns.fqn).parts.map(_.asMangledString)
 
-  def dirForNs(ns: DecodeNamespace): io.File = new io.File(config.outputDir, nsOrAliasCppSourceParts(ns).mkString("/"))
+  private def dirPathForNs(ns: DecodeNamespace): String = nsOrAliasCppSourceParts(ns).mkString("/")
+
+  private def dirForNs(ns: DecodeNamespace): io.File = new io.File(config.outputDir, dirPathForNs(ns))
 
   def ensureDirForNsExists(ns: DecodeNamespace): io.File = {
     val dir = dirForNs(ns)
@@ -40,10 +83,9 @@ class CppSourcesGenerator(val config: CppGeneratorConfiguration) extends Generat
     }
   }
 
-  def writeFileIfNotEmptyWithComment[A >: Statement <: CppStatement](file: io.File, cppFile: CppFile.Type, comment: String) {
-    if (cppFile.nonEmpty) {
-      writeFile(file, CppFile(cppFile.statements ++ Seq(Comment(comment), Eol.asInstanceOf[Statement])))
-    }
+  def writeFileIfNotEmptyWithComment[A >: CppAstElement](file: io.File, cppFile: CppFile.Type, comment: String) {
+    if (cppFile.nonEmpty)
+      writeFile(file, CppFile(Seq(Comment(comment), Eol) ++ cppFile.statements: _*))
   }
 
   def generateNs(ns: DecodeNamespace) {
@@ -67,7 +109,7 @@ class CppSourcesGenerator(val config: CppGeneratorConfiguration) extends Generat
     }
   }
 
-  private def cTypeNameFromOptionName(name: Option[DecodeName]): String = {
+  private def cppTypeNameFromOptionName(name: Option[DecodeName]): String = {
     if (name.isDefined) {
       name.get.asMangledString
     } else {
@@ -114,7 +156,7 @@ class CppSourcesGenerator(val config: CppGeneratorConfiguration) extends Generat
       case t: DecodeGenericTypeSpecialized =>
         cppTypeNameFor(t.genericType.obj) + "_" +
         t.genericTypeArguments.map(tp => if (tp.isDefined) cppTypeNameFor(tp.get.obj) else "void").mkString("_")
-      case t: DecodeOptionNamed => cTypeNameFromOptionName(t.optionName)
+      case t: DecodeOptionNamed => cppTypeNameFromOptionName(t.optionName)
       case _ => sys.error("not implemented")
     }
   }
@@ -122,10 +164,14 @@ class CppSourcesGenerator(val config: CppGeneratorConfiguration) extends Generat
   private val rand = new Random()
 
   private def protectDoubleIncludeFile(file: File.Type): File.Type = {
-    val bytes = Array[Byte](10)
-    rand.nextBytes(bytes)
-    val uniqueName: String = "__" ++ MessageDigest.getInstance("MD5").digest(bytes).map("%02x".format(_)).mkString ++ "__"
-    File(Seq(CppIfNDef(uniqueName, Seq(CppDefine(uniqueName)))) ++ file.statements ++ Seq(CppEndIf()): _*)
+    if (config.usePragmaOnce) {
+      File(Seq(CppPragma("once"), Eol) ++ file.statements: _*)
+    } else {
+      val bytes = Array[Byte](10)
+      rand.nextBytes(bytes)
+      val uniqueName: String = "__" ++ MessageDigest.getInstance("MD5").digest(bytes).map("%02x".format(_)).mkString ++ "__"
+      File(CppIfNDef(uniqueName, Seq(CppDefine(uniqueName))) +: file.statements :+ CppEndIf(): _*)
+    }
   }
 
   private def primitiveTypeToCTypeApplication(primitiveType: DecodePrimitiveType): CppTypeApplication = {
@@ -219,11 +265,48 @@ class CppSourcesGenerator(val config: CppGeneratorConfiguration) extends Generat
     compSet.foreach(generateComponent)
   }
 
-  def cppTypeForDecodeType(t: DecodeType): Type = {
-    t.optionName.map{on => Type(on.asMangledString)}.getOrElse(Type("<not implemented>"))
+  def cppTypeForDecodeType(t: DecodeType): CppType = {
+    t.optionName.map{on => CppTypeApplication(on.asMangledString)}.getOrElse(CppTypeApplication("<not implemented>"))
   }
 
   private def classNameForComponent(comp: DecodeComponent): String = comp.name.asMangledString + "Component"
+
+  private def includePathForComponent(comp: DecodeComponent): String = {
+    val dir = dirPathForNs(comp.namespace)
+    val className = classNameForComponent(comp)
+    val hFileName = className + ".h"
+    dir + "/" + hFileName
+  }
+
+  private def importStatementsForComponent(comp: DecodeComponent) = {
+    val imports = comp.subComponents.flatMap { cr => Seq(CppInclude(includePathForComponent(cr.component.obj)), Eol) }
+    if (imports.nonEmpty)
+      imports += Eol
+    imports
+  }
+
+  private val keywords = Seq("return")
+
+  private def methodNameForDecodeName(name: DecodeName): String = {
+    var methodName = name.asMangledString
+    if (keywords.contains(methodName))
+      methodName = "_" + methodName
+    methodName
+  }
+
+
+
+  def appendPrologEpilog(file: File.Type): File.Type = {
+    File(Seq(CppInclude("decode_prologue.h"), Eol, Eol) ++ file.statements ++ Seq(Eol, CppInclude("decode_epilogue.h"), Eol): _*)
+  }
+
+  private def readingAndExecutingCommandsMethods() = {
+    Seq(ClassMethodDef("readExecuteCommand", commandExecuteResult, mutable.Buffer(readerParameter, writerParameter),
+      implementation = CppStatements(
+        CppIf(FuncCall("decode::canNotReadBer"), CppStatements(Return(CppVar("decode::CommandExecutionResult::NotEnoughData")))),
+        Return(MethodCall("executeCommand", MethodCall("decode::readBerOrFail", readerVar), readerVar, CppVar("writer"))))),
+      ClassMethodDef(executeCommandMethodName, commandExecuteResult, executeCommandParameters.to[mutable.Buffer]))
+  }
 
   private def generateComponent(comp: DecodeComponent) {
     val dir = dirForNs(comp.namespace)
@@ -233,24 +316,71 @@ class CppSourcesGenerator(val config: CppGeneratorConfiguration) extends Generat
     val cppFile = new io.File(dir, comp.name.asMangledString + "Component.cpp")
     var hNs = nsOrAliasCppSourceParts(comp.namespace).foldLeft[Option[Namespace.Type]](None)(
       (hNs: Option[Namespace.Type], part: String)
-      => hNs.map{ns => Namespace(part, Seq(ns))}.orElse(Some(Namespace(part)))).get
-    val methods = comp.commands.map{cmd => ClassMethodDef(cmd.name.asMangledString,
-      cmd.returnType.map{rt => cppTypeForDecodeType(rt.obj)}.getOrElse(Type("void")),
-      cmd.parameters.map{p => Parameter(p.name.asMangledString, cppTypeForDecodeType(p.paramType.obj))})}
-    methods ++= comp.messages.map{msg =>
-      ClassMethodDef("write" + msg.name.asMangledString.capitalize, Type("void"),
-        Seq(Parameter("writer", Type("Writer"))))}
+      => hNs.map{ns => Namespace(part, ns)}.orElse(Some(Namespace(part)))).get
+    val imports = importStatementsForComponent(comp)
+    val methods = comp.commands.flatMap{cmd =>
+      val methodName = methodNameForDecodeName(cmd.name)
+      val returnType = cmd.returnType.map { rt => cppTypeForDecodeType(rt.obj) }.getOrElse(voidType)
+      val parameters = cmd.parameters.map { p => Parameter(p.name.asMangledString, cppTypeForDecodeType(p.paramType.obj)) }
+      Seq(
+        ClassMethodDef(methodName, returnType, parameters.to[mutable.Buffer], virtual = true, _abstract = true),
+        ClassMethodDef(methodName, returnType, mutable.Buffer(readerParameter, writerParameter),
+          implementation = if (parameters.isEmpty) {
+            val methodCall = MethodCall(methodName)
+            CppStatements(
+              CppStatement(MacroCall("BMCL_UNUSED", CppVar(readerParameter.name))),
+              CppStatement(MacroCall("BMCL_UNUSED", CppVar(writerParameter.name))),
+              if (cmd.returnType.isDefined) Return(methodCall) else CppStatement(methodCall))
+          } else CppStatements())
+    )}
+    methods ++= comp.messages.map{msg => ClassMethodDef("write" + msg.name.asMangledString.capitalize, voidType,
+          mutable.Buffer(writerParameter))}
     methods ++= comp.baseType.map{bt => bt.obj.fields.map{f =>
-      ClassMethodDef(f.name.asMangledString, cppTypeForDecodeType(f.typeUnit.t.obj), Seq.empty)}}
+      ClassMethodDef(methodNameForDecodeName(f.name), cppTypeForDecodeType(f.typeUnit.t.obj))}}
       .getOrElse(Seq.empty)
-    hNs = Namespace(hNs.name, hNs.statements ++ Seq(ClassDef(className, methods, comp.subComponents.map{ cr => classNameForComponent(cr.component.obj)}), Eol))
-    writeFileIfNotEmptyWithComment(hFile, protectDoubleIncludeFile(File(hNs)), "Component header")
-    writeFileIfNotEmptyWithComment(cppFile, CppFile(Seq(CppInclude(hFileName))), "Component header")
+    methods ++= readingAndExecutingCommandsMethods()
+    val idField = ClassFieldDef("ID", stdSizeTType, static = true)
+    val guidField = ClassFieldDef("GUID", stdStringType, static = true)
+    val fields = Seq(idField, guidField)
+    val classDef = ClassDef(className, methods, comp.subComponents.map { cr => classNameForComponent(cr.component.obj) }, fields)
+    val nsClassPrefix = s"${hNs.name}::$className::"
+    val guidFieldInit = ClassFieldInit(s"$nsClassPrefix${guidField.name}", guidField,
+      CppStringLiteral(comp.fqn.asMangledString))
+    val idFieldInit = ClassFieldInit(s"$nsClassPrefix${idField.name}", idField,
+      CppIntLiteral(componentIdByComponent.get(comp).get))
+    val executeCommandImpl = ClassMethodImpl(s"$nsClassPrefix$executeCommandMethodName", commandExecuteResult,
+      executeCommandParameters, CppStatements(CppSwitch(CppVar("commandId"), casesForCommands(comp),
+        default = Some(CppStatements(Return(CppVar("decode::CommandExecutionResult::InvalidCommandId")))))))
+    hNs = Namespace(hNs.name, hNs.statements ++ Seq(classDef, Eol): _*)
+    writeFileIfNotEmptyWithComment(hFile, protectDoubleIncludeFile(appendPrologEpilog(File(imports :+ hNs: _*))), s"Component ${comp.name.asMangledString} interface")
+    writeFileIfNotEmptyWithComment(cppFile, CppFile(CppInclude(hFileName), Eol, Eol, guidFieldInit, Eol, Eol, idFieldInit, Eol, Eol, executeCommandImpl), s"Component ${comp.name.asMangledString} implementation")
+  }
+
+  private def casesForCommands(comp: DecodeComponent): Seq[CppCase] = {
+    var commandNextId = 0
+    val commandsById = mutable.HashMap.empty[Int, (DecodeComponent, DecodeCommand)]
+    comp.commands.foreach { cmd =>
+      assert(commandsById.put(cmd.id.getOrElse({commandNextId += 1; commandNextId - 1}), (comp, cmd)).isEmpty)
+    }
+    subComponentsFor(comp).toSeq.sortBy(_.fqn.asMangledString).filterNot(_ == comp).foreach { comp =>
+      comp.commands.foreach { cmd =>
+        assert(commandsById.put(commandNextId, (comp, cmd)).isEmpty)
+        commandNextId += 1
+      }
+    }
+    commandsById.toSeq.sortBy(_._1).map(el => {
+      CppCase(CppIntLiteral(el._1), CppStatements(Return(MethodCall((if (el._2._1 == comp) "" else classNameForComponent(el._2._1) + "::") + methodNameForDecodeName(el._2._2.name), readerVar, writerVar))))
+    }: CppCase)
+  }
+
+  private def subComponentsFor(comp: DecodeComponent, set: mutable.Set[DecodeComponent] = mutable.HashSet.empty): mutable.Set[DecodeComponent] = {
+    comp.subComponents.foreach { ref =>
+      val c: DecodeComponent = ref.component.obj
+      set += c
+      subComponentsFor(c, set)
+    }
+    set
   }
 
   override def getConfiguration: CppGeneratorConfiguration = config
-}
-
-object CppSourcesGenerator {
-
 }

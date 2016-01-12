@@ -9,11 +9,12 @@ import scala.collection.mutable.ArrayBuffer
 /**
   * @author Artem Shein
   */
-case class DecodeFqnImpl(parts: Seq[DecodeName]) extends DecodeFqn {
-  def copyDropLast(): DecodeFqn = DecodeFqnImpl(parts.dropRight(1))
+case class DecodeFqnImpl(var parts: Seq[DecodeName]) extends DecodeFqn {
+  def copyDropLast(): DecodeFqn = new DecodeFqnImpl(parts.dropRight(1))
 }
 
 object DecodeFqnImpl {
+  def newFromFqn(fqn: DecodeFqn, last: DecodeName) = new DecodeFqnImpl(fqn.parts :+ last)
   def newFromSource(sourceText: String): DecodeFqn = new DecodeFqnImpl("\\.".r.split(sourceText).map(DecodeNameImpl.newFromSourceName))
 }
 
