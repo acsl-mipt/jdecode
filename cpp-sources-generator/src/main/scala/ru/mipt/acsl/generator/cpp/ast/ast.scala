@@ -387,8 +387,16 @@ case class CppIntLiteral(value: Int) extends CppExpression {
   override def generate(s: CppGeneratorState): Unit = s.append(value.toString)
 }
 
+case class MutableCppAstElements[A <: CppAstElement](statements: mutable.Buffer[A] = mutable.Buffer.empty) extends CppAstElement {
+  def nonEmpty = statements.nonEmpty
+  def isEmpty = statements.isEmpty
+  def +=(el: A) = { statements += el }
+  def ++=(elements: Seq[A]) = { statements ++= elements; this }
+  override def generate(s: CppGeneratorState): Unit = statements.foreach(_.generate(s))
+}
+
 case class CppAstElements[+A <: CppAstElement](statements: immutable.Seq[A] = immutable.Seq.empty)
-  extends CppStatement {
+  extends CppAstElement {
   def nonEmpty = statements.nonEmpty
   def isEmpty = statements.isEmpty
 
@@ -410,6 +418,15 @@ object CppStatements {
   def apply(statements: CppStatement*) = new CppStatements(statements: _*)
 }
 
+abstract class AbstractMutableNamespace[A <: CppAstElement](val name: String, statements: mutable.Buffer[A])
+  extends MutableCppAstElements[A](statements) {
+  override def generate(s: CppGeneratorState): Unit = {
+    s.append("namespace ").append(name).eol().append("{").eol()
+    super.generate(s)
+    s.append("}").eol()
+  }
+}
+
 abstract class AbstractNamespace[+A <: CppAstElement](val name: String, statements: immutable.Seq[A])
   extends CppAstElements[A](statements) {
   override def generate(s: CppGeneratorState): Unit = {
@@ -417,6 +434,15 @@ abstract class AbstractNamespace[+A <: CppAstElement](val name: String, statemen
     super.generate(s)
     s.append("}").eol()
   }
+}
+
+object MutableNamespace {
+  type Type = AbstractMutableNamespace[CppAstElement] with CppAstElement
+
+  private class Impl(name: String, statements: mutable.Buffer[CppAstElement])
+    extends AbstractMutableNamespace[CppAstElement](name, statements) with CppAstElement
+
+  def apply(name: String, statements: CppAstElement*): Type = new Impl(name, statements.to[mutable.Buffer])
 }
 
 object Namespace {
