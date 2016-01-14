@@ -2,8 +2,7 @@ package ru.mipt.acsl.generator.c.ast
 
 import ru.mipt.acsl.generation.Generatable
 
-import scala.collection.mutable
-import scala.collection.immutable
+import scala.collection.{immutable, mutable}
 
 /**
   * @author Artem Shein
@@ -66,13 +65,27 @@ object CPragma {
   def apply(value: String) = new CPragma(value)
 }
 
-object CIfNDef {
+object CIfDef {
   type Type = CAstElements[CAstElement] with CMacroAstElement
 
-  class Impl(val name: String, elements: immutable.Seq[CAstElement]) extends CAstElements(elements)
+  private class Impl(val name: String, elements: CAstElement*) extends CAstElements(elements.to[immutable.Seq])
   with CMacroAstElement {
     override def generate(s: CGeneratorState): Unit = {
-      s.append("#ifndef ").append(name).eol()
+      s.append(s"#ifdef $name").eol()
+      Helpers.generate(s, elements)
+    }
+  }
+
+  def apply(name: String, statements: CAstElement*): Type = new Impl(name, statements: _*)
+}
+
+object CIfNDef {
+  type Type = CIfDef.Type
+
+  private class Impl(val name: String, elements: immutable.Seq[CAstElement]) extends CAstElements(elements)
+  with CMacroAstElement {
+    override def generate(s: CGeneratorState): Unit = {
+      s.append(s"#ifndef $name").eol()
       elements.foreach(stmt => {
         stmt.generate(s); s.eol()
       })
@@ -96,6 +109,10 @@ class CInclude(val path: String) extends CMacroAstElement {
   override def generate(s: CGeneratorState) {
     s.append("#include \"").append(path).append("\"")
   }
+}
+
+case class CPlainText(text: String) extends CAstElement {
+  override def generate(s: CGeneratorState): Unit = s.append(text)
 }
 
 object CInclude {
@@ -213,15 +230,25 @@ case class Parameter(name: String, t: CType) extends Generatable[CGeneratorState
 }
 
 private object Helpers {
-  def generate(s: CGeneratorState, parameters: Seq[Parameter]): Unit = {
+
+  implicit class Elements(val seq: Seq[CAstElement])
+
+  def generate(s: CGeneratorState, elements: Elements): Unit = {
+    elements.seq.foreach(stmt => {
+      stmt.generate(s); s.eol()
+    })
+  }
+
+  def generate(s: CGeneratorState, parameters: Parameter*): Unit = {
     s.append("(")
     var first = true
     parameters.foreach { p => if (first) first = false else s.append(", "); p.generate(s) }
     s.append(")")
   }
+
   def generate(s: CGeneratorState, statements: CStatements) = {
     s.append(" {").eol().incIndentation()
-    statements.statements.foreach({ statement => s.indent(); statement.generate(s); s.eol() })
+    statements.elements.foreach({ statement => s.indent(); statement.generate(s); s.eol() })
     s.decIndentation().indent().append("}")
   }
 }
@@ -248,17 +275,6 @@ case class CSwitch(expr: CExpression, cases: Seq[CCase], default: Option[CStatem
   }
 }
 
-case class ClassMethodImpl(name: String, returnType: CType, parameters: Seq[Parameter], implementation: CStatements, static: Boolean = false) extends CAstElement {
-  override def generate(s: CGeneratorState): Unit = {
-    if (static)
-      s.append("static ")
-    returnType.generate(s)
-    s.append(" ").append(name)
-    Helpers.generate(s, parameters)
-    Helpers.generate(s, implementation)
-  }
-}
-
 case class CStringLiteral(value: String) extends CExpression {
   override def generate(s: CGeneratorState): Unit = s.append("\"").append(value.replace("\"", "\\\"")).append("\"")
 }
@@ -275,12 +291,12 @@ case class MutableCAstElements[A <: CAstElement](statements: mutable.Buffer[A] =
   override def generate(s: CGeneratorState): Unit = statements.foreach(_.generate(s))
 }
 
-case class CAstElements[+A <: CAstElement](statements: immutable.Seq[A] = immutable.Seq.empty)
+case class CAstElements[+A <: CAstElement](elements: immutable.Seq[A] = immutable.Seq.empty)
   extends CAstElement {
-  def nonEmpty = statements.nonEmpty
-  def isEmpty = statements.isEmpty
+  def nonEmpty = elements.nonEmpty
+  def isEmpty = elements.isEmpty
 
-  override def generate(s: CGeneratorState): Unit = statements.foreach(_.generate(s))
+  override def generate(s: CGeneratorState): Unit = elements.foreach(_.generate(s))
 }
 
 class CStatements(statements: CStatement*) extends CAstElements(statements.to[immutable.Seq]) {
@@ -359,7 +375,7 @@ case class CFuncDef(name: String, returnType: CType = CVoidType, parameters: Seq
   override def generate(s: CGeneratorState): Unit = {
     returnType.generate(s)
     s.append(" ").append(name)
-    Helpers.generate(s, parameters)
+    Helpers.generate(s, parameters: _*)
   }
 }
 

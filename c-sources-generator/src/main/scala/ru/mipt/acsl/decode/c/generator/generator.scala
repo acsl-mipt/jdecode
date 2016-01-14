@@ -7,6 +7,7 @@ import java.security.MessageDigest
 import com.typesafe.scalalogging.LazyLogging
 import ru.mipt.acsl.decode.model.domain._
 import ru.mipt.acsl.generation.Generator
+import ru.mipt.acsl.generator.c.ast.CFile.Type
 import ru.mipt.acsl.generator.c.ast._
 
 import resource._
@@ -15,7 +16,8 @@ import scala.collection.mutable
 import scala.util.Random
 
 case class CGeneratorConfiguration(outputDir: io.File, registry: DecodeRegistry, rootComponentFqn: String,
-                                   namespaceAliases: Map[DecodeFqn, DecodeFqn] = Map.empty)
+                                   namespaceAliases: Map[DecodeFqn, DecodeFqn] = Map.empty,
+                                   prologEpilogPath: Option[String] = None)
 
 object CSourcesGenerator {
   private val voidType = CTypeApplication("void")
@@ -66,7 +68,7 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
     config.namespaceAliases.getOrElse(ns.fqn, ns.fqn).parts.map(_.asMangledString)
   }
 
-  private def dirPathForNs(ns: DecodeNamespace): String = nsOrAliasCppSourceParts(ns).mkString("/")
+  private def dirPathForNs(ns: DecodeNamespace): String = nsOrAliasCppSourceParts(ns).mkString(io.File.separator)
 
   private def dirForNs(ns: DecodeNamespace): io.File = new io.File(config.outputDir, dirPathForNs(ns))
 
@@ -89,7 +91,7 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
 
   def writeFileIfNotEmptyWithComment[A >: CAstElement](file: io.File, cppFile: CFile.Type, comment: String) {
     if (cppFile.nonEmpty)
-      writeFile(file, CFile(Seq(CComment(comment), CEol) ++ cppFile.statements: _*))
+      writeFile(file, CFile(Seq(CComment(comment), CEol) ++ cppFile.elements: _*))
   }
 
   def generateNs(ns: DecodeNamespace) {
@@ -113,7 +115,7 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
     }
   }
 
-  private def cppTypeNameFromOptionName(name: Option[DecodeName]): String = {
+  private def cTypeNameFromOptionName(name: Option[DecodeName]): String = {
     if (name.isDefined) {
       name.get.asMangledString
     } else {
@@ -160,7 +162,7 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
       case t: DecodeGenericTypeSpecialized =>
         cTypeNameFor(t.genericType.obj) + "_" +
           t.genericTypeArguments.map(tp => if (tp.isDefined) cTypeNameFor(tp.get.obj) else "void").mkString("_")
-      case t: DecodeOptionNamed => cppTypeNameFromOptionName(t.optionName)
+      case t: DecodeOptionNamed => cTypeNameFromOptionName(t.optionName)
       case _ => sys.error("not implemented")
     }
   }
@@ -171,7 +173,7 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
     val bytes = Array[Byte](10)
     rand.nextBytes(bytes)
     val uniqueName: String = "__" ++ MessageDigest.getInstance("MD5").digest(bytes).map("%02x".format(_)).mkString ++ "__"
-    CFile(CIfNDef(uniqueName, Seq(CDefine(uniqueName))) +: file.statements :+ CEndIf(): _*)
+    CFile(CIfNDef(uniqueName, Seq(CDefine(uniqueName))) +: file.elements :+ CEndIf(): _*)
   }
 
   private def primitiveTypeToCTypeApplication(primitiveType: DecodePrimitiveType): CTypeApplication = {
@@ -213,10 +215,18 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
       case t: DecodeAliasType =>
         val newName: String = cTypeNameFor(t)
         val oldName: String = cTypeNameFor(t.baseType.obj)
-        if (newName equals oldName) CComment("omitted due name clash") else CDefine(newName, oldName)
+        if (newName equals oldName) CComment("omitted due name clash") else cTypeDefForName(t, cTypeAppForTypeName(t.baseType.obj)) // CDefine(newName, oldName)
       case _ => sys.error("not implemented")
     }
-    writeFileIfNotEmptyWithComment(tFile, CFile(inner), "Type header")
+    val imports = mutable.Buffer[CAstElement]((t match {
+      case t: DecodeStructType => t.fields.flatMap { f => Seq(CInclude(relPathForType(f.typeUnit.t.obj)), CEol) }
+      case t: BaseTyped => if (t.baseType.obj.isInstanceOf[DecodePrimitiveType]) Seq.empty else Seq(CInclude(relPathForType(t.baseType.obj)), CEol)
+      case _ => Seq.empty
+    }): _*)
+    if (imports.nonEmpty)
+      imports += CEol
+    val externed = externCpp(CFile(inner))
+    writeFileIfNotEmptyWithComment(tFile, protectDoubleIncludeFile(appendPrologEpilog(CFile(imports ++ externed.elements: _*))), "Type header")
   }
 
   private def collectNsForType[T <: DecodeType](t: DecodeMaybeProxy[T], set: mutable.Set[DecodeNamespace]) {
@@ -275,14 +285,15 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
     val dir = dirPathForNs(comp.namespace)
     val className = classNameForComponent(comp)
     val hFileName = className + ".h"
-    dir + "/" + hFileName
+    dir + io.File.separator + hFileName
   }
 
   private def importStatementsForComponent(comp: DecodeComponent) = {
     val imports = comp.subComponents.flatMap { cr => Seq(CInclude(includePathForComponent(cr.component.obj)), CEol) }
     if (imports.nonEmpty)
       imports += CEol
-    val typeIncludes = typesForComponent(comp).flatMap { t => Seq(CInclude(relPathForType(t)), CEol) }
+    val types = typesForComponent(comp).toSeq
+    val typeIncludes = types.flatMap { t => Seq(CInclude(relPathForType(t)), CEol) }
     imports ++= typeIncludes
     if (typeIncludes.nonEmpty)
       imports += CEol
@@ -309,7 +320,9 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
   }
 
   private def appendPrologEpilog(file: CFile.Type): CFile.Type = {
-    CFile(Seq(CInclude("decode_prologue.h"), CEol, CEol) ++ file.statements ++ Seq(CEol, CInclude("decode_epilogue.h"), CEol): _*)
+    val prefix = config.prologEpilogPath.map(_ + io.File.separator).getOrElse("")
+    CFile(Seq(CInclude(prefix + "photon_prologue.h"), CEol, CEol) ++ file.elements ++
+      Seq(CEol, CInclude(prefix + "photon_epilogue.h"), CEol, CEol): _*)
   }
 
   private def readingAndExecutingCommandsMethods() = {
@@ -320,14 +333,19 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
       CFuncImpl(CFuncDef(executeCommandMethodName, commandExecuteResult, executeCommandParameters.to[mutable.Buffer]), CStatements()))
   }
 
+  def externCpp(file: CFile.Type): CFile.Type = {
+    CFile(Seq(CIfDef("__cplusplus", CPlainText("extern \"C\" {"), CEndIf()), CEol) ++ file.elements ++
+      Seq(CEol, CIfDef("__cplusplus", CPlainText("}"), CEndIf())): _*)
+  }
+
   private def generateComponent(comp: DecodeComponent) {
     val dir = dirForNs(comp.namespace)
     val className = classNameForComponent(comp)
     val hFileName = className + ".h"
     val hFile = new io.File(dir, hFileName)
-    val cppFile = new io.File(dir, comp.name.asMangledString + "Component.cpp")
-    val nsParts = nsOrAliasCppSourceParts(comp.namespace)
-    val cppNs = nsParts.mkString("::")
+    val cFile = new io.File(dir, comp.name.asMangledString + "Component.c")
+    //val nsParts = nsOrAliasCppSourceParts(comp.namespace)
+    //val cNs = nsParts.mkString("::")
     val imports = importStatementsForComponent(comp)
     val methods = comp.commands.flatMap{cmd =>
       val methodName = methodNameForDecodeName(cmd.name)
@@ -354,16 +372,17 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
     //val guidField = ClassFieldDef("GUID", stringType, static = true)
     //val fields = Seq(idField, guidField)
     //val classDef = ClassDef(className, methods, comp.subComponents.map { cr => classNameForComponent(cr.component.obj) }, fields)
-    val nsClassPrefix = s"$cppNs::$className::"
+    //val nsClassPrefix = s"$cNs::$className::"
     //val guidFieldInit = ClassFieldInit(s"$nsClassPrefix${guidField.name}", guidField,
     //  CStringLiteral(comp.fqn.asMangledString))
     //val idFieldInit = ClassFieldInit(s"$nsClassPrefix${idField.name}", idField,
     //  CIntLiteral(componentIdByComponent.get(comp).get))
-    val executeCommandImpl = ClassMethodImpl(s"$nsClassPrefix$executeCommandMethodName", commandExecuteResult,
-      executeCommandParameters, CStatements(CSwitch(CVar("commandId"), casesForCommands(comp),
-        default = Some(CStatements(Return(CVar("PhotonCommandExecutionResult_InvalidCommandId")))))))
-    writeFileIfNotEmptyWithComment(hFile, protectDoubleIncludeFile(appendPrologEpilog(CFile(imports ++ Seq(CEol): _*))), s"Component ${comp.name.asMangledString} interface")
-    writeFileIfNotEmptyWithComment(cppFile, CFile(CInclude(hFileName), CEol, CEol, executeCommandImpl), s"Component ${comp.name.asMangledString} implementation")
+    //val executeCommandImpl = ClassMethodImpl(s"$nsClassPrefix$executeCommandMethodName", commandExecuteResult,
+    //  executeCommandParameters, CStatements(CSwitch(CVar("commandId"), casesForCommands(comp),
+    //    default = Some(CStatements(Return(CVar("PhotonCommandExecutionResult_InvalidCommandId")))))))
+    val externedCFile = externCpp(CFile())
+    writeFileIfNotEmptyWithComment(hFile, protectDoubleIncludeFile(appendPrologEpilog(CFile(imports ++ externedCFile.elements: _*))), s"Component ${comp.name.asMangledString} interface")
+    writeFileIfNotEmptyWithComment(cFile, CFile(CInclude(hFileName), CEol, CEol), s"Component ${comp.name.asMangledString} implementation")
   }
 
   private def casesForCommands(comp: DecodeComponent): Seq[CCase] = {
