@@ -376,6 +376,8 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
     }).getOrElse(Seq.empty) ++ methods, Some(componentFunctionTableName + "_s")))
 
     val execCommand = CFuncDef(componentStructName + "_executeCommand", commandExecuteResult,
+      Seq(Parameter("self", componentSelfType), readerParameter, writerParameter, Parameter("commandId", sizeTType)))
+    val readExecCommand = CFuncDef(componentStructName + "_readExecuteCommand", commandExecuteResult,
       Seq(Parameter("self", componentSelfType), readerParameter, writerParameter))
    /* methods ++= comp.messages.flatMap{msg => Seq(CFuncDef(className + "_Write" + msg.name.asMangledString.capitalize, voidType,
       Seq(writerParameter)), CEol) }
@@ -395,7 +397,7 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
     //val executeCommandImpl = ClassMethodImpl(s"$nsClassPrefix$executeCommandMethodName", commandExecuteResult,
     //  executeCommandParameters, CStatements(CSwitch(CVar("commandId"), casesForCommands(comp),
     //    default = Some(CStatements(Return(CVar("PhotonCommandExecutionResult_InvalidCommandId")))))))
-    val externedCFile = externCpp(Seq(forwardFuncTableDecl, CEol, CEol, componentType, CEol, vtbl, CEol, execCommand, CEol))
+    val externedCFile = externCpp(Seq(forwardFuncTableDecl, CEol, CEol, componentType, CEol, vtbl, CEol, execCommand, CEol, CEol, readExecCommand))
     writeFileIfNotEmptyWithComment(hFile, protectDoubleIncludeFile(CEol +: appendPrologEpilog(imports ++ externedCFile)), s"Component ${comp.name.asMangledString} interface")
     writeFileIfNotEmptyWithComment(cFile, Seq(CInclude(hFileName), CEol, CEol), s"Component ${comp.name.asMangledString} implementation")
   }

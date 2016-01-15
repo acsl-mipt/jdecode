@@ -368,6 +368,7 @@ case class CFuncDef(name: String, returnType: CType = CVoidType, parameters: Seq
     returnType.generate(s)
     s.append(" ").append(name)
     Helpers.generate(s, parameters: _*)
+    s.append(";")
   }
 }
 
