@@ -25,14 +25,19 @@ object CSourcesGenerator {
   private val stringType = CTypeApplication("char").ptr
   private val commandExecuteResult = CTypeApplication("PhotonCommandExecutionResult")
 
+  private val commandExecuteResultOk = CVar(commandExecuteResult.name + "_Ok")
+
   private val readerParameter = Parameter("reader", CTypeApplication("PhotonReader").ptr)
   private val writerParameter = Parameter("writer", CTypeApplication("PhotonWriter").ptr)
 
+  private val selfVar = CVar("self")
   private val readerVar = CVar("reader")
   private val writerVar = CVar("writer")
 
   private val executeCommandMethodName = "executeCommand"
   private val executeCommandParameters = Seq(Parameter("commandId", sizeTType), readerParameter, writerParameter)
+
+  private val userFunctionTableStructFieldName = "userFunctionTable"
 }
 
 class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[CGeneratorConfiguration] with LazyLogging {
@@ -279,11 +284,11 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
     t.optionName.map{on => CTypeApplication(on.asMangledString)}.getOrElse(CTypeApplication("<not implemented>"))
   }
 
-  private def classNameForComponent(comp: DecodeComponent): String = comp.name.asMangledString + "Component"
+  private def typeNameForComponent(comp: DecodeComponent): String = comp.name.asMangledString + "Component"
 
   private def includePathForComponent(comp: DecodeComponent): String = {
     val dir = dirPathForNs(comp.namespace)
-    val className = classNameForComponent(comp)
+    val className = typeNameForComponent(comp)
     val hFileName = className + ".h"
     dir + io.File.separator + hFileName
   }
@@ -312,8 +317,12 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
 
   private val keywords = Seq("return")
 
-  private def methodNameForDecodeName(name: DecodeName): String = {
-    var methodName = name.asMangledString
+  private def cNameForDecodeName(name: DecodeName): String = {
+    name.asMangledString
+  }
+
+  private def mangledCNameForDecodeName(name: DecodeName): String = {
+    var methodName = cNameForDecodeName(name)
     if (keywords.contains(methodName))
       methodName = "_" + methodName
     methodName
@@ -327,8 +336,8 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
 
   private def readingAndExecutingCommandsMethods() = {
     Seq(CFuncImpl(CFuncDef("readExecuteCommand", commandExecuteResult, Seq(readerParameter, writerParameter)),
-        Seq(CIf(FuncCall("decode::canNotReadBer"), Return(CVar("decode::CommandExecutionResult::NotEnoughData"))),
-        Return(FuncCall("executeCommand", FuncCall("decode::readBerOrFail", readerVar), readerVar, CVar("writer"))))),
+        Seq(CIf(CFuncCall("decode::canNotReadBer"), Return(CVar("decode::CommandExecutionResult::NotEnoughData"))),
+        Return(CFuncCall("executeCommand", CFuncCall("decode::readBerOrFail", readerVar), readerVar, CVar("writer"))))),
       CFuncImpl(CFuncDef(executeCommandMethodName, commandExecuteResult, executeCommandParameters)))
   }
 
@@ -337,48 +346,57 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
       Seq(CEol, CIfDef("__cplusplus"), CEol, CPlainText("}"), CEol, CEndIf)
   }
 
+  def functionTableTypeNameFor(comp: DecodeComponent): String = typeNameForComponent(comp) + "UserFunctionTable"
+
+  private def ptrTypeFor(comp: DecodeComponent) = {
+    CTypeApplication(typeNameForComponent(comp)).ptr
+  }
+
+  private def userFuncNameFor(component: DecodeComponent, command: DecodeCommand): String = {
+    userFuncComponentStructFieldFor(component) + cNameForDecodeName(command.name).capitalize
+  }
+
   private def generateComponent(comp: DecodeComponent) {
     val dir = dirForNs(comp.namespace)
-    val componentStructName = classNameForComponent(comp)
+    val componentStructName = typeNameForComponent(comp)
     val hFileName = componentStructName + ".h"
     val hFile = new io.File(dir, hFileName)
     val cFile = new io.File(dir, comp.name.asMangledString + "Component.c")
     //val nsParts = nsOrAliasCppSourceParts(comp.namespace)
     //val cNs = nsParts.mkString("::")
     val imports = importStatementsForComponent(comp)
-    val componentFunctionTableName: String = componentStructName + "UserFunctionTable"
+    val componentFunctionTableName: String = functionTableTypeNameFor(comp)
     val componentFunctionTableNameStruct: String = componentFunctionTableName + "_s"
     val forwardFuncTableDecl = CForwardStructDecl(componentFunctionTableNameStruct)
-    val componentType = CTypeDefStatement(componentStructName, CStructTypeDef(Seq(
-      CStructTypeDefField("userFunctionTable", CStructType(forwardFuncTableDecl.name)),
-      CStructTypeDefField("data", voidType.ptr))))
-    val componentSelfType: CType = CTypeApplication(componentType.name).ptr
-
+    val componentSelfType: CType = ptrTypeFor(comp)
     val methods: Seq[CStructTypeDefField] = comp.commands.flatMap{cmd =>
-      val methodName = methodNameForDecodeName(cmd.name)
+      val methodName = mangledCNameForDecodeName(cmd.name)
       val returnType = cmd.returnType.map { rt => cTypeForDecodeType(rt.obj) }.getOrElse(voidType)
       val parameters = componentSelfType +: cmd.parameters.map { p => cTypeForDecodeType(p.paramType.obj) }
       Seq(CStructTypeDefField(methodName, CFuncType(returnType, parameters, methodName)))
-      /*Seq(
-        CFuncDef(methodName, returnType, parameters.to[mutable.Buffer]),
-        CFuncImpl(CFuncDef(methodName, returnType, mutable.Buffer(readerParameter, writerParameter)),
-          if (parameters.isEmpty) {
-            val methodCall = FuncCall(methodName)
-            Seq(
-              MacroCall("BMCL_UNUSED", CVar(readerParameter.name)),
-              MacroCall("BMCL_UNUSED", CVar(writerParameter.name)),
-              if (cmd.returnType.isDefined) Return(methodCall) else CStatement(methodCall))
-          } else Seq())
-      )*/}
-    val vtbl = CTypeDefStatement(componentFunctionTableName, CStructTypeDef(comp.baseType.map(_.obj.fields.map { f =>
-      val name: String = methodNameForDecodeName(f.name)
-      CStructTypeDefField(name, CFuncType(cTypeForDecodeType(f.typeUnit.t.obj), Seq(componentSelfType), name))
-    }).getOrElse(Seq.empty) ++ methods, Some(componentFunctionTableName + "_s")))
+    }
 
-    val execCommand = CFuncDef(componentStructName + "_executeCommand", commandExecuteResult,
-      Seq(Parameter("self", componentSelfType), readerParameter, writerParameter, Parameter("commandId", sizeTType)))
-    val readExecCommand = CFuncDef(componentStructName + "_readExecuteCommand", commandExecuteResult,
+    val componentType = CTypeDefStatement(componentStructName, CStructTypeDef(Seq(CStructTypeDefField("data", voidType.ptr)) ++
+      subComponentsFor(comp).toSeq.flatMap { sc => sc.commands.map { cmd =>
+        val returnType = cmd.returnType.map { rt => cTypeForDecodeType(rt.obj) }.getOrElse(voidType)
+        val parameters = componentSelfType +: cmd.parameters.map { p => cTypeForDecodeType(p.paramType.obj) }
+        val methodName: String = userFuncNameFor(sc, cmd)
+        CStructTypeDefField(methodName, CFuncType(returnType, parameters, methodName))
+      }} ++
+      comp.baseType.map(_.obj.fields.map { f =>
+        val name: String = mangledCNameForDecodeName(f.name)
+        CStructTypeDefField(name, CFuncType(cTypeForDecodeType(f.typeUnit.t.obj), Seq(componentSelfType), name))
+      }).getOrElse(Seq.empty) ++ methods))
+    //val vtbl = CTypeDefStatement(componentFunctionTableName, CStructTypeDef(
+    //  , Some(componentFunctionTableName + "_s")))
+
+    val execCommand = CFuncImpl(CFuncDef(componentStructName + "_ExecuteCommand", commandExecuteResult,
+      Seq(Parameter("self", componentSelfType), readerParameter, writerParameter, Parameter("commandId", sizeTType))),
+      CSwitch(CVar("commandId"), casesForCommands(comp),
+        default = Some(Return(CVar("PhotonCommandExecutionResult_InvalidCommandId")))))
+    val readExecCommand = CFuncDef(componentStructName + "_ReadExecuteCommand", commandExecuteResult,
       Seq(Parameter("self", componentSelfType), readerParameter, writerParameter))
+    val functionsForComponentCommands = functionsForCommands(comp)
    /* methods ++= comp.messages.flatMap{msg => Seq(CFuncDef(className + "_Write" + msg.name.asMangledString.capitalize, voidType,
       Seq(writerParameter)), CEol) }
     methods ++= comp.baseType.map{bt => bt.obj.fields.map{f =>
@@ -397,26 +415,65 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
     //val executeCommandImpl = ClassMethodImpl(s"$nsClassPrefix$executeCommandMethodName", commandExecuteResult,
     //  executeCommandParameters, CStatements(CSwitch(CVar("commandId"), casesForCommands(comp),
     //    default = Some(CStatements(Return(CVar("PhotonCommandExecutionResult_InvalidCommandId")))))))
-    val externedCFile = externCpp(Seq(forwardFuncTableDecl, CEol, CEol, componentType, CEol, vtbl, CEol, execCommand, CEol, CEol, readExecCommand))
+    val externedCFile = externCpp(Seq(forwardFuncTableDecl, CEol, CEol, componentType, CEol) ++
+     functionsForComponentCommands.flatMap { f => Seq(f.definition, CEol) } ++
+     Seq(CEol, execCommand.definition, CEol, CEol, readExecCommand, CEol))
     writeFileIfNotEmptyWithComment(hFile, protectDoubleIncludeFile(CEol +: appendPrologEpilog(imports ++ externedCFile)), s"Component ${comp.name.asMangledString} interface")
-    writeFileIfNotEmptyWithComment(cFile, Seq(CInclude(hFileName), CEol, CEol), s"Component ${comp.name.asMangledString} implementation")
+    writeFileIfNotEmptyWithComment(cFile, Seq(CInclude(hFileName), CEol, CEol) ++
+      functionsForComponentCommands.flatMap { f => Seq(f, CEol, CEol) } :+
+      execCommand,
+      s"Component ${comp.name.asMangledString} implementation")
   }
 
-  private def casesForCommands(comp: DecodeComponent): Seq[CCase] = {
+  private def userFuncComponentStructFieldFor(sc: DecodeComponent): String = {
+    val name: String = typeNameForComponent(sc)
+    Character.toLowerCase(name.charAt(0)) + name.substring(1)
+  }
+
+  private case class ComponentCommand(component: DecodeComponent, command: DecodeCommand)
+
+  private def commandsByIdFor(comp: DecodeComponent): mutable.Map[Int, ComponentCommand] = {
     var commandNextId = 0
-    val commandsById = mutable.HashMap.empty[Int, (DecodeComponent, DecodeCommand)]
+    val commandsById = mutable.HashMap.empty[Int, ComponentCommand]
     comp.commands.foreach { cmd =>
-      assert(commandsById.put(cmd.id.getOrElse({commandNextId += 1; commandNextId - 1}), (comp, cmd)).isEmpty)
+      assert(commandsById.put(cmd.id.getOrElse({commandNextId += 1; commandNextId - 1}), ComponentCommand(comp, cmd)).isEmpty)
     }
     subComponentsFor(comp).toSeq.sortBy(_.fqn.asMangledString).filterNot(_ == comp).foreach { comp =>
       comp.commands.foreach { cmd =>
-        assert(commandsById.put(commandNextId, (comp, cmd)).isEmpty)
+        assert(commandsById.put(commandNextId, ComponentCommand(comp, cmd)).isEmpty)
         commandNextId += 1
       }
     }
-    commandsById.toSeq.sortBy(_._1).map(el => {
-      CCase(CIntLiteral(el._1), Return(FuncCall((if (el._2._1 == comp) "" else classNameForComponent(el._2._1) + "::") + methodNameForDecodeName(el._2._2.name), readerVar, writerVar)))
-    }: CCase)
+    commandsById
+  }
+
+  private def defineAndInitVar(v: CVar, parameter: DecodeCommandParameter): Seq[CAstElement] = {
+    Seq(CIdent, CDefVar(v.name, cTypeAppForTypeName(parameter.paramType.obj)))
+  }
+
+  private def functionsForCommands(comp: DecodeComponent): Seq[CFuncImpl] = {
+    val componentTypeName: String = typeNameForComponent(comp)
+    val compType = ptrTypeFor(comp)
+    val parameters = Seq(Parameter("self", compType), readerParameter, writerParameter)
+    commandsByIdFor(comp).toSeq.sortBy(_._1).map(el => {
+      val component = el._2.component
+      val command = el._2.command
+      val methodName: String = typeNameForComponent(component) + cNameForDecodeName(command.name).capitalize
+      val vars = command.parameters.map { p => CVar(mangledCNameForDecodeName(p.name))}
+      val varInits = vars.zip(command.parameters).flatMap { (el: (CVar, DecodeCommandParameter)) => defineAndInitVar(el._1, el._2) :+ CEol }
+      val funcCall = CArrow(selfVar, CFuncCall(userFuncNameFor(component, command), selfVar +: vars: _*))
+      CFuncImpl(CFuncDef(componentTypeName + "_" + methodName, commandExecuteResult, parameters),
+        varInits ++ Seq(CIdent, CStatement(funcCall), CEol, CIdent, Return(commandExecuteResultOk), CEol))
+    })
+  }
+
+  private def casesForCommands(comp: DecodeComponent): Seq[CCase] = {
+    val componentTypeName: String = typeNameForComponent(comp)
+    commandsByIdFor(comp).toSeq.sortBy(_._1).map { el =>
+      val methodName: String = typeNameForComponent(el._2.component) + cNameForDecodeName(el._2.command.name).capitalize
+      val funcCall: CFuncCall = CFuncCall(componentTypeName + "_" + methodName, selfVar, readerVar, writerVar)
+      CCase(CIntLiteral(el._1), Return(funcCall))
+    }
   }
 
   private def subComponentsFor(comp: DecodeComponent, set: mutable.Set[DecodeComponent] = mutable.HashSet.empty): mutable.Set[DecodeComponent] = {

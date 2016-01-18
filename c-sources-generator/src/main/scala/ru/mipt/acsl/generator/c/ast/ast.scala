@@ -221,13 +221,17 @@ case class Parameter(name: String, t: CType) extends Generatable[CGeneratorState
 }
 
 private object Helpers {
+  def generate(s: CGeneratorState, name: String, t: CType): Unit = {
+    t.generate(s)
+    s.append(s" $name")
+  }
+
   def generate(s: CGeneratorState, parameterTypes: Iterable[CType]): Unit = {
     s.append("(")
     var first = true
     parameterTypes.foreach { p => if (first) first = false else s.append(", "); p.generate(s) }
     s.append(")")
   }
-
 
   implicit class Elements(val seq: Seq[CAstElement])
 
@@ -302,6 +306,22 @@ case class CStatements(buf: mutable.Buffer[CStatement] = mutable.Buffer.empty) e
   }
 }
 
+case class CArrow(expr: CExpression, expr2: CExpression) extends CExpression {
+  override def generate(s: CGeneratorState): Unit = {
+    expr.generate(s)
+    s.append("->")
+    expr2.generate(s)
+  }
+}
+
+case class CDot(expr: CExpression, expr2: CExpression) extends CExpression {
+  override def generate(s: CGeneratorState): Unit = {
+    expr.generate(s)
+    s.append(".")
+    expr2.generate(s)
+  }
+}
+
 package object Implicits {
   implicit def cAstElement2cAstElements(el: CAstElement): CAstElements = CAstElements(mutable.Buffer(el))
   implicit def iterable2cAstElements(els: Iterable[CAstElement]): CAstElements = CAstElements(els.to[mutable.Buffer])
@@ -310,12 +330,23 @@ package object Implicits {
   implicit def iterable2cStatements(els: Iterable[CStatement]): CStatements = CStatements(els.to[mutable.Buffer])
 }
 
-case class FuncCall(methodName: String, arguments: CExpression*) extends CExpression {
+case class CFuncCall(methodName: String, arguments: CExpression*) extends CExpression {
   override def generate(s: CGeneratorState): Unit = {
     s.append(methodName).append("(")
     var first = true
     arguments.foreach{ arg => if (first) first = false else s.append(", "); arg.generate(s) }
     s.append(")")
+  }
+}
+
+case class CDefVar(name: String, t: CType, init: Option[CExpression] = None) extends CStatement {
+  override def generate(s: CGeneratorState): Unit = {
+    Helpers.generate(s, name, t)
+    if (init.isDefined) {
+      s.append(" = ")
+      init.get.generate(s)
+    }
+    s.append(";")
   }
 }
 
@@ -354,6 +385,10 @@ case class CIf(expression: CExpression, thenStatements: CStatements = CStatement
   }
 }
 
+case object CIdent extends CAstElement {
+  override def generate(s: CGeneratorState): Unit = s.indent()
+}
+
 case class CVarDef(name: String, t: CType, init: Option[CExpression]) extends CStatement {
   override def generate(s: CGeneratorState): Unit = {
     t.generate(s)
@@ -372,10 +407,14 @@ case class CFuncDef(name: String, returnType: CType = CVoidType, parameters: Seq
   }
 }
 
-case class CFuncImpl(definition: CFuncDef, implementation: CStatements = CStatements()) extends CAstElement {
+case class CFuncImpl(definition: CFuncDef, implementation: CAstElement*) extends CAstElement {
   override def generate(s: CGeneratorState): Unit = {
-    definition.generate(s)
+    definition.returnType.generate(s)
+    s.append(" ").append(definition.name)
+    Helpers.generate(s, definition.parameters: _*)
+    s.append(" {").eol().incIndentation()
     Helpers.generate(s, implementation)
+    s.decIndentation().indent().append("}")
   }
 }
 
