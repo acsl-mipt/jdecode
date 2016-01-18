@@ -8,14 +8,28 @@ import scala.collection.mutable
   * @author Artem Shein
   */
 
-trait CAstElement extends Generatable[CGeneratorState]
+trait CAstElement extends Generatable[CGenState]
+
+object CAstElements {
+  def apply(elements: CAstElement*) = mutable.Buffer(elements: _*)
+  def apply() = mutable.Buffer.empty[CAstElement]
+}
+
+package object Implicits {
+  type CAstElements = mutable.Buffer[CAstElement]
+  implicit class CAstElementsGeneratable(els: CAstElements) extends CAstElement {
+    override def generate(s: CGenState): Unit = { Helpers.generate(s, els) }
+  }
+}
+
+import Implicits._
 
 trait CStatement extends CAstElement
 
-trait CExpression extends CAstElement
+trait CExpression extends CStatement
 
 case class CExprStatement(expr: CExpression) extends CStatement {
-  override def generate(s: CGeneratorState): Unit = {
+  override def generate(s: CGenState): Unit = {
     expr.generate(s)
     s.append(";")
   }
@@ -26,7 +40,7 @@ object CStatement {
 }
 
 class CComment(val text: String) extends CAstElement {
-  override def generate(s: CGeneratorState): Unit = {
+  override def generate(s: CGenState): Unit = {
     s.append("/* ").append(text).append(" */")
   }
 }
@@ -36,13 +50,13 @@ object CComment {
 }
 
 object CEol extends CAstElement {
-  override def generate(s: CGeneratorState): Unit = s.eol()
+  override def generate(s: CGenState): Unit = s.eol()
 }
 
 trait CMacroAstElement extends CAstElement
 
 class CDefine(val name: String, val value: Option[String]) extends CMacroAstElement {
-  override def generate(s: CGeneratorState): Unit = {
+  override def generate(s: CGenState): Unit = {
     s.append("#define ").append(name)
     value.foreach(s.append(" ").append)
     s.eol()
@@ -56,7 +70,7 @@ object CDefine {
 }
 
 class CPragma(val value: String) extends CMacroAstElement {
-  override def generate(s: CGeneratorState): Unit = {
+  override def generate(s: CGenState): Unit = {
     s.append("#pragma ").append(value).eol()
   }
 }
@@ -66,44 +80,46 @@ object CPragma {
 }
 
 case class CIfDef(name: String) extends CMacroAstElement {
-  override def generate(s: CGeneratorState): Unit = {
+  override def generate(s: CGenState): Unit = {
     s.append(s"#ifdef $name")
   }
 }
 
 case class CIfNDef(name: String) extends CMacroAstElement {
-  override def generate(s: CGeneratorState): Unit = {
+  override def generate(s: CGenState): Unit = {
     s.append(s"#ifndef $name")
   }
 }
 
 case object CEndIf extends CMacroAstElement {
-  override def generate(s: CGeneratorState): Unit = s.append("#endif")
+  override def generate(s: CGenState): Unit = s.append("#endif")
 }
 
 case class CInclude(path: String) extends CMacroAstElement {
-  override def generate(s: CGeneratorState) {
+  override def generate(s: CGenState) {
     s.append("#include \"").append(path).append("\"")
   }
 }
 
 case class CPlainText(text: String) extends CAstElement {
-  override def generate(s: CGeneratorState): Unit = s.append(text)
+  override def generate(s: CGenState): Unit = s.append(text)
 }
 
-trait CType extends CAstElement {
+trait CType extends CExpression {
   def ptr: CPtrType = CPtrType(this)
 }
 
 case class CPtrType(subType: CType) extends CType {
-  override def generate(s: CGeneratorState): Unit = {
+  override def generate(s: CGenState): Unit = {
     subType.generate(s)
     s.append("*")
   }
 }
 
 case class CTypeDefStatement(name: String, t: CType) extends CAstElement {
-  override def generate(s: CGeneratorState): Unit = {
+  def toType: CType = CTypeApplication(name)
+  def ptr: CPtrType = toType.ptr
+  override def generate(s: CGenState): Unit = {
     s.append("typedef ")
     t.generate(s)
     s.append(" ").append(name).append(";").eol()
@@ -111,7 +127,7 @@ case class CTypeDefStatement(name: String, t: CType) extends CAstElement {
 }
 
 class CNativeType(name: String) extends CTypeApplication(name) {
-  override def generate(s: CGeneratorState): Unit = {
+  override def generate(s: CGenState): Unit = {
     s.append(name)
   }
 }
@@ -139,7 +155,7 @@ case object CFloatType extends CNativeType("float")
 case object CDoubleType extends CNativeType("double")
 
 class CTypeApplication(val name: String) extends CType {
-  override def generate(s: CGeneratorState): Unit = s.append(name)
+  override def generate(s: CGenState): Unit = s.append(name)
 }
 
 object CTypeApplication {
@@ -149,7 +165,7 @@ object CTypeApplication {
 case class CEnumTypeDefConst(name: String, value: Int)
 
 case class CFuncType(returnType: CType, parameterTypes: Iterable[CType], name: String = "") extends CType {
-  override def generate(s: CGeneratorState): Unit = {
+  override def generate(s: CGenState): Unit = {
     returnType.generate(s)
     s.append(s" (*$name)")
     Helpers.generate(s, parameterTypes)
@@ -158,8 +174,16 @@ case class CFuncType(returnType: CType, parameterTypes: Iterable[CType], name: S
 
 trait CTypeDef extends CType
 
+case class CBlock(elements: CAstElement*) extends CAstElement {
+  override def generate(s: CGenState): Unit = {
+    s.append(" {").eol().incIndentation()
+    elements.foreach { el => s.indent(); el.generate(s); s.append(";").eol() }
+    s.decIndentation().indent().append("}")
+  }
+}
+
 case class CEnumTypeDef(consts: Iterable[CEnumTypeDefConst], name: Option[String] = None) extends CTypeDef {
-  override def generate(s: CGeneratorState): Unit = {
+  override def generate(s: CGenState): Unit = {
     s.append("enum")
     name.foreach(s.append(" ").append)
     s.append(" {")
@@ -176,11 +200,11 @@ object CEnumTypeDef {
 }
 
 case class CStructType(name: String) extends CType {
-  override def generate(s: CGeneratorState): Unit = s.append(s"struct $name")
+  override def generate(s: CGenState): Unit = s.append(s"struct $name")
 }
 
 case class CStructTypeDefField(name: String, t: CType) extends CAstElement {
-  override def generate(s: CGeneratorState): Unit = {
+  override def generate(s: CGenState): Unit = {
     t match {
       case f: CFuncType => f.generate(s)
       case _ => t.generate(s); s.append(s" $name")
@@ -189,11 +213,11 @@ case class CStructTypeDefField(name: String, t: CType) extends CAstElement {
 }
 
 case class CForwardStructDecl(name: String) extends CAstElement {
-  override def generate(s: CGeneratorState): Unit = s.append(s"struct $name;")
+  override def generate(s: CGenState): Unit = s.append(s"struct $name;")
 }
 
 case class CStructTypeDef(fields: Traversable[CStructTypeDefField], name: Option[String] = None) extends CType {
-  override def generate(s: CGeneratorState): Unit = {
+  override def generate(s: CGenState): Unit = {
     s.append("struct ")
     name.map(s.append(_).append(" "))
     s.append("{")
@@ -213,20 +237,20 @@ case class CStructTypeDef(fields: Traversable[CStructTypeDefField], name: Option
   }
 }
 
-case class Parameter(name: String, t: CType) extends Generatable[CGeneratorState] {
-  override def generate(s: CGeneratorState): Unit = {
+case class CFuncParam(name: String, t: CType) extends Generatable[CGenState] {
+  override def generate(s: CGenState): Unit = {
     t.generate(s)
     s.append(s" $name")
   }
 }
 
 private object Helpers {
-  def generate(s: CGeneratorState, name: String, t: CType): Unit = {
+  def generate(s: CGenState, name: String, t: CType): Unit = {
     t.generate(s)
     s.append(s" $name")
   }
 
-  def generate(s: CGeneratorState, parameterTypes: Iterable[CType]): Unit = {
+  def generate(s: CGenState, parameterTypes: Iterable[CType]): Unit = {
     s.append("(")
     var first = true
     parameterTypes.foreach { p => if (first) first = false else s.append(", "); p.generate(s) }
@@ -235,26 +259,26 @@ private object Helpers {
 
   implicit class Elements(val seq: Seq[CAstElement])
 
-  def generate(s: CGeneratorState, elements: Elements): Unit = {
+  def generate(s: CGenState, elements: Elements): Unit = {
     elements.seq.foreach(_.generate(s))
   }
 
-  def generate(s: CGeneratorState, parameters: Parameter*): Unit = {
+  def generate(s: CGenState, parameters: CFuncParam*): Unit = {
     s.append("(")
     var first = true
     parameters.foreach { p => if (first) first = false else s.append(", "); p.generate(s) }
     s.append(")")
   }
 
-  def generate(s: CGeneratorState, statements: CStatements) = {
+  /*def generate(s: CGeneratorState, statements: CAs) = {
     s.append(" {").eol().incIndentation()
     statements.buf.foreach({ statement => s.indent(); statement.generate(s); s.eol() })
     s.decIndentation().indent().append("}")
-  }
+  }*/
 }
 
-case class CCase(expr: CExpression, statements: CStatements) extends CAstElement {
-  override def generate(s: CGeneratorState): Unit = {
+case class CCase(expr: CExpression, statements: CAstElements) extends CAstElement {
+  override def generate(s: CGenState): Unit = {
     s.indent()
     s.append("case ")
     expr.generate(s)
@@ -264,8 +288,8 @@ case class CCase(expr: CExpression, statements: CStatements) extends CAstElement
   }
 }
 
-case class CSwitch(expr: CExpression, cases: Seq[CCase], default: Option[CStatements] = None) extends CStatement {
-  override def generate(s: CGeneratorState): Unit = {
+case class CSwitch(expr: CExpression, cases: Seq[CCase], default: CAstElements = CAstElements()) extends CStatement {
+  override def generate(s: CGenState): Unit = {
     s.append("switch (")
     expr.generate(s)
     s.append(") {").incIndentation().eol()
@@ -276,11 +300,11 @@ case class CSwitch(expr: CExpression, cases: Seq[CCase], default: Option[CStatem
 }
 
 case class CStringLiteral(value: String) extends CExpression {
-  override def generate(s: CGeneratorState): Unit = s.append("\"").append(value.replace("\"", "\\\"")).append("\"")
+  override def generate(s: CGenState): Unit = s.append("\"").append(value.replace("\"", "\\\"")).append("\"")
 }
 
 case class CIntLiteral(value: Int) extends CExpression {
-  override def generate(s: CGeneratorState): Unit = s.append(value.toString)
+  override def generate(s: CGenState): Unit = s.append(value.toString)
 }
 
 case class MutableCAstElements[A <: CAstElement](statements: mutable.Buffer[A] = mutable.Buffer.empty) extends CAstElement {
@@ -288,13 +312,12 @@ case class MutableCAstElements[A <: CAstElement](statements: mutable.Buffer[A] =
   def isEmpty = statements.isEmpty
   def +=(el: A) = { statements += el }
   def ++=(elements: Seq[A]) = { statements ++= elements; this }
-  override def generate(s: CGeneratorState): Unit = statements.foreach(_.generate(s))
+  override def generate(s: CGenState): Unit = statements.foreach(_.generate(s))
 }
 
-case class CAstElements(buf: mutable.Buffer[CAstElement] = mutable.Buffer.empty) extends CAstElement {
-  override def generate(s: CGeneratorState): Unit = { Helpers.generate(s, buf) }
-}
 
+
+/*
 case class CStatements(buf: mutable.Buffer[CStatement] = mutable.Buffer.empty) extends CAstElement {
   override def generate(s: CGeneratorState) = {
     var first = true
@@ -304,10 +327,10 @@ case class CStatements(buf: mutable.Buffer[CStatement] = mutable.Buffer.empty) e
       stmt.generate(s);
     })
   }
-}
+}*/
 
 case class CArrow(expr: CExpression, expr2: CExpression) extends CExpression {
-  override def generate(s: CGeneratorState): Unit = {
+  override def generate(s: CGenState): Unit = {
     expr.generate(s)
     s.append("->")
     expr2.generate(s)
@@ -315,23 +338,15 @@ case class CArrow(expr: CExpression, expr2: CExpression) extends CExpression {
 }
 
 case class CDot(expr: CExpression, expr2: CExpression) extends CExpression {
-  override def generate(s: CGeneratorState): Unit = {
+  override def generate(s: CGenState): Unit = {
     expr.generate(s)
     s.append(".")
     expr2.generate(s)
   }
 }
 
-package object Implicits {
-  implicit def cAstElement2cAstElements(el: CAstElement): CAstElements = CAstElements(mutable.Buffer(el))
-  implicit def iterable2cAstElements(els: Iterable[CAstElement]): CAstElements = CAstElements(els.to[mutable.Buffer])
-  implicit def cAstElements2buffer(els: CAstElements): mutable.Buffer[CAstElement] = els.buf
-  implicit def cStatement2cStatements(el: CStatement): CStatements = CStatements(mutable.Buffer(el))
-  implicit def iterable2cStatements(els: Iterable[CStatement]): CStatements = CStatements(els.to[mutable.Buffer])
-}
-
 case class CFuncCall(methodName: String, arguments: CExpression*) extends CExpression {
-  override def generate(s: CGeneratorState): Unit = {
+  override def generate(s: CGenState): Unit = {
     s.append(methodName).append("(")
     var first = true
     arguments.foreach{ arg => if (first) first = false else s.append(", "); arg.generate(s) }
@@ -340,7 +355,7 @@ case class CFuncCall(methodName: String, arguments: CExpression*) extends CExpre
 }
 
 case class CDefVar(name: String, t: CType, init: Option[CExpression] = None) extends CStatement {
-  override def generate(s: CGeneratorState): Unit = {
+  override def generate(s: CGenState): Unit = {
     Helpers.generate(s, name, t)
     if (init.isDefined) {
       s.append(" = ")
@@ -351,11 +366,11 @@ case class CDefVar(name: String, t: CType, init: Option[CExpression] = None) ext
 }
 
 case class CVar(name: String) extends CExpression {
-  override def generate(s: CGeneratorState): Unit = s.append(name)
+  override def generate(s: CGenState): Unit = s.append(name)
 }
 
 case class MacroCall(name: String, arguments: CExpression*) extends CExpression with CStatement {
-  override def generate(s: CGeneratorState): Unit = {
+  override def generate(s: CGenState): Unit = {
     s.append(name).append("(")
     var first = true
     arguments.foreach{ arg => if (first) first = false else s.append(", "); arg.generate(s) }
@@ -364,21 +379,21 @@ case class MacroCall(name: String, arguments: CExpression*) extends CExpression 
 }
 
 case class Return(expression: CExpression) extends CStatement {
-  override def generate(s: CGeneratorState): Unit = {
+  override def generate(s: CGenState): Unit = {
     s.append("return ")
     expression.generate(s)
     s.append(";")
   }
 }
 
-case class CIf(expression: CExpression, thenStatements: CStatements = CStatements(),
-               elseStatements: CStatements = CStatements()) extends CStatement {
-  override def generate(s: CGeneratorState): Unit = {
+case class CIf(expression: CExpression, thenStatements: CAstElements = CAstElements(),
+               elseStatements: CAstElements = CAstElements()) extends CStatement {
+  override def generate(s: CGenState): Unit = {
     s.append("if (")
     expression.generate(s)
     s.append(")")
     Helpers.generate(s, thenStatements)
-    if (elseStatements.buf.nonEmpty) {
+    if (elseStatements.nonEmpty) {
       s.append(" else")
       Helpers.generate(s, elseStatements)
     }
@@ -386,11 +401,11 @@ case class CIf(expression: CExpression, thenStatements: CStatements = CStatement
 }
 
 case object CIdent extends CAstElement {
-  override def generate(s: CGeneratorState): Unit = s.indent()
+  override def generate(s: CGenState): Unit = s.indent()
 }
 
 case class CVarDef(name: String, t: CType, init: Option[CExpression]) extends CStatement {
-  override def generate(s: CGeneratorState): Unit = {
+  override def generate(s: CGenState): Unit = {
     t.generate(s)
     s.append(" ").append(name)
     init.foreach{s.append(" = "); _.generate(s)}
@@ -398,8 +413,8 @@ case class CVarDef(name: String, t: CType, init: Option[CExpression]) extends CS
   }
 }
 
-case class CFuncDef(name: String, returnType: CType = CVoidType, parameters: Seq[Parameter] = Seq.empty) extends CAstElement {
-  override def generate(s: CGeneratorState): Unit = {
+case class CFuncDef(name: String, returnType: CType = CVoidType, parameters: Seq[CFuncParam] = Seq.empty) extends CAstElement {
+  override def generate(s: CGenState): Unit = {
     returnType.generate(s)
     s.append(" ").append(name)
     Helpers.generate(s, parameters: _*)
@@ -407,8 +422,16 @@ case class CFuncDef(name: String, returnType: CType = CVoidType, parameters: Seq
   }
 }
 
-case class CFuncImpl(definition: CFuncDef, implementation: CAstElement*) extends CAstElement {
-  override def generate(s: CGeneratorState): Unit = {
+case object CSemicolon extends CAstElement {
+  override def generate(s: CGenState): Unit = s.append(";")
+}
+
+case object CIndent extends CAstElement {
+  override def generate(s: CGenState): Unit = s.indent()
+}
+
+case class CFuncImpl(definition: CFuncDef, implementation: CAstElements = CAstElements()) extends CAstElement {
+  override def generate(s: CGenState): Unit = {
     definition.returnType.generate(s)
     s.append(" ").append(definition.name)
     Helpers.generate(s, definition.parameters: _*)
@@ -418,7 +441,7 @@ case class CFuncImpl(definition: CFuncDef, implementation: CAstElement*) extends
   }
 }
 
-class CGeneratorState(var a: Appendable) {
+class CGenState(var a: Appendable) {
   var pos: Int = 0
   var line: Int = 0
   var linePos: Int = 0
@@ -435,12 +458,12 @@ class CGeneratorState(var a: Appendable) {
     linePos += s.length
   }
 
-  def append(s: String): CGeneratorState = {
+  def append(s: String): CGenState = {
     advance(s)
     a.append(s); this
   }
 
-  def eol(): CGeneratorState = {
+  def eol(): CGenState = {
     a.append("\n")
     line += 1
     linePos = 0
@@ -448,6 +471,6 @@ class CGeneratorState(var a: Appendable) {
   }
 }
 
-object CGeneratorState {
-  def apply(a: Appendable) = new CGeneratorState(a)
+object CGenState {
+  def apply(a: Appendable) = new CGenState(a)
 }
