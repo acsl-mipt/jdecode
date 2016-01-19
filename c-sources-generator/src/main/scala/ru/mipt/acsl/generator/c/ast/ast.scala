@@ -232,6 +232,19 @@ case class CStatementLine(elements: CAstElement*) extends CAstElement {
   }
 }
 
+case class CRef(v: CVar) extends CExpression {
+  override def generate(s: CGenState): Unit = {
+    s.append("&")
+    v.generate(s)
+  }
+}
+
+case class CForwardStructTypeDef(name: String, structName: String) extends CStatement {
+  override def generate(s: CGenState): Unit = {
+    s.append(s"typedef struct $structName $name;")
+  }
+}
+
 case class CStructTypeDef(fields: Traversable[CStructTypeDefField], name: Option[String] = None) extends CType {
   override def generate(s: CGenState): Unit = {
     s.append("struct ")
@@ -377,7 +390,6 @@ case class CDefVar(name: String, t: CType, init: Option[CExpression] = None) ext
       s.append(" = ")
       init.get.generate(s)
     }
-    s.append(";")
   }
 }
 
@@ -394,7 +406,7 @@ case class MacroCall(name: String, arguments: CExpression*) extends CExpression 
   }
 }
 
-case class Return(expression: CExpression) extends CStatement {
+case class CReturn(expression: CExpression) extends CStatement {
   override def generate(s: CGenState): Unit = {
     s.append("return ")
     expression.generate(s)

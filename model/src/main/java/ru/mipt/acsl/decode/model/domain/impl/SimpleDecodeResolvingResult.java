@@ -1,6 +1,8 @@
 package ru.mipt.acsl.decode.model.domain.impl;
 
 import com.google.common.collect.Lists;
+import ru.mipt.acsl.JavaToScala;
+import ru.mipt.acsl.ScalaToJava;
 import ru.mipt.acsl.decode.model.domain.DecodeReferenceable;
 import ru.mipt.acsl.decode.model.domain.DecodeResolvingResult;
 import ru.mipt.acsl.decode.modeling.ModelingMessage;
@@ -10,6 +12,7 @@ import org.jetbrains.annotations.NotNull;
 import scala.Option;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -47,8 +50,13 @@ public final class SimpleDecodeResolvingResult<T extends DecodeReferenceable> im
             @NotNull DecodeResolvingResult<T> resolvingResult1,
             @NotNull DecodeResolvingResult<T> resolvingResult2)
     {
-        resolvingResult1.getMessages().addAll(resolvingResult2.getMessages());
-        return resolvingResult1;
+        List<ResolvingMessage> msgs = new ArrayList<>(resolvingResult1.getMessages().size() + resolvingResult2.getMessages().size());
+        msgs.addAll(resolvingResult1.getMessages());
+        msgs.addAll(resolvingResult2.getMessages());
+        Option<T> obj = resolvingResult1.resolvedObject();
+        if (obj.isEmpty())
+            obj = resolvingResult2.resolvedObject();
+        return new SimpleDecodeResolvingResult<>(obj, msgs);
     }
 
     @NotNull
