@@ -4,7 +4,7 @@ import java.io
 import java.io.{OutputStreamWriter, FileOutputStream}
 import java.security.MessageDigest
 
-import com.google.common.base.Charsets
+import com.google.common.base.{CaseFormat, Charsets}
 import com.typesafe.scalalogging.LazyLogging
 import ru.mipt.acsl.decode.model.domain._
 import ru.mipt.acsl.generation.Generator
@@ -116,7 +116,8 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
     val typesHeader = CAstElements()
     ns.types.foreach(generateTypeSeparateFiles(_, nsDir))
     val fileName: String = "types" + headerExt
-    writeFileIfNotEmptyWithComment(new io.File(nsDir, fileName), protectDoubleIncludeFile(fileName, typesHeader), s"Types of ${ns.fqn.asMangledString} namespace")
+    writeFileIfNotEmptyWithComment(new io.File(nsDir, fileName), protectDoubleIncludeFile(fileName, typesHeader),
+      s"Types of ${ns.fqn.asMangledString} namespace")
     //ns.getComponents.toTraversable.foreach(generateRootComponent)
   }
 
@@ -141,32 +142,14 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
     }
   }
 
-  private def fileNameFor(t: DecodeType): String = t match {
-    case t: DecodeNamed => t.name.asMangledString
-    case t: DecodeArrayType =>
-      val baseTypeFileName: String = fileNameFor(t.baseType.obj)
-      val min = t.size.minLength
-      val max = t.size.maxLength
-      "DecodeArray" + baseTypeFileName + ((t.isFixedSize, min, max) match {
-        case (true, 0, _) | (false, 0, 0) => ""
-        case (true, _, _) => s"Fixed$min"
-        case (false, 0, _) => s"Max$max"
-        case (false, _, 0) => s"Min$min"
-        case (false, _, _) => s"Min${min}Max$max"
-      })
-    case t: DecodeGenericTypeSpecialized =>
-      fileNameFor(t.genericType.obj) + "_" +
-        t.genericTypeArguments.map(tp => if (tp.isDefined) fileNameFor(tp.get.obj) else "void").mkString("_")
-    case t: DecodeOptionNamed => fileNameFromOptionName(t.optionName)
-    case _ => sys.error("not implemented")
-  }
+  private def fileNameFor(t: DecodeType): String = CaseFormat.LOWER_UNDERSCORE.to(CaseFormat.UPPER_CAMEL, cTypeNameFor(t))
 
   private def cTypeNameFor(t: DecodeType): String = {
     t match {
       case t: DecodeNamed => t.name.asMangledString
       case t: DecodePrimitiveType => primitiveTypeToCTypeApplication(t).name
       case t: DecodeArrayType =>
-        val baseCType: String = cTypeNameFor(t.baseType.obj).capitalize
+        val baseCType: String = cTypeNameFor(t.baseType.obj)
         val min = t.size.minLength
         val max = t.size.maxLength
         "DecodeArray" + baseCType + ((t.isFixedSize, min, max) match {
@@ -176,17 +159,9 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
           case (false, _, 0) => s"Min$min"
           case (false, _, _) => s"Min${min}Max$max"
         })
-        /*
-        "DECODE_ARRAY_TYPE_" + ((t.isFixedSize, min, max) match {
-          case (true, 0, _) | (false, 0, 0) => s"NAME($baseCType)"
-          case (true, _, _) => s"FIXED_SIZE_NAME($baseCType, $min)"
-          case (false, 0, _) => s"MAX_NAME($baseCType, $max)"
-          case (false, _, 0) => s"MIN_NAME($baseCType, $min)"
-          case (false, _, _) => s"MIN_MAX_NAME($baseCType, $min, $max)"
-        })*/
       case t: DecodeGenericTypeSpecialized =>
-        cTypeNameFor(t.genericType.obj) + "_" +
-          t.genericTypeArguments.map(tp => if (tp.isDefined) cTypeNameFor(tp.get.obj) else "void").mkString("_")
+        cTypeNameFor(t.genericType.obj) +
+          t.genericTypeArguments.map(tp => if (tp.isDefined) cTypeNameFor(tp.get.obj) else "Void").mkString
       case t: DecodeOptionNamed => cTypeNameFromOptionName(t.optionName)
       case _ => sys.error("not implemented")
     }
@@ -195,11 +170,9 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
   private val rand = new Random()
 
   private def protectDoubleIncludeFile(fileName: String, file: CAstElements): CAstElements = {
-    val nameBytes: Array[Byte] = fileName.getBytes(Charsets.UTF_8)
-    val bytes = new Array[Byte](10 + nameBytes.length)
+    val bytes = new Array[Byte](20)
     rand.nextBytes(bytes)
-    nameBytes.copyToArray(bytes, 10)
-    val uniqueName: String = "__" ++ MessageDigest.getInstance("MD5").digest(bytes).map("%02x".format(_)).mkString ++ "__"
+    val uniqueName: String = "__" + fileName + "_" + MessageDigest.getInstance("MD5").digest(bytes).map("%02x".format(_)).mkString + "__"
     CAstElements(CIfNDef(uniqueName), CEol, CDefine(uniqueName)) ++ file :+ CEndIf
   }
 
@@ -235,14 +208,17 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
       case t: DecodeEnumType => (CAstElements(cTypeDefForName(t,
         CEnumTypeDef(t.constants.map(c => CEnumTypeDefConst(c.name.asMangledString, c.value.toInt))))), CAstElements())
       case t: DecodeArrayType =>
-        val typeDef: CTypeDefStatement = cTypeDefForName(t, cDecodeArrayType)
         val sizeVar: CVar = CVar("size")
         val dataVar: CVar = CVar("data")
-        (CAstElements(typeDef),
-        CAstElements(CFuncImpl(CFuncDef(typeDef.name + cDecodeArrayTypeInitMethodNamePart,
-          parameters = Seq(CFuncParam("self", typeDef.ptr), CFuncParam(sizeVar.name, sizeTType),
-            CFuncParam(dataVar.name, voidType.ptr))), CAstElements(CIndent, CFuncCall(cDecodeArrayTypeInitMethodName, selfVar,
-          CFuncCall(sizeOfStatement, cTypeAppForTypeName(t.baseType.obj)), sizeVar, dataVar), CSemicolon, CEol))))
+        val typeDef = CTypeDefStatement(cTypeNameFor(t), CStructTypeDef(Seq(
+          CStructTypeDefField(sizeVar.name, sizeTType),
+          CStructTypeDefField(dataVar.name, cTypeForDecodeType(t.baseType.obj).ptr))))
+        val initFunc = CFuncImpl(CFuncDef(typeDef.name + cDecodeArrayTypeInitMethodNamePart,
+          parameters = Seq(CFuncParam(selfVar.name, typeDef.ptr), CFuncParam(sizeVar.name, sizeTType),
+            CFuncParam(dataVar.name, voidType.ptr))), CAstElements(CStatementLine(
+          CAssign(CArrow(selfVar, sizeVar), sizeVar)), CStatementLine(CAssign(CArrow(selfVar, dataVar), dataVar))))
+        (CAstElements(typeDef, CEol, initFunc.definition),
+          CAstElements(initFunc))
       case t: DecodeStructType => (CAstElements(cTypeDefForName(t, CStructTypeDef(t.fields.map(f =>
         CStructTypeDefField(f.name.asMangledString, cTypeAppForTypeName(f.typeUnit.t.obj)))))), CAstElements())
       case t: DecodeAliasType =>
@@ -277,7 +253,8 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
     val cFileName = fileName + sourcesExt
     val (hFile, cFile) = (new io.File(nsDir, hFileName), new io.File(nsDir, cFileName))
     val (h, c) = generateType(t, nsDir)
-    writeFileIfNotEmptyWithComment(hFile, protectDoubleIncludeFile(hFileName, CEol +: appendPrologEpilog(h)), "Type header")
+    writeFileIfNotEmptyWithComment(hFile, protectDoubleIncludeFile(hFileName,
+      CAstElements(CEol) ++ appendPrologEpilog(h) ++ Seq(CEol)), "Type header")
     if (c.nonEmpty)
       writeFileIfNotEmptyWithComment(cFile, CAstElements(CInclude(relPathForType(t)), CEol, CEol) ++ c, "Type implementation")
   }
@@ -392,8 +369,8 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
   }
 
   def externCpp(file: CAstElements): CAstElements = {
-    CAstElements(CIfDef(cppDefine), CEol, CPlainText("extern \"C\" {"), CEol, CEndIf, CEol) ++ file ++
-      Seq(CEol, CIfDef(cppDefine), CEol, CPlainText("}"), CEol, CEndIf)
+    CAstElements(CIfDef(cppDefine), CEol, CPlainText("extern \"C\" {"), CEol, CEndIf, CEol, CEol) ++ file ++
+      Seq(CEol, CEol, CIfDef(cppDefine), CEol, CPlainText("}"), CEol, CEndIf)
   }
 
   def functionTableTypeNameFor(comp: DecodeComponent): String = typeNameForComponent(comp) + "UserFunctionTable"

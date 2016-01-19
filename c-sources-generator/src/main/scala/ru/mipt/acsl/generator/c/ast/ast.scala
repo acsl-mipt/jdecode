@@ -216,6 +216,22 @@ case class CForwardStructDecl(name: String) extends CAstElement {
   override def generate(s: CGenState): Unit = s.append(s"struct $name;")
 }
 
+case class CAssign(left: CExpression, right: CExpression) extends CExpression {
+  override def generate(s: CGenState): Unit = {
+    left.generate(s)
+    s.append(" = ")
+    right.generate(s)
+  }
+}
+
+case class CStatementLine(elements: CAstElement*) extends CAstElement {
+  override def generate(s: CGenState): Unit = {
+    s.indent()
+    Helpers.generate(s, elements)
+    s.append(";").eol()
+  }
+}
+
 case class CStructTypeDef(fields: Traversable[CStructTypeDefField], name: Option[String] = None) extends CType {
   override def generate(s: CGenState): Unit = {
     s.append("struct ")
