@@ -7,6 +7,8 @@ import java.security.MessageDigest
 import com.google.common.base.{CaseFormat, Charsets}
 import com.typesafe.scalalogging.LazyLogging
 import ru.mipt.acsl.decode.model.domain._
+import ru.mipt.acsl.decode.model.domain.impl.`type`.DecodeOptionalType
+import ru.mipt.acsl.decode.model.domain.impl.`type`.DecodeOrType
 import ru.mipt.acsl.generation.Generator
 import ru.mipt.acsl.generator.c.ast.Implicits._
 import ru.mipt.acsl.generator.c.ast._
@@ -17,12 +19,13 @@ import scala.collection.mutable
 import scala.util.Random
 
 case class CGeneratorConfiguration(outputDir: io.File, registry: DecodeRegistry, rootComponentFqn: String,
-                                   namespaceAliases: Map[DecodeFqn, DecodeFqn] = Map.empty,
+                                   namespaceAliases: Map[DecodeFqn, Option[DecodeFqn]] = Map.empty,
                                    prologEpilogPath: Option[String] = None)
 
 private case class TypedVar(name: String, t: CType) {
   val v = CVar(name)
   val param = CFuncParam(name, t)
+  val field = CStructTypeDefField(name, t)
 }
 
 object CSourcesGenerator {
@@ -36,6 +39,8 @@ object CSourcesGenerator {
   private val typeSerializeMethodName = "Serialize"
   private val typeDeserializeMethodName = "Deserialize"
 
+  private val b8Type = CTypeApplication("B8")
+  private val berType = CTypeApplication("Ber")
   private val voidType = CTypeApplication("void")
   private val sizeTType = CTypeApplication("size_t")
   private val stringType = CTypeApplication("char").ptr
@@ -50,6 +55,7 @@ object CSourcesGenerator {
 
   private val selfVar = CVar("self")
 
+  private val tag = TypedVar("tag", berType)
   private val reader = TypedVar("reader", CTypeApplication("PhotonReader").ptr)
   private val writer = TypedVar("writer", CTypeApplication("PhotonWriter").ptr)
   private val commandId = TypedVar("commandId", sizeTType)
@@ -91,7 +97,7 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
   }
 
   private def nsOrAliasCppSourceParts(ns: DecodeNamespace): Seq[String] = {
-    config.namespaceAliases.getOrElse(ns.fqn, ns.fqn).parts.map(_.asMangledString)
+    config.namespaceAliases.getOrElse(ns.fqn, Some(ns.fqn)).map(_.parts.map(_.asMangledString)).getOrElse(Seq.empty)
   }
 
   private def dirPathForNs(ns: DecodeNamespace): String = nsOrAliasCppSourceParts(ns).mkString(io.File.separator)
@@ -124,7 +130,7 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
     val nsDir = ensureDirForNsExists(ns)
     ns.subNamespaces.foreach(generateNs)
     val typesHeader = CAstElements()
-    ns.types.foreach(generateTypeSeparateFiles(_, nsDir))
+    ns.types.foreach{ t => logger.debug(t.toString); generateTypeSeparateFiles(t, nsDir)}
     val fileName: String = "types" + headerExt
     writeFileIfNotEmptyWithComment(new io.File(nsDir, fileName), protectDoubleIncludeFile(fileName, typesHeader),
       s"Types of ${ns.fqn.asMangledString} namespace")
@@ -159,7 +165,7 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
   private def prefixedCTypeNameFor(t: DecodeType): String = {
     val tName = cTypeNameFor(t)
     t match {
-      case t: DecodePrimitiveType => tName
+      case _: DecodePrimitiveType | _: DecodeNativeType => tName
       case _ => "PhotonGt" + tName
     }
   }
@@ -168,6 +174,7 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
     t match {
       case t: DecodeNamed => lowerUnderscoreToUpperCamel(t.name.asMangledString)
       case t: DecodePrimitiveType => primitiveTypeToCTypeApplication(t).name
+      case t: DecodeNativeType => lowerUnderscoreToUpperCamel(t.name.asMangledString)
       case t: DecodeArrayType =>
         val baseCType: String = cTypeNameFor(t.baseType.obj)
         val min = t.size.minLength
@@ -192,7 +199,8 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
   private def protectDoubleIncludeFile(fileName: String, file: CAstElements): CAstElements = {
     val bytes = new Array[Byte](20)
     rand.nextBytes(bytes)
-    val uniqueName: String = "__" + fileName.replaceAll("\\.", "_") + "_" + MessageDigest.getInstance("MD5").digest(bytes).map("%02x".format(_)).mkString + "__"
+    val uniqueName: String = "__" + upperCamelCaseToUpperUnderscore(fileName).replaceAll("\\.", "_") + "_" +
+      MessageDigest.getInstance("MD5").digest(bytes).map("%02x".format(_)).mkString + "__"
     CAstElements(CIfNDef(uniqueName), CEol, CDefine(uniqueName)) ++ file :+ CEndIf
   }
 
@@ -220,13 +228,35 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
   def cTypeDefForName(t: DecodeType, cType: CType) = CTypeDefStatement(prefixedCTypeNameFor(t), cType)
   def cTypeAppForTypeName(t: DecodeType): CTypeApplication = CTypeApplication(prefixedCTypeNameFor(t))
 
+  private def isTypePrimitiveOrNative(t: DecodeType) = t.isInstanceOf[DecodePrimitiveType] || t.isInstanceOf[DecodeNativeType]
+
+  private def upperCamelCaseToUpperUnderscore(s: String) = CaseFormat.UPPER_CAMEL.to(CaseFormat.UPPER_UNDERSCORE, s)
+
   private def generateType(t: DecodeType, nsDir: io.File): (CAstElements, CAstElements) = {
     val (h, c): (CAstElements, CAstElements) = t match {
       case t: DecodePrimitiveType => (CAstElements(cTypeDefForName(t, cTypeAppForTypeName(t))), CAstElements())
       case t: DecodeNativeType => (CAstElements(cTypeDefForName(t, CVoidType.ptr)), CAstElements())
       case t: DecodeSubType => (CAstElements(cTypeDefForName(t, cTypeAppForTypeName(t.baseType.obj))), CAstElements())
-      case t: DecodeEnumType => (CAstElements(cTypeDefForName(t,
-        CEnumTypeDef(t.constants.map(c => CEnumTypeDefConst(c.name.asMangledString, c.value.toInt))))), CAstElements())
+      case t: DecodeEnumType =>
+        val prefixedEnumName = upperCamelCaseToUpperUnderscore(prefixedCTypeNameFor(t))
+        (CAstElements(cTypeDefForName(t, CEnumTypeDef(t.constants.map(c =>
+          CEnumTypeDefConst(prefixedEnumName + "_" + c.name.asMangledString, c.value.toInt))))),
+          CAstElements())
+      case t: DecodeGenericType =>
+        (CAstElements(), CAstElements())
+      case t: DecodeGenericTypeSpecialized => t.genericType.obj match {
+        case optional: DecodeOptionalType =>
+          require(t.genericTypeArguments.size == 1)
+          require(t.genericTypeArguments.head.isDefined)
+          (CAstElements(cTypeDefForName(t, CStructTypeDef(Seq(CStructTypeDefField("flag", b8Type),
+            CStructTypeDefField("value", cTypeAppForTypeName(t.genericTypeArguments.head.get.obj)))))), CAstElements())
+        case or: DecodeOrType =>
+          var index = 0
+          (CAstElements(cTypeDefForName(t, CStructTypeDef(Seq(tag.field) ++ t.genericTypeArguments.flatMap { ot =>
+            index += 1
+            ot.map(t => Seq(CStructTypeDefField("_" + index, cTypeAppForTypeName(t.obj)))).getOrElse(Seq.empty)
+          }))), CAstElements())
+      }
       case t: DecodeArrayType =>
         val sizeVar: CVar = CVar("size")
         val dataVar: CVar = CVar("data")
@@ -248,18 +278,33 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
           (CAstElements(CComment("omitted due name clash")), CAstElements())
         else
           (CAstElements(cTypeDefForName(t, cTypeAppForTypeName(t.baseType.obj))), CAstElements()) // CDefine(newName, oldName)
-      case _ => sys.error("not implemented")
+      case _ => sys.error(s"not implemented $t")
     }
 
-    val imports: CAstElements = t match {
-      case t: DecodeStructType => t.fields.flatMap { f => CAstElements(CInclude(relPathForType(f.typeUnit.t.obj)), CEol) }.to[mutable.Buffer]
-      case t: BaseTyped =>
-        if (t.baseType.obj.isInstanceOf[DecodePrimitiveType])
-          CAstElements()
+    val importTypes: Seq[DecodeType] = t match {
+      case t: DecodeStructType => t.fields.flatMap { f =>
+        val t = f.typeUnit.t.obj
+        if (isTypePrimitiveOrNative(t))
+          Seq.empty
         else
-          CAstElements(CInclude(relPathForType(t.baseType.obj)), CEol)
-      case _ => CAstElements()
+          Seq(t)
+      }
+      case s: DecodeGenericTypeSpecialized =>
+        s.genericType.obj match {
+          case optional: DecodeOptionalType =>
+            Seq(s.genericTypeArguments.head.get.obj)
+          case or: DecodeOrType =>
+            s.genericTypeArguments.flatMap(_.map(p => Seq(p.obj)).getOrElse(Seq.empty))
+        }
+      case t: BaseTyped =>
+        if (isTypePrimitiveOrNative(t.baseType.obj))
+          Seq.empty
+        else
+          Seq(t.baseType.obj)
+      case _ => Seq.empty
     }
+
+    val imports = CAstElements(importTypes.flatMap(t => Seq(CInclude(relPathForType(t)), CEol)): _*)
 
     val selfType = cTypeAppForTypeName(t).ptr
     val serializeMethod = CFuncImpl(CFuncDef(methodNameFor(t, typeSerializeMethodName), resultType,
@@ -276,7 +321,7 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
   }
 
   private def generateTypeSeparateFiles(t: DecodeType, nsDir: io.File) {
-    if (t.isInstanceOf[DecodePrimitiveType])
+    if (isTypePrimitiveOrNative(t))
       return
     val fileName = fileNameFor(t)
     val hFileName = fileName + headerExt
@@ -308,11 +353,11 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
   private def collectNsForTypes(comp: DecodeComponent, set: mutable.Set[DecodeNamespace]) {
     if (comp.baseType.isDefined)
       collectNsForType(comp.baseType.get, set)
-    comp.commands.foreach(cmd => {
+    comp.commands.foreach{ cmd =>
       cmd.parameters.foreach(arg => collectNsForType(arg.paramType, set))
       if (cmd.returnType.isDefined)
         collectNsForType(cmd.returnType.get, set)
-    })
+    }
   }
 
   def collectNsForComponent(comp: DecodeComponent, nsSet: mutable.HashSet[DecodeNamespace]) {
@@ -349,11 +394,11 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
   }
 
   private def importStatementsForComponent(comp: DecodeComponent): CAstElements = {
-    val imports = comp.subComponents.flatMap { cr => Seq(CInclude(includePathForComponent(cr.component.obj)), CEol) }
+    val imports = comp.subComponents.flatMap(cr => Seq(CInclude(includePathForComponent(cr.component.obj)), CEol))
     if (imports.nonEmpty)
       imports += CEol
     val types = typesForComponent(comp).toSeq
-    val typeIncludes = types.flatMap { t => Seq(CInclude(relPathForType(t)), CEol) }
+    val typeIncludes = types.filterNot(t => isTypePrimitiveOrNative(t)).flatMap(t => Seq(CInclude(relPathForType(t)), CEol))
     imports ++= typeIncludes
     if (typeIncludes.nonEmpty)
       imports += CEol
@@ -425,18 +470,18 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
     val forwardFuncTableDecl = CForwardStructDecl(componentFunctionTableNameStruct)
     val componentTypeStructName = componentStructName + structNamePostfix
     val componentSelfType: CType = ptrTypeFor(comp)
-    val methods: Seq[CStructTypeDefField] = comp.commands.flatMap{cmd =>
+    val methods: Seq[CStructTypeDefField] = comp.commands.flatMap{ cmd =>
       val methodName = mangledCNameForDecodeName(cmd.name)
-      val returnType = cmd.returnType.map { rt => cTypeForDecodeType(rt.obj) }.getOrElse(voidType)
-      val parameters = componentSelfType +: cmd.parameters.map { p => cTypeForDecodeType(p.paramType.obj) }
+      val returnType = cmd.returnType.map(rt => cTypeForDecodeType(rt.obj)).getOrElse(voidType)
+      val parameters = componentSelfType +: cmd.parameters.map(p => cTypeForDecodeType(p.paramType.obj))
       Seq(CStructTypeDefField(methodName, CFuncType(returnType, parameters, methodName)))
     }
 
     val componentTypeForwardDecl = CForwardStructTypeDef(componentStructName, componentTypeStructName)
     val componentType = CStructTypeDef(Seq(CStructTypeDefField("data", voidType.ptr)) ++
       subComponentsFor(comp).toSeq.flatMap { sc => sc.commands.map { cmd =>
-        val returnType = cmd.returnType.map { rt => cTypeForDecodeType(rt.obj) }.getOrElse(voidType)
-        val parameters = componentSelfType +: cmd.parameters.map { p => cTypeForDecodeType(p.paramType.obj) }
+        val returnType = cmd.returnType.map(rt => cTypeForDecodeType(rt.obj)).getOrElse(voidType)
+        val parameters = componentSelfType +: cmd.parameters.map(p => cTypeForDecodeType(p.paramType.obj))
         val methodName = userFuncNameFor(comp, sc, cmd)
         CStructTypeDefField(methodName, CFuncType(returnType, parameters, methodName))
       }} ++
@@ -453,12 +498,12 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
       Seq(CFuncParam("self", componentSelfType), reader.param, writer.param))
     val functionsForComponentCommands = functionsForCommands(comp)
     val externedCFile = externCpp(CAstElements(forwardFuncTableDecl, CEol, CEol, componentTypeForwardDecl, CEol, CEol, componentType, CSemicolon, CEol) ++
-     functionsForComponentCommands.flatMap { f => Seq(f.definition, CEol) } ++
+     functionsForComponentCommands.flatMap(f => Seq(f.definition, CEol)) ++
      Seq(CEol, execCommand.definition, CEol, CEol, readExecCommand, CEol))
     writeFileIfNotEmptyWithComment(hFile, protectDoubleIncludeFile(hFileName,
       CEol +: appendPrologEpilog(imports ++ externedCFile)), s"Component ${comp.name.asMangledString} interface")
     writeFileIfNotEmptyWithComment(cFile, CAstElements(CInclude(hFileName), CEol, CEol) ++
-      functionsForComponentCommands.flatMap { f => Seq(f, CEol, CEol) } :+
+      functionsForComponentCommands.flatMap(f => Seq(f, CEol, CEol)) :+
       execCommand,
       s"Component ${comp.name.asMangledString} implementation")
   }
@@ -473,15 +518,14 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
   private def commandsByIdFor(comp: DecodeComponent): mutable.Map[Int, ComponentCommand] = {
     var commandNextId = 0
     val commandsById = mutable.HashMap.empty[Int, ComponentCommand]
-    comp.commands.foreach { cmd =>
-      assert(commandsById.put(cmd.id.getOrElse({commandNextId += 1; commandNextId - 1}), ComponentCommand(comp, cmd)).isEmpty)
-    }
-    subComponentsFor(comp).toSeq.sortBy(_.fqn.asMangledString).filterNot(_ == comp).foreach { comp =>
+    comp.commands.foreach(cmd =>
+      assert(commandsById.put(cmd.id.getOrElse {commandNextId += 1; commandNextId - 1},
+        ComponentCommand(comp, cmd)).isEmpty))
+    subComponentsFor(comp).toSeq.sortBy(_.fqn.asMangledString).filterNot(_ == comp).foreach(comp =>
       comp.commands.foreach { cmd =>
         assert(commandsById.put(commandNextId, ComponentCommand(comp, cmd)).isEmpty)
         commandNextId += 1
-      }
-    }
+      })
     commandsById
   }
 
@@ -489,7 +533,8 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
 
   private def defineAndInitVar(v: CVar, parameter: DecodeCommandParameter): CAstElements = {
     CAstElements(CStatementLine(CDefVar(v.name, cTypeAppForTypeName(parameter.paramType.obj))),
-      CStatementLine(CFuncCall(tryMacroName, CFuncCall(methodNameFor(parameter.paramType.obj, typeDeserializeMethodName), CRef(v), reader.v))))
+      CStatementLine(CFuncCall(tryMacroName, CFuncCall(methodNameFor(parameter.paramType.obj,
+        typeDeserializeMethodName), CRef(v), reader.v))))
   }
 
   private def functionsForCommands(comp: DecodeComponent): Seq[CFuncImpl] = {
@@ -501,9 +546,8 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
       val command = el._2.command
       val methodName: String = (if (comp == component) "" else typeNameForComponent(component)) + cNameForDecodeName(command.name).capitalize
       val vars = command.parameters.map { p => CVar(mangledCNameForDecodeName(p.name))}
-      val varInits = vars.zip(command.parameters).flatMap { (el: (CVar, DecodeCommandParameter)) =>
-        defineAndInitVar(el._1, el._2)
-      }.to[mutable.Buffer]
+      val varInits = vars.zip(command.parameters).flatMap((el: (CVar, DecodeCommandParameter)) =>
+        defineAndInitVar(el._1, el._2)).to[mutable.Buffer]
       val funcCall = CArrow(selfVar, CFuncCall(userFuncNameFor(comp, component, command), selfVar +: vars: _*))
       CFuncImpl(CFuncDef(componentTypeName + "_" + methodName, resultType, parameters),
         varInits ++ CAstElements(CIdent, CStatement(funcCall), CEol, CIdent, CReturn(resultOk), CEol))

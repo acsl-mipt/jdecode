@@ -34,6 +34,13 @@ public final class SimpleDecodeResolvingResult<T extends DecodeReferenceable> im
         return new SimpleDecodeResolvingResult<>(resolvedObject, new ArrayList<>());
     }
 
+    @NotNull
+    public static <T extends DecodeReferenceable> DecodeResolvingResult<T> newInstance(
+            @NotNull Option<T> resolvedObject, @NotNull List<ResolvingMessage> messages)
+    {
+        return new SimpleDecodeResolvingResult<>(resolvedObject, messages);
+    }
+
     @SuppressWarnings("unchecked")
     public static <T extends DecodeReferenceable> DecodeResolvingResult<T> immutableEmpty()
     {

@@ -86,9 +86,7 @@ public class SimpleDecodeMaybeProxy<T extends DecodeReferenceable> extends Eithe
     public DecodeResolvingResult<T> resolve(@NotNull DecodeRegistry registry, @NotNull Class<T> cls)
     {
         if (isResolved())
-        {
             return SimpleDecodeResolvingResult.newInstance(resolvedObject);
-        }
         DecodeResolvingResult<T> resolvingResult = proxy.get().resolve(registry, cls);
         if (resolvingResult.resolvedObject().isDefined())
         {

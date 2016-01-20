@@ -22,6 +22,8 @@ import ru.mipt.acsl.decode.model.domain.DecodeDomainModelResolver;
 import ru.mipt.acsl.decode.model.domain.DecodeResolvingResult;
 import ru.mipt.acsl.decode.model.domain.impl.DecodeModelResolver;
 import ru.mipt.acsl.decode.model.domain.impl.DecodeRegistryImpl;
+import ru.mipt.acsl.decode.modeling.ModelingMessage;
+import ru.mipt.acsl.decode.modeling.ResolvingMessage;
 import ru.mipt.acsl.decode.parser.psi.DecodeFile;
 import ru.mipt.acsl.decode.model.exporter.ModelExportingException;
 import ru.mipt.acsl.decode.model.exporter.DecodeSqlite3Exporter;
@@ -30,6 +32,9 @@ import ru.mipt.acsl.decode.model.domain.DecodeReferenceable;
 import ru.mipt.acsl.decode.model.domain.DecodeRegistry;
 import ru.mipt.acsl.decode.modeling.TransformationResult;
 import ru.mipt.acsl.decode.parser.DecodeFileType;
+import scala.Function1;
+import scala.collection.Iterable;
+import scala.collection.Iterator;
 
 import java.io.File;
 import java.io.IOException;
@@ -70,11 +75,20 @@ public class DecodeGenerateSqliteForDecodeSourcesAction extends AnAction
         if (!result.hasError() && result.getResult().isPresent())
         {
             Preconditions.checkState(result.getResult().get() == registry);
-            DecodeResolvingResult<DecodeReferenceable> resolvingResult = DecodeModelResolver.resolve(registry);
-            if (resolvingResult.hasError())
+            Iterable<ResolvingMessage> messages = DecodeModelResolver.resolve(registry);
+            Iterator<ResolvingMessage> it = messages.iterator();
+            while (it.hasNext())
             {
-                resolvingResult.getMessages()
-                        .forEach(DecodeFileProcessor::notifyUser);
+                ResolvingMessage msg = it.next();
+                if (msg.getLevel() == ModelingMessage.Level.ERROR)
+                {
+                    Iterator<ResolvingMessage> it2 = messages.iterator();
+                    while (it2.hasNext())
+                    {
+                        DecodeFileProcessor.notifyUser(it2.next());
+                    }
+                    break;
+                }
             }
         }
         FileSaverDialog fileChooserDialog = FileChooserFactory.getInstance().createSaveFileDialog(

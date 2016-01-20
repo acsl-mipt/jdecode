@@ -4,8 +4,9 @@ import java.net.URI
 
 import ru.mipt.acsl.decode.model.domain._
 import ru.mipt.acsl.decode.model.domain.impl.proxy.DecodeTypeResolveVisitor
+import ru.mipt.acsl.decode.modeling.ResolvingMessage
 
-import scala.collection.mutable
+import scala.collection.{JavaConversions, mutable}
 import scala.collection.mutable.ArrayBuffer
 
 /**
@@ -42,43 +43,40 @@ object DecodeModelResolver {
   }
 
   def resolve(t: DecodeType, registry: DecodeRegistry):  DecodeResolvingResult[DecodeReferenceable] = {
-    val resolvingResultList = new ArrayBuffer[DecodeResolvingResult[DecodeReferenceable]]()
+    val resolvingResultList = mutable.Buffer.empty[DecodeResolvingResult[DecodeReferenceable]]
     t.accept(new DecodeTypeResolveVisitor(registry, resolvingResultList))
     resolvingResultList.foldLeft(SimpleDecodeResolvingResult.newInstance[DecodeReferenceable](None))(SimpleDecodeResolvingResult.merge)
   }
 
-  def resolve(registry: DecodeRegistry): DecodeResolvingResult[DecodeReferenceable] = {
-    registry.rootNamespaces.flatMap(resolve(_, registry)).foldLeft(SimpleDecodeResolvingResult.newInstance[DecodeReferenceable](None))(SimpleDecodeResolvingResult.merge)
+  def resolve(registry: DecodeRegistry): Iterable[ResolvingMessage] = {
+    JavaConversions.collectionAsScalaIterable(registry.rootNamespaces.flatMap(resolve(_, registry)).foldLeft(
+      SimpleDecodeResolvingResult.newInstance[DecodeReferenceable](None))(SimpleDecodeResolvingResult.merge).getMessages)
   }
 
   def resolve(component: DecodeComponent, registry: DecodeRegistry): Seq[DecodeResolvingResult[DecodeReferenceable]] = {
-    val resultList = mutable.Buffer[DecodeResolvingResult[DecodeReferenceable]]()
-    component.baseType.map(t => {
+    val resultList = mutable.Buffer.empty[DecodeResolvingResult[DecodeReferenceable]]
+    component.baseType.map { t =>
       resultList += resolveWithTypeCheck(t, registry, classOf[DecodeStructType])
       if (t.isResolved)
-      {
         resultList += DecodeModelResolver.resolve(t.obj, registry)
-      }
-    })
-    component.commands.foreach(cmd => {
-      cmd.returnType.foreach(rt => {
+    }
+    component.commands.foreach { cmd =>
+      cmd.returnType.foreach { rt =>
         resultList += resolveWithTypeCheck(rt, registry, classOf[DecodeType])
-      })
-      cmd.parameters.foreach(arg => {
+      }
+      cmd.parameters.foreach { arg =>
         resultList += resolveWithTypeCheck(arg.paramType, registry, classOf[DecodeType])
-        arg.unit.map(u => {
+        arg.unit.map { u =>
           resultList += resolveWithTypeCheck(u, registry, classOf[DecodeUnit])
-        })
-      })
-    })
-    component.subComponents.foreach(scr => {
+        }
+      }
+    }
+    component.subComponents.foreach { scr =>
       val sc = scr.component
       resultList += resolveWithTypeCheck(sc, registry, classOf[DecodeComponent])
       if (sc.isResolved)
-      {
         resultList ++= resolve(sc.obj, registry)
-      }
-    })
+    }
     resultList
   }
 }

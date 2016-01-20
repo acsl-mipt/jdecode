@@ -186,12 +186,14 @@ case class CEnumTypeDef(consts: Iterable[CEnumTypeDefConst], name: Option[String
   override def generate(s: CGenState): Unit = {
     s.append("enum")
     name.foreach(s.append(" ").append)
-    s.append(" {")
+    s.append(" {").eol().incIndentation()
     var first = true
     consts.map(c => {
-      if (first) first = !first else s.append(","); s.append(" ").append(c.name).append(" = ").append(c.value.toString)
+      s.indent()
+      if (first) { first = !first; s.append(" ") } else s.append(",")
+      s.append(" ").append(c.name).append(" = ").append(c.value.toString).eol()
     })
-    s.append(" }")
+    s.decIndentation().indent().append("}")
   }
 }
 
