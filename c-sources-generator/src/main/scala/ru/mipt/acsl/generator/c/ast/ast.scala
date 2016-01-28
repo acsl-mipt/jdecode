@@ -324,8 +324,8 @@ case class CSwitch(expr: CExpression, cases: Seq[CCase], default: CAstElements =
     s.append("switch (")
     expr.generate(s)
     s.append(") {").incIndentation().eol()
-    cases.foreach({ c => c.generate(s); s.eol() })
-    default.foreach({ statements => s.indent().append("default:").eol().incIndentation(); statements.generate(s); s.decIndentation().eol() })
+    cases.foreach(_.generate(s))
+    default.foreach({ statements => s.indent().append("default:").eol().incIndentation(); statements.generate(s); s.decIndentation() })
     s.decIndentation().indent().append("}")
   }
 }
@@ -399,6 +399,14 @@ case class CVar(name: String) extends CExpression {
   override def generate(s: CGenState): Unit = s.append(name)
 }
 
+case class CEq(left: CExpression, right: CExpression) extends CExpression {
+  override def generate(s: CGenState): Unit = { left.generate(s); s.append(" == "); right.generate(s) }
+}
+
+case class CNotEq(left: CExpression, right: CExpression) extends CExpression {
+  override def generate(s: CGenState): Unit = { left.generate(s); s.append(" != "); right.generate(s) }
+}
+
 case class MacroCall(name: String, arguments: CExpression*) extends CExpression with CStatement {
   override def generate(s: CGenState): Unit = {
     s.append(name).append("(")
@@ -412,7 +420,6 @@ case class CReturn(expression: CExpression) extends CStatement {
   override def generate(s: CGenState): Unit = {
     s.append("return ")
     expression.generate(s)
-    s.append(";")
   }
 }
 
@@ -434,12 +441,11 @@ case object CIdent extends CAstElement {
   override def generate(s: CGenState): Unit = s.indent()
 }
 
-case class CVarDef(name: String, t: CType, init: Option[CExpression]) extends CStatement {
+case class CVarDef(name: String, t: CType, init: Option[CExpression] = None) extends CStatement {
   override def generate(s: CGenState): Unit = {
     t.generate(s)
     s.append(" ").append(name)
-    init.foreach{s.append(" = "); _.generate(s)}
-    s.append(";")
+    init.foreach(i => { s.append(" = "); i.generate(s) })
   }
 }
 
