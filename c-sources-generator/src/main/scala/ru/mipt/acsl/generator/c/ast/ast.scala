@@ -24,6 +24,10 @@ package object Implicits {
 
 import Implicits._
 
+object CStatements {
+  def apply(elements: CAstElement*): CAstElements = CAstElements(elements.map(CStatementLine(_)): _*)
+}
+
 trait CStatement extends CAstElement
 
 trait CExpression extends CStatement
@@ -123,6 +127,21 @@ case class CTypeDefStatement(name: String, t: CType) extends CAstElement {
     s.append("typedef ")
     t.generate(s)
     s.append(" ").append(name).append(";").eol()
+  }
+}
+
+case class CForStatement(init: CAstElements = CAstElements(), test: CAstElements = CAstElements(),
+                         inc: CAstElements = CAstElements(), statements: CAstElements = CAstElements()) extends CStatement {
+  override def generate(s: CGenState): Unit = {
+    s.append("for(")
+    init.generate(s)
+    s.append(";")
+    test.generate(s)
+    s.append(";")
+    inc.generate(s)
+    s.append(") {").incIndentation().eol()
+    statements.generate(s)
+    s.eol().decIndentation().indent().append("}")
   }
 }
 
@@ -234,13 +253,6 @@ case class CStatementLine(elements: CAstElement*) extends CAstElement {
   }
 }
 
-case class CRef(v: CVar) extends CExpression {
-  override def generate(s: CGenState): Unit = {
-    s.append("&")
-    v.generate(s)
-  }
-}
-
 case class CForwardStructTypeDef(name: String, structName: String) extends CStatement {
   override def generate(s: CGenState): Unit = {
     s.append(s"typedef struct $structName $name;")
@@ -300,12 +312,6 @@ private object Helpers {
     parameters.foreach { p => if (first) first = false else s.append(", "); p.generate(s) }
     s.append(")")
   }
-
-  /*def generate(s: CGeneratorState, statements: CAs) = {
-    s.append(" {").eol().incIndentation()
-    statements.buf.foreach({ statement => s.indent(); statement.generate(s); s.eol() })
-    s.decIndentation().indent().append("}")
-  }*/
 }
 
 case class CCase(expr: CExpression, statements: CAstElements) extends CAstElement {
@@ -346,32 +352,10 @@ case class MutableCAstElements[A <: CAstElement](statements: mutable.Buffer[A] =
   override def generate(s: CGenState): Unit = statements.foreach(_.generate(s))
 }
 
-
-
-/*
-case class CStatements(buf: mutable.Buffer[CStatement] = mutable.Buffer.empty) extends CAstElement {
-  override def generate(s: CGeneratorState) = {
-    var first = true
-    buf.foreach({ stmt =>
-      if (first) first = false else s.eol()
-      s.indent()
-      stmt.generate(s);
-    })
-  }
-}*/
-
 case class CArrow(expr: CExpression, expr2: CExpression) extends CExpression {
   override def generate(s: CGenState): Unit = {
     expr.generate(s)
     s.append("->")
-    expr2.generate(s)
-  }
-}
-
-case class CDot(expr: CExpression, expr2: CExpression) extends CExpression {
-  override def generate(s: CGenState): Unit = {
-    expr.generate(s)
-    s.append(".")
     expr2.generate(s)
   }
 }
@@ -399,13 +383,36 @@ case class CVar(name: String) extends CExpression {
   override def generate(s: CGenState): Unit = s.append(name)
 }
 
-case class CEq(left: CExpression, right: CExpression) extends CExpression {
-  override def generate(s: CGenState): Unit = { left.generate(s); s.append(" == "); right.generate(s) }
+abstract class CUnaryOp(private val expr: CExpression, val op: String, private val isBefore: Boolean = true) extends CExpression {
+  override def generate(s: CGenState): Unit = {
+    if (isBefore)
+      s.append(op)
+    expr.generate(s)
+    if (!isBefore)
+      s.append(op)
+  }
 }
 
-case class CNotEq(left: CExpression, right: CExpression) extends CExpression {
-  override def generate(s: CGenState): Unit = { left.generate(s); s.append(" != "); right.generate(s) }
+case class CIncBefore(expr: CExpression) extends CUnaryOp(expr, "++")
+case class CRef(expr: CExpression) extends CUnaryOp(expr, "&")
+
+abstract class CBinaryOp(private val left: CExpression, val op: String, private val right: CExpression,
+                         val isSpaced: Boolean = true) extends CExpression {
+  override def generate(s: CGenState): Unit = {
+    left.generate(s)
+    if (isSpaced)
+      s.append(s" $op ")
+    else
+      s.append(op)
+    right.generate(s)
+  }
 }
+
+case class CEq(left: CExpression, right: CExpression) extends CBinaryOp(left, "==", right)
+case class CNotEq(left: CExpression, right: CExpression) extends CBinaryOp(left, "!=", right)
+case class CLess(left: CExpression, right: CExpression) extends CBinaryOp(left, "<", right)
+case class CPlus(left: CExpression, right: CExpression) extends CBinaryOp(left, "+", right)
+case class CDot(left: CExpression, right: CExpression) extends CBinaryOp(left, ".", right, false)
 
 case class MacroCall(name: String, arguments: CExpression*) extends CExpression with CStatement {
   override def generate(s: CGenState): Unit = {
@@ -439,6 +446,10 @@ case class CIf(expression: CExpression, thenStatements: CAstElements = CAstEleme
 
 case object CIdent extends CAstElement {
   override def generate(s: CGenState): Unit = s.indent()
+}
+
+case object CComma extends CAstElement {
+  override def generate(s: CGenState): Unit = s.append(", ")
 }
 
 case class CVarDef(name: String, t: CType, init: Option[CExpression] = None) extends CStatement {

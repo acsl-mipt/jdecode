@@ -105,9 +105,9 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
 
       val selfType = cTypeAppForType(t).ptr
       val serializeMethod = CFuncImpl(CFuncDef(methodNameFor(t, typeSerializeMethodName), resultType,
-        Seq(CFuncParam(selfVar.name, selfType), writer.param)), CAstElements(CReturn(resultOk)))
+        Seq(CFuncParam(selfVar.name, selfType), writer.param)), serializeCodeFor(t) ++ CAstElements(CStatementLine(CReturn(resultOk))))
       val deserializeMethod = CFuncImpl(CFuncDef(methodNameFor(t, typeDeserializeMethodName), resultType,
-        Seq(CFuncParam(selfVar.name, selfType), reader.param)), CAstElements(CReturn(resultOk)))
+        Seq(CFuncParam(selfVar.name, selfType), reader.param)), deserializeCodeFor(t) ++ CAstElements(CStatementLine(CReturn(resultOk))))
 
       h ++= Seq(CEol, serializeMethod.definition, CEol, CEol, deserializeMethod.definition)
       c ++= Seq(CEol, serializeMethod, CEol, CEol, deserializeMethod)
@@ -117,6 +117,38 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
     } else {
       (CAstElements(), CAstElements())
     }
+  }
+
+  private def serializeArraySize(src: CExpression): CAstElements =
+    CStatements(CFuncCall(tryMacroName, CFuncCall("PhotonBer_Serialize", CArrow(src, size.v), writer.v)))
+
+  private def deserializeArraySize(dest: CExpression): CAstElements =
+    CStatements(CFuncCall(tryMacroName, CFuncCall("PhotonBer_Deserialize", CRef(CArrow(dest, size.v)), writer.v)))
+
+  private def serializeArrayElements(t: DecodeArrayType, src: CExpression): CAstElements =
+    CAstElements(CForStatement(CAstElements(CDefVar(i.name, i.t, Some(CIntLiteral(0))), CComma,
+      CDefVar(size.name, i.t, Some(CArrow(src, size.v)))), CAstElements(CLess(i.v, size.v)),
+      CAstElements(CIncBefore(i.v)), serializeCodeFor(t.baseType.obj, CPlus(CArrow(src, dataVar), i.v))))
+
+  private def deserializeArrayElements(t: DecodeArrayType, src: CExpression): CAstElements =
+    CAstElements(CForStatement(CAstElements(CDefVar(i.name, i.t, Some(CIntLiteral(0))), CComma,
+      CDefVar(size.name, i.t, Some(CArrow(src, size.v)))), CAstElements(CLess(i.v, size.v)),
+      CAstElements(CIncBefore(i.v)), deserializeCodeFor(t.baseType.obj, CPlus(CArrow(src, dataVar), i.v))))
+
+  private def serializeCodeFor(t: DecodeType, src: CExpression = selfVar): CAstElements = t match {
+    case t: DecodeStructType =>
+      CAstElements(t.fields.flatMap(f =>
+        serializeCodeFor(f.typeUnit.t.obj, CArrow(src, CVar(cNameForDecodeName(f.name))))): _*)
+    case t: DecodeArrayType => serializeArraySize(src) ++ serializeArrayElements(t, src)
+    case _ => sys.error(s"not implemented for $t")
+  }
+
+  private def deserializeCodeFor(t: DecodeType, dest: CExpression = selfVar): CAstElements = t match {
+    case t: DecodeStructType =>
+      CAstElements(t.fields.flatMap(f =>
+        deserializeCodeFor(f.typeUnit.t.obj, CArrow(dest, CVar(cNameForDecodeName(f.name))))): _*)
+    case t: DecodeArrayType => deserializeArraySize(dest) ++ deserializeArrayElements(t, dest)
+    case _ => sys.error(s"not implemented for $t")
   }
 
   private def generateTypeSeparateFiles(t: DecodeType, nsDir: io.File) {
@@ -174,8 +206,8 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
     }
     writeFile(hFile, protectDoubleIncludeFile(hFile.getName,
       CAstElements(CEol, CInclude(includePathForComponent(comp)), CEol, CEol) ++
-        externCpp(CAstElements(initFunc.definition, CEol, CEol) ++
-          cmdFuncDefs.flatMap(f => CAstElements(CEol, f, CEol))) ++ CAstElements(CEol, CEol)))
+        externCpp(CAstElements(initFunc.definition, CEol) ++
+          cmdFuncDefs.flatMap(f => CAstElements(CEol, f))) ++ CAstElements(CEol)))
     writeFile(cFile, CAstElements(CInclude(includePathForNsFileName(comp.namespace, hFile.getName)), CEol, CEol,
       CStatementLine(CVarDef(componentSingletonVar.name, componentSingletonVar.t)), initFunc))
   }
@@ -213,8 +245,9 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
 
     val componentTypeForwardDecl = CForwardStructTypeDef(componentStructName, componentTypeStructName)
     val componentDataTypePtr = CTypeApplication(componentDataTypeNameFor(comp)).ptr
+    val allCommands = allCommandsFor(comp)
     val componentType = CStructTypeDef(Seq(CStructTypeDefField("data", componentDataTypePtr)) ++
-      allCommandsFor(comp).map { compCmd =>
+      allCommands.map { compCmd =>
         val component = compCmd.component
         val cmd = compCmd.command
         val cmdReturnType = cmd.returnType.map(rt => cTypeForDecodeType(rt.obj))
@@ -327,8 +360,11 @@ private object CSourcesGenerator {
   private val resultOk = CVar(resultType.name + "_Ok")
 
   private val selfVar = CVar("self")
+  private val dataVar = CVar("data")
 
   private val tag = TypedVar("tag", berType)
+  private val size = TypedVar("size", berType)
+  private val i = TypedVar("i", sizeTType)
   private val reader = TypedVar("reader", CTypeApplication("PhotonReader").ptr)
   private val writer = TypedVar("writer", CTypeApplication("PhotonWriter").ptr)
   private val commandId = TypedVar("commandId", sizeTType)
@@ -542,20 +578,19 @@ private object CSourcesGenerator {
 
   private case class ComponentCommand(component: DecodeComponent, command: DecodeCommand)
 
-  private var commandNextId = 0
-  private val commandsById = mutable.HashMap.empty[Int, ComponentCommand]
+  // todo: memoize
   private def commandsByIdFor(comp: DecodeComponent): mutable.Map[Int, ComponentCommand] = {
-    if (commandNextId == 0) {
-      comp.commands.foreach(cmd =>
-        assert(commandsById.put(cmd.id.getOrElse {
-          commandNextId += 1; commandNextId - 1
-        }, ComponentCommand(comp, cmd)).isEmpty))
-      subComponentsFor(comp).toSeq.sortBy(_.fqn.asMangledString).filterNot(_ == comp).foreach(comp =>
-        comp.commands.foreach { cmd =>
-          assert(commandsById.put(commandNextId, ComponentCommand(comp, cmd)).isEmpty)
-          commandNextId += 1
-        })
-    }
+    var commandNextId = 0
+    val commandsById = mutable.HashMap.empty[Int, ComponentCommand]
+    comp.commands.foreach(cmd =>
+      assert(commandsById.put(cmd.id.getOrElse {
+        commandNextId += 1; commandNextId - 1
+      }, ComponentCommand(comp, cmd)).isEmpty))
+    subComponentsFor(comp).toSeq.sortBy(_.fqn.asMangledString).filterNot(_ == comp).foreach(comp =>
+      comp.commands.foreach { cmd =>
+        assert(commandsById.put(commandNextId, ComponentCommand(comp, cmd)).isEmpty)
+        commandNextId += 1
+      })
     commandsById
   }
 
