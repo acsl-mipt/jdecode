@@ -7,6 +7,7 @@ import java.security.MessageDigest
 import com.google.common.base.{CaseFormat, Charsets}
 import com.typesafe.scalalogging.LazyLogging
 import ru.mipt.acsl.decode.model.domain._
+import ru.mipt.acsl.decode.model.domain.impl.`type`.DecodeBerType
 import ru.mipt.acsl.decode.model.domain.impl.`type`.DecodeOptionalType
 import ru.mipt.acsl.decode.model.domain.impl.`type`.DecodeOrType
 import ru.mipt.acsl.generation.Generator
@@ -80,15 +81,16 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
       case t: DecodeArrayType =>
         val sizeVar: CVar = CVar("size")
         val dataVar: CVar = CVar("data")
+        val arrayType: CArrayType = CArrayType(cTypeForDecodeType(t.baseType.obj), maxLengthFor(t), dataVar.name)
         val typeDef = CTypeDefStatement(prefixedCTypeNameFor(t), CStructTypeDef(Seq(
           CStructTypeDefField(sizeVar.name, sizeTType),
-          CStructTypeDefField(dataVar.name, cTypeForDecodeType(t.baseType.obj).ptr))))
-        val initFunc = CFuncImpl(CFuncDef(typeDef.name + cDecodeArrayTypeInitMethodNamePart,
+          CStructTypeDefField(dataVar.name, arrayType))))
+        /*val initFunc = CFuncImpl(CFuncDef(typeDef.name + cDecodeArrayTypeInitMethodNamePart,
           parameters = Seq(CFuncParam(selfVar.name, typeDef.ptr), CFuncParam(sizeVar.name, sizeTType),
-            CFuncParam(dataVar.name, voidType.ptr))), CAstElements(CStatementLine(
-          CAssign(CArrow(selfVar, sizeVar), sizeVar)), CStatementLine(CAssign(CArrow(selfVar, dataVar), dataVar))))
-        (CAstElements(typeDef, CEol, initFunc.definition),
-          CAstElements(initFunc))
+            CFuncParam(dataVar.name, arrayType))), CAstElements(CStatementLine(
+          CAssign(CArrow(selfVar, sizeVar), sizeVar)), CStatementLine(CAssign(CArrow(selfVar, dataVar), dataVar))))*/
+        (CAstElements(typeDef),
+          CAstElements())
       case t: DecodeStructType => (CAstElements(cTypeDefForName(t, CStructTypeDef(t.fields.map(f =>
         CStructTypeDefField(f.name.asMangledString, cTypeAppForType(f.typeUnit.t.obj)))))), CAstElements())
       case t: DecodeAliasType =>
@@ -117,56 +119,6 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
     } else {
       (CAstElements(), CAstElements())
     }
-  }
-
-  private def serializeArraySize(src: CExpression): CAstElements =
-    CStatements(CFuncCall(tryMacroName, CFuncCall("PhotonBer_Serialize", CArrow(src, size.v), writer.v)))
-
-  private def deserializeArraySize(dest: CExpression): CAstElements =
-    CStatements(CFuncCall(tryMacroName, CFuncCall("PhotonBer_Deserialize", CRef(CArrow(dest, size.v)), writer.v)))
-
-  private def serializeArrayElements(t: DecodeArrayType, src: CExpression): CAstElements =
-    CAstElements(CForStatement(CAstElements(CDefVar(i.name, i.t, Some(CIntLiteral(0))), CComma,
-      CDefVar(size.name, i.t, Some(CArrow(src, size.v)))), CAstElements(CLess(i.v, size.v)),
-      CAstElements(CIncBefore(i.v)), serializeCodeFor(t.baseType.obj, CPlus(CArrow(src, dataVar), i.v))))
-
-  private def deserializeArrayElements(t: DecodeArrayType, src: CExpression): CAstElements =
-    CAstElements(CForStatement(CAstElements(CDefVar(i.name, i.t, Some(CIntLiteral(0))), CComma,
-      CDefVar(size.name, i.t, Some(CArrow(src, size.v)))), CAstElements(CLess(i.v, size.v)),
-      CAstElements(CIncBefore(i.v)), deserializeCodeFor(t.baseType.obj, CPlus(CArrow(src, dataVar), i.v))))
-
-  private def serializeCodeFor(t: DecodeType, src: CExpression = selfVar): CAstElements = t match {
-    case t: DecodeStructType =>
-      CAstElements(t.fields.flatMap(f =>
-        serializeCodeFor(f.typeUnit.t.obj, CArrow(src, CVar(cNameForDecodeName(f.name))))): _*)
-    case t: DecodeArrayType => serializeArraySize(src) ++ serializeArrayElements(t, src)
-    case _ => sys.error(s"not implemented for $t")
-  }
-
-  private def deserializeCodeFor(t: DecodeType, dest: CExpression = selfVar): CAstElements = t match {
-    case t: DecodeStructType =>
-      CAstElements(t.fields.flatMap(f =>
-        deserializeCodeFor(f.typeUnit.t.obj, CArrow(dest, CVar(cNameForDecodeName(f.name))))): _*)
-    case t: DecodeArrayType => deserializeArraySize(dest) ++ deserializeArrayElements(t, dest)
-    case _ => sys.error(s"not implemented for $t")
-  }
-
-  private def generateTypeSeparateFiles(t: DecodeType, nsDir: io.File) {
-    if (isTypePrimitiveOrNative(t))
-      return
-    val fileName = fileNameFor(t)
-    val hFileName = fileName + headerExt
-    val cFileName = fileName + sourcesExt
-    val (hFile, cFile) = (new io.File(nsDir, hFileName), new io.File(nsDir, cFileName))
-    val (h, c) = generateType(t, nsDir)
-    if (h.nonEmpty)
-      writeFileIfNotEmptyWithComment(hFile, protectDoubleIncludeFile(hFileName,
-        CAstElements(CEol) ++ appendPrologEpilog(h) ++ Seq(CEol)), "Type header")
-    else
-      logger.debug(s"Ommiting type ${t.optionName.toString}")
-    if (c.nonEmpty)
-      writeFileIfNotEmptyWithComment(cFile, CAstElements(CInclude(relPathForType(t)), CEol, CEol) ++ c,
-        "Type implementation")
   }
 
   private def generateRootComponent(comp: DecodeComponent) {
@@ -251,21 +203,20 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
         val component = compCmd.component
         val cmd = compCmd.command
         val cmdReturnType = cmd.returnType.map(rt => cTypeForDecodeType(rt.obj))
-        val parameters = Seq(componentSelfType) ++ cmdReturnType.map(t => Seq(t.ptr)).getOrElse(Seq()) ++
-          cmd.parameters.map(p => cTypeForDecodeType(p.paramType.obj).ptr)
+        val parameters = componentSelfType +: cmd.parameters.map(p => cTypeForDecodeType(p.paramType.obj).ptr)
         val methodName = userFuncNameFor(comp, component, cmd)
-        CStructTypeDefField(methodName, CFuncType(resultType, parameters, methodName))
+        CStructTypeDefField(methodName, CFuncType(cmdReturnType.getOrElse(voidType), parameters, methodName))
       } ++
       comp.baseType.map(_.obj.fields.map { f =>
         val name: String = mangledCNameForDecodeName(f.name)
         CStructTypeDefField(name, CFuncType(cTypeForDecodeType(f.typeUnit.t.obj), Seq(componentSelfType), name))
       }).getOrElse(Seq.empty) ++ methods, Some(componentTypeStructName))
 
-    val execCommand = CFuncImpl(CFuncDef(componentStructName + "_ExecuteCommand", resultType,
+    val execCommand = CFuncImpl(CFuncDef(methodNameFor(componentStructName, "ExecuteCommand"), resultType,
       Seq(CFuncParam(selfVar.name, componentSelfType), reader.param, writer.param, commandId.param)),
       CAstElements(CIdent, CSwitch(commandId.v, casesForCommands(comp),
         default = CAstElements(CStatementLine(CReturn(CVar("PhotonResult_InvalidCommandId"))))), CEol))
-    val readExecCommand = CFuncDef(componentStructName + "_ReadExecuteCommand", resultType,
+    val readExecCommand = CFuncDef(methodNameFor(componentStructName, "ReadExecuteCommand"), resultType,
       Seq(CFuncParam(selfVar.name, componentSelfType), reader.param, writer.param))
     val functionsForComponentCommands = functionsForCommands(comp)
     val externedCFile = externCpp(CAstElements(forwardFuncTableDecl, CEol, CEol, componentTypeForwardDecl, CEol, CEol, componentType, CSemicolon, CEol) ++
@@ -292,14 +243,12 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
         defineAndInitVar(el._1, el._2)).to[mutable.Buffer]
       val cmdResultVar = CVar("cmdResult")
       val cmdReturnType = command.returnType.map(_.obj)
-      val cmdCReturnTypePtr = command.returnType.map(mt => cTypeAppForType(mt.obj).ptr)
-      val funcCall = CArrow(selfVar, CFuncCall(userFuncNameFor(comp, component, command), Seq(selfVar) ++
-        cmdCReturnTypePtr.map(rt => Seq(cmdResultVar)).getOrElse(Seq.empty) ++ vars: _*))
-      CFuncImpl(CFuncDef(componentTypeName + "_" + methodName, resultType, parameters),
-        varInits ++ cmdCReturnTypePtr.map(rt => CAstElements(CStatementLine(CVarDef(cmdResultVar.name, rt)),
-          CStatementLine(CFuncCall(tryMacroName, funcCall)),
+      val cmdCReturnType = command.returnType.map(mt => cTypeAppForType(mt.obj))
+      val funcCall = CArrow(selfVar, CFuncCall(userFuncNameFor(comp, component, command), selfVar +: vars.map(CRef(_)): _*))
+      CFuncImpl(CFuncDef(methodNameFor(componentTypeName, methodName), resultType, parameters),
+        varInits ++ cmdCReturnType.map(t => CAstElements(CStatementLine(CVarDef(cmdResultVar.name, t, Some(funcCall))),
           CStatementLine(CReturn(CFuncCall(methodNameFor(cmdReturnType.get, typeSerializeMethodName),
-            cmdResultVar, writer.v))))).getOrElse(CAstElements(CStatementLine(CReturn(funcCall)))))
+            CRef(cmdResultVar), writer.v))))).getOrElse(CAstElements(CStatementLine(funcCall))))
     }
   }
 
@@ -324,6 +273,24 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
     CAstElements(CInclude(prefix + "photon_prologue.h"), CEol, CEol) ++ file ++
       Seq(CEol, CInclude(prefix + "photon_epilogue.h"), CEol, CEol)
   }
+
+  private def generateTypeSeparateFiles(t: DecodeType, nsDir: io.File) {
+    if (isTypePrimitiveOrNative(t))
+      return
+    val fileName = fileNameFor(t)
+    val hFileName = fileName + headerExt
+    val cFileName = fileName + sourcesExt
+    val (hFile, cFile) = (new io.File(nsDir, hFileName), new io.File(nsDir, cFileName))
+    val (h, c) = generateType(t, nsDir)
+    if (h.nonEmpty)
+      writeFileIfNotEmptyWithComment(hFile, protectDoubleIncludeFile(hFileName,
+        CAstElements(CEol) ++ appendPrologEpilog(h) ++ Seq(CEol)), "Type header")
+    else
+      logger.debug(s"Omitting type ${t.optionName.toString}")
+    if (c.nonEmpty)
+      writeFileIfNotEmptyWithComment(cFile, CAstElements(CInclude(relPathForType(t)), CEol, CEol) ++ c,
+        "Type implementation")
+  }
 }
 
 private object CSourcesGenerator {
@@ -344,6 +311,9 @@ private object CSourcesGenerator {
   private val typeInitMethodName = "Init"
   private val typeSerializeMethodName = "Serialize"
   private val typeDeserializeMethodName = "Deserialize"
+  private val photonBerTypeName = "PhotonBer"
+  private val photonWriterTypeName = "PhotonWriter"
+  private val photonReaderTypeName = "PhotonReader"
 
   private val b8Type = CTypeApplication("PhotonGtB8")
   private val berType = CTypeApplication("PhotonBer")
@@ -361,6 +331,7 @@ private object CSourcesGenerator {
 
   private val selfVar = CVar("self")
   private val dataVar = CVar("data")
+  private val itemVar = CVar("item")
 
   private val tag = TypedVar("tag", berType)
   private val size = TypedVar("size", berType)
@@ -391,6 +362,16 @@ private object CSourcesGenerator {
   private def collectNsForComponent(comp: DecodeComponent, nsSet: mutable.HashSet[DecodeNamespace]) {
     comp.subComponents.foreach(cr => collectNsForComponent(cr.component.obj, nsSet))
     collectNsForTypes(comp, nsSet)
+  }
+
+  private def maxLengthFor(t: DecodeArrayType): Long = {
+    val size = t.size
+    if (t.isFixedSize)
+      size.minLength.min(256)
+    if (size.maxLength == 0)
+      256
+    else
+      size.maxLength.min(256)
   }
 
   private def allCommandsFor(comp: DecodeComponent): Seq[ComponentCommand] =
@@ -558,9 +539,9 @@ private object CSourcesGenerator {
   }
 
   private def defineAndInitVar(v: CVar, parameter: DecodeCommandParameter): CAstElements = {
-    CAstElements(CStatementLine(CDefVar(v.name, cTypeAppForType(parameter.paramType.obj).ptr)),
+    CAstElements(CStatementLine(CDefVar(v.name, cTypeAppForType(parameter.paramType.obj))),
       CStatementLine(CFuncCall(tryMacroName, CFuncCall(methodNameFor(parameter.paramType.obj,
-        typeDeserializeMethodName), v, reader.v))))
+        typeDeserializeMethodName), CRef(v), reader.v))))
   }
 
   private def subComponentsFor(comp: DecodeComponent, set: mutable.Set[DecodeComponent] = mutable.HashSet.empty): mutable.Set[DecodeComponent] = {
@@ -606,11 +587,11 @@ private object CSourcesGenerator {
   }
 
   private def userFuncComponentStructFieldFor(sc: DecodeComponent): String =
-    upperCamelCaseToLowerCamelCase(typeNameForComponent(sc))
+    typeNameForComponent(sc)
 
   private def userFuncNameFor(selfComponent: DecodeComponent, component: DecodeComponent, command: DecodeCommand): String =
-    (if (selfComponent == component) "" else userFuncComponentStructFieldFor(component)) +
-      cNameForDecodeName(command.name).capitalize
+    upperCamelCaseToLowerCamelCase((if (selfComponent == component) "" else userFuncComponentStructFieldFor(component)) +
+      cNameForDecodeName(command.name).capitalize)
 
   private def casesForCommands(comp: DecodeComponent): Seq[CCase] = {
     val componentTypeName: String = prefixedTypeNameForComponent(comp)
@@ -658,5 +639,125 @@ private object CSourcesGenerator {
       componentIdByComponent.put(component, nextComponentId)
       nextComponentId += 1
     }
+  }
+
+  private def serializeCodeForArraySize(src: CExpression): CAstElements =
+    CStatements(CFuncCall(tryMacroName, CFuncCall(methodNameFor(photonBerTypeName, typeSerializeMethodName),
+      CArrow(src, size.v), writer.v)))
+
+  private def deserializeCodeForArraySize(dest: CExpression): CAstElements =
+    CStatements(CFuncCall(tryMacroName, CFuncCall(methodNameFor(photonBerTypeName, typeDeserializeMethodName),
+      CRef(CArrow(dest, size.v)), reader.v)))
+
+  private def serializeCodeForArrayElements(t: DecodeArrayType, src: CExpression): CAstElements =
+    CAstElements(CIdent, CForStatement(CAstElements(CDefVar(i.name, i.t, Some(CIntLiteral(0))), CComma,
+      CAssign(size.v, CArrow(src, size.v))), CAstElements(CLess(i.v, size.v)),
+      CAstElements(CIncBefore(i.v)), serializeCallCodeFor(t.baseType.obj, CRef(CIndex(CArrow(src, dataVar), i.v)))), CEol)
+
+  private def deserializeCodeForArrayElements(t: DecodeArrayType, src: CExpression): CAstElements =
+    CAstElements(CIdent, CForStatement(CAstElements(CDefVar(i.name, i.t, Some(CIntLiteral(0))), CComma,
+      CAssign(size.v, CArrow(src, size.v))), CAstElements(CLess(i.v, size.v)),
+      CAstElements(CIncBefore(i.v)), deserializeCallCodeFor(t.baseType.obj, CRef(CIndex(CArrow(src, dataVar), i.v)))), CEol)
+
+  private def serializeCodeFor(t: DecodePrimitiveType, src: CExpression): CAstElements = {
+    import TypeKind._
+    CStatements(CFuncCall(methodNameFor(photonWriterTypeName, (t.kind, t.bitLength) match {
+      case (_, 8) => "WriteUint8"
+      case (Bool, 16) | (Uint, 16) => "WriteUint16Le"
+      case (Bool, 32) | (Uint, 32) => "WriteUint32Le"
+      case (Bool, 64) | (Uint, 64) => "WriteUint64Le"
+      case (Int, 16) => "WriteInt16Le"
+      case (Int, 32) => "WriteInt32Le"
+      case (Int, 64) => "WriteInt64Le"
+      case (Float, 32) => "WriteFloat32Le"
+      case (Float, 64) => "WriteFloat64Le"
+      case _ => sys.error(s"not implemented $t")
+    }), writer.v, src))
+  }
+
+  private def serializeCodeFor(t: DecodeNativeType, src: CExpression): CAstElements = t match {
+    case t: DecodeBerType => CStatements(CFuncCall(
+      methodNameFor(photonBerTypeName, typeSerializeMethodName), src, writer.v))
+    case _ => sys.error(s"not implemented $t")
+  }
+
+  private def serializeCodeFor(t: DecodeGenericTypeSpecialized, src: CExpression): CAstElements =
+    t.genericType.obj match {
+      case gt: DecodeOrType => CAstElements(CComment("todo"))
+      case gt: DecodeOptionalType => CAstElements(CComment("todo"))
+      case _ => sys.error(s"not implemented $t")
+    }
+
+  private def serializeCallCodeFor(t: DecodeType, src: CExpression): CAstElements = t match {
+    case _: DecodeArrayType | _: DecodeStructType => CStatements(CFuncCall(tryMacroName,
+      CFuncCall(methodNameFor(t, typeSerializeMethodName), src, writer.v)))
+    case _ => serializeCodeFor(t, src)
+  }
+
+  private def deserializeCallCodeFor(t: DecodeType, dest: CExpression): CAstElements = t match {
+    case _: DecodeArrayType | _: DecodeStructType => CStatements(CFuncCall(tryMacroName,
+      CFuncCall(methodNameFor(t, typeDeserializeMethodName), dest, reader.v)))
+    case _ => deserializeCodeFor(t, dest)
+  }
+
+  private def deserializeCodeFor(t: DecodePrimitiveType, dest: CExpression): CAstElements = {
+    import TypeKind._
+    CStatements(CAssign(CDeref(dest), CFuncCall(methodNameFor(photonReaderTypeName, (t.kind, t.bitLength) match {
+      case (_, 8) => "ReadUint8"
+      case (Bool, 16) | (Uint, 16) => "ReadUint16Le"
+      case (Bool, 32) | (Uint, 32) => "ReadUint32Le"
+      case (Bool, 64) | (Uint, 64) => "ReadUint64Le"
+      case (Int, 16) => "ReadInt16Le"
+      case (Int, 32) => "ReadInt32Le"
+      case (Int, 64) => "ReadInt64Le"
+      case (Float, 32) => "ReadFloat32Le"
+      case (Float, 64) => "ReadFloat64Le"
+      case _ => sys.error(s"not implemented $t")
+    }), reader.v)))
+  }
+
+  private def deserializeCodeFor(t: DecodeNativeType, dest: CExpression): CAstElements = t match {
+    case t: DecodeBerType => CStatements(CFuncCall(tryMacroName, CFuncCall(
+      methodNameFor(photonBerTypeName, typeDeserializeMethodName), dest, reader.v)))
+    case _ => sys.error(s"not implemented $t")
+  }
+
+  private def deserializeCodeFor(t: DecodeGenericTypeSpecialized, dest: CExpression): CAstElements =
+    t.genericType.obj match {
+      case gt: DecodeOrType => CAstElements(CComment("todo"))
+      case gt: DecodeOptionalType => CAstElements(CComment("todo"))
+      case _ => sys.error(s"not implemented $t")
+    }
+
+  private def serializeCodeFor(t: DecodeType, src: CExpression = selfVar): CAstElements = t match {
+    case t: DecodeStructType =>
+      CAstElements(t.fields.flatMap(f =>
+        serializeCallCodeFor(f.typeUnit.t.obj, CRef(CArrow(src, CVar(cNameForDecodeName(f.name)))))): _*)
+    case t: DecodeArrayType => serializeCodeForArraySize(src) ++ serializeCodeForArrayElements(t, src)
+    case t: DecodeAliasType => serializeCodeFor(t.baseType.obj, src)
+    case t: DecodeSubType => serializeCallCodeFor(t.baseType.obj, src)
+    case t: DecodeEnumType => serializeCallCodeFor(t.baseType.obj, src)
+    /* CStatements(CFuncCall(tryMacroName,
+       CFuncCall(methodNameFor(prefixedCTypeNameFor(t), typeSerializeMethodName), src, writer.v)))*/
+    case t: DecodePrimitiveType => serializeCodeFor(t, src)
+    case t: DecodeNativeType => serializeCodeFor(t, src)
+    case t: DecodeGenericTypeSpecialized => serializeCodeFor(t, src)
+    case _ => sys.error(s"not implemented for $t")
+  }
+
+  private def deserializeCodeFor(t: DecodeType, dest: CExpression = selfVar): CAstElements = t match {
+    case t: DecodeStructType =>
+      CAstElements(t.fields.flatMap(f =>
+        deserializeCallCodeFor(f.typeUnit.t.obj, CRef(CArrow(dest, CVar(cNameForDecodeName(f.name)))))): _*)
+    case t: DecodeArrayType => deserializeCodeForArraySize(dest) ++ deserializeCodeForArrayElements(t, dest)
+    case t: DecodeAliasType => deserializeCodeFor(t.baseType.obj, dest)
+    case t: DecodeSubType => deserializeCallCodeFor(t.baseType.obj, dest)
+    case t: DecodeEnumType => deserializeCallCodeFor(t.baseType.obj, dest)
+      /*CStatements(CFuncCall(tryMacroName,
+        CFuncCall(methodNameFor(prefixedCTypeNameFor(t), typeDeserializeMethodName), dest, reader.v)))*/
+    case t: DecodePrimitiveType => deserializeCodeFor(t, dest)
+    case t: DecodeNativeType => deserializeCodeFor(t, dest)
+    case t: DecodeGenericTypeSpecialized => deserializeCodeFor(t, dest)
+    case _ => sys.error(s"not implemented for $t")
   }
 }

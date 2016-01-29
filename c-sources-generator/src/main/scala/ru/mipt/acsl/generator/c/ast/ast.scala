@@ -109,8 +109,17 @@ case class CPlainText(text: String) extends CAstElement {
   override def generate(s: CGenState): Unit = s.append(text)
 }
 
-trait CType extends CExpression {
+trait CType extends CAstElement {
   def ptr: CPtrType = CPtrType(this)
+}
+
+abstract class CNamedType(val name: String) extends CType
+
+case class CArrayType(val subType: CType, val length: Long, _name: String) extends CNamedType(_name) {
+  override def generate(s: CGenState): Unit = {
+    subType.generate(s)
+    s.append(" ").append(name).append("[").append(length.toString).append("]")
+  }
 }
 
 case class CPtrType(subType: CType) extends CType {
@@ -135,13 +144,13 @@ case class CForStatement(init: CAstElements = CAstElements(), test: CAstElements
   override def generate(s: CGenState): Unit = {
     s.append("for(")
     init.generate(s)
-    s.append(";")
+    s.append("; ")
     test.generate(s)
-    s.append(";")
+    s.append("; ")
     inc.generate(s)
     s.append(") {").incIndentation().eol()
     statements.generate(s)
-    s.eol().decIndentation().indent().append("}")
+    s.decIndentation().indent().append("}")
   }
 }
 
@@ -183,7 +192,7 @@ object CTypeApplication {
 
 case class CEnumTypeDefConst(name: String, value: Int)
 
-case class CFuncType(returnType: CType, parameterTypes: Iterable[CType], name: String = "") extends CType {
+case class CFuncType(returnType: CType, parameterTypes: Iterable[CType], _name: String = "") extends CNamedType(_name) {
   override def generate(s: CGenState): Unit = {
     returnType.generate(s)
     s.append(s" (*$name)")
@@ -227,7 +236,7 @@ case class CStructType(name: String) extends CType {
 case class CStructTypeDefField(name: String, t: CType) extends CAstElement {
   override def generate(s: CGenState): Unit = {
     t match {
-      case f: CFuncType => f.generate(s)
+      case f: CNamedType => f.generate(s)
       case _ => t.generate(s); s.append(s" $name")
     }
   }
@@ -281,16 +290,13 @@ case class CStructTypeDef(fields: Traversable[CStructTypeDefField], name: Option
 }
 
 case class CFuncParam(name: String, t: CType) extends Generatable[CGenState] {
-  override def generate(s: CGenState): Unit = {
-    t.generate(s)
-    s.append(s" $name")
-  }
+  override def generate(s: CGenState): Unit = Helpers.generate(s, t, name)
 }
 
 private object Helpers {
-  def generate(s: CGenState, name: String, t: CType): Unit = {
-    t.generate(s)
-    s.append(s" $name")
+  def generate(s: CGenState, t: CType, name: String): Unit = t match {
+    case t: CNamedType => t.generate(s)
+    case _ => t.generate(s); s.append(s" $name")
   }
 
   def generate(s: CGenState, parameterTypes: Iterable[CType]): Unit = {
@@ -371,7 +377,7 @@ case class CFuncCall(methodName: String, arguments: CExpression*) extends CExpre
 
 case class CDefVar(name: String, t: CType, init: Option[CExpression] = None) extends CStatement {
   override def generate(s: CGenState): Unit = {
-    Helpers.generate(s, name, t)
+    Helpers.generate(s, t, name)
     if (init.isDefined) {
       s.append(" = ")
       init.get.generate(s)
@@ -395,6 +401,31 @@ abstract class CUnaryOp(private val expr: CExpression, val op: String, private v
 
 case class CIncBefore(expr: CExpression) extends CUnaryOp(expr, "++")
 case class CRef(expr: CExpression) extends CUnaryOp(expr, "&")
+class CDeref(expr: CExpression) extends CUnaryOp(expr, "*")
+
+object CDeref {
+  def apply(expr: CExpression) = expr match {
+    case e: CRef => e.expr
+    case _ => new CDeref(expr)
+  }
+}
+
+case class CIndex(expr: CExpression, index: CExpression) extends CExpression {
+  override def generate(s: CGenState): Unit = {
+    expr.generate(s)
+    s.append("[")
+    index.generate(s)
+    s.append("]")
+  }
+}
+
+case class CParens(expr: CExpression) extends CExpression {
+  override def generate(s: CGenState): Unit = {
+    s.append("(")
+    expr.generate(s)
+    s.append(")")
+  }
+}
 
 abstract class CBinaryOp(private val left: CExpression, val op: String, private val right: CExpression,
                          val isSpaced: Boolean = true) extends CExpression {
