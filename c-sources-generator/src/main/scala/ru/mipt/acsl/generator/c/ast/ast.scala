@@ -483,8 +483,10 @@ case object CComma extends CAstElement {
   override def generate(s: CGenState): Unit = s.append(", ")
 }
 
-case class CVarDef(name: String, t: CType, init: Option[CExpression] = None) extends CStatement {
+case class CVarDef(name: String, t: CType, init: Option[CExpression] = None, static: Boolean = false) extends CStatement {
   override def generate(s: CGenState): Unit = {
+    if (static)
+      s.append("static ")
     t.generate(s)
     s.append(" ").append(name)
     init.foreach(i => { s.append(" = "); i.generate(s) })
