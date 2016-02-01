@@ -318,7 +318,7 @@ private object CSourcesGenerator {
       component.subComponents.foreach { ref =>
         val c: DecodeComponent = ref.component.obj
         set += c
-        c._allSubComponents(set)
+        RichComponent(c)._allSubComponents(set)
       }
       set
     }
@@ -626,7 +626,7 @@ private object CSourcesGenerator {
         typeDeserializeMethodName), CRef(v), reader.v))))
   }
 
-  private case class ComponentCommand(component: DecodeComponent, command: DecodeCommand)
+  case class ComponentCommand(component: DecodeComponent, command: DecodeCommand)
 
   // todo: memoize
   private def commandsByIdFor(comp: DecodeComponent): mutable.Map[Int, ComponentCommand] = {
