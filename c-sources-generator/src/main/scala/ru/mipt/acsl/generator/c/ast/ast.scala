@@ -375,16 +375,6 @@ case class CFuncCall(methodName: String, arguments: CExpression*) extends CExpre
   }
 }
 
-case class CDefVar(name: String, t: CType, init: Option[CExpression] = None) extends CStatement {
-  override def generate(s: CGenState): Unit = {
-    Helpers.generate(s, t, name)
-    if (init.isDefined) {
-      s.append(" = ")
-      init.get.generate(s)
-    }
-  }
-}
-
 case class CVar(name: String) extends CExpression {
   override def generate(s: CGenState): Unit = s.append(name)
 }
