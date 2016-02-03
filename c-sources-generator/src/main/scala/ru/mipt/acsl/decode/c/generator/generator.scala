@@ -149,7 +149,7 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
       componentSingletonVar.v.dot(command.methodNamePart(component, c)._var).assign(
         cSingletonComponentName.methodName(command, component, c)._var.ref).line
     }) ++ allParameters.map(_ match { case ComponentParameterField(c, f) =>
-      componentSingletonVar.v.dot(cStructFieldName(component, c, f)._var).assign(
+      componentSingletonVar.v.dot(f.cStructFieldName(component, c)._var).assign(
         cSingletonComponentName.methodName(f, component, c)._var.ref).line
     }): _*) ++ CStatements(CReturn(componentSingletonVar.v.ref)))
     val funcDefs = allCommands.map(_ match { case ComponentCommand(c, command) =>
@@ -216,12 +216,8 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
       s"Component ${component.name.asMangledString} implementation")
   }
 
-  private def cStructFieldName(structComponent: DecodeComponent, component: DecodeComponent, named: DecodeNamed): String =
-    upperCamelCaseToLowerCamelCase((if (structComponent == component) "" else component.cName) +
-      named.mangledCName.capitalize)
-
   private def structTypeFieldForCommand(structComponent: DecodeComponent, component: DecodeComponent, command: DecodeCommand): CStructTypeDefField = {
-    val methodName = cStructFieldName(structComponent, component, command)
+    val methodName = command.cStructFieldName(structComponent, component)
     val returnType = command.returnType.map(_.obj.cType).getOrElse(voidType)
     val parameters = command.cFuncParameterTypes(structComponent)
     CStructTypeDefField(methodName, CFuncType(returnType, parameters, methodName))
@@ -232,7 +228,7 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
     CStructTypeDef(Seq(CStructTypeDefField("data", CTypeApplication(component.componentDataTypeName).ptr)) ++
       component.allCommands.map(compCmd => structTypeFieldForCommand(component, compCmd.component, compCmd.command)) ++
       component.allParameters.map(_ match { case ComponentParameterField(c, f) =>
-        val name = cStructFieldName(component, c, f)
+        val name = f.cStructFieldName(component, c)
         CStructTypeDefField(
           name, CFuncType(f.typeUnit.t.obj.cType, Seq(componentSelfPtrType), name))
       }) ++
@@ -364,7 +360,18 @@ private object CSourcesGenerator {
             CReturn(CFuncCall(cmdReturnType.get.methodName(typeSerializeMethodName),
               cmdResultVar.ref, writer.v)))).getOrElse(CStatements(funcCall)))*/
           CFuncImpl(CFuncDef(componentTypeName.methodName(methodNamePart), resultType,
-            Seq(CFuncParam(selfVar.name, componentPtrType), writer.param)), CStatements())
+            Seq(CFuncParam(selfVar.name, componentPtrType), writer.param)),
+            CAstElements(message.parameters.map(p => {
+              val v = p.varName._var
+              val t = p.t(c)
+              v.define(t.cType, Some(selfVar -> CFuncCall(p.cStructFieldName(component, c), selfVar))).line
+            }): _*) ++
+            CAstElements(message.parameters.flatMap(p => {
+              val v = p.varName._var
+              val t = p.t(c)
+              t.serializeCallCode(v.refIfNotSmall(t))
+            }): _*) :+
+              CReturn(resultOk).line)
       })
     }
 
@@ -425,6 +432,11 @@ private object CSourcesGenerator {
     }
   }
 
+  implicit class RichParameter(val parameter: DecodeMessageParameter) {
+    def varName: String = CaseFormat.LOWER_UNDERSCORE.to(CaseFormat.LOWER_CAMEL,
+      parameter.value.replaceAll("[\\.\\[\\]]", "_").replaceAll("__", "_"))
+  }
+
   implicit class RichCommand(val command: DecodeCommand) {
     def cFuncParameterTypes(component: DecodeComponent): Seq[CType] = {
       component.ptrType +: command.parameters.map(p => {
@@ -450,6 +462,10 @@ private object CSourcesGenerator {
         methodName = "_" + methodName
       methodName
     }
+
+    def cStructFieldName(structComponent: DecodeComponent, component: DecodeComponent): String =
+      upperCamelCaseToLowerCamelCase((if (structComponent == component) "" else component.cName) +
+        named.mangledCName.capitalize)
   }
 
   implicit class RichType(val t: DecodeType) {

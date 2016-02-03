@@ -88,10 +88,14 @@ class DecodeTypeUnitApplicationImpl(val t: DecodeMaybeProxy[DecodeType], val uni
 class DecodeStructFieldImpl(val name: DecodeName, val typeUnit: DecodeTypeUnitApplication, info: Option[String])
   extends AbstractDecodeOptionalInfoAware(info) with DecodeStructField {
   override def optionName: Option[DecodeName] = Some(name)
+  override def toString: String = s"${this.getClass.getSimpleName}{name = $name, typeUnit = $typeUnit, info = $info}"
 }
 
 class DecodeStructTypeImpl(name: Option[DecodeName], namespace: DecodeNamespace, info: Option[String], var fields: Seq[DecodeStructField])
-  extends AbstractDecodeType(name, namespace, info) with DecodeStructType
+  extends AbstractDecodeType(name, namespace, info) with DecodeStructType {
+  override def toString: String =
+    s"${this.getClass}{name = $name, namespace = $namespace, info = $info, fields = [${fields.map(_.toString).mkString(", ")}]"
+}
 
 case class ArraySizeImpl(minLength: Long = 0, maxLength: Long = 0) extends ArraySize
 

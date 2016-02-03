@@ -291,6 +291,18 @@ trait DecodeComponentRef {
 
 trait DecodeMessageParameter extends DecodeHasOptionInfo {
   def value: String
+
+  def t(component: DecodeComponent): DecodeType = {
+    val walker = new DecodeParameterWalker(this)
+    val componentWalker = new DecodeComponentWalker(component)
+    while (walker.hasNext) {
+      val token = walker.next
+      componentWalker.walk(token)
+    }
+    if (componentWalker.t.isEmpty)
+      sys.error("fail")
+    componentWalker.t.get
+  }
 }
 
 trait DecodeEventMessage extends DecodeMessage {
@@ -308,18 +320,6 @@ trait DecodeComponent extends DecodeHasOptionInfo with DecodeFqned with DecodeRe
   def subComponents: mutable.Buffer[DecodeComponentRef]
   def id: Option[Int]
   override def accept[T](visitor: DecodeReferenceableVisitor[T]): T = visitor.visit(this)
-  def getTypeForParameter(parameter: DecodeMessageParameter): DecodeType = {
-    val walker = new DecodeParameterWalker(parameter)
-    val componentWalker = new DecodeComponentWalker(this)
-    while (walker.hasNext)
-    {
-      val token = walker.next
-      componentWalker.walk(token)
-    }
-    if (componentWalker.`type`.isEmpty)
-      sys.error("fail")
-    componentWalker.`type`.get
-  }
 }
 
 trait DecodeDomainModelResolver {

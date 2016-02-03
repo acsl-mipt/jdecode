@@ -19,6 +19,7 @@ case class DecodeNameImpl(value: String) extends DecodeName {
 
 object DecodeNameImpl {
   def newFromSourceName(name: String) = DecodeNameImpl(DecodeName.mangleName(name))
+
   def newFromMangledName(name: String) = DecodeNameImpl(name)
 }
 
@@ -38,17 +39,14 @@ class TokenWalker(val token: Either[String, Int]) extends DecodeTypeVisitor[Opti
   }
 
   override def visit(structType: DecodeStructType) = {
-    if (token.isLeft)
-      sys.error("invalid token")
-    val name = token.left
+    if (token.isRight)
+      sys.error(s"invalid token ${token.right.get}")
+    val name = token.left.get
     Some(structType.fields.find(_.name.asMangledString == name)
-      .getOrElse({
-      throw new AssertionError(
-        String.format("Field '%s' not found in struct '%s'", name, structType))
-    }).typeUnit.t.obj)
+      .getOrElse{sys.error(s"Field '$name' not found in struct '$structType'")}.typeUnit.t.obj)
   }
 
-  override def visit(typeAlias: DecodeAliasType) =  typeAlias.baseType.obj.accept(this)
+  override def visit(typeAlias: DecodeAliasType) = typeAlias.baseType.obj.accept(this)
 
   override def visit(genericType: DecodeGenericType) = None
 
@@ -56,39 +54,38 @@ class TokenWalker(val token: Either[String, Int]) extends DecodeTypeVisitor[Opti
 }
 
 abstract class AbstractImmutableDecodeMessage(val component: DecodeComponent, val name: DecodeName, val id: Option[Int],
-  info: Option[String], val parameters: Seq[DecodeMessageParameter]) extends AbstractDecodeMessage(info) {
+                                              info: Option[String], val parameters: Seq[DecodeMessageParameter]) extends AbstractDecodeMessage(info) {
   def optionName = Some(name)
 }
 
-class DecodeComponentRefImpl(val component: DecodeMaybeProxy[DecodeComponent], val alias: Option[String] = None)
+case class DecodeComponentRefImpl(component: DecodeMaybeProxy[DecodeComponent], alias: Option[String] = None)
   extends DecodeComponentRef
 
 class DecodeStatusMessageImpl(component: DecodeComponent, name: DecodeName, id: Option[Int], info: Option[String],
-  parameters: Seq[DecodeMessageParameter]) extends AbstractImmutableDecodeMessage(component, name, id, info, parameters) with DecodeStatusMessage
+                              parameters: Seq[DecodeMessageParameter]) extends AbstractImmutableDecodeMessage(component, name, id, info, parameters) with DecodeStatusMessage
 
 class DecodeEventMessageImpl(component: DecodeComponent, name: DecodeName, id: Option[Int], info: Option[String],
-                                  parameters: Seq[DecodeMessageParameter], val eventType: DecodeMaybeProxy[DecodeType])
+                             parameters: Seq[DecodeMessageParameter], val eventType: DecodeMaybeProxy[DecodeType])
   extends AbstractImmutableDecodeMessage(component, name, id, info, parameters) with DecodeEventMessage
 
 class DecodeRegistryImpl(resolvers: DecodeProxyResolver*) extends DecodeRegistry {
   if (DecodeConstants.SYSTEM_NAMESPACE_FQN.size != 1)
     sys.error("not implemented")
 
-  private val _rootNamespaces = new mutable.ArrayBuffer[DecodeNamespace]() += new DecodeNamespaceImpl(DecodeConstants.SYSTEM_NAMESPACE_FQN.last,
-    Option.empty)
-  private val _proxyResolvers = new mutable.ArrayBuffer[DecodeProxyResolver]() ++= resolvers
+  private val _rootNamespaces = new mutable.ArrayBuffer[DecodeNamespace]() +=
+    new DecodeNamespaceImpl(DecodeConstants.SYSTEM_NAMESPACE_FQN.last, None)
+
+  private val proxyResolvers = new mutable.ArrayBuffer[DecodeProxyResolver]() ++= resolvers
 
   def this() = this(new FindExistingDecodeProxyResolver(), new ProvidePrimitivesAndNativeTypesDecodeProxyResolver())
 
   def rootNamespaces: mutable.Buffer[DecodeNamespace] = _rootNamespaces
+
   def resolve[T <: DecodeReferenceable](uri: URI, cls: Class[T]): DecodeResolvingResult[T] = {
-    for (resolver <- _proxyResolvers)
-    {
+    for (resolver <- proxyResolvers) {
       val result = resolver.resolve(this, uri, cls)
       if (result.resolvedObject.isDefined)
-      {
         return result
-      }
     }
     SimpleDecodeResolvingResult.immutableEmpty()
   }
@@ -99,36 +96,31 @@ object DecodeRegistryImpl {
 }
 
 class DecodeComponentWalker(var component: DecodeComponent) {
-  private var t: Option[DecodeType] = Option.empty[DecodeType]
 
-  def `type`: Option[DecodeType] = t
+  private var _t: Option[DecodeType] = Option.empty[DecodeType]
+
+  def t: Option[DecodeType] = _t
 
   def walk(token: Either[String, Int]) {
-    if (t.isDefined)
-    {
+    if (_t.isDefined) {
       // must not return null
-      t = t.get.accept(new TokenWalker(token))
-      if (t.isEmpty)
+      _t = _t.get.accept(new TokenWalker(token))
+      if (_t.isEmpty)
         sys.error("fail")
-    }
-    else
-    {
+    } else {
       if (!token.isLeft)
         sys.error("wtf")
       val stringToken = token.left
       val subComponent = component.subComponents.find(cr => {
         val alias = cr.alias
-        (alias.isDefined && alias.get == stringToken.get) | cr.component.obj.name.asMangledString == stringToken.get
+        (alias.isDefined && alias.get == stringToken.get) || cr.component.obj.name.asMangledString == stringToken.get
       })
-      if (subComponent.isDefined)
-      {
+      if (subComponent.isDefined) {
         component = subComponent.get.component.obj
-      }
-      else
-      {
-        if (component.baseType.isDefined)
+      } else {
+        if (component.baseType.isEmpty)
           sys.error("wtf")
-        t = Some(component.baseType.get.obj)
+        _t = Some(component.baseType.get.obj)
         walk(token)
       }
     }

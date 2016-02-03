@@ -26,62 +26,52 @@ import static scala.collection.JavaConversions.bufferAsJavaList;
 /**
  * @author Artem Shein
  */
-public class JavaDecodeSourcesGenerator implements Generator<JavaDecodeSourcesGeneratorConfiguration>
-{
+public class JavaDecodeSourcesGenerator implements Generator<JavaDecodeSourcesGeneratorConfiguration> {
     @NotNull
     private static final Logger LOG = LoggerFactory.getLogger(JavaDecodeSourcesGenerator.class);
     @NotNull
     private final JavaDecodeSourcesGeneratorConfiguration config;
     private static int uniqueId = 0;
 
-    public JavaDecodeSourcesGenerator(@NotNull JavaDecodeSourcesGeneratorConfiguration config)
-    {
+    public JavaDecodeSourcesGenerator(@NotNull JavaDecodeSourcesGeneratorConfiguration config) {
         this.config = config;
     }
 
     @Override
-    public void generate()
-    {
+    public void generate() {
         LOG.info("Generating Java sources to '{}'", config.getOutputDir().getAbsolutePath());
         generateNamespaces(bufferAsJavaList(config.getRegistry().rootNamespaces()));
     }
 
-    private void generateNamespaces(@NotNull List<DecodeNamespace> namespaces)
-    {
+    private void generateNamespaces(@NotNull List<DecodeNamespace> namespaces) {
         namespaces.stream().forEach(this::generateNamespace);
     }
 
-    private void generateNamespace(@NotNull DecodeNamespace namespace)
-    {
+    private void generateNamespace(@NotNull DecodeNamespace namespace) {
         generateNamespaces(bufferAsJavaList(namespace.subNamespaces()));
         bufferAsJavaList(namespace.components()).stream().forEach(this::generateComponent);
         bufferAsJavaList(namespace.units()).stream().forEach(this::generateUnit);
         bufferAsJavaList(namespace.types()).stream().forEach(this::generateType);
     }
 
-    private void generateType(@NotNull DecodeType type)
-    {
+    private void generateType(@NotNull DecodeType type) {
         Optional<AbstractJavaBaseClass> javaClassOptional =
-                type.accept(new DecodeTypeVisitor<Optional<AbstractJavaBaseClass>>()
-                {
+                type.accept(new DecodeTypeVisitor<Optional<AbstractJavaBaseClass>>() {
                     @Override
                     @NotNull
-                    public Optional<AbstractJavaBaseClass> visit(@NotNull DecodePrimitiveType primitiveType) throws RuntimeException
-                    {
+                    public Optional<AbstractJavaBaseClass> visit(@NotNull DecodePrimitiveType primitiveType) throws RuntimeException {
                         return Optional.empty();
                     }
 
                     @Override
                     public Optional<AbstractJavaBaseClass> visit(@NotNull DecodeNativeType nativeType) throws
-                            RuntimeException
-                    {
+                            RuntimeException {
                         return Optional.empty();
                     }
 
                     @Override
                     @NotNull
-                    public Optional<AbstractJavaBaseClass> visit(@NotNull DecodeSubType subType) throws RuntimeException
-                    {
+                    public Optional<AbstractJavaBaseClass> visit(@NotNull DecodeSubType subType) throws RuntimeException {
                         DecodeType baseType = subType.baseType().obj();
                         JavaClass javaClass = JavaClass.newBuilder(subType.namespace().fqn().asMangledString(),
                                 // FIXME
@@ -93,8 +83,7 @@ public class JavaDecodeSourcesGenerator implements Generator<JavaDecodeSourcesGe
 
                     @Override
                     @NotNull
-                    public Optional<AbstractJavaBaseClass> visit(@NotNull DecodeEnumType enumType) throws RuntimeException
-                    {
+                    public Optional<AbstractJavaBaseClass> visit(@NotNull DecodeEnumType enumType) throws RuntimeException {
                         JavaEnum javaEnum = JavaEnum.newBuilder(enumType.namespace().fqn().asMangledString(),
                                 // FIXME
                                 classNameFromEnumName(enumType.optionName().get().asMangledString())).build();
@@ -103,8 +92,7 @@ public class JavaDecodeSourcesGenerator implements Generator<JavaDecodeSourcesGe
 
                     @Override
                     @NotNull
-                    public Optional<AbstractJavaBaseClass> visit(@NotNull DecodeArrayType arrayType) throws RuntimeException
-                    {
+                    public Optional<AbstractJavaBaseClass> visit(@NotNull DecodeArrayType arrayType) throws RuntimeException {
                         JavaClass javaClass = JavaClass.newBuilder(arrayType.namespace().fqn().asMangledString(),
                                 classNameFromArrayType(arrayType))
                                 .genericArgument("T")
@@ -119,8 +107,7 @@ public class JavaDecodeSourcesGenerator implements Generator<JavaDecodeSourcesGe
 
                     @Override
                     @NotNull
-                    public Optional<AbstractJavaBaseClass> visit(@NotNull DecodeStructType structType) throws RuntimeException
-                    {
+                    public Optional<AbstractJavaBaseClass> visit(@NotNull DecodeStructType structType) throws RuntimeException {
                         JavaClass javaClass = JavaClass.newBuilder(structType.namespace().fqn().asMangledString(),
                                 classNameFromTypeName(getOrMakeUniqueName(structType)))
                                 .constuctor(
@@ -152,51 +139,43 @@ public class JavaDecodeSourcesGenerator implements Generator<JavaDecodeSourcesGe
 
                     @Override
                     @NotNull
-                    public Optional<AbstractJavaBaseClass> visit(@NotNull DecodeAliasType typeAlias) throws RuntimeException
-                    {
+                    public Optional<AbstractJavaBaseClass> visit(@NotNull DecodeAliasType typeAlias) throws RuntimeException {
                         return Optional.empty();
                     }
 
                     @Override
-                    public Optional<AbstractJavaBaseClass> visit(@NotNull DecodeGenericType genericType)
-                    {
+                    public Optional<AbstractJavaBaseClass> visit(@NotNull DecodeGenericType genericType) {
                         return Optional.empty();
                     }
 
                     @Override
                     public Optional<AbstractJavaBaseClass> visit(
-                            @NotNull DecodeGenericTypeSpecialized genericTypeSpecialized)
-                    {
+                            @NotNull DecodeGenericTypeSpecialized genericTypeSpecialized) {
                         return Optional.empty();
                     }
                 });
-        if (javaClassOptional.isPresent())
-        {
+        if (javaClassOptional.isPresent()) {
             generateJavaClass(javaClassOptional.get());
         }
     }
 
     @NotNull
-    private String getOrMakeUniqueName(DecodeOptionNamed optionalNameAware)
-    {
+    private String getOrMakeUniqueName(DecodeOptionNamed optionalNameAware) {
         Option<DecodeName> optionalName = optionalNameAware.optionName();
         return optionalName.isDefined() ? optionalName.get().asMangledString() : makeUniqueName();
     }
 
     @NotNull
-    private String makeUniqueName()
-    {
+    private String makeUniqueName() {
         return "name" + uniqueId++;
     }
 
     @NotNull
-    private String classNameFromEnumName(@NotNull String enumName)
-    {
+    private String classNameFromEnumName(@NotNull String enumName) {
         return classNameFromTypeName(enumName);
     }
 
-    private void generateUnit(@NotNull DecodeUnit unit)
-    {
+    private void generateUnit(@NotNull DecodeUnit unit) {
         JavaClass javaClass =
                 JavaClass.newBuilder(fqnToJavaPackage(unit.namespace().fqn().asMangledString()), unitNameToClassName(
                         unit.name().asMangledString())).build();
@@ -210,34 +189,27 @@ public class JavaDecodeSourcesGenerator implements Generator<JavaDecodeSourcesGe
     }
 
     @NotNull
-    private String fqnToJavaPackage(@NotNull String fqn)
-    {
+    private String fqnToJavaPackage(@NotNull String fqn) {
         return fqn.toLowerCase();
     }
 
     @NotNull
-    private String unitNameToClassName(@NotNull String unitName)
-    {
+    private String unitNameToClassName(@NotNull String unitName) {
         return CaseFormat.LOWER_CAMEL.to(CaseFormat.UPPER_CAMEL, unitName) + "Unit";
     }
 
-    private void generateJavaClass(@NotNull AbstractJavaBaseClass javaClass)
-    {
+    private void generateJavaClass(@NotNull AbstractJavaBaseClass javaClass) {
         File dir = createPathIfNotExistsForPackage(javaClass.getPackage());
         File javaFile = new File(dir, javaClass.getName() + ".java");
-        try (OutputStream os = new FileOutputStream(javaFile))
-        {
-            try (OutputStreamWriter writer = new OutputStreamWriter(os))
-            {
+        try (OutputStream os = new FileOutputStream(javaFile)) {
+            try (OutputStreamWriter writer = new OutputStreamWriter(os)) {
                 JavaGeneratorState state = new JavaGeneratorState(writer);
                 writer.append("package ").append(javaClass.getPackage()).append(";");
                 state.eol();
                 Map<String, String> imports = new HashMap<>();
                 new ImportsExporter(imports, javaClass.getPackage()).export(javaClass);
-                if (!imports.isEmpty())
-                {
-                    for (Map.Entry<String, String> _import : imports.entrySet())
-                    {
+                if (!imports.isEmpty()) {
+                    for (Map.Entry<String, String> _import : imports.entrySet()) {
                         writer.append("import ").append(_import.getValue()).append('.').append(_import.getKey()).append(';');
                         state.eol();
                     }
@@ -245,26 +217,21 @@ public class JavaDecodeSourcesGenerator implements Generator<JavaDecodeSourcesGe
                 state.eol();
                 javaClass.generate(state);
             }
-        }
-        catch (Exception e)
-        {
+        } catch (Exception e) {
             throw new GenerationException(e);
         }
     }
 
     @NotNull
-    private File createPathIfNotExistsForPackage(@NotNull String _package)
-    {
+    private File createPathIfNotExistsForPackage(@NotNull String _package) {
         File dir = new File(config.getOutputDir(), _package.replaceAll(Pattern.quote("."), "/"));
-        if (!dir.exists())
-        {
+        if (!dir.exists()) {
             Preconditions.checkState(dir.mkdirs());
         }
         return dir;
     }
 
-    private void generateComponent(@NotNull DecodeComponent component)
-    {
+    private void generateComponent(@NotNull DecodeComponent component) {
         String componentClassName = classNameFromComponentName(
                 component.name().asMangledString());
         JavaClass.Builder componentClassBuilder = JavaClass.newBuilder(component.namespace().fqn().asMangledString(),
@@ -278,9 +245,8 @@ public class JavaDecodeSourcesGenerator implements Generator<JavaDecodeSourcesGe
             messageClassBuilder.staticClass();
             List<JavaMethodArgument> ctorArgs = new ArrayList<>();
             List<JavaStatement> ctorStatements = new ArrayList<>();
-            for (DecodeMessageParameter param : asJavaCollection(m.parameters()))
-            {
-                JavaType type = getJavaTypeForDecodeType(component.getTypeForParameter(param), false);
+            for (DecodeMessageParameter param : asJavaCollection(m.parameters())) {
+                JavaType type = getJavaTypeForDecodeType(param.t(component), false);
                 String name = getFieldNameForParameter(param);
                 messageClassBuilder.privateField(type, name);
                 ctorArgs.add(new JavaMethodArgument(type, name));
@@ -298,20 +264,17 @@ public class JavaDecodeSourcesGenerator implements Generator<JavaDecodeSourcesGe
     }
 
     @NotNull
-    private static String classNameFromComponentName(@NotNull String componentName)
-    {
+    private static String classNameFromComponentName(@NotNull String componentName) {
         return componentName + "Component";
     }
 
     @NotNull
-    private static String getFieldNameForParameter(@NotNull DecodeMessageParameter parameter)
-    {
+    private static String getFieldNameForParameter(@NotNull DecodeMessageParameter parameter) {
         return parameter.value().replaceAll("[\\.\\[\\]]", "_");
     }
 
     private Stream<DecodeMessageParameter> getParametersStreamForParameter(@NotNull DecodeMessageParameter parameter, @NotNull
-    DecodeComponent component)
-    {
+    DecodeComponent component) {
         /*TODO: implement * and *.* parameters
         if (parameter.equals(ImmutableDecodeDeepAllParameters.INSTANCE))
         {
@@ -329,15 +292,13 @@ public class JavaDecodeSourcesGenerator implements Generator<JavaDecodeSourcesGe
     }
 
     @NotNull
-    private String classNameFromMessageName(@NotNull String name)
-    {
+    private String classNameFromMessageName(@NotNull String name) {
         return CaseFormat.LOWER_CAMEL.to(CaseFormat.UPPER_CAMEL, name) + "Message";
     }
 
     @NotNull
     @Override
-    public JavaDecodeSourcesGeneratorConfiguration getConfiguration()
-    {
+    public JavaDecodeSourcesGeneratorConfiguration getConfiguration() {
         return config;
     }
 }
