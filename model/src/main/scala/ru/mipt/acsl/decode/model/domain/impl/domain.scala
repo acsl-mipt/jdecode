@@ -2,6 +2,7 @@ package ru.mipt.acsl.decode.model.domain.impl
 
 import java.net.URI
 
+import ru.mipt.acsl.decode.model.domain.Aliases.DecodeMessageParameterToken
 import ru.mipt.acsl.decode.model.domain._
 import ru.mipt.acsl.decode.model.domain.impl.`type`.AbstractDecodeNameNamespaceOptionalInfoAware
 import ru.mipt.acsl.decode.model.domain.impl.`type`.AbstractDecodeOptionalInfoAware
@@ -9,6 +10,7 @@ import ru.mipt.acsl.decode.model.domain.impl.`type`.DecodeNamespaceImpl
 import ru.mipt.acsl.decode.model.domain.impl.proxy.{ProvidePrimitivesAndNativeTypesDecodeProxyResolver, FindExistingDecodeProxyResolver}
 
 import scala.collection.mutable
+import scala.util.{Failure, Success, Try}
 
 /**
   * @author Artem Shein
@@ -23,34 +25,29 @@ object DecodeNameImpl {
   def newFromMangledName(name: String) = DecodeNameImpl(name)
 }
 
-class TokenWalker(val token: Either[String, Int]) extends DecodeTypeVisitor[Option[DecodeType]] {
-  override def visit(primitiveType: DecodePrimitiveType) = None
+case object TokenTypeWalker extends ((DecodeType, DecodeMessageParameterToken) => DecodeType) {
+  private val optionWalker = TokenOptionTypeWalker
+  override def apply(t: DecodeType, token: DecodeMessageParameterToken): DecodeType = optionWalker(t, token).get
+}
 
-  override def visit(nativeType: DecodeNativeType) = None
-
-  override def visit(subType: DecodeSubType) = subType.baseType.obj.accept(this)
-
-  override def visit(enumType: DecodeEnumType) = None
-
-  override def visit(arrayType: DecodeArrayType) = {
-    if (!token.isRight)
-      sys.error("invalid token")
-    Some(arrayType.baseType.obj)
+case object TokenOptionTypeWalker extends ((DecodeType, DecodeMessageParameterToken) => Option[DecodeType]) {
+  override def apply(t: DecodeType, token: DecodeMessageParameterToken): Option[DecodeType] = t match {
+    case t: DecodeSubType => apply(t.baseType.obj, token)
+    case t: DecodeArrayType =>
+      if (!token.isRight)
+        sys.error("invalid token")
+      Some(t.baseType.obj)
+    case t: DecodeStructType =>
+      if (token.isRight)
+        sys.error(s"invalid token ${token.right.get}")
+      val name = token.left.get
+      Some(t.fields.find(_.name.asMangledString == name)
+        .getOrElse {
+          sys.error(s"Field '$name' not found in struct '$t'")
+        }.typeUnit.t.obj)
+    case t: DecodeAliasType => apply(t.baseType.obj, token)
+    case _ => None
   }
-
-  override def visit(structType: DecodeStructType) = {
-    if (token.isRight)
-      sys.error(s"invalid token ${token.right.get}")
-    val name = token.left.get
-    Some(structType.fields.find(_.name.asMangledString == name)
-      .getOrElse{sys.error(s"Field '$name' not found in struct '$structType'")}.typeUnit.t.obj)
-  }
-
-  override def visit(typeAlias: DecodeAliasType) = typeAlias.baseType.obj.accept(this)
-
-  override def visit(genericType: DecodeGenericType) = None
-
-  override def visit(genericTypeSpecialized: DecodeGenericTypeSpecialized) = None
 }
 
 abstract class AbstractImmutableDecodeMessage(val component: DecodeComponent, val name: DecodeName, val id: Option[Int],
@@ -95,35 +92,45 @@ object DecodeRegistryImpl {
   def apply() = new DecodeRegistryImpl()
 }
 
-class DecodeComponentWalker(var component: DecodeComponent) {
+class DecodeMessageParameterRefWalker(var component: DecodeComponent, var structField: Option[DecodeStructField] = None,
+                                      var subTokens: Seq[DecodeMessageParameterToken] = Seq.empty)
+  extends DecodeMessageParameterRef {
 
-  private var _t: Option[DecodeType] = Option.empty[DecodeType]
+  while (structField.isEmpty)
+    walkOne()
 
-  def t: Option[DecodeType] = _t
+  override def t: DecodeType = if (structField.isEmpty)
+    component.baseType.get.obj
+  else if (subTokens.isEmpty)
+    structField.get.typeUnit.t.obj
+  else
+    subTokens.foldLeft(structField.get.typeUnit.t.obj)(TokenTypeWalker)
 
-  def walk(token: Either[String, Int]) {
-    if (_t.isDefined) {
-      // must not return null
-      _t = _t.get.accept(new TokenWalker(token))
-      if (_t.isEmpty)
-        sys.error("fail")
-    } else {
-      if (!token.isLeft)
-        sys.error("wtf")
-      val stringToken = token.left
-      val subComponent = component.subComponents.find(cr => {
-        val alias = cr.alias
-        (alias.isDefined && alias.get == stringToken.get) || cr.component.obj.name.asMangledString == stringToken.get
-      })
-      if (subComponent.isDefined) {
-        component = subComponent.get.component.obj
-      } else {
-        if (component.baseType.isEmpty)
-          sys.error("wtf")
-        _t = Some(component.baseType.get.obj)
-        walk(token)
-      }
+  private def walkOne(): Try[Unit] = {
+    require(subTokens.nonEmpty)
+    val token = subTokens.head
+    val fail = () => { Failure(new IllegalStateException(s"can't walk $token for $this")) }
+    subTokens = subTokens.tail
+    if (structField.isDefined)
+      return fail()
+    if (token.isRight)
+      return fail()
+    val tokenString = token.left.get
+    // try for sub components
+    val subComponent = component.subComponents.find(tokenString == _.aliasOrMangledName)
+    if (subComponent.isDefined) {
+      component = subComponent.get.component.obj
+      structField = None
+      return Success()
     }
+    if (component.baseType.isEmpty)
+      return fail()
+    val f = component.baseType.get.obj.fields.find(tokenString == _.name.asMangledString)
+    if (f.isDefined) {
+      structField = Some(f.get)
+      return Success()
+    }
+    fail()
   }
 }
 
@@ -133,8 +140,8 @@ class DecodeCommandImpl(val name: DecodeName, val id: Option[Int], info: Option[
   override def optionName: Option[DecodeName] = Some(name)
 }
 
-class DecodeLanguageImpl(name: DecodeName, nameespace: DecodeNamespace, val isDefault: Boolean, info: Option[String])
-  extends AbstractDecodeNameNamespaceOptionalInfoAware(name, nameespace, info) with DecodeLanguage {
+class DecodeLanguageImpl(name: DecodeName, namespace: DecodeNamespace, val isDefault: Boolean, info: Option[String])
+  extends AbstractDecodeNameNamespaceOptionalInfoAware(name, namespace, info) with DecodeLanguage {
   override def accept[T](visitor: DecodeReferenceableVisitor[T]): T = visitor.visit(this)
 }
 

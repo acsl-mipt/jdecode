@@ -246,13 +246,13 @@ public class JavaDecodeSourcesGenerator implements Generator<JavaDecodeSourcesGe
             List<JavaMethodArgument> ctorArgs = new ArrayList<>();
             List<JavaStatement> ctorStatements = new ArrayList<>();
             for (DecodeMessageParameter param : asJavaCollection(m.parameters())) {
-                JavaType type = getJavaTypeForDecodeType(param.t(component), false);
+                /*FIXME: JavaType type = getJavaTypeForDecodeType(param.t(component), false);
                 String name = getFieldNameForParameter(param);
                 messageClassBuilder.privateField(type, name);
                 ctorArgs.add(new JavaMethodArgument(type, name));
                 ctorStatements.add(new JavaAssignStatement(new JavaVarExpr("this." + name), new JavaVarExpr(name)));
                 messageClassBuilder.publicMethod(type, "get" + StringUtils.capitalize(name), Collections.emptyList(),
-                        Lists.newArrayList(new JavaReturnStatement(new JavaVarExpr(name))));
+                        Lists.newArrayList(new JavaReturnStatement(new JavaVarExpr(name))));*/
             }
             messageClassBuilder.publicStaticFinalField(String.class, "FQN", new JavaAddExpr(new JavaClassFieldExpr(
                     new JavaTypeApplication(componentClassName), "FQN"),

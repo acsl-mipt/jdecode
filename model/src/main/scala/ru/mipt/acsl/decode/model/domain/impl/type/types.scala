@@ -1,5 +1,6 @@
 package ru.mipt.acsl.decode.model.domain.impl.`type`
 
+import ru.mipt.acsl.decode.model.domain.Aliases.DecodeMessageParameterToken
 import ru.mipt.acsl.decode.model.domain._
 import ru.mipt.acsl.decode.model.domain.impl.{ParameterParser, DecodeNameImpl}
 
@@ -15,7 +16,8 @@ case class DecodeFqnImpl(var parts: Seq[DecodeName]) extends DecodeFqn {
 
 object DecodeFqnImpl {
   def newFromFqn(fqn: DecodeFqn, last: DecodeName) = new DecodeFqnImpl(fqn.parts :+ last)
-  def newFromSource(sourceText: String): DecodeFqn = new DecodeFqnImpl("\\.".r.split(sourceText).map(DecodeNameImpl.newFromSourceName))
+  def newFromSource(sourceText: String): DecodeFqn =
+    new DecodeFqnImpl("\\.".r.split(sourceText).map(DecodeNameImpl.newFromSourceName))
 }
 
 abstract class AbstractDecodeOptionalInfoAware(val info: Option[String]) extends DecodeHasOptionInfo
@@ -24,7 +26,7 @@ abstract class AbstractDecodeOptionalNameAndOptionalInfoAware(val optionName: Op
   extends AbstractDecodeOptionalInfoAware(info) with DecodeOptionalNameAndOptionalInfoAware {
 }
 
-class AbstractDecodeNameAndOptionalInfoAware(val _name: DecodeName, info: Option[String])
+class AbstractDecodeNameAndOptionalInfoAware(private val _name: DecodeName, info: Option[String])
   extends AbstractDecodeOptionalInfoAware(info) with DecodeNamed {
   override def name: DecodeName = _name
   override def optionName: Option[DecodeName] = Some(_name)
@@ -39,8 +41,10 @@ class DecodeUnitImpl(name: DecodeName, var namespace: DecodeNamespace, var displ
 }
 
 class DecodeNamespaceImpl(var name: DecodeName, var parent: Option[DecodeNamespace] = None,
-                          var types: mutable.Buffer[DecodeType] = mutable.Buffer(), var units: mutable.Buffer[DecodeUnit] = mutable.Buffer(),
-                          var subNamespaces: mutable.Buffer[DecodeNamespace] = mutable.Buffer(), var components: mutable.Buffer[DecodeComponent] = mutable.Buffer(),
+                          var types: mutable.Buffer[DecodeType] = mutable.Buffer(),
+                          var units: mutable.Buffer[DecodeUnit] = mutable.Buffer(),
+                          var subNamespaces: mutable.Buffer[DecodeNamespace] = mutable.Buffer(),
+                          var components: mutable.Buffer[DecodeComponent] = mutable.Buffer(),
                           var languages: mutable.Buffer[DecodeLanguage] = mutable.Buffer())
   extends DecodeNamed with DecodeNamespace {
   override def optionName: Option[DecodeName] = Some(name)
@@ -154,19 +158,17 @@ class DecodeComponentImpl(name: DecodeName, namespace: DecodeNamespace, var id: 
                           var messages: mutable.Buffer[DecodeMessage] = mutable.Buffer())
   extends AbstractDecodeNameNamespaceOptionalInfoAware(name, namespace, info) with DecodeComponent
 
-class DecodeParameterWalker(var parameter: DecodeMessageParameter)
+case class DecodeParameterWalker(parameter: DecodeMessageParameter)
 {
+  val tokens = mutable.Buffer.empty[DecodeMessageParameterToken]
+
   private var currentIndex = 0
-  private val tokens = ArrayBuffer[Either[String, Int]]()
-
-  type Val = Seq[Either[String, Int]]
-
-  val result = new ParameterParser(parameter.value).Parameter.run()
+  private val result = new ParameterParser(parameter.value).Parameter.run()
   if (result.isFailure)
     sys.error("parsing fails")
   tokens ++= result.get
 
   def hasNext: Boolean = currentIndex < tokens.size
 
-  def next: Either[String, Int] = { currentIndex += 1; tokens(currentIndex - 1) }
+  def next: DecodeMessageParameterToken = { currentIndex += 1; tokens(currentIndex - 1) }
 }

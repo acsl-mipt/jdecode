@@ -3,7 +3,7 @@ package ru.mipt.acsl.decode.model.domain
 import java.net.URI
 
 import ru.mipt.acsl.decode.model.domain.impl.`type`._
-import ru.mipt.acsl.decode.model.domain.impl.{DecodeComponentWalker, DecodeNameImpl}
+import ru.mipt.acsl.decode.model.domain.impl.{DecodeMessageParameterRefWalker, DecodeNameImpl}
 
 import scala.collection.immutable.HashSet
 import scala.collection.mutable
@@ -12,6 +12,12 @@ import scala.collection.mutable.ArrayBuffer
 object DecodeConstants {
   val SYSTEM_NAMESPACE_FQN: DecodeFqn = DecodeFqnImpl.newFromSource("decode")
 }
+
+package object Aliases {
+  type DecodeMessageParameterToken = Either[String, Int]
+}
+
+import Aliases._
 
 trait DecodeName {
   def asMangledString: String
@@ -42,6 +48,10 @@ trait DecodeNamed extends DecodeOptionNamed {
 
 trait DecodeHasOptionInfo {
   def info: Option[String]
+}
+
+trait DecodeHasOptionId {
+  def id: Option[Int]
 }
 
 trait DecodeFqn {
@@ -254,9 +264,8 @@ trait DecodeCommandParameter extends DecodeNamed with DecodeHasOptionInfo {
   def paramType: DecodeMaybeProxy[DecodeType]
 }
 
-trait DecodeCommand extends DecodeHasOptionInfo with DecodeNamed {
+trait DecodeCommand extends DecodeHasOptionInfo with DecodeNamed with DecodeHasOptionId {
   def returnType: Option[DecodeMaybeProxy[DecodeType]]
-  def id: Option[Int]
   def parameters: Seq[DecodeCommandParameter]
 }
 
@@ -266,14 +275,12 @@ trait DecodeMessageVisitor[T] {
   def visit(statusMessage: DecodeStatusMessage): T
 }
 
-trait DecodeMessage extends DecodeHasOptionInfo with DecodeNamed {
+trait DecodeMessage extends DecodeHasOptionInfo with DecodeNamed with DecodeHasOptionId {
   def accept[T](visitor: DecodeMessageVisitor[T] ): T
 
   def parameters: Seq[DecodeMessageParameter]
 
   def component: DecodeComponent
-
-  def id: Option[Int]
 }
 
 trait DecodeStatusMessage extends DecodeMessage {
@@ -287,22 +294,24 @@ trait DecodeComponentRef {
   def component: DecodeMaybeProxy[DecodeComponent]
 
   def alias: Option[String]
+
+  def aliasOrMangledName: String = alias.getOrElse(component.obj.name.asMangledString)
+}
+
+trait DecodeMessageParameterRef {
+  def component: DecodeComponent
+  def structField: Option[DecodeStructField]
+  def subTokens: Seq[DecodeMessageParameterToken]
+  def t: DecodeType
 }
 
 trait DecodeMessageParameter extends DecodeHasOptionInfo {
   def value: String
 
-  def t(component: DecodeComponent): DecodeType = {
-    val walker = new DecodeParameterWalker(this)
-    val componentWalker = new DecodeComponentWalker(component)
-    while (walker.hasNext) {
-      val token = walker.next
-      componentWalker.walk(token)
-    }
-    if (componentWalker.t.isEmpty)
-      sys.error("fail")
-    componentWalker.t.get
-  }
+  def ref(component: DecodeComponent): DecodeMessageParameterRef =
+    new DecodeMessageParameterRefWalker(component, None, tokens)
+
+  private def tokens: Seq[DecodeMessageParameterToken] = DecodeParameterWalker(this).tokens
 }
 
 trait DecodeEventMessage extends DecodeMessage {
@@ -313,12 +322,11 @@ trait DecodeFqned extends DecodeNamed with DecodeNamespaceAware {
   def fqn: DecodeFqn = DecodeFqnImpl.newFromFqn(namespace.fqn, name)
 }
 
-trait DecodeComponent extends DecodeHasOptionInfo with DecodeFqned with DecodeReferenceable {
+trait DecodeComponent extends DecodeHasOptionInfo with DecodeFqned with DecodeReferenceable with DecodeHasOptionId {
   def messages: mutable.Buffer[DecodeMessage]
   def commands: mutable.Buffer[DecodeCommand]
   def baseType: Option[DecodeMaybeProxy[DecodeStructType]]
   def subComponents: mutable.Buffer[DecodeComponentRef]
-  def id: Option[Int]
   override def accept[T](visitor: DecodeReferenceableVisitor[T]): T = visitor.visit(this)
 }
 
