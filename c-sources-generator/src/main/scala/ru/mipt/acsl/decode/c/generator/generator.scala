@@ -30,9 +30,10 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
   override def getConfiguration: CGeneratorConfiguration = config
 
   override def generate() {
-    val component: DecodeComponent = config.registry.getComponent(config.rootComponentFqn).get
-    enumerateComponentsFrom(component)
-    generateRootComponent(component)
+    for (component <- config.registry.getComponent(config.rootComponentFqn)) {
+      enumerateComponentsFrom(component)
+      generateRootComponent(component)
+    }
   }
 
   private def ensureDirForNsExists(ns: DecodeNamespace): io.File = {
@@ -279,9 +280,7 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
       Seq(CEol, CInclude(prefix + "photon_epilogue.h"), CEol, CEol)
   }
 
-  private def generateTypeSeparateFiles(t: DecodeType, nsDir: io.File) {
-    if (t.isPrimitiveOrNative)
-      return
+  private def generateTypeSeparateFiles(t: DecodeType, nsDir: io.File): Unit = if (t.isPrimitiveOrNative) {
     val fileName = t.fileName
     val hFileName = fileName + headerExt
     val cFileName = fileName + sourcesExt
@@ -297,10 +296,17 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
   }
 }
 
+private case class TypedVar(name: String, t: CType) {
+  val v = CVar(name)
+  val param = CFuncParam(name, t)
+  val field = CStructTypeDefField(name, t)
+}
+
+private case class ComponentParameterField(component: DecodeComponent, field: DecodeStructField)
+
 private object CSourcesGenerator {
 
-  class WithComponent[T](val component: DecodeComponent, val _2: T) {
-  }
+  class WithComponent[T](val component: DecodeComponent, val _2: T)
 
   object WithComponent {
     def apply[T](component: DecodeComponent, _2: T) = new WithComponent[T](component, _2)
@@ -319,8 +325,6 @@ private object CSourcesGenerator {
 
     def unapply(o: WithComponent[DecodeMessage]) = WithComponent.unapply(o)
   }
-
-  case class ComponentParameterField(component: DecodeComponent, field: DecodeStructField)
 
   implicit class RichString(val str: String) {
     def _var: CVar = CVar(str)
@@ -383,12 +387,12 @@ private object CSourcesGenerator {
     }
 
     def collectNsForTypes(set: mutable.Set[DecodeNamespace]) {
-      if (component.baseType.isDefined)
-        collectNsForType(component.baseType.get, set)
+      for (baseType <- component.baseType)
+        collectNsForType(baseType, set)
       component.commands.foreach { cmd =>
         cmd.parameters.foreach(arg => collectNsForType(arg.paramType, set))
-        if (cmd.returnType.isDefined)
-          collectNsForType(cmd.returnType.get, set)
+        for (returnType <- cmd.returnType)
+          collectNsForType(returnType, set)
       }
     }
 
@@ -400,14 +404,10 @@ private object CSourcesGenerator {
           CAstElements(message.parameters.map { p =>
             val v = p.varName._var
             val parameterRef = p.ref(c)
-            if (parameterRef.structField.isDefined) {
-              val structField = parameterRef.structField.get
-              val t = structField.typeUnit.t.obj
-              v.define(t.cType, Some(selfVar ->
-                CFuncCall(structField.cStructFieldName(component, c), selfVar))).line
-            } else {
-              sys.error("not implemented")
-            }
+            val structField = parameterRef.structField.getOrElse { sys.error("not implemented") }
+            val t = structField.typeUnit.t.obj
+            v.define(t.cType, Some(selfVar ->
+              CFuncCall(structField.cStructFieldName(component, c), selfVar))).line
           }: _*) ++
             CAstElements(message.parameters.flatMap { p =>
               val v = p.varName._var
@@ -443,7 +443,7 @@ private object CSourcesGenerator {
           selfVar +: vars.map(_.ref): _*)
         CFuncImpl(CFuncDef(componentTypeName.methodName(methodNamePart), resultType, parameters),
           varInits ++ cmdCReturnType.map(t => CStatements(cmdResultVar.define(t, Some(funcCall)),
-            CReturn(CFuncCall(cmdReturnType.get.methodName(typeSerializeMethodName),
+            CReturn(CFuncCall(cmdReturnType.getOrElse{ sys.error("not implemented") }.methodName(typeSerializeMethodName),
               cmdResultVar.ref, writer.v)))).getOrElse(CStatements(funcCall)))
       }
     }
@@ -452,6 +452,7 @@ private object CSourcesGenerator {
     private def makeMapById[T <: DecodeHasOptionId](seq: Seq[T], subSeq: DecodeComponent => Seq[T]): mutable.Map[Int, WithComponent[T]] = {
       var nextId = 0
       val mapById = mutable.HashMap.empty[Int, WithComponent[T]]
+      // fixme: remove Option.get
       seq.filter(_.id.isDefined).foreach(el => assert(mapById.put(el.id.get, WithComponent[T](component, el)).isEmpty))
       seq.filter(_.id.isEmpty).foreach { el =>
         // todo: optimize: too many contain checks
@@ -541,7 +542,10 @@ private object CSourcesGenerator {
 
     def cType: CType = CTypeApplication(t.prefixedCTypeName)
 
-    def isPrimitiveOrNative = t.isInstanceOf[DecodePrimitiveType] || t.isInstanceOf[DecodeNativeType]
+    def isPrimitiveOrNative = t match {
+      case _: DecodePrimitiveType | _: DecodeNativeType => true
+      case _ => false
+    }
 
     def fileName: String = t.prefixedCTypeName
 
@@ -567,7 +571,8 @@ private object CSourcesGenerator {
         })
       case t: DecodeGenericTypeSpecialized =>
         t.genericType.obj.cTypeName +
-          t.genericTypeArguments.map(tp => if (tp.isDefined) tp.get.obj.cTypeName else "Void").mkString
+          t.genericTypeArguments.map(_.map(_.obj.cTypeName).getOrElse("Void")).mkString
+        // fixme: remove asInstanceOf
       case t: DecodeOptionNamed => lowerUnderscoreToUpperCamel(t.asInstanceOf[DecodeOptionNamed].cTypeName)
       case _ => sys.error("not implemented")
     }
@@ -707,8 +712,7 @@ private object CSourcesGenerator {
       t match {
         case t: BaseTyped => collectNsForType(t.baseType, set)
         case t: DecodeStructType => t.fields.foreach(f => collectNsForType(f.typeUnit.t, set))
-        case t: DecodeGenericTypeSpecialized => t.genericTypeArguments
-          .filter(_.isDefined).foreach(a => collectNsForType(a.get, set))
+        case t: DecodeGenericTypeSpecialized => t.genericTypeArguments.foreach(_.foreach(collectNsForType(_, set)))
         case _ =>
       }
     }
@@ -724,7 +728,7 @@ private object CSourcesGenerator {
       case s: DecodeGenericTypeSpecialized =>
         s.genericType.obj match {
           case optional: DecodeOptionalType =>
-            Seq(s.genericTypeArguments.head.get.obj)
+            Seq(s.genericTypeArguments.head.getOrElse{ sys.error("invalid optional types") }.obj)
           case or: DecodeOrType =>
             s.genericTypeArguments.flatMap(_.map(p => Seq(p.obj)).getOrElse(Seq.empty))
         }
@@ -846,23 +850,11 @@ private object CSourcesGenerator {
   private var typeNameId: Int = 0
 
   implicit class RichOptionNamed(val optionNamed: DecodeOptionNamed) {
-    def fileName: String = {
-      if (optionNamed.optionName.isDefined) {
-        optionNamed.optionName.get.asMangledString
-      } else {
-        fileNameId += 1
-        "type" + fileNameId
-      }
-    }
+    def fileName: String =
+      optionNamed.optionName.map(_.asMangledString).getOrElse { fileNameId += 1; "type" + fileNameId }
 
-    def cTypeName: String = {
-      if (optionNamed.optionName.isDefined) {
-        optionNamed.optionName.get.asMangledString
-      } else {
-        typeNameId += 1
-        "type" + typeNameId
-      }
-    }
+    def cTypeName: String =
+      optionNamed.optionName.map(_.asMangledString).getOrElse { typeNameId += 1; "type" + typeNameId }
   }
 
   implicit class RichFile(val file: io.File) {
@@ -876,12 +868,6 @@ private object CSourcesGenerator {
       if (contents.nonEmpty)
         file.write(CComment(comment).eol ++ contents)
     }
-  }
-
-  private case class TypedVar(name: String, t: CType) {
-    val v = CVar(name)
-    val param = CFuncParam(name, t)
-    val field = CStructTypeDefField(name, t)
   }
 
   private val headerExt = ".h"
@@ -1010,9 +996,9 @@ private object CSourcesGenerator {
   private val componentIdByComponent = mutable.HashMap.empty[DecodeComponent, Int]
 
   private def enumerateComponentsFrom(component: DecodeComponent): Unit = {
-    if (component.id.isDefined) {
-      assert(componentIdByComponent.put(component, component.id.get).isEmpty)
-      assert(componentByComponentId.put(component.id.get, component).isEmpty)
+    for (id <- component.id) {
+      assert(componentIdByComponent.put(component, id).isEmpty)
+      assert(componentByComponentId.put(id, component).isEmpty)
     }
     component.subComponents.foreach { cr => enumerateComponentsFrom(cr.component.obj) }
     if (component.id.isEmpty) {
