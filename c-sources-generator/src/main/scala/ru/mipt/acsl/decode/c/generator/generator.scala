@@ -4,7 +4,7 @@ import java.io
 import java.io.{File, OutputStreamWriter, FileOutputStream}
 import java.security.MessageDigest
 
-import com.google.common.base.{CaseFormat, Charsets}
+import com.google.common.base.CaseFormat
 import com.typesafe.scalalogging.LazyLogging
 import ru.mipt.acsl.decode.model.domain._
 import ru.mipt.acsl.decode.model.domain.impl.`type`.DecodeBerType
@@ -145,14 +145,14 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
     val allParameters = component.allParameters
     val cComponentSingletonPtrType: CPtrType = cComponentSingletonType.ptr
     val initFunc = CFuncImpl(CFuncDef(cSingletonComponentName.initMethodName,
-      cComponentSingletonPtrType), CAstElements(allCommands.map(_ match { case ComponentCommand(c, command) =>
+      cComponentSingletonPtrType), CAstElements(allCommands.map { case ComponentCommand(c, command) =>
       componentSingletonVar.v.dot(command.methodNamePart(component, c)._var).assign(
         cSingletonComponentName.methodName(command, component, c)._var.ref).line
-    }) ++ allParameters.map(_ match { case ComponentParameterField(c, f) =>
+    } ++ allParameters.map { case ComponentParameterField(c, f) =>
       componentSingletonVar.v.dot(f.cStructFieldName(component, c)._var).assign(
         cSingletonComponentName.methodName(f, component, c)._var.ref).line
-    }): _*) ++ CStatements(CReturn(componentSingletonVar.v.ref)))
-    val funcDefs = allCommands.map(_ match { case ComponentCommand(c, command) =>
+    }: _*) ++ CStatements(CReturn(componentSingletonVar.v.ref)))
+    val funcDefs = allCommands.map { case ComponentCommand(c, command) =>
       CFuncDef(cSingletonComponentName.methodName(command, component, c),
         command.returnType.map(_.obj.cType).getOrElse(voidType),
         Seq(CFuncParam(selfVar.name, cComponentSingletonPtrType)) ++
@@ -160,10 +160,10 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
             val t = p.paramType.obj
             CFuncParam(p.cName, t.cType.ptrIfNotSmall(t))
           }))
-    }) ++ allParameters.map(_ match { case ComponentParameterField(c, f) =>
+    } ++ allParameters.map { case ComponentParameterField(c, f) =>
       CFuncDef(cSingletonComponentName.methodName(f, component, c), f.typeUnit.t.obj.cType,
         Seq(CFuncParam(selfVar.name, cComponentSingletonPtrType)))
-    })
+    }
     hFile.write((CAstElements(CEol, CInclude(includePathForComponent(component)), CEol, CEol) ++
       (initFunc.definition.eol ++ funcDefs.flatMap(f => CAstElements(CEol, f))).externC.eol).protectDoubleInclude(hFile.getName))
     cFile.write(CAstElements(CInclude(includePathForNsFileName(component.namespace, hFile.getName)), CEol, CEol,
@@ -196,33 +196,39 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
     val componentSelfType = component.ptrType
     val componentTypeForwardDecl = CForwardStructTypeDef(componentStructName, componentTypeStructName)
     val componentType = componentStructType(component)
+    val selfParam = CFuncParam(selfVar.name, componentSelfType)
     /* TODO: Need this? Pointer to function by commandId
-    val functionForCommand = CFuncImpl(CFuncDef(component.functionForCommandMethodName,
-      CFuncType(resultType, Seq(componentSelfType, reader.t, writer.t))),
-      CAstElements(CIdent, CSwitch(commandId.v, casesForCommandFunctions(component),
-        CStatements(CReturn(CIntLiteral(0)))), CEol))*/
+        val functionForCommand = CFuncImpl(CFuncDef(component.functionForCommandMethodName,
+          CFuncType(resultType, Seq(componentSelfType, reader.t, writer.t))),
+          CAstElements(CIdent, CSwitch(commandId.v, casesForCommandFunctions(component),
+            CStatements(CReturn(CIntLiteral(0)))), CEol))*/
     val execCommand = CFuncImpl(CFuncDef(component.executeCommandMethodName, resultType,
-      Seq(CFuncParam(selfVar.name, componentSelfType), reader.param, writer.param, commandId.param)),
+      Seq(selfParam, reader.param, writer.param, commandId.param)),
       CAstElements(CIdent, CSwitch(commandId.v, casesForCommands(component),
         default = CStatements(CReturn(invalidCommandId))), CEol))
     val readExecCommand = CFuncImpl(CFuncDef(component.readExecuteCommandMethodName, resultType,
-      Seq(CFuncParam(selfVar.name, componentSelfType), reader.param, writer.param)), CStatements(
+      Seq(selfParam, reader.param, writer.param)), CStatements(
       commandId.v.define(commandId.t),
       tryCall(photonBerTypeName.methodName(typeDeserializeMethodName), commandId.v.ref, reader.v),
       CReturn(CFuncCall(execCommand.definition.name, selfVar, reader.v, writer.v, commandId.v))))
+    val isStatusMessageFunc = CFuncImpl(CFuncDef(component.isStatusMessageMethodName, b8Type,
+      Seq(messageId.param)), CAstElements(CIdent, CSwitch(messageId.v, casesForMap(component.allMessagesById,
+      (message: DecodeMessage, c: DecodeComponent) => CStatements(CReturn(CVar(message match {
+        case _: DecodeStatusMessage => "true"
+        case _ => "false"
+      })))), default = CStatements(CReturn(CVar("false")))), CEol))
     val writeMessage = CFuncImpl(CFuncDef(component.writeMessageMethodName, resultType,
-      Seq(CFuncParam(selfVar.name, componentSelfType), writer.param, messageId.param)),
-      CAstElements(CIdent, CSwitch(messageId.v, casesForMessages(component),
+      Seq(selfParam, writer.param, messageId.param)),
+      CAstElements(messageId.v.serializeBer._try.line, CIdent, CSwitch(messageId.v, casesForMessages(component),
         default = CStatements(CReturn(invalidMessageId))), CEol))
-    val functions = component.allCommandsFunctions ++ component.allMessagesFunctions
+    val functions = component.allCommandsFunctions ++ component.allMessagesFunctions ++
+      Seq(execCommand, readExecCommand, writeMessage, isStatusMessageFunc)
     val externedCFile = (CAstElements(forwardFuncTableDecl, CEol, CEol, componentTypeForwardDecl, CEol, CEol, componentType, CSemicolon, CEol) ++
-      functions.flatMap(f => Seq(f.definition, CEol)) ++
-      Seq(CEol, readExecCommand.definition, CEol, writeMessage.definition, CEol)).externC
+      functions.flatMap(f => Seq(f.definition, CEol))).externC
     hFile.writeIfNotEmptyWithComment((CEol +: appendPrologEpilog(imports ++ externedCFile))
       .protectDoubleInclude(hFileName), s"Component ${component.name.asMangledString} interface")
     cFile.writeIfNotEmptyWithComment(CAstElements(CInclude(includePathForComponent(component)), CEol, CEol) ++
-      functions.flatMap(f => Seq(f, CEol, CEol)) ++
-      Seq(execCommand, CEol, CEol, readExecCommand, CEol, CEol, writeMessage),
+      functions.flatMap(f => Seq(f, CEol, CEol)),
       s"Component ${component.name.asMangledString} implementation")
   }
 
@@ -236,14 +242,14 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
   private def componentStructType(component: DecodeComponent): CStructTypeDef = {
     val componentSelfPtrType = component.ptrType
     CStructTypeDef(Seq(CStructTypeDefField("data", CTypeApplication(component.componentDataTypeName).ptr)) ++
-      component.allCommands.map(_ match { case ComponentCommand(c, command) =>
+      component.allCommands.map { case ComponentCommand(c, command) =>
         structTypeFieldForCommand(component, c, command)
-      }) ++
-      component.allParameters.map(_ match { case ComponentParameterField(c, f) =>
+      } ++
+      component.allParameters.map { case ComponentParameterField(c, f) =>
         val name = f.cStructFieldName(component, c)
         CStructTypeDefField(
           name, CFuncType(f.typeUnit.t.obj.cType, Seq(componentSelfPtrType), name))
-      }) ++
+      } ++
       component.baseType.map(_.obj.fields.map { f =>
         val name = f.mangledCName
         CStructTypeDefField(name, CFuncType(f.typeUnit.t.obj.cType, Seq(componentSelfPtrType), name))
@@ -294,22 +300,24 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
 private object CSourcesGenerator {
 
   class WithComponent[T](val component: DecodeComponent, val _2: T) {
-    def unapply(): Option[(DecodeComponent, T)] = Some(component, _2)
   }
 
   object WithComponent {
     def apply[T](component: DecodeComponent, _2: T) = new WithComponent[T](component, _2)
+
+    def unapply[T](o: WithComponent[T]): Option[(DecodeComponent, T)] = Some(o.component, o._2)
   }
 
   object ComponentCommand {
     def apply(component: DecodeComponent, command: DecodeCommand) = WithComponent[DecodeCommand](component, command)
 
-    def unapply(o: WithComponent[DecodeCommand]) = o.unapply()
+    def unapply(o: WithComponent[DecodeCommand]) = WithComponent.unapply(o)
   }
 
   object ComponentMessage {
     def apply(component: DecodeComponent, message: DecodeMessage) = WithComponent[DecodeMessage](component, message)
-    def unapply(o: WithComponent[DecodeMessage]) = o.unapply()
+
+    def unapply(o: WithComponent[DecodeMessage]) = WithComponent.unapply(o)
   }
 
   case class ComponentParameterField(component: DecodeComponent, field: DecodeStructField)
@@ -345,6 +353,8 @@ private object CSourcesGenerator {
     def readExecuteCommandMethodName: String = component.prefixedTypeName.methodName("ReadExecuteCommand")
 
     def writeMessageMethodName: String = component.prefixedTypeName.methodName("WriteMessage")
+
+    def isStatusMessageMethodName: String = component.prefixedTypeName.methodName("IsStatusMessage")
 
     def prefixedTypeName: String = typePrefix + typeName
 
@@ -384,10 +394,10 @@ private object CSourcesGenerator {
 
     def allMessagesFunctions: Seq[CFuncImpl] = {
       val componentPtrType = component.ptrType
-      allMessagesById.toSeq.sortBy(_._1).map(_._2).map(_ match { case ComponentMessage(c, message) =>
+      allMessagesById.toSeq.sortBy(_._1).map(_._2).map { case ComponentMessage(c, message) =>
         CFuncImpl(CFuncDef(message.fullMethodName(component, c), resultType,
           Seq(CFuncParam(selfVar.name, componentPtrType), writer.param)),
-          CAstElements(message.parameters.map(p => {
+          CAstElements(message.parameters.map { p =>
             val v = p.varName._var
             val parameterRef = p.ref(c)
             if (parameterRef.structField.isDefined) {
@@ -398,8 +408,8 @@ private object CSourcesGenerator {
             } else {
               sys.error("not implemented")
             }
-          }): _*) ++
-            CAstElements(message.parameters.flatMap(p => {
+          }: _*) ++
+            CAstElements(message.parameters.flatMap { p =>
               val v = p.varName._var
               val parameterRef = p.ref(c)
               if (parameterRef.structField.isDefined) {
@@ -411,21 +421,21 @@ private object CSourcesGenerator {
               } else {
                 sys.error("not implemented")
               }
-            }): _*) :+
+            }: _*) :+
             CReturn(resultOk).line)
-      })
+      }
     }
 
     def allCommandsFunctions: Seq[CFuncImpl] = {
       val componentTypeName = component.prefixedTypeName
       val compType = component.ptrType
       val parameters = Seq(CFuncParam(selfVar.name, compType), reader.param, writer.param)
-      component.allCommandsById.toSeq.sortBy(_._1).map(_._2).map(_ match { case ComponentCommand(subComponent, command) =>
+      component.allCommandsById.toSeq.sortBy(_._1).map(_._2).map { case ComponentCommand(subComponent, command) =>
         val methodNamePart = command.methodNamePart(component, subComponent)
         val vars = command.parameters.map { p => CVar(p.mangledCName) }
-        val varInits = vars.zip(command.parameters).flatMap(_ match { case (v, parameter) =>
+        val varInits = vars.zip(command.parameters).flatMap { case (v, parameter) =>
           defineAndInitVar(v, parameter)
-        }).to[mutable.Buffer]
+        }.to[mutable.Buffer]
         val cmdResultVar = CVar("cmdResult")
         val cmdReturnType = command.returnType.map(_.obj)
         val cmdCReturnType = command.returnType.map(_.obj.cType)
@@ -435,7 +445,7 @@ private object CSourcesGenerator {
           varInits ++ cmdCReturnType.map(t => CStatements(cmdResultVar.define(t, Some(funcCall)),
             CReturn(CFuncCall(cmdReturnType.get.methodName(typeSerializeMethodName),
               cmdResultVar.ref, writer.v)))).getOrElse(CStatements(funcCall)))
-      })
+      }
     }
 
     // todo: optimize: memoize
@@ -506,7 +516,29 @@ private object CSourcesGenerator {
         named.mangledCName.capitalize)
   }
 
+  private object RichType {
+    def callCodeForPrimitiveType(t: DecodePrimitiveType, src: CExpression, typeName: String, methodPrefix: String,
+                             exprs: CExpression*): CFuncCall = {
+      import TypeKind._
+      CFuncCall(typeName.methodName(methodPrefix + ((t.kind, t.bitLength) match {
+        case (_, 8) => "Uint8"
+        case (Bool, 16) | (Uint, 16) => "Uint16Le"
+        case (Bool, 32) | (Uint, 32) => "Uint32Le"
+        case (Bool, 64) | (Uint, 64) => "Uint64Le"
+        case (Int, 16) => "Int16Le"
+        case (Int, 32) => "Int32Le"
+        case (Int, 64) => "Int64Le"
+        case (Float, 32) => "Float32Le"
+        case (Float, 64) => "Float64Le"
+        case _ => sys.error(s"not implemented $t")
+      })), exprs: _*)
+    }
+  }
+
   implicit class RichType(val t: DecodeType) {
+
+    import RichType._
+
     def cType: CType = CTypeApplication(t.prefixedCTypeName)
 
     def isPrimitiveOrNative = t.isInstanceOf[DecodePrimitiveType] || t.isInstanceOf[DecodeNativeType]
@@ -549,39 +581,107 @@ private object CSourcesGenerator {
 
     def methodName(name: String): String = t.prefixedCTypeName.methodName(name)
 
+    private val berSizeOf = CFuncCall("sizeof", berType)
+
+    def abstractMinSizeExpr: Option[CExpression] = t match {
+      case t: DecodeBerType => Some(berSizeOf)
+      case t: DecodeAliasType => t.baseType.obj.abstractMinSizeExpr
+      case t: DecodeSubType => t.baseType.obj.abstractMinSizeExpr
+      case t: DecodePrimitiveType => Some(CFuncCall("sizeof", t.cType))
+      case t: DecodeStructType => t.fields.map { f => f.typeUnit.t.obj.abstractMinSizeExpr }.foldLeft[Option[CExpression]](None) {
+        (l: Option[CExpression], r: Option[CExpression]) =>
+          l.map { lExpr => r.map { rExpr => CPlus(lExpr, rExpr) }.getOrElse(lExpr) }.orElse(r)
+      }
+      case t: DecodeArrayType =>
+        t.baseType.obj.abstractMinSizeExpr.map{ rExpr => CPlus(berSizeOf, rExpr) }.orElse(Some(berSizeOf))
+      case _ => sys.error(s"not implemented for $t")
+    }
+
+    def concreteMinSizeExpr(src: CExpression): Option[CExpression] = t match {
+      case t: DecodeStructType => t.fields.map { f => f.typeUnit.t.obj.concreteMinSizeExpr(src) }.foldLeft[Option[CExpression]](None) {
+        (l: Option[CExpression], r: Option[CExpression]) =>
+          l.map { lExpr => r.map { rExpr => CPlus(lExpr, rExpr) }.getOrElse(lExpr) }.orElse(r)
+      }
+      case t: DecodeArrayType =>
+        t.baseType.obj.abstractMinSizeExpr.map{ rExpr => CMul(src -> size.v, rExpr) }.orElse(None)
+      case t: DecodeSubType => t.baseType.obj.concreteMinSizeExpr(src)
+      case t: DecodeAliasType => t.baseType.obj.concreteMinSizeExpr(src)
+      case t: DecodeGenericTypeSpecialized => None // todo: yes you can
+      case t: DecodeEnumType => t.baseType.obj.concreteMinSizeExpr(src)
+      case _ => abstractMinSizeExpr
+    }
+
+    private def writerSizeCheckCode(src: CExpression) = concreteMinSizeExpr(src).map { sizeExpr =>
+      CAstElements(CIdent, CIf(CLess(CFuncCall("PhotonWriter_WritableSize", writer.v), sizeExpr),
+        CAstElements(CEol, CReturn(CVar("PhotonResult_NotEnoughSpace")).line)))
+    }.getOrElse(CAstElements())
+
+    private def readerSizeCheckCode(dest: CExpression) = concreteMinSizeExpr(dest).map { sizeExpr =>
+      CAstElements(CIdent, CIf(CLess(CFuncCall("PhotonReader_ReadableSize", reader.v), sizeExpr),
+        CAstElements(CEol, CReturn(CVar("PhotonResult_NotEnoughData")).line)))
+    }.getOrElse(CAstElements())
+
     def serializeMethodName: String = methodName(typeSerializeMethodName)
 
     def deserializeMethodName: String = methodName(typeDeserializeMethodName)
 
+    private def trySerializeCode(src: CExpression): CAstElements =
+      CStatements(tryCall(methodName(typeSerializeMethodName), src, writer.v))
+
+    private def tryDeserializeCode(dest: CExpression): CAstElements =
+      CStatements(tryCall(methodName(typeDeserializeMethodName), dest, reader.v))
+
+    private def callCodeForBer(methodNamePart: String, exprs: CExpression*) = CStatements(tryCall(
+      photonBerTypeName.methodName(methodNamePart), exprs: _*))
+
+    def serializeBerCallCode(src: CExpression): CAstElements = callCodeForBer(typeSerializeMethodName, src, writer.v)
+
+    def deserializeBerCallCode(dest: CExpression): CAstElements = callCodeForBer(typeDeserializeMethodName, dest, reader.v)
+
     def serializeCallCode(src: CExpression): CAstElements = t match {
-      case _: DecodeArrayType | _: DecodeStructType => CStatements(tryCall(
-        methodName(typeSerializeMethodName), src, writer.v))
-      case _ => serializeCode(src)
+      case _: DecodeArrayType | _: DecodeStructType => trySerializeCode(src)
+      case t: DecodeNativeType => t match {
+        case t: DecodeBerType => callCodeForBer(typeSerializeMethodName, src, writer.v)
+        case _ => sys.error(s"not implemented for $t")
+      }
+      case t: DecodeSubType => t.baseType.obj.serializeCallCode(src)
+      case t: DecodeAliasType => t.baseType.obj.serializeCallCode(src)
+      case t: DecodePrimitiveType =>
+        CStatements(callCodeForPrimitiveType(t, src, photonWriterTypeName, "Write", writer.v, src))
+      case _ => sys.error(s"not implemented for $t")
     }
 
     def deserializeCallCode(dest: CExpression): CAstElements = t match {
-      case _: DecodeArrayType | _: DecodeStructType => CStatements(tryCall(
-        methodName(typeDeserializeMethodName), dest, reader.v))
-      case _ => deserializeCode(dest)
+      case _: DecodeArrayType | _: DecodeStructType => tryDeserializeCode(dest)
+      case t: DecodeNativeType => t match {
+        case t: DecodeBerType => callCodeForBer(typeDeserializeMethodName, dest, reader.v)
+        case _ => sys.error(s"not implemented for $t")
+      }
+      case t: DecodeSubType => t.baseType.obj.deserializeCallCode(dest)
+      case t: DecodeAliasType => t.baseType.obj.deserializeCallCode(dest)
+      case t: DecodePrimitiveType =>
+        CStatements(CAssign(CDeref(dest), callCodeForPrimitiveType(t, dest, photonReaderTypeName, "Read", reader.v)))
+      case _ => sys.error(s"not implemented for $t")
     }
 
     def serializeCode: CAstElements = serializeCode(selfVar)
 
-    def serializeCode(src: CExpression): CAstElements = t match {
-      case t: DecodeStructType =>
-        CAstElements(t.fields.flatMap(f => {
-          val fType = f.typeUnit.t.obj
-          fType.serializeCallCode((src -> CVar(f.cName)).refIfNotSmall(fType))
-        }): _*)
-      case t: DecodeArrayType => src.serializeCodeForArraySize ++ t.serializeCodeForArrayElements(src)
-      case t: DecodeAliasType => t.baseType.obj.serializeCode(src)
-      case t: DecodeSubType => t.baseType.obj.serializeCallCode(src)
-      case t: DecodeEnumType => t.baseType.obj.serializeCallCode(src)
-      case t: DecodePrimitiveType => t.serializeCode(src)
-      case t: DecodeNativeType => t.serializeCode(src)
-      case t: DecodeGenericTypeSpecialized => t.serializeCode(src)
-      case _ => sys.error(s"not implemented for $t")
-    }
+    def serializeCode(src: CExpression): CAstElements = writerSizeCheckCode(src) ++
+      (t match {
+        case t: DecodeStructType =>
+          CAstElements(t.fields.flatMap(f => {
+            val fType = f.typeUnit.t.obj
+            fType.serializeCallCode((src -> CVar(f.cName)).refIfNotSmall(fType))
+          }): _*)
+        case t: DecodeArrayType => src.serializeCodeForArraySize ++ t.serializeCodeForArrayElements(src)
+        case t: DecodeAliasType => t.baseType.obj.serializeCallCode(src)
+        case t: DecodeSubType => t.baseType.obj.serializeCallCode(src)
+        case t: DecodeEnumType => t.baseType.obj.serializeCallCode(src)
+        case t: DecodePrimitiveType => t.serializeCallCode(src)
+        case t: DecodeNativeType => t.serializeCallCode(src)
+        case t: DecodeGenericTypeSpecialized => t.serializeCode(src)
+        case _ => sys.error(s"not implemented for $t")
+      })
 
     def deserializeCode: CAstElements = deserializeCode(selfVar)
 
@@ -590,12 +690,12 @@ private object CSourcesGenerator {
         CAstElements(t.fields.flatMap(f => {
           f.typeUnit.t.obj.deserializeCallCode((dest -> f.cName._var).ref)
         }): _*)
-      case t: DecodeArrayType => dest.deserializeCodeForArraySize ++ t.deserializeCodeForArrayElements(dest)
+      case t: DecodeArrayType => dest.deserializeCodeForArraySize ++ readerSizeCheckCode(dest) ++ t.deserializeCodeForArrayElements(dest)
       case t: DecodeAliasType => t.baseType.obj.deserializeCode(dest)
       case t: DecodeSubType => t.baseType.obj.deserializeCallCode(dest)
       case t: DecodeEnumType => t.baseType.obj.deserializeCallCode(dest)
-      case t: DecodePrimitiveType => t.deserializeCode(dest)
-      case t: DecodeNativeType => t.deserializeCode(dest)
+      case t: DecodePrimitiveType => t.deserializeCallCode(dest)
+      case t: DecodeNativeType => t.deserializeCallCode(dest)
       case t: DecodeGenericTypeSpecialized => t.deserializeCode(dest)
       case _ => sys.error(s"not implemented for $t")
     }
@@ -667,41 +767,6 @@ private object CSourcesGenerator {
     }
   }
 
-  implicit class RichNativeType(val t: DecodeNativeType) {
-
-    private def code(methodNamePart: String, exprs: CExpression*): CAstElements = t match {
-      case t: DecodeBerType => CStatements(tryCall(
-        photonBerTypeName.methodName(methodNamePart), exprs: _*))
-      case _ => sys.error(s"not implemented $t")
-    }
-
-    def serializeCode(src: CExpression): CAstElements = code(typeSerializeMethodName, src, writer.v)
-
-    def deserializeCode(dest: CExpression): CAstElements = code(typeDeserializeMethodName, dest, reader.v)
-  }
-
-  implicit class RichPrimitiveType(val t: DecodePrimitiveType) {
-    private def code(src: CExpression, typeName: String, methodPrefix: String, exprs: CExpression*): CAstElements = {
-      import TypeKind._
-      CStatements(CFuncCall(typeName.methodName(methodPrefix + ((t.kind, t.bitLength) match {
-        case (_, 8) => "Uint8"
-        case (Bool, 16) | (Uint, 16) => "Uint16Le"
-        case (Bool, 32) | (Uint, 32) => "Uint32Le"
-        case (Bool, 64) | (Uint, 64) => "Uint64Le"
-        case (Int, 16) => "Int16Le"
-        case (Int, 32) => "Int32Le"
-        case (Int, 64) => "Int64Le"
-        case (Float, 32) => "Float32Le"
-        case (Float, 64) => "Float64Le"
-        case _ => sys.error(s"not implemented $t")
-      })), exprs: _*))
-    }
-
-    def serializeCode(src: CExpression): CAstElements = code(src, photonWriterTypeName, "Write", writer.v, src)
-
-    def deserializeCode(dest: CExpression): CAstElements = code(dest, photonReaderTypeName, "Read", reader.v)
-  }
-
   implicit class RichDecodeGenericTypeSpecialized(val t: DecodeGenericTypeSpecialized) {
 
     private def code(src: CExpression): CAstElements = t.genericType.obj match {
@@ -769,6 +834,8 @@ private object CSourcesGenerator {
 
   implicit class RichVar(val v: CVar) {
     def define(t: CType, init: Option[CExpression] = None, static: Boolean = false) = CVarDef(v.name, t, init, static)
+
+    def serializeBer: CFuncCall = CFuncCall(photonBerTypeName.methodName(typeSerializeMethodName), v, writer.v)
   }
 
   implicit class RichCType(val ct: CType) {
@@ -912,28 +979,30 @@ private object CSourcesGenerator {
 
   private val keywords = Seq("return")
 
+  private def casesForMap[T <: DecodeNamed](map: mutable.Map[Int, WithComponent[T]],
+                                            apply: (T, DecodeComponent) => CAstElements): Seq[CCase] =
+    map.toSeq.sortBy(_._1).map { case (id, WithComponent(c, _2)) =>
+      CCase(CIntLiteral(id), apply(_2, c))
+    }
+
   private def casesForCommandFunctions(component: DecodeComponent): Seq[CCase] =
-    component.allCommandsById.toSeq.sortBy(_._1).map(_ match { case (id, ComponentCommand(c, command)) =>
-      CCase(CIntLiteral(id), CStatements(CReturn(command.methodName(component, c)._var.ref)))
-    })
+    casesForMap(component.allCommandsById, (command: DecodeCommand, c: DecodeComponent) =>
+      CStatements(CReturn(command.methodName(component, c)._var.ref)))
 
   private def casesForCommands(component: DecodeComponent): Seq[CCase] =
-    component.allCommandsById.toSeq.sortBy(_._1).map(_ match { case (id, ComponentCommand(c, command)) =>
-      CCase(CIntLiteral(id), CStatements(CReturn(CFuncCall(
-        command.methodName(component, c), selfVar, reader.v, writer.v))))
-    })
+    casesForMap(component.allCommandsById, (command: DecodeCommand, c: DecodeComponent) =>
+      CStatements(CReturn(CFuncCall(command.methodName(component, c), selfVar, reader.v, writer.v))))
 
   private def casesForMessages(component: DecodeComponent): Seq[CCase] =
-    component.allMessagesById.toSeq.sortBy(_._1).map(_ match { case (id, ComponentMessage(c, message)) =>
-      CCase(CIntLiteral(id), CStatements(CReturn(CFuncCall(message.fullMethodName(component, c), selfVar, writer.v))))
-    })
+    casesForMap(component.allMessagesById, (message: DecodeMessage, c: DecodeComponent) =>
+      CStatements(CReturn(CFuncCall(message.fullMethodName(component, c), selfVar, writer.v))))
 
   private def typesForComponent(comp: DecodeComponent,
                                 typesSet: mutable.Set[DecodeType] = mutable.HashSet.empty): mutable.Set[DecodeType] = {
-    typesSet ++= comp.commands.flatMap(cmd =>
-      cmd.returnType.map(rt => Seq(rt.obj)).getOrElse(Seq.empty) ++ cmd.parameters.map(_.paramType.obj))
-    typesSet ++= comp.baseType.map(_.obj.fields.map(_.typeUnit.t.obj)).getOrElse(Seq.empty)
-    typesSet
+    typesSet ++
+      comp.commands.flatMap(cmd => cmd.returnType.map(rt => Seq(rt.obj)).getOrElse(Seq.empty) ++
+        cmd.parameters.map(_.paramType.obj)) ++
+      comp.baseType.map(_.obj.fields.map(_.typeUnit.t.obj)).getOrElse(Seq.empty)
   }
 
   private var nextComponentId = 0

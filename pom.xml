@@ -26,6 +26,7 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <scala.binary.version>2.11</scala.binary.version>
+        <max.classfile.name>140</max.classfile.name>
     </properties>
 
     <build>
@@ -60,6 +61,13 @@
                         </goals>
                     </execution>
                 </executions>
+                <configuration>
+                    <!-- facepalm, "file name too long" error without that stuff -->
+                    <args>
+                        <arg>-Xmax-classfile-name</arg>
+                        <arg>${max.classfile.name}</arg>
+                    </args>
+                </configuration>
             </plugin>
         </plugins>
     </build>

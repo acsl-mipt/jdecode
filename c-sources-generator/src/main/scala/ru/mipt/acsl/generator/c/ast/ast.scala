@@ -109,7 +109,7 @@ case class CPlainText(text: String) extends CAstElement {
   override def generate(s: CGenState): Unit = s.append(text)
 }
 
-trait CType extends CAstElement {
+trait CType extends CExpression {
   def ptr: CPtrType = CPtrType(this)
 }
 
@@ -433,6 +433,7 @@ case class CEq(left: CExpression, right: CExpression) extends CBinaryOp(left, "=
 case class CNotEq(left: CExpression, right: CExpression) extends CBinaryOp(left, "!=", right)
 case class CLess(left: CExpression, right: CExpression) extends CBinaryOp(left, "<", right)
 case class CPlus(left: CExpression, right: CExpression) extends CBinaryOp(left, "+", right)
+case class CMul(left: CExpression, right: CExpression) extends CBinaryOp(left, "*", right)
 case class CDot(left: CExpression, right: CExpression) extends CBinaryOp(left, ".", right, false)
 
 case class MacroCall(name: String, arguments: CExpression*) extends CExpression with CStatement {
@@ -457,7 +458,9 @@ case class CIf(expression: CExpression, thenStatements: CAstElements = CAstEleme
     s.append("if (")
     expression.generate(s)
     s.append(")")
+    s.incIndentation()
     Helpers.generate(s, thenStatements)
+    s.decIndentation()
     if (elseStatements.nonEmpty) {
       s.append(" else")
       Helpers.generate(s, elseStatements)
