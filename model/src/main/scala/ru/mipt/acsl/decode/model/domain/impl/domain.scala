@@ -2,15 +2,15 @@ package ru.mipt.acsl.decode.model.domain.impl
 
 import java.net.URI
 
-import ru.mipt.acsl.decode.model.domain.Aliases.DecodeMessageParameterToken
+import ru.mipt.acsl.decode.model.domain.aliases.DecodeMessageParameterToken
 import ru.mipt.acsl.decode.model.domain._
 import ru.mipt.acsl.decode.model.domain.impl.`type`.AbstractDecodeNameNamespaceOptionalInfoAware
 import ru.mipt.acsl.decode.model.domain.impl.`type`.AbstractDecodeOptionalInfoAware
 import ru.mipt.acsl.decode.model.domain.impl.`type`.DecodeNamespaceImpl
 import ru.mipt.acsl.decode.model.domain.impl.proxy.{ProvidePrimitivesAndNativeTypesDecodeProxyResolver, FindExistingDecodeProxyResolver}
 
-import scala.collection.mutable
 import scala.util.{Failure, Success, Try}
+import scala.collection.immutable
 
 /**
   * @author Artem Shein
@@ -69,14 +69,11 @@ class DecodeRegistryImpl(resolvers: DecodeProxyResolver*) extends DecodeRegistry
   if (DecodeConstants.SYSTEM_NAMESPACE_FQN.size != 1)
     sys.error("not implemented")
 
-  private val _rootNamespaces = new mutable.ArrayBuffer[DecodeNamespace]() +=
-    new DecodeNamespaceImpl(DecodeConstants.SYSTEM_NAMESPACE_FQN.last, None)
+  var rootNamespaces: immutable.Seq[DecodeNamespace] = immutable.Seq(new DecodeNamespaceImpl(DecodeConstants.SYSTEM_NAMESPACE_FQN.last, None))
 
-  private val proxyResolvers = new mutable.ArrayBuffer[DecodeProxyResolver]() ++= resolvers
+  private val proxyResolvers = resolvers.to[immutable.Seq]
 
   def this() = this(new FindExistingDecodeProxyResolver(), new ProvidePrimitivesAndNativeTypesDecodeProxyResolver())
-
-  def rootNamespaces: mutable.Buffer[DecodeNamespace] = _rootNamespaces
 
   def resolve[T <: DecodeReferenceable](uri: URI, cls: Class[T]): DecodeResolvingResult[T] = {
     for (resolver <- proxyResolvers) {
@@ -106,6 +103,7 @@ class DecodeMessageParameterRefWalker(var component: DecodeComponent, var struct
   else
     subTokens.foldLeft(structField.get.typeUnit.t.obj)(TokenTypeWalker)
 
+  // todo: refactoring
   private def walkOne(): Try[Unit] = {
     require(subTokens.nonEmpty)
     val token = subTokens.head
@@ -117,17 +115,15 @@ class DecodeMessageParameterRefWalker(var component: DecodeComponent, var struct
       return fail()
     val tokenString = token.left.get
     // try for sub components
-    val subComponent = component.subComponents.find(tokenString == _.aliasOrMangledName)
-    if (subComponent.isDefined) {
-      component = subComponent.get.component.obj
+    for (subComponent <- component.subComponents.find(tokenString == _.aliasOrMangledName)) {
+      component = subComponent.component.obj
       structField = None
       return Success()
     }
     if (component.baseType.isEmpty)
       return fail()
-    val f = component.baseType.get.obj.fields.find(tokenString == _.name.asMangledString)
-    if (f.isDefined) {
-      structField = Some(f.get)
+    for (f <- component.baseType.get.obj.fields.find(tokenString == _.name.asMangledString)) {
+      structField = Some(f)
       return Success()
     }
     fail()
@@ -135,7 +131,7 @@ class DecodeMessageParameterRefWalker(var component: DecodeComponent, var struct
 }
 
 class DecodeCommandImpl(val name: DecodeName, val id: Option[Int], info: Option[String],
-                        val parameters: Seq[DecodeCommandParameter], val returnType: Option[DecodeMaybeProxy[DecodeType]])
+                        val parameters: immutable.Seq[DecodeCommandParameter], val returnType: Option[DecodeMaybeProxy[DecodeType]])
   extends AbstractDecodeOptionalInfoAware(info) with DecodeCommand {
   override def optionName: Option[DecodeName] = Some(name)
 }

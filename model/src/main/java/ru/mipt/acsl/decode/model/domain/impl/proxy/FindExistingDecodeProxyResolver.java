@@ -18,7 +18,7 @@ import java.util.stream.Stream;
 
 import static ru.mipt.acsl.JavaToScala.asOption;
 import static ru.mipt.acsl.ScalaToJava.asOptional;
-import static ru.mipt.acsl.decode.ScalaUtil.appendToBuffer;
+import static ru.mipt.acsl.decode.ScalaUtil.append;
 import static ru.mipt.acsl.decode.model.domain.impl.proxy.SimpleDecodeMaybeProxy.proxy;
 import static scala.collection.JavaConversions.asJavaCollection;
 
@@ -132,10 +132,7 @@ public class FindExistingDecodeProxyResolver implements DecodeProxyResolver
                         .resolve(registry, DecodeType.class);
                 if (resolvedBaseType.resolvedObject().isDefined())
                 {
-                    Buffer<DecodeType> types = new ArrayBuffer<>();
-                    types.append(namespace.types());
-                    appendToBuffer(types, newArrayType);
-                    namespace.types_$eq(types);
+                    namespace.types_$eq(append(namespace.types(), newArrayType));
                     return SimpleDecodeResolvingResult.newInstance(Option.apply(newArrayType));
                 }
             }

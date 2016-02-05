@@ -9,6 +9,7 @@ import com.intellij.psi.PsiWhiteSpace;
 import org.apache.commons.lang.NotImplementedException;
 import ru.mipt.acsl.JavaToScala;
 import ru.mipt.acsl.ScalaToJava;
+import ru.mipt.acsl.decode.ScalaUtil;
 import ru.mipt.acsl.decode.model.domain.*;
 import ru.mipt.acsl.decode.model.domain.impl.*;
 import ru.mipt.acsl.decode.model.domain.impl.type.*;
@@ -29,6 +30,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import static ru.mipt.acsl.JavaToScala.asOption;
+import static ru.mipt.acsl.decode.ScalaUtil.append;
 import static ru.mipt.acsl.decode.model.domain.impl.proxy.SimpleDecodeMaybeProxy.obj;
 import static ru.mipt.acsl.decode.model.domain.impl.proxy.SimpleDecodeMaybeProxy.proxy;
 import static ru.mipt.acsl.decode.model.domain.impl.proxy.SimpleDecodeMaybeProxy.proxyForSystem;
@@ -77,17 +79,17 @@ public class DecodeFileProcessor
 
             if (element instanceof DecodeUnitDecl)
             {
-                namespace.units().$plus$eq(
+                namespace.units_$eq(append(namespace.units(),
                         new DecodeUnitImpl(
                                 DecodeNameImpl.newFromSourceName(
                                         ((DecodeUnitDecl) element).getElementNameRule().getText()),
                                 namespace,
                                 getText(((DecodeUnitDecl) element).getStringValue()),
-                                getText(((DecodeUnitDecl) element).getInfoString())));
+                                getText(((DecodeUnitDecl) element).getInfoString()))));
             }
             else if (element instanceof DecodeTypeDecl)
             {
-                namespace.types().$plus$eq(newType((DecodeTypeDecl) element, namespace));
+                namespace.types_$eq(append(namespace.types(), newType((DecodeTypeDecl) element, namespace)));
             }
             else if (element instanceof DecodeComponentDecl)
             {
@@ -95,12 +97,12 @@ public class DecodeFileProcessor
             }
             else if (element instanceof DecodeAliasDecl)
             {
-                namespace.types()
-                        .$plus$eq(new DecodeAliasTypeImpl(DecodeNameImpl.newFromSourceName(
+                namespace.types_$eq(append(namespace.types(),
+                        new DecodeAliasTypeImpl(DecodeNameImpl.newFromSourceName(
                                         ((DecodeAliasDecl) element).getElementId().getText()),
                                 namespace,
                                 makeProxyForTypeApplication(((DecodeAliasDecl) element).getTypeApplication(), namespace),
-                                getText(((DecodeAliasDecl) element).getInfoString())));
+                                getText(((DecodeAliasDecl) element).getInfoString()))));
             }
             else if (element instanceof PsiWhiteSpace)
             {

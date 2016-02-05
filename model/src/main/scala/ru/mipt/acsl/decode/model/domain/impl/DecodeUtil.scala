@@ -2,59 +2,61 @@ package ru.mipt.acsl.decode.model.domain.impl
 
 import ru.mipt.acsl.decode.model.domain.DecodeNamespace
 
-import scala.collection.mutable
-import scala.collection.mutable.ArrayBuffer
+import scala.collection.immutable
 
 /**
   * @author Artem Shein
   */
 object DecodeUtil {
 
-  def mergeNamespaceTo(targetNamespace: DecodeNamespace, namespace: DecodeNamespace) {
+  def mergeNamespaceTo(targetNamespace: DecodeNamespace, namespace: DecodeNamespace): DecodeNamespace = {
     val subNamespaces = targetNamespace.subNamespaces
-    namespace.subNamespaces.foreach(ns => { mergeNamespaceToNamespacesList(subNamespaces, ns); ns.parent = Option.apply(targetNamespace) })
+    namespace.subNamespaces.foreach { ns =>
+      targetNamespace.subNamespaces = mergeNamespaceToNamespacesList(subNamespaces, ns)
+      ns.parent = Some(targetNamespace)
+    }
 
     val units = targetNamespace.units
-    namespace.units.foreach(u => {
+    namespace.units.foreach { u =>
         val name = u.name
         if (units.exists(_.name == name))
           sys.error(s"unit name collision '$name'")
         u.namespace = targetNamespace
-    })
-    units ++= namespace.units
+    }
+    targetNamespace.units ++= namespace.units
 
     val types = targetNamespace.types
-    namespace.types.foreach(t => {
+    namespace.types.foreach { t =>
         val name = t.optionName
         if (types.exists(t2 => t2.optionName == name))
           sys.error(s"type name collision '$name'")
         t.namespace = targetNamespace
-    })
-    types ++= namespace.types
+    }
+    targetNamespace.types ++= namespace.types
 
     val components = targetNamespace.components
-    namespace.components.foreach(c => {
+    namespace.components.foreach { c =>
         val name = c.name
         if (components.exists(c2 => c2.name == name))
           sys.error(s"component name collision '$name'")
         c.namespace = targetNamespace
-    })
-    components ++= namespace.components
+    }
+    targetNamespace.components ++= namespace.components
+
+    targetNamespace
   }
 
-  private def mergeNamespaceToNamespacesList(list: mutable.Buffer[DecodeNamespace], namespace: DecodeNamespace) {
+  private def mergeNamespaceToNamespacesList(list: immutable.Seq[DecodeNamespace],
+                                             namespace: DecodeNamespace): immutable.Seq[DecodeNamespace] = {
     val nsName = namespace.name
-    val targetNamespace = list.find(_.name == nsName)
-
-    if (targetNamespace.isDefined)
-      mergeNamespaceTo(targetNamespace.get, namespace)
-    else
-      list += namespace
+    list.find(_.name == nsName)
+      .map{ns => mergeNamespaceTo(ns, namespace); list}
+      .getOrElse(list :+ namespace)
   }
 
-  def mergeRootNamespaces(namespaces: Traversable[DecodeNamespace]): mutable.Buffer[DecodeNamespace] = {
-    val result = new ArrayBuffer[DecodeNamespace]()
-    namespaces.foreach(mergeNamespaceToNamespacesList(result, _))
+  def mergeRootNamespaces(namespaces: Traversable[DecodeNamespace]): immutable.Seq[DecodeNamespace] = {
+    var result = immutable.Seq.empty[DecodeNamespace]
+    namespaces.foreach{ ns => result = mergeNamespaceToNamespacesList(result, ns) }
     result
   }
 }

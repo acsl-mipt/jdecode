@@ -5,19 +5,17 @@ import java.net.URI
 import ru.mipt.acsl.decode.model.domain.impl.`type`._
 import ru.mipt.acsl.decode.model.domain.impl.{DecodeMessageParameterRefWalker, DecodeNameImpl}
 
-import scala.collection.immutable.HashSet
-import scala.collection.mutable
-import scala.collection.mutable.ArrayBuffer
+import scala.collection.immutable
 
 object DecodeConstants {
   val SYSTEM_NAMESPACE_FQN: DecodeFqn = DecodeFqnImpl.newFromSource("decode")
 }
 
-package object Aliases {
+package object aliases {
   type DecodeMessageParameterToken = Either[String, Int]
 }
 
-import Aliases._
+import aliases._
 
 trait DecodeName {
   def asMangledString: String
@@ -77,21 +75,31 @@ trait DecodeLanguage extends DecodeReferenceable with DecodeNamespaceAware
 trait DecodeNamespace extends DecodeReferenceable with DecodeNamed {
   def asString: String
 
-  def units: mutable.Buffer[DecodeUnit]
+  def units: immutable.Seq[DecodeUnit]
 
-  def types: mutable.Buffer[DecodeType]
+  def units_=(units: immutable.Seq[DecodeUnit])
 
-  def types_= (types: mutable.Buffer[DecodeType])
+  def types: immutable.Seq[DecodeType]
 
-  def subNamespaces: mutable.Buffer[DecodeNamespace]
+  def types_=(types: immutable.Seq[DecodeType])
+
+  def subNamespaces: immutable.Seq[DecodeNamespace]
+
+  def subNamespaces_=(namespaces: immutable.Seq[DecodeNamespace])
 
   def parent: Option[DecodeNamespace]
 
-  def components: mutable.Buffer[DecodeComponent]
+  def parent_=(parent: Option[DecodeNamespace])
+
+  def components: immutable.Seq[DecodeComponent]
+
+  def components_=(components: immutable.Seq[DecodeComponent])
 
   def accept[T](visitor: DecodeReferenceableVisitor[T]): T = visitor.visit(this)
 
-  def languages: mutable.Buffer[DecodeLanguage]
+  def languages: immutable.Seq[DecodeLanguage]
+
+  def languages_=(languages: immutable.Seq[DecodeLanguage])
 
   def fqn: DecodeFqn = {
     val parts: scala.collection.mutable.Buffer[DecodeName] = scala.collection.mutable.Buffer[DecodeName]()
@@ -103,8 +111,6 @@ trait DecodeNamespace extends DecodeReferenceable with DecodeNamed {
     parts += currentNamespace.name
     DecodeFqnImpl(parts.reverse)
   }
-
-  def parent_=(parent: Option[DecodeNamespace])
 
   def rootNamespace: DecodeNamespace = parent.map(_.rootNamespace).getOrElse(this)
 }
@@ -174,7 +180,7 @@ trait DecodeNativeType extends DecodeType with DecodeNamed {
 }
 
 object DecodeNativeType {
-  val MANGLED_TYPE_NAMES: Set[String] = HashSet[String](DecodeBerType.NAME, DecodeOrType.NAME, DecodeOptionalType.NAME)
+  val MANGLED_TYPE_NAMES: Set[String] = immutable.HashSet[String](DecodeBerType.NAME, DecodeOrType.NAME, DecodeOptionalType.NAME)
 }
 
 trait BaseTyped {
@@ -195,7 +201,7 @@ trait DecodeEnumConstant extends DecodeHasOptionInfo {
 }
 
 trait DecodeEnumType extends DecodeType with BaseTyped {
-  def constants: mutable.Set[DecodeEnumConstant]
+  def constants: Set[DecodeEnumConstant]
 
   override def accept[T](visitor: DecodeTypeVisitor[T]): T = visitor.visit(this)
 }
@@ -266,7 +272,7 @@ trait DecodeCommandParameter extends DecodeNamed with DecodeHasOptionInfo {
 
 trait DecodeCommand extends DecodeHasOptionInfo with DecodeNamed with DecodeHasOptionId {
   def returnType: Option[DecodeMaybeProxy[DecodeType]]
-  def parameters: Seq[DecodeCommandParameter]
+  def parameters: immutable.Seq[DecodeCommandParameter]
 }
 
 // TODO: replace with case classes?
@@ -323,10 +329,12 @@ trait DecodeFqned extends DecodeNamed with DecodeNamespaceAware {
 }
 
 trait DecodeComponent extends DecodeHasOptionInfo with DecodeFqned with DecodeReferenceable with DecodeHasOptionId {
-  def messages: mutable.Buffer[DecodeMessage]
-  def commands: mutable.Buffer[DecodeCommand]
+  def messages: immutable.Seq[DecodeMessage]
+  def messages_=(messages: immutable.Seq[DecodeMessage])
+  def commands: immutable.Seq[DecodeCommand]
+  def commands_=(commands: immutable.Seq[DecodeCommand])
   def baseType: Option[DecodeMaybeProxy[DecodeStructType]]
-  def subComponents: mutable.Buffer[DecodeComponentRef]
+  def subComponents: immutable.Seq[DecodeComponentRef]
   override def accept[T](visitor: DecodeReferenceableVisitor[T]): T = visitor.visit(this)
 }
 
@@ -335,7 +343,9 @@ trait DecodeDomainModelResolver {
 }
 
 trait DecodeRegistry {
-  def rootNamespaces: mutable.Buffer[DecodeNamespace]
+  def rootNamespaces: immutable.Seq[DecodeNamespace]
+
+  def rootNamespaces_=(rootNamespaces: immutable.Seq[DecodeNamespace])
 
   def resolve[T <: DecodeReferenceable](uri: URI, cls: Class[T]): DecodeResolvingResult[T]
 
@@ -350,25 +360,24 @@ trait DecodeRegistry {
     namespaceOptional.get.components.find(_.name == componentName)
   }
 
+  // todo: refactoring
   def getNamespace(fqn: String): Option[DecodeNamespace] = {
-    var currentNamespaces: Option[ArrayBuffer[DecodeNamespace]] = Some(new ArrayBuffer[DecodeNamespace]())
-    currentNamespaces.get ++= rootNamespaces
-    var currentNamespace = Option.empty[DecodeNamespace]
+    var currentNamespaces: Option[Seq[DecodeNamespace]] = Some(rootNamespaces)
+    var currentNamespace: Option[DecodeNamespace] = None
     "\\.".r.split(fqn).foreach(nsName => {
       if (currentNamespaces.isEmpty)
       {
-        return Option.empty
+        return None
       }
       val decodeName = DecodeNameImpl.newFromMangledName(nsName)
       currentNamespace = currentNamespaces.get.find(_.name == decodeName)
       if (currentNamespace.isDefined)
       {
-        currentNamespaces.get.clear()
-        currentNamespaces.get ++= currentNamespace.get.subNamespaces
+        currentNamespaces = Some(currentNamespace.get.subNamespaces)
       }
       else
       {
-        currentNamespaces = Option.empty[ArrayBuffer[DecodeNamespace]]
+        currentNamespaces = None
       }
     })
     currentNamespace

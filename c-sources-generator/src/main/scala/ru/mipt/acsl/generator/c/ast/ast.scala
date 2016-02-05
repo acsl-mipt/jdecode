@@ -2,7 +2,7 @@ package ru.mipt.acsl.generator.c.ast
 
 import ru.mipt.acsl.generation.Generatable
 
-import scala.collection.mutable
+import scala.collection.immutable
 
 /**
   * @author Artem Shein
@@ -11,18 +11,18 @@ import scala.collection.mutable
 trait CAstElement extends Generatable[CGenState]
 
 object CAstElements {
-  def apply(elements: CAstElement*) = mutable.Buffer(elements: _*)
-  def apply() = mutable.Buffer.empty[CAstElement]
+  def apply(elements: CAstElement*) = immutable.Seq(elements: _*)
+  def apply() = immutable.Seq.empty[CAstElement]
 }
 
-package object Implicits {
-  type CAstElements = mutable.Buffer[CAstElement]
+package object implicits {
+  type CAstElements = immutable.Seq[CAstElement]
   implicit class CAstElementsGeneratable(els: CAstElements) extends CAstElement {
     override def generate(s: CGenState): Unit = { Helpers.generate(s, els) }
   }
 }
 
-import Implicits._
+import implicits._
 
 object CStatements {
   def apply(elements: CAstElement*): CAstElements = CAstElements(elements.map(CStatementLine(_)): _*)
@@ -348,14 +348,6 @@ case class CStringLiteral(value: String) extends CExpression {
 
 case class CIntLiteral(value: Int) extends CExpression {
   override def generate(s: CGenState): Unit = s.append(value.toString)
-}
-
-case class MutableCAstElements[A <: CAstElement](statements: mutable.Buffer[A] = mutable.Buffer.empty) extends CAstElement {
-  def nonEmpty = statements.nonEmpty
-  def isEmpty = statements.isEmpty
-  def +=(el: A) = { statements += el }
-  def ++=(elements: Seq[A]) = { statements ++= elements; this }
-  override def generate(s: CGenState): Unit = statements.foreach(_.generate(s))
 }
 
 case class CArrow(expr: CExpression, expr2: CExpression) extends CExpression {

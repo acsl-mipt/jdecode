@@ -301,15 +301,17 @@ class CppSourcesGenerator(val config: CppGeneratorConfiguration) extends Generat
     dir + "/" + hFileName
   }
 
-  private def importStatementsForComponent(comp: DecodeComponent) = {
-    val imports = comp.subComponents.flatMap { cr => Seq(CppInclude(includePathForComponent(cr.component.obj)), Eol) }
+  private def importStatementsForComponent(comp: DecodeComponent): immutable.Seq[CppAstElement] = {
+    val imports: mutable.Buffer[CppAstElement] = comp.subComponents.flatMap { cr =>
+      Seq(CppInclude(includePathForComponent(cr.component.obj)), Eol)
+    }.to[mutable.Buffer]
     if (imports.nonEmpty)
       imports += Eol
     val typeIncludes = typesForComponent(comp).flatMap { t => Seq(CppInclude(relPathForType(t)), Eol) }
     imports ++= typeIncludes
     if (typeIncludes.nonEmpty)
       imports += Eol
-    imports
+    imports.to[immutable.Seq]
   }
 
   private def typesForComponent(comp: DecodeComponent, typesSet: mutable.Set[DecodeType] = mutable.HashSet.empty) = {
@@ -366,14 +368,14 @@ class CppSourcesGenerator(val config: CppGeneratorConfiguration) extends Generat
               CppStatement(MacroCall("BMCL_UNUSED", CppVar(readerParameter.name))),
               CppStatement(MacroCall("BMCL_UNUSED", CppVar(writerParameter.name))),
               if (cmd.returnType.isDefined) Return(methodCall) else CppStatement(methodCall))
-          } else CppStatements())
-    )}
-    methods ++= comp.messages.map{msg => ClassMethodDef("write" + msg.name.asMangledString.capitalize, voidType,
-          mutable.Buffer(writerParameter))}
-    methods ++= comp.baseType.map{bt => bt.obj.fields.map{f =>
-      ClassMethodDef(methodNameForDecodeName(f.name), cppTypeForDecodeType(f.typeUnit.t.obj))}}
-      .getOrElse(Seq.empty)
-    methods ++= readingAndExecutingCommandsMethods()
+          } else CppStatements()))
+    } ++
+      comp.messages.map{msg => ClassMethodDef("write" + msg.name.asMangledString.capitalize, voidType,
+          mutable.Buffer(writerParameter))} ++
+      comp.baseType.map(_.obj.fields.map { f =>
+          ClassMethodDef(methodNameForDecodeName(f.name), cppTypeForDecodeType(f.typeUnit.t.obj))
+        }).getOrElse(Seq.empty) ++
+      readingAndExecutingCommandsMethods()
     val idField = ClassFieldDef("ID", stdSizeTType, static = true)
     val guidField = ClassFieldDef("GUID", stdStringType, static = true)
     val fields = Seq(idField, guidField)

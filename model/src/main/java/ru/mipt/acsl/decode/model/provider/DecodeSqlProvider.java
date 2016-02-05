@@ -11,16 +11,15 @@ import ru.mipt.acsl.decode.model.exporter.ModelExportingException;
 import scala.Int;
 import scala.Option;
 import scala.collection.JavaConversions;
-import scala.collection.mutable.*;
-import scala.collection.mutable.HashSet;
-import scala.collection.mutable.Set;
+import scala.collection.immutable.*;
 
 import java.sql.*;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import static ru.mipt.acsl.decode.ScalaUtil.appendToBuffer;
+import static ru.mipt.acsl.decode.ScalaUtil.newSeq;
+import static ru.mipt.acsl.decode.ScalaUtil.append;
 
 /**
  * @author Artem Shein
@@ -81,11 +80,11 @@ public class DecodeSqlProvider
                 DecodeNamespace parent = namespaceById.get(subNamespacesRs.getLong("namespace_id")),
                         child = namespaceById.get(subNamespacesRs.getLong("sub_namespace_id"));
                 child.parent_$eq(Option.apply(parent));
-                parent.subNamespaces().$plus$eq(child);
+                parent.subNamespaces_$eq(append(parent.subNamespaces(), child));
             }
-            Buffer<DecodeNamespace> rootNamespaces = registry.rootNamespaces();
-            rootNamespaces.$plus$plus$eq(JavaConversions.asScalaBuffer(namespaceById.values().stream().filter(n -> !n.parent().isDefined())
-                    .collect(Collectors.toList())));
+            registry.rootNamespaces_$eq(append(registry.rootNamespaces(),
+                    JavaConversions.asScalaBuffer(namespaceById.values().stream().filter(n -> !n.parent().isDefined())
+                    .collect(Collectors.toList()))));
         }
 
         try (ResultSet selectUnitsRs = connection.prepareStatement(
@@ -99,7 +98,7 @@ public class DecodeSqlProvider
                         namespace, Option.apply(selectUnitsRs.getString("display")),
                         Option.apply(selectUnitsRs.getString("info")));
                 unitById.put(selectUnitsRs.getLong("id"), unit);
-                namespace.units().$plus$eq(unit);
+                namespace.units_$eq(append(namespace.units(), unit));
             }
         }
 
@@ -146,7 +145,7 @@ public class DecodeSqlProvider
                         componentRs.wasNull() ? Option.<DecodeMaybeProxy<DecodeStructType>>empty()
                                 : Option.apply(SimpleDecodeMaybeProxy.obj((DecodeStructType) ensureTypeLoaded(baseTypeId)));
 
-                Buffer<DecodeComponentRef> subComponentRefs = new ArrayBuffer<>();
+                Seq<DecodeComponentRef> subComponentRefs = newSeq();
                 try(PreparedStatement subComponentsSelect = connection.prepareStatement(
                         String.format(
                                 "SELECT sub_component_id FROM %s WHERE component_id = ? ORDER BY sub_component_id ASC",
@@ -157,15 +156,15 @@ public class DecodeSqlProvider
                     {
                         while (subComponentsRs.next())
                         {
-                            subComponentRefs
-                                    .$plus$eq(new DecodeComponentRefImpl(SimpleDecodeMaybeProxy
+                            subComponentRefs = append(subComponentRefs,
+                                    new DecodeComponentRefImpl(SimpleDecodeMaybeProxy
                                             .obj(ensureComponentLoaded(subComponentsRs.getLong("sub_component_id"))),
                                             Option.empty()));
                         }
                     }
                 }
 
-                Buffer<DecodeCommand> commands = new ArrayBuffer<>();
+                Seq<DecodeCommand> commands = newSeq();
                 try (PreparedStatement commandsSelect = connection.prepareStatement(
                         String.format("SELECT id, name, command_id, info FROM %s WHERE component_id = ?",
                                 TableName.COMMAND)))
@@ -178,7 +177,7 @@ public class DecodeSqlProvider
                     {
                         while (commandsSelectRs.next())
                         {
-                            Buffer<DecodeCommandParameter> arguments = new ArrayBuffer<>();
+                            Seq<DecodeCommandParameter> arguments = newSeq();
                             long commandId = commandsSelectRs.getLong("id");
                             argumentsSelect.setLong(1, commandId);
                             try (ResultSet commandArgumentsRs = argumentsSelect.executeQuery())
@@ -191,7 +190,7 @@ public class DecodeSqlProvider
                                             : Option.apply(SimpleDecodeMaybeProxy.obj(
                                             Preconditions.checkNotNull(unitById.get(unitId), "unit not found")));
 
-                                    arguments.$plus$eq(new DecodeCommandParameterImpl(
+                                    arguments = append(arguments, new DecodeCommandParameterImpl(
                                             DecodeNameImpl.newFromMangledName(
                                                     commandArgumentsRs.getString("name")),
                                             Option.apply(commandArgumentsRs.getString("info")),
@@ -201,7 +200,7 @@ public class DecodeSqlProvider
                                 }
                             }
                             Option<Long> returnTypeIdOptional = getOptionalLong(commandsSelectRs, "return_type_id");
-                            commands.$plus$eq(new DecodeCommandImpl(
+                            commands = append(commands, new DecodeCommandImpl(
                                     DecodeNameImpl.newFromMangledName(commandsSelectRs.getString("name")),
                                     getOptionalInt(commandsSelectRs, "command_id"),
                                     Option.apply(commandsSelectRs.getString("info")), arguments,
@@ -214,7 +213,7 @@ public class DecodeSqlProvider
                     }
                 }
 
-                Buffer<DecodeMessage> messages = new ArrayBuffer<>();
+                Seq<DecodeMessage> messages = newSeq();
                 int componentForcedId = componentRs.getInt("component_id");
                 boolean isComponentForcedIdProvided = !componentRs.wasNull();
                 component = new DecodeComponentImpl(
@@ -238,12 +237,12 @@ public class DecodeSqlProvider
                         while (messagesSelectRs.next())
                         {
                             messageParametersSelect.setLong(1, messagesSelectRs.getLong("id"));
-                            Buffer<DecodeMessageParameter> parameters = new ArrayBuffer<>();
+                            Seq<DecodeMessageParameter> parameters = newSeq();
                             try (ResultSet messageParametersRs = messageParametersSelect.executeQuery())
                             {
                                 while (messageParametersRs.next())
                                 {
-                                    appendToBuffer(parameters, new DecodeMessageParameterImpl(
+                                    parameters = append(parameters, new DecodeMessageParameterImpl(
                                             messageParametersRs.getString("name"), Option.empty()));
                                 }
                             }
@@ -270,13 +269,13 @@ public class DecodeSqlProvider
                                                 parameters, SimpleDecodeMaybeProxy.obj(Preconditions.checkNotNull(typeById.get(messagesSelectRs.getLong("e_event_type_id")))));
                             }
 
-                            appendToBuffer(messages, Preconditions.checkNotNull(message, "invalid message"));
+                            messages = append(messages, Preconditions.checkNotNull(message, "invalid message"));
                         }
                     }
                 }
 
                 componentById.put(componentId, component);
-                appendToBuffer(namespace.components(), component);
+                namespace.components_$eq(append(namespace.components(), component));
                 return component;
             }
         }
@@ -361,7 +360,7 @@ public class DecodeSqlProvider
                     Set<DecodeEnumConstant> constants = new HashSet<>();
                     while (constantsRs.next())
                     {
-                        constants.add(new DecodeEnumConstantImpl(DecodeNameImpl.newFromMangledName(
+                        constants = append(constants, new DecodeEnumConstantImpl(DecodeNameImpl.newFromMangledName(
                                                 Preconditions.checkNotNull(constantsRs.getString(0), "constant name")),
                                         constantsRs.getString(2), Option.apply(constantsRs.getString(1))));
                     }
@@ -388,13 +387,13 @@ public class DecodeSqlProvider
                             TableName.STRUCT_TYPE_FIELD));
                     structFieldsStmt.setLong(1, structTypeId);
                     ResultSet structFieldsRs = structFieldsStmt.executeQuery();
-                    Buffer<DecodeStructField> fields = new ArrayBuffer<>();
+                    Seq<DecodeStructField> fields = newSeq();
                     while (structFieldsRs.next())
                     {
                         long unitId = structFieldsRs.getLong(3);
                         Option<DecodeUnit> unit = structFieldsRs.wasNull() ? Option.<DecodeUnit>empty() : Option.apply(
                                 unitById.get(unitId));
-                        fields.$plus$eq(new DecodeStructFieldImpl(
+                        fields = append(fields, new DecodeStructFieldImpl(
                                 DecodeNameImpl.newFromMangledName(
                                         structFieldsRs.getString(1)),
                                 new DecodeTypeUnitApplicationImpl(
@@ -406,7 +405,7 @@ public class DecodeSqlProvider
                     type = new DecodeStructTypeImpl(name, namespace, info, fields);
                 }
 
-                namespace.types().$plus$eq(Preconditions.checkNotNull(type, "invalid type"));
+                namespace.types_$eq(append(namespace.types(), Preconditions.checkNotNull(type, "invalid type")));
             }
         }
 

@@ -28,6 +28,7 @@ import java.util.stream.Stream;
 
 import static ru.mipt.acsl.JavaToScala.asOption;
 import static ru.mipt.acsl.decode.ScalaUtil.appendToBuffer;
+import static ru.mipt.acsl.decode.ScalaUtil.append;
 import static scala.collection.JavaConversions.asJavaCollection;
 
 /**
@@ -54,11 +55,11 @@ public final class DecodeUtils
                         Option.apply(parentNamespace));
                 if (parentNamespace != null)
                 {
-                    parentNamespace.subNamespaces().$plus$eq(newNamespace);
+                    parentNamespace.subNamespaces_$eq(append(parentNamespace.subNamespaces(), newNamespace));
                 }
                 else
                 {
-                    registry.rootNamespaces().$plus$eq(newNamespace);
+                    registry.rootNamespaces_$eq(append(registry.rootNamespaces(), newNamespace));
                 }
                 return newNamespace;
             });
@@ -135,7 +136,7 @@ public final class DecodeUtils
             DecodeNamespace parentNamespace = DecodeNamespaceImpl.apply(parts.apply(i),
                     Option.<DecodeNamespace>empty());
             namespace.parent_$eq(Option.apply(parentNamespace));
-            parentNamespace.subNamespaces().$plus$eq(namespace);
+            parentNamespace.subNamespaces_$eq(append(parentNamespace.subNamespaces(), namespace));
             namespace = parentNamespace;
         }
         return namespace;
@@ -151,7 +152,8 @@ public final class DecodeUtils
             currentNamespace = DecodeNamespaceImpl.apply(iterator.next(), Option.apply(currentNamespace));
             if (currentNamespace.parent().isDefined())
             {
-                appendToBuffer(currentNamespace.parent().get().subNamespaces(), currentNamespace);
+                DecodeNamespace parentNamespace = currentNamespace.parent().get();
+                parentNamespace.subNamespaces_$eq(append(parentNamespace.subNamespaces(), currentNamespace));
             }
         }
         return Preconditions.checkNotNull(currentNamespace);

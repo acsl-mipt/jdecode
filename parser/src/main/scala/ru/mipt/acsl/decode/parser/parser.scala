@@ -23,7 +23,7 @@ import ru.mipt.acsl.decode.model.domain.impl.`type`.DecodeNamespaceImpl
 import ru.mipt.acsl.decode.model.domain._
 import ru.mipt.acsl.decode.model.domain.impl.proxy.SimpleDecodeMaybeProxy
 
-import scala.collection.mutable
+import scala.collection.{immutable, mutable}
 import scala.io.Source
 import scala.util.{Try, Success, Failure}
 
@@ -128,14 +128,14 @@ class DecodeParboiledParser(val input: ParserInput) extends Parser with LazyLogg
       => new DecodeCommandParameterImpl(name, info, typeUnit.t, typeUnit.unit))
   }
 
-  def CommandArgs: Rule1[Seq[DecodeCommandParameter]] = rule {
+  def CommandArgs: Rule1[immutable.Seq[DecodeCommandParameter]] = rule {
     '(' ~ Ew.? ~ CommandArg.*(Ew.? ~ ',' ~ Ew.?) ~ (Ew.? ~ ',').? ~ Ew.? ~ ')'
   }
 
   def Command: Rule1[DecodeCommand] = rule {
     definition("command") ~ Ew.? ~ (':' ~ Ew.? ~ NonNegativeIntegerAsInt).? ~ Ew.? ~ CommandArgs ~
       (Ew.? ~ "->" ~ Ew.? ~ TypeApplication ~> (_.get)).? ~>
-      ((info: Option[String], name: DecodeName, id: Option[Int], args: Seq[DecodeCommandParameter], returnType: Option[DecodeMaybeProxy[DecodeType]])
+      ((info: Option[String], name: DecodeName, id: Option[Int], args: immutable.Seq[DecodeCommandParameter], returnType: Option[DecodeMaybeProxy[DecodeType]])
         => new DecodeCommandImpl(name, id, info, args, returnType))
   }
 
@@ -196,17 +196,17 @@ class DecodeParboiledParser(val input: ParserInput) extends Parser with LazyLogg
     definition("component") ~> ((name: DecodeName) => { componentName = Some(name) }: Unit) ~ (Ew.? ~ ':' ~ NonNegativeIntegerAsInt).? ~
       (Ew ~ atomic("with") ~ Ew ~ ElementId.+(Ew.? ~ ',' ~ Ew.?)).? ~
       Ew.? ~ '{' ~ (Ew.? ~ ComponentParameters).? ~>
-      ((info: Option[String], id: Option[Int], subComponents: Option[Seq[DecodeFqn]], baseType: Option[DecodeStructType])
+      ((info: Option[String], id: Option[Int], subComponents: Option[immutable.Seq[DecodeFqn]], baseType: Option[DecodeStructType])
         => { component = Some(new DecodeComponentImpl(componentName.get, ns.get, id, baseType.map(SimpleDecodeMaybeProxy.obj(_)), info,
-          subComponents.map(_.toBuffer).getOrElse(mutable.Buffer()).map((fqn: DecodeFqn) => {
-            val alias = fqn.asMangledString
+          subComponents.map(_.map{ fqn =>
+          val alias = fqn.asMangledString
             if (fqn.size == 1 && imports.contains(alias))
               new DecodeComponentRefImpl(imports.get(alias).get.asInstanceOf[DecodeMaybeProxy[DecodeComponent]], Some(alias))
             else
               new DecodeComponentRefImpl(SimpleDecodeMaybeProxy.proxyDefaultNamespace(fqn, ns.get), None)
-          }))); component.get }) ~
-      (Ew.? ~ (Command ~> ((command: DecodeCommand) => { component.get.commands += command }: Unit)
-        | Message ~> ((message: DecodeMessage) => { component.get.messages += message }: Unit))).* ~
+          }).getOrElse(immutable.Seq.empty))); component.get }) ~
+      (Ew.? ~ (Command ~> ((command: DecodeCommand) => { component.get.commands = component.get.commands :+ command }: Unit)
+        | Message ~> ((message: DecodeMessage) => { component.get.messages = component.get.messages :+ message }: Unit))).* ~
       Ew.? ~ '}'
   }
 
@@ -236,7 +236,7 @@ class DecodeParboiledParser(val input: ParserInput) extends Parser with LazyLogg
   def EnumType = rule {
     InfoEw.? ~ atomic("enum") ~ Ew ~ TypeApplication ~ Ew.? ~ '(' ~ Ew.? ~ EnumTypeValues ~ Ew.? ~ ')' ~>
       ((name: DecodeName, info: Option[String], t: Option[DecodeMaybeProxy[DecodeType]], constants: Seq[DecodeEnumConstant])
-        => new DecodeEnumTypeImpl(Some(name), ns.get, t.get, info, constants.to[mutable.Set]))
+        => new DecodeEnumTypeImpl(Some(name), ns.get, t.get, info, constants.to[immutable.Set]))
   }
 
   def StructType = rule {
@@ -365,24 +365,25 @@ class DecodeParboiledParser(val input: ParserInput) extends Parser with LazyLogg
       ((info: Option[String], name: DecodeName, default: Boolean) => new DecodeLanguageImpl(name, ns.get, default, info))
   }
 
+  // todo: refactoring
   def File: Rule1[DecodeNamespace] = rule {
     run(imports.clear()) ~ Namespace ~>
-      ((_ns: DecodeNamespace) => { ns = Some(_ns); ns.get }: DecodeNamespace) ~
+      { _ns => ns = Some(_ns); _ns } ~
       (Ew ~ Import).* ~
-      (Ew.? ~ (Component ~> ((c: DecodeComponent) => { ns.get.components += c }: Unit)
-        | Unit_ ~> ((u: DecodeUnit) => { ns.get.units += u }: Unit)
-        | Type ~> ((t: DecodeType) => { ns.get.types += t }: Unit)
-        | Alias ~> ((a: DecodeAliasType) => { ns.get.types += a }: Unit)
-        | Language ~> ((l: DecodeLanguage) => { ns.get.languages += l }: Unit))).* ~
+      (Ew.? ~ (Component ~> { c => ns.get.components = ns.get.components :+ c }
+        | Unit_ ~> { u => ns.get.units = ns.get.units :+ u }
+        | Type ~> { t => ns.get.types = ns.get.types :+ t }
+        | Alias ~> { a => ns.get.types = ns.get.types :+ a }
+        | Language ~> { l => ns.get.languages = ns.get.languages :+ l })).* ~
       Ew.? ~ EOI
   }
 
-  def newNamespace(info: Option[String], fqn: DecodeFqn) = {
+  def newNamespace(info: Option[String], fqn: DecodeFqn): DecodeNamespace = {
     var parentNamespace: Option[DecodeNamespace] = None
     if (fqn.size > 1)
       parentNamespace = Some(DecodeUtils.newNamespaceForFqn(fqn.copyDropLast()))
-    var result: DecodeNamespace = DecodeNamespaceImpl(fqn.last, parentNamespace)
-    parentNamespace.foreach(_.subNamespaces += result)
+    val result: DecodeNamespace = DecodeNamespaceImpl(fqn.last, parentNamespace)
+    parentNamespace.foreach(ns => ns.subNamespaces = ns.subNamespaces :+ result)
     result
   }
 }
@@ -417,7 +418,7 @@ class DecodeSourceProvider extends LazyLogging {
     val resourcesAsStream = getClass.getResourceAsStream(resourcePath)
     require(resourcesAsStream != null, resourcePath)
     registry.rootNamespaces ++= DecodeUtil.mergeRootNamespaces(Source.fromInputStream(resourcesAsStream).getLines().
-      filter(_.endsWith(".decode")).map(name => {
+      filter(_.endsWith(".decode")).map { name =>
       val resource: String = resourcePath + "/" + name
       logger.debug(s"Parsing $resource...")
       val input: StringBasedParserInput = Source.fromInputStream(getClass.getResourceAsStream(resource)).mkString
@@ -430,7 +431,7 @@ class DecodeSourceProvider extends LazyLogging {
         }
         throw e
       }
-    }).toTraversable)
+    }.toTraversable)
     registry
   }
 }

@@ -22,6 +22,7 @@ import java.util.stream.Stream;
 import static ru.mipt.acsl.decode.java.generator.JavaDecodeTypeVisitor.*;
 import static scala.collection.JavaConversions.asJavaCollection;
 import static scala.collection.JavaConversions.bufferAsJavaList;
+import static scala.collection.JavaConversions.seqAsJavaList;
 
 /**
  * @author Artem Shein
@@ -40,7 +41,7 @@ public class JavaDecodeSourcesGenerator implements Generator<JavaDecodeSourcesGe
     @Override
     public void generate() {
         LOG.info("Generating Java sources to '{}'", config.getOutputDir().getAbsolutePath());
-        generateNamespaces(bufferAsJavaList(config.getRegistry().rootNamespaces()));
+        generateNamespaces(seqAsJavaList(config.getRegistry().rootNamespaces()));
     }
 
     private void generateNamespaces(@NotNull List<DecodeNamespace> namespaces) {
@@ -48,10 +49,10 @@ public class JavaDecodeSourcesGenerator implements Generator<JavaDecodeSourcesGe
     }
 
     private void generateNamespace(@NotNull DecodeNamespace namespace) {
-        generateNamespaces(bufferAsJavaList(namespace.subNamespaces()));
-        bufferAsJavaList(namespace.components()).stream().forEach(this::generateComponent);
-        bufferAsJavaList(namespace.units()).stream().forEach(this::generateUnit);
-        bufferAsJavaList(namespace.types()).stream().forEach(this::generateType);
+        generateNamespaces(seqAsJavaList(namespace.subNamespaces()));
+        seqAsJavaList(namespace.components()).stream().forEach(this::generateComponent);
+        seqAsJavaList(namespace.units()).stream().forEach(this::generateUnit);
+        seqAsJavaList(namespace.types()).stream().forEach(this::generateType);
     }
 
     private void generateType(@NotNull DecodeType type) {

@@ -1,11 +1,10 @@
 package ru.mipt.acsl.decode.model.domain.impl.`type`
 
-import ru.mipt.acsl.decode.model.domain.Aliases.DecodeMessageParameterToken
+import ru.mipt.acsl.decode.model.domain.aliases.DecodeMessageParameterToken
 import ru.mipt.acsl.decode.model.domain._
 import ru.mipt.acsl.decode.model.domain.impl.{ParameterParser, DecodeNameImpl}
 
-import scala.collection.mutable
-import scala.collection.mutable.ArrayBuffer
+import scala.collection.immutable
 
 /**
   * @author Artem Shein
@@ -41,11 +40,11 @@ class DecodeUnitImpl(name: DecodeName, var namespace: DecodeNamespace, var displ
 }
 
 class DecodeNamespaceImpl(var name: DecodeName, var parent: Option[DecodeNamespace] = None,
-                          var types: mutable.Buffer[DecodeType] = mutable.Buffer(),
-                          var units: mutable.Buffer[DecodeUnit] = mutable.Buffer(),
-                          var subNamespaces: mutable.Buffer[DecodeNamespace] = mutable.Buffer(),
-                          var components: mutable.Buffer[DecodeComponent] = mutable.Buffer(),
-                          var languages: mutable.Buffer[DecodeLanguage] = mutable.Buffer())
+                          var types: immutable.Seq[DecodeType] = immutable.Seq.empty,
+                          var units: immutable.Seq[DecodeUnit] = immutable.Seq.empty,
+                          var subNamespaces: immutable.Seq[DecodeNamespace] = immutable.Seq.empty,
+                          var components: immutable.Seq[DecodeComponent] = immutable.Seq.empty,
+                          var languages: immutable.Seq[DecodeLanguage] = immutable.Seq.empty)
   extends DecodeNamed with DecodeNamespace {
   override def optionName: Option[DecodeName] = Some(name)
   override def asString: String = name.asMangledString
@@ -82,7 +81,7 @@ class DecodeEnumConstantImpl(val name: DecodeName, val value: String, info: Opti
   extends AbstractDecodeOptionalInfoAware(info) with DecodeEnumConstant
 
 class DecodeEnumTypeImpl(name: Option[DecodeName], namespace: DecodeNamespace, baseType: DecodeMaybeProxy[DecodeType],
-                              info: Option[String], var constants: mutable.Set[DecodeEnumConstant])
+                              info: Option[String], var constants: Set[DecodeEnumConstant])
   extends AbstractDecodeTypeWithBaseType(name, namespace, info, baseType) with DecodeEnumType {
 }
 
@@ -153,20 +152,18 @@ class DecodeCommandParameterImpl(name: DecodeName, info: Option[String], val par
 
 class DecodeComponentImpl(name: DecodeName, namespace: DecodeNamespace, var id: Option[Int],
                           var baseType: Option[DecodeMaybeProxy[DecodeStructType]], info: Option[String],
-                          var subComponents: mutable.Buffer[DecodeComponentRef],
-                          var commands: mutable.Buffer[DecodeCommand] = mutable.Buffer(),
-                          var messages: mutable.Buffer[DecodeMessage] = mutable.Buffer())
+                          var subComponents: immutable.Seq[DecodeComponentRef],
+                          var commands: immutable.Seq[DecodeCommand] = immutable.Seq.empty,
+                          var messages: immutable.Seq[DecodeMessage] = immutable.Seq.empty)
   extends AbstractDecodeNameNamespaceOptionalInfoAware(name, namespace, info) with DecodeComponent
 
 case class DecodeParameterWalker(parameter: DecodeMessageParameter)
 {
-  val tokens = mutable.Buffer.empty[DecodeMessageParameterToken]
-
   private var currentIndex = 0
   private val result = new ParameterParser(parameter.value).Parameter.run()
   if (result.isFailure)
     sys.error("parsing fails")
-  tokens ++= result.get
+  val tokens = result.get
 
   def hasNext: Boolean = currentIndex < tokens.size
 

@@ -8,9 +8,8 @@ import scala.Option;
 import scala.collection.Iterator;
 import scala.collection.mutable.Buffer;
 
-import java.util.List;
-
 import static ru.mipt.acsl.decode.ScalaUtil.appendToBuffer;
+
 
 /**
  * @author Artem Shein
