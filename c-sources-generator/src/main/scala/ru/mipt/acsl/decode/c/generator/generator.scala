@@ -139,15 +139,8 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
     imports.to[immutable.Seq]
   }
 
-  private def typeIncludes(component: DecodeComponent): CAstElements = {
-      val types = component.allTypes.toSeq
-      val typeIncludes = CAstElements(types.filter(_.isGeneratable)
-        .flatMap(t => CInclude(relPathForType(t)).eol): _*)
-      if (typeIncludes.nonEmpty)
-        typeIncludes :+ CEol
-      else
-        typeIncludes
-  }
+  private def typeIncludes(component: DecodeComponent): CAstElements =
+    component.allTypes.toSeq.filter(_.isGeneratable).flatMap(t => CInclude(relPathForType(t)).eol)
 
   private def generateSingleton(component: DecodeComponent): Unit = {
 
@@ -159,10 +152,15 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
       new File(nsDir, componentStructName + sourcesExt))
 
     val methods = component.allMethods ++ component.allSubComponentsMethods
-    val methodDefs = component.commandMethodImplDefs ++ component.parameterMethodImplDefs ++ methods.map(_.definition)
 
-    hFile.write((CEol +: appendPrologEpilog((typeIncludes(component) ++ component.allMessageDefs.eol ++
-      component.allCommandDefs.eol ++ methodDefs.flatMap(m => Seq(CEol, m))).externC.eol))
+    hFile.write((CEol +: appendPrologEpilog((typeIncludes(component) ++
+      "USER command implementation functions, MUST BE defined".comment ++
+      component.commandMethodImplDefs.flatMap(m => Seq(CEol, m)).eol ++
+      "USER parameter implementation functions, MUST BE defined".comment ++
+      component.parameterMethodImplDefs.flatMap(m => Seq(CEol, m)).eol ++
+      "Message ID for component defines".comment.eol ++ component.allMessageDefines ++
+      "Command ID for component defines".comment.eol ++ component.allCommandDefines ++
+      "Implemented functions".comment ++ methods.map(_.definition).flatMap(m => Seq(CEol, m))).externC.eol))
       .protectDoubleInclude(dirPathForNs(component.namespace) + hFile.getName))
 
     cFile.write(CInclude(includePathForNsFileName(component.namespace, hFile.getName)).eol.eol ++
@@ -302,6 +300,8 @@ private object CSourcesGenerator {
 
     def methodName(f: DecodeStructField, rootComponent: DecodeComponent, component: DecodeComponent): String =
       methodName(f.methodNamePart(rootComponent, component))
+
+    def comment: CAstElements = Seq(CEol, CComment(str), CEol)
   }
 
   implicit class RichComponent(val component: DecodeComponent) {
@@ -473,17 +473,17 @@ private object CSourcesGenerator {
       }
     }
 
-    def allCommandDefs: CAstElements = allCommandDefs(component)
+    def allCommandDefines: CAstElements = allCommandDefines(component)
 
-    def allCommandDefs(rootComponent: DecodeComponent): CAstElements =
-      component.commandDefs(rootComponent) ++ component.allSubComponents.toSeq.flatMap(_.commandDefs(component))
+    def allCommandDefines(rootComponent: DecodeComponent): CAstElements =
+      component.commandDefines(rootComponent) ++ component.allSubComponents.toSeq.flatMap(_.commandDefines(component))
 
-    def commandDefs(rootComponent: DecodeComponent): CAstElements =
+    def commandDefines(rootComponent: DecodeComponent): CAstElements =
       CDefine(upperCamelCaseToUpperUnderscore(rootComponent.prefixedTypeName +
         (if (rootComponent == component) "" else component.cName) + "CommandIds"),
         "{" + component.allCommandsById.toSeq.map(_._1).sorted.mkString(", ") + "}").eol
 
-    def allMessageDefs: CAstElements = allMessageDefs(component)
+    def allMessageDefines: CAstElements = allMessageDefs(component)
 
     def allMessageDefs(rootComponent: DecodeComponent): CAstElements =
        component.messageDefs(rootComponent) ++ component.allSubComponents.toSeq.flatMap(_.messageDefs(component))
@@ -698,7 +698,7 @@ private object CSourcesGenerator {
       case t: DecodeGenericTypeSpecialized =>
         t.genericType.obj.cTypeName +
           t.genericTypeArguments.map(_.map(_.obj.cTypeName).getOrElse("Void")).mkString
-        // fixme: remove asInstanceOf
+      // fixme: remove asInstanceOf
       case t: DecodeOptionNamed => lowerUnderscoreToUpperCamel(t.asInstanceOf[DecodeOptionNamed].cTypeName)
       case _ => sys.error("not implemented")
     }
@@ -932,7 +932,7 @@ private object CSourcesGenerator {
       val uniqueName = "__" + filePath.split(io.File.separatorChar).map(p =>
         upperCamelCaseToUpperUnderscore(p).replaceAll("\\.", "_")).mkString("_") + "__"
       /*"_" + MessageDigest.getInstance("MD5").digest(bytes).map("%02x".format(_)).mkString +*/
-      Seq(CIfNDef(uniqueName), CEol, CDefine(uniqueName)) ++ els :+ CEndIf
+      "DO NOT EDIT! FILE IS AUTO GENERATED".comment.eol ++ Seq(CIfNDef(uniqueName), CEol, CDefine(uniqueName)) ++ els :+ CEndIf
     }
 
     def externC: CAstElements =
