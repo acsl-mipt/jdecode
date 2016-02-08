@@ -16,7 +16,7 @@ object CAstElements {
 }
 
 package object implicits {
-  type CAstElements = immutable.Seq[CAstElement]
+  type CAstElements = Seq[CAstElement]
   implicit class CAstElementsGeneratable(els: CAstElements) extends CAstElement {
     override def generate(s: CGenState): Unit = { Helpers.generate(s, els) }
   }
@@ -63,7 +63,6 @@ class CDefine(val name: String, val value: Option[String]) extends CMacroAstElem
   override def generate(s: CGenState): Unit = {
     s.append("#define ").append(name)
     value.foreach(s.append(" ").append)
-    s.eol()
   }
 }
 

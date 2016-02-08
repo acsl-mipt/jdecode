@@ -69,7 +69,8 @@ class DecodeRegistryImpl(resolvers: DecodeProxyResolver*) extends DecodeRegistry
   if (DecodeConstants.SYSTEM_NAMESPACE_FQN.size != 1)
     sys.error("not implemented")
 
-  var rootNamespaces: immutable.Seq[DecodeNamespace] = immutable.Seq(new DecodeNamespaceImpl(DecodeConstants.SYSTEM_NAMESPACE_FQN.last, None))
+  var rootNamespaces: immutable.Seq[DecodeNamespace] = immutable.Seq(
+    new DecodeNamespaceImpl(DecodeConstants.SYSTEM_NAMESPACE_FQN.last, None))
 
   private val proxyResolvers = resolvers.to[immutable.Seq]
 
@@ -103,35 +104,38 @@ class DecodeMessageParameterRefWalker(var component: DecodeComponent, var struct
   else
     subTokens.foldLeft(structField.get.typeUnit.t.obj)(TokenTypeWalker)
 
-  // todo: refactoring
+  private def findSubComponent(tokenString: String): Option[Try[Unit]] =
+    component.subComponents.find(tokenString == _.aliasOrMangledName).map { subComponent =>
+    component = subComponent.component.obj
+    structField = None
+    Success()}
+
+  private def findBaseTypeField(tokenString: String): Option[Try[Unit]] =
+    component.baseType.flatMap(_.obj.fields.find(tokenString == _.name.asMangledString).map { f =>
+      structField = Some(f)
+      Success()
+    })
+
+  private def findTokenString(token: DecodeMessageParameterToken): Option[Try[Unit]] =
+    token.left.toOption.flatMap { tokenString =>
+      findSubComponent(tokenString).orElse(findBaseTypeField(tokenString))
+    }
+
   private def walkOne(): Try[Unit] = {
     require(subTokens.nonEmpty)
     val token = subTokens.head
-    val fail = () => { Failure(new IllegalStateException(s"can't walk $token for $this")) }
+    val fail = () => Try[Unit] { Failure(new IllegalStateException(s"can't walk $token for $this")) }
     subTokens = subTokens.tail
-    if (structField.isDefined)
-      return fail()
-    if (token.isRight)
-      return fail()
-    val tokenString = token.left.get
-    // try for sub components
-    for (subComponent <- component.subComponents.find(tokenString == _.aliasOrMangledName)) {
-      component = subComponent.component.obj
-      structField = None
-      return Success()
+    structField match {
+      case Some(_) => fail()
+      case _ => findTokenString(token).getOrElse { fail() }
     }
-    if (component.baseType.isEmpty)
-      return fail()
-    for (f <- component.baseType.get.obj.fields.find(tokenString == _.name.asMangledString)) {
-      structField = Some(f)
-      return Success()
-    }
-    fail()
   }
 }
 
 class DecodeCommandImpl(val name: DecodeName, val id: Option[Int], info: Option[String],
-                        val parameters: immutable.Seq[DecodeCommandParameter], val returnType: Option[DecodeMaybeProxy[DecodeType]])
+                        val parameters: immutable.Seq[DecodeCommandParameter],
+                        val returnType: Option[DecodeMaybeProxy[DecodeType]])
   extends AbstractDecodeOptionalInfoAware(info) with DecodeCommand {
   override def optionName: Option[DecodeName] = Some(name)
 }
