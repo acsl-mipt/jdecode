@@ -59,7 +59,8 @@ case class DecodeComponentRefImpl(component: DecodeMaybeProxy[DecodeComponent], 
   extends DecodeComponentRef
 
 class DecodeStatusMessageImpl(component: DecodeComponent, name: DecodeName, id: Option[Int], info: Option[String],
-                              parameters: Seq[DecodeMessageParameter]) extends AbstractImmutableDecodeMessage(component, name, id, info, parameters) with DecodeStatusMessage
+                              parameters: Seq[DecodeMessageParameter], val priority: Option[Int] = None)
+  extends AbstractImmutableDecodeMessage(component, name, id, info, parameters) with DecodeStatusMessage
 
 class DecodeEventMessageImpl(component: DecodeComponent, name: DecodeName, id: Option[Int], info: Option[String],
                              parameters: Seq[DecodeMessageParameter], val eventType: DecodeMaybeProxy[DecodeType])

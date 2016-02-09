@@ -250,6 +250,7 @@ public class DecodeSqlProvider
                             DecodeNameImpl messageName = DecodeNameImpl
                                     .newFromMangledName(messagesSelectRs.getString("name"));
                             Option<Object> messageId = getOptionalInt(messagesSelectRs, "message_id");
+                            Option<Object> messagePriority = getOptionalInt(messagesSelectRs, "message_priority");
                             Option<String> messageInfo = Option.apply(messagesSelectRs.getString("info"));
 
                             DecodeMessage message = null;
@@ -258,7 +259,7 @@ public class DecodeSqlProvider
                             if (!messagesSelectRs.wasNull())
                             {
                                 message = new DecodeStatusMessageImpl(component, messageName, messageId, messageInfo,
-                                                parameters);
+                                                parameters, messagePriority);
                             }
 
                             messagesSelectRs.getLong("e_message_id");

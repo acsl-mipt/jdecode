@@ -43,6 +43,10 @@ public class DecodeVisitor extends PsiElementVisitor {
     visitPsiElement(o);
   }
 
+  public void visitEntityId(@NotNull DecodeEntityId o) {
+    visitPsiElement(o);
+  }
+
   public void visitEnumTypeDecl(@NotNull DecodeEnumTypeDecl o) {
     visitPsiElement(o);
   }

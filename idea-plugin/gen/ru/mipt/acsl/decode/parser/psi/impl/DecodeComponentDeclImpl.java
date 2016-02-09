@@ -42,6 +42,12 @@ public class DecodeComponentDeclImpl extends ASTWrapperPsiElement implements Dec
 
   @Override
   @Nullable
+  public DecodeEntityId getEntityId() {
+    return findChildByClass(DecodeEntityId.class);
+  }
+
+  @Override
+  @Nullable
   public DecodeInfoString getInfoString() {
     return findChildByClass(DecodeInfoString.class);
   }
@@ -56,12 +62,6 @@ public class DecodeComponentDeclImpl extends ASTWrapperPsiElement implements Dec
   @NotNull
   public List<DecodeSubcomponentDecl> getSubcomponentDeclList() {
     return PsiTreeUtil.getChildrenOfTypeAsList(this, DecodeSubcomponentDecl.class);
-  }
-
-  @Override
-  @Nullable
-  public PsiElement getNonNegativeNumber() {
-    return findChildByType(NON_NEGATIVE_NUMBER);
   }
 
 }

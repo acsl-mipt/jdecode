@@ -17,6 +17,7 @@ public interface DecodeTypes {
   IElementType COMPONENT_PARAMETERS_DECL = new DecodeElementType("COMPONENT_PARAMETERS_DECL");
   IElementType ELEMENT_ID = new DecodeElementType("ELEMENT_ID");
   IElementType ELEMENT_NAME_RULE = new DecodeElementType("ELEMENT_NAME_RULE");
+  IElementType ENTITY_ID = new DecodeElementType("ENTITY_ID");
   IElementType ENUM_TYPE_DECL = new DecodeElementType("ENUM_TYPE_DECL");
   IElementType ENUM_TYPE_VALUE = new DecodeElementType("ENUM_TYPE_VALUE");
   IElementType ENUM_TYPE_VALUES = new DecodeElementType("ENUM_TYPE_VALUES");
@@ -76,6 +77,7 @@ public interface DecodeTypes {
   IElementType FALSE = new DecodeTokenType("false");
   IElementType FLOAT = new DecodeTokenType("float");
   IElementType GT = new DecodeTokenType(">");
+  IElementType ID = new DecodeTokenType("id");
   IElementType IMPORT = new DecodeTokenType("import");
   IElementType INFO = new DecodeTokenType("info");
   IElementType INT = new DecodeTokenType("int");
@@ -93,6 +95,7 @@ public interface DecodeTypes {
   IElementType PARAMETERS = new DecodeTokenType("parameters");
   IElementType PLACEMENT = new DecodeTokenType("placement");
   IElementType PLUS = new DecodeTokenType("+");
+  IElementType PRIORITY = new DecodeTokenType("priority");
   IElementType QUESTION = new DecodeTokenType("?");
   IElementType RIGHT_BRACE = new DecodeTokenType("}");
   IElementType RIGHT_BRACKET = new DecodeTokenType("]");
@@ -139,6 +142,9 @@ public interface DecodeTypes {
       }
       else if (type == ELEMENT_NAME_RULE) {
         return new DecodeElementNameRuleImpl(node);
+      }
+      else if (type == ENTITY_ID) {
+        return new DecodeEntityIdImpl(node);
       }
       else if (type == ENUM_TYPE_DECL) {
         return new DecodeEnumTypeDeclImpl(node);

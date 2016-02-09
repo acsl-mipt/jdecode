@@ -128,6 +128,13 @@ case class CPtrType(subType: CType) extends CType {
   }
 }
 
+case class CConstType(t: CType) extends CType {
+  override def generate(s: CGenState): Unit = {
+    s.append("const ")
+    t.generate(s)
+  }
+}
+
 case class CTypeDefStatement(name: String, t: CType) extends CAstElement {
   def toType: CType = CTypeApplication(name)
   def ptr: CPtrType = toType.ptr
@@ -368,6 +375,15 @@ case class CFuncCall(methodName: String, arguments: CExpression*) extends CExpre
 
 case class CVar(name: String) extends CExpression {
   override def generate(s: CGenState): Unit = s.append(name)
+}
+
+case class CTypeCast(expr: CExpression, cType: CType) extends CExpression {
+  override def generate(s: CGenState): Unit = {
+    s.append("(")
+    cType.generate(s)
+    s.append(") ")
+    expr.generate(s)
+  }
 }
 
 abstract class CUnaryOp(private val expr: CExpression, val op: String, private val isBefore: Boolean = true) extends CExpression {

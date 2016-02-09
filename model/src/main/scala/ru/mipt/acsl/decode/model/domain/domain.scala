@@ -290,6 +290,8 @@ trait DecodeMessage extends DecodeHasOptionInfo with DecodeNamed with DecodeHasO
 }
 
 trait DecodeStatusMessage extends DecodeMessage {
+  def priority: Option[Int]
+
   def accept[T](visitor: DecodeMessageVisitor[T]): T = visitor.visit(this)
 }
 

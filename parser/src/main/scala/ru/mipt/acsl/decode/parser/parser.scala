@@ -145,7 +145,7 @@ class DecodeParboiledParser(val input: ParserInput) extends Parser with LazyLogg
     new DecodeCommandImpl(name, id, info, args, returnType)
 
   def Command: Rule1[DecodeCommand] = rule {
-    definition("command") ~ Ew.? ~ (':' ~ Ew.? ~ NonNegativeIntegerAsInt).? ~ Ew.? ~ CommandArgs ~
+    definition("command") ~ Id.? ~ Ew.? ~ CommandArgs ~
       (Ew.? ~ "->" ~ Ew.? ~ TypeApplication ~> (_.get)).? ~> newCommand _
   }
 
@@ -165,9 +165,7 @@ class DecodeParboiledParser(val input: ParserInput) extends Parser with LazyLogg
     '(' ~ Ew.? ~ MessageParameter.+(Ew.? ~ ',' ~ Ew.?) ~ (Ew.? ~ ',').? ~ Ew.? ~ ')'
   }
 
-  def MessageNameId: Rule2[DecodeName, Option[Int]] = rule {
-    ElementName ~ (Ew.? ~ ':' ~ Ew.? ~ NonNegativeIntegerAsInt).?
-  }
+  def MessageNameId: Rule2[DecodeName, Option[Int]] = rule { ElementName ~ Id.? }
 
   var component: Option[DecodeComponent] = None
 
@@ -181,12 +179,13 @@ class DecodeParboiledParser(val input: ParserInput) extends Parser with LazyLogg
       newEventMessage _
   }
 
-  private def newStatusMessage(info: Option[String], name: DecodeName, id: Option[Int],
+  private def newStatusMessage(info: Option[String], name: DecodeName, id: Option[Int], priority: Option[Int],
                                parameters: Seq[DecodeMessageParameter]) =
-    new DecodeStatusMessageImpl(component.get, name, id, info, parameters)
+    new DecodeStatusMessageImpl(component.get, name, id, info, parameters, priority)
 
   def StatusMessage: Rule1[DecodeStatusMessage] = rule {
-    InfoEw.? ~ atomic("status") ~ Ew ~ MessageNameId ~ Ew.? ~ MessageParameters ~> newStatusMessage _
+    InfoEw.? ~ atomic("status") ~ Ew ~ MessageNameId ~
+      (Ew ~ "priority" ~ Ew.? ~ ':' ~ Ew.? ~ NonNegativeIntegerAsInt).? ~ Ew.? ~ MessageParameters ~> newStatusMessage _
   }
 
   def Message: Rule1[DecodeMessage] = rule { StatusMessage | EventMessage }
@@ -204,8 +203,12 @@ class DecodeParboiledParser(val input: ParserInput) extends Parser with LazyLogg
     component.get
   }
 
+  def Id: Rule1[Int] = rule {
+    Ew ~ "id" ~ Ew.? ~ ':' ~ Ew.? ~ NonNegativeIntegerAsInt
+  }
+
   def Component: Rule1[DecodeComponent] = rule {
-    definition("component") ~> { name => componentName = Some(name) } ~ (Ew.? ~ ':' ~ NonNegativeIntegerAsInt).? ~
+    definition("component") ~> { name => componentName = Some(name) } ~ Id.? ~
       (Ew ~ atomic("with") ~ Ew ~ ElementId.+(Ew.? ~ ',' ~ Ew.?)).? ~
       Ew.? ~ '{' ~ (Ew.? ~ ComponentParameters).? ~> newComponent _ ~
       (Ew.? ~ (Command ~> { command => component.get.commands = component.get.commands :+ command }

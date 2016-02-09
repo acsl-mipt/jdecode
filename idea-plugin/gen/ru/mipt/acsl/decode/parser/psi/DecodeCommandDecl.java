@@ -14,12 +14,12 @@ public interface DecodeCommandDecl extends PsiElement {
   DecodeElementNameRule getElementNameRule();
 
   @Nullable
+  DecodeEntityId getEntityId();
+
+  @Nullable
   DecodeInfoString getInfoString();
 
   @Nullable
   DecodeTypeUnitApplication getTypeUnitApplication();
-
-  @Nullable
-  PsiElement getNonNegativeNumber();
 
 }

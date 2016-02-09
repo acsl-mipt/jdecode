@@ -30,6 +30,12 @@ public class DecodeStatusMessageImpl extends ASTWrapperPsiElement implements Dec
 
   @Override
   @Nullable
+  public DecodeEntityId getEntityId() {
+    return findChildByClass(DecodeEntityId.class);
+  }
+
+  @Override
+  @Nullable
   public DecodeInfoString getInfoString() {
     return findChildByClass(DecodeInfoString.class);
   }

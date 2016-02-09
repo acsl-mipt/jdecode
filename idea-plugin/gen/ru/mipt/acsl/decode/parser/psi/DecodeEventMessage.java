@@ -11,6 +11,9 @@ public interface DecodeEventMessage extends PsiElement {
   DecodeElementNameRule getElementNameRule();
 
   @Nullable
+  DecodeEntityId getEntityId();
+
+  @Nullable
   DecodeInfoString getInfoString();
 
   @NotNull
@@ -18,8 +21,5 @@ public interface DecodeEventMessage extends PsiElement {
 
   @NotNull
   DecodeTypeApplication getTypeApplication();
-
-  @Nullable
-  PsiElement getNonNegativeNumber();
 
 }

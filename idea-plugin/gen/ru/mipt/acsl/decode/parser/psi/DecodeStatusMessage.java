@@ -11,6 +11,9 @@ public interface DecodeStatusMessage extends PsiElement {
   DecodeElementNameRule getElementNameRule();
 
   @Nullable
+  DecodeEntityId getEntityId();
+
+  @Nullable
   DecodeInfoString getInfoString();
 
   @NotNull
