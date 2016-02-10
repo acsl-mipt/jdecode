@@ -475,10 +475,6 @@ case class CIf(expression: CExpression, thenStatements: CAstElements = CAstEleme
   }
 }
 
-case object CIdent extends CAstElement {
-  override def generate(s: CGenState): Unit = s.indent()
-}
-
 case object CComma extends CAstElement {
   override def generate(s: CGenState): Unit = s.append(", ")
 }
@@ -508,6 +504,10 @@ case object CSemicolon extends CAstElement {
 
 case object CIndent extends CAstElement {
   override def generate(s: CGenState): Unit = s.indent()
+}
+
+case object CBreak extends CAstElement {
+  override def generate(s: CGenState): Unit = s.append("break")
 }
 
 case class CFuncImpl(definition: CFuncDef, implementation: CAstElements = CAstElements()) extends CAstElement {
