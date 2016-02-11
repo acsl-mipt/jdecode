@@ -74,15 +74,16 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
           head.obj match {
             // TODO: implement or remove
             // case h if h.isBasedOnEnum => (Seq(t.cTypeDef(head.obj.cType)), Seq.empty)
-            case _ => (Seq(t.cTypeDef(CStructTypeDef(Seq(CStructTypeDefField("flag", b8Type),
-              CStructTypeDefField("value", t.genericTypeArguments.head.get.obj.cType))))), Seq.empty)
+            case _ => (Seq(t.cTypeDef(CStructTypeDef(Seq(
+              CStructTypeDefField("value", t.genericTypeArguments.head.get.obj.cType),
+              CStructTypeDefField("flag", b8Type))))), Seq.empty)
           }
         case or: DecodeOrType =>
           var index = 0
-          (Seq(t.cTypeDef(CStructTypeDef(Seq(tag.field) ++ t.genericTypeArguments.flatMap { ot =>
+          (Seq(t.cTypeDef(CStructTypeDef(t.genericTypeArguments.flatMap { ot =>
             index += 1
             ot.map(t => Seq(CStructTypeDefField("_" + index, t.obj.cType))).getOrElse(Seq.empty)
-          }))), Seq.empty)
+          } :+ tag.field))), Seq.empty)
       }
       case t: DecodeArrayType =>
         val arrayType: CType = config.arrayAsPointer match {
