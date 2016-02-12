@@ -36,19 +36,19 @@ object DecodeName {
 
 trait DecodeElement
 
-trait DecodeOptionNamed {
+trait OptionNamed {
   def optionName: Option[DecodeName]
 }
 
-trait DecodeNamed extends DecodeOptionNamed {
+trait Named extends OptionNamed {
   def name: DecodeName
 }
 
-trait DecodeHasOptionInfo {
+trait HasOptionInfo {
   def info: Option[String]
 }
 
-trait DecodeHasOptionId {
+trait HasOptionId {
   def id: Option[Int]
 }
 
@@ -66,13 +66,13 @@ trait DecodeFqn {
   def isEmpty: Boolean = parts.isEmpty
 }
 
-trait DecodeReferenceable extends DecodeOptionNamed {
+trait DecodeReferenceable extends OptionNamed {
   def accept[T](visitor: DecodeReferenceableVisitor[T]): T
 }
 
 trait DecodeLanguage extends DecodeReferenceable with DecodeNamespaceAware
 
-trait DecodeNamespace extends DecodeReferenceable with DecodeNamed {
+trait DecodeNamespace extends DecodeReferenceable with Named {
   def asString: String
 
   def units: immutable.Seq[DecodeUnit]
@@ -121,9 +121,9 @@ trait DecodeNamespaceAware {
   def namespace_=(namespace: DecodeNamespace)
 }
 
-trait DecodeOptionalNameAndOptionalInfoAware extends DecodeHasOptionInfo with DecodeOptionNamed
+trait DecodeOptionalNameAndOptionalInfoAware extends HasOptionInfo with OptionNamed
 
-trait DecodeUnit extends DecodeNamed with DecodeHasOptionInfo with DecodeReferenceable with DecodeNamespaceAware {
+trait DecodeUnit extends Named with HasOptionInfo with DecodeReferenceable with DecodeNamespaceAware {
   def display: Option[String]
 
   def accept[T] (visitor: DecodeReferenceableVisitor[T] ): T = visitor.visit(this)
@@ -176,7 +176,7 @@ trait DecodePrimitiveType extends DecodeType {
   def accept[T](visitor: DecodeTypeVisitor[T]): T = visitor.visit(this)
 }
 
-trait DecodeNativeType extends DecodeType with DecodeNamed {
+trait DecodeNativeType extends DecodeType with Named {
 }
 
 object DecodeNativeType {
@@ -187,7 +187,7 @@ trait BaseTyped {
   def baseType: DecodeMaybeProxy[DecodeType]
 }
 
-trait DecodeAliasType extends DecodeType with DecodeNamed with BaseTyped {
+trait DecodeAliasType extends DecodeType with Named with BaseTyped {
   def accept[T](visitor: DecodeTypeVisitor[T]): T = visitor.visit(this)
 }
 
@@ -195,7 +195,7 @@ trait DecodeSubType extends DecodeType with BaseTyped {
   def accept[T](visitor: DecodeTypeVisitor[T]): T = visitor.visit(this)
 }
 
-trait DecodeEnumConstant extends DecodeHasOptionInfo {
+trait DecodeEnumConstant extends HasOptionInfo {
   def name: DecodeName
   def value: String
 }
@@ -228,7 +228,7 @@ trait DecodeTypeUnitApplication {
   def unit: Option[DecodeMaybeProxy[DecodeUnit]]
 }
 
-trait DecodeStructField extends DecodeNamed with DecodeHasOptionInfo {
+trait DecodeStructField extends Named with HasOptionInfo {
   def typeUnit: DecodeTypeUnitApplication
 }
 
@@ -265,12 +265,12 @@ trait DecodeTypeVisitor[T] {
 }
 
 // Components
-trait DecodeCommandParameter extends DecodeNamed with DecodeHasOptionInfo {
+trait DecodeCommandParameter extends Named with HasOptionInfo {
   def unit: Option[DecodeMaybeProxy[DecodeUnit]]
   def paramType: DecodeMaybeProxy[DecodeType]
 }
 
-trait DecodeCommand extends DecodeHasOptionInfo with DecodeNamed with DecodeHasOptionId {
+trait DecodeCommand extends HasOptionInfo with Named with HasOptionId {
   def returnType: Option[DecodeMaybeProxy[DecodeType]]
   def parameters: immutable.Seq[DecodeCommandParameter]
 }
@@ -281,7 +281,7 @@ trait DecodeMessageVisitor[T] {
   def visit(statusMessage: DecodeStatusMessage): T
 }
 
-trait DecodeMessage extends DecodeHasOptionInfo with DecodeNamed with DecodeHasOptionId {
+trait DecodeMessage extends HasOptionInfo with Named with HasOptionId {
   def accept[T](visitor: DecodeMessageVisitor[T] ): T
 
   def parameters: Seq[DecodeMessageParameter]
@@ -313,7 +313,7 @@ trait DecodeMessageParameterRef {
   def t: DecodeType
 }
 
-trait DecodeMessageParameter extends DecodeHasOptionInfo {
+trait DecodeMessageParameter extends HasOptionInfo {
   def value: String
 
   def ref(component: DecodeComponent): DecodeMessageParameterRef =
@@ -326,11 +326,11 @@ trait DecodeEventMessage extends DecodeMessage {
   def accept[T](visitor: DecodeMessageVisitor[T]): T = visitor.visit(this)
 }
 
-trait DecodeFqned extends DecodeNamed with DecodeNamespaceAware {
+trait DecodeFqned extends Named with DecodeNamespaceAware {
   def fqn: DecodeFqn = DecodeFqnImpl.newFromFqn(namespace.fqn, name)
 }
 
-trait DecodeComponent extends DecodeHasOptionInfo with DecodeFqned with DecodeReferenceable with DecodeHasOptionId {
+trait DecodeComponent extends HasOptionInfo with DecodeFqned with DecodeReferenceable with HasOptionId {
   def messages: immutable.Seq[DecodeMessage]
   def messages_=(messages: immutable.Seq[DecodeMessage])
   def commands: immutable.Seq[DecodeCommand]

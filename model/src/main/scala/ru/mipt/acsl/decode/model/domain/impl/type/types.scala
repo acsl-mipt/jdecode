@@ -19,14 +19,14 @@ object DecodeFqnImpl {
     new DecodeFqnImpl("\\.".r.split(sourceText).map(DecodeNameImpl.newFromSourceName))
 }
 
-abstract class AbstractDecodeOptionalInfoAware(val info: Option[String]) extends DecodeHasOptionInfo
+abstract class AbstractDecodeOptionalInfoAware(val info: Option[String]) extends HasOptionInfo
 
 abstract class AbstractDecodeOptionalNameAndOptionalInfoAware(val optionName: Option[DecodeName], info: Option[String])
   extends AbstractDecodeOptionalInfoAware(info) with DecodeOptionalNameAndOptionalInfoAware {
 }
 
 class AbstractDecodeNameAndOptionalInfoAware(private val _name: DecodeName, info: Option[String])
-  extends AbstractDecodeOptionalInfoAware(info) with DecodeNamed {
+  extends AbstractDecodeOptionalInfoAware(info) with Named {
   override def name: DecodeName = _name
   override def optionName: Option[DecodeName] = Some(_name)
 }
@@ -45,7 +45,7 @@ class DecodeNamespaceImpl(var name: DecodeName, var parent: Option[DecodeNamespa
                           var subNamespaces: immutable.Seq[DecodeNamespace] = immutable.Seq.empty,
                           var components: immutable.Seq[DecodeComponent] = immutable.Seq.empty,
                           var languages: immutable.Seq[DecodeLanguage] = immutable.Seq.empty)
-  extends DecodeNamed with DecodeNamespace {
+  extends Named with DecodeNamespace {
   override def optionName: Option[DecodeName] = Some(name)
   override def asString: String = name.asMangledString
 }

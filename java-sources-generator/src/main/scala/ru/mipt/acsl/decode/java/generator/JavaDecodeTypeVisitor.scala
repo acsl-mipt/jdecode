@@ -50,7 +50,7 @@ object JavaDecodeTypeVisitor {
     case t: DecodeNativeType if t.isInstanceOf[DecodeBerType] => new JavaTypeApplication("decode.ber")
     case t: DecodeNativeType if t.isInstanceOf[DecodeOrType] => new JavaTypeApplication("decode.or")
     case t: DecodeNativeType if t.isInstanceOf[DecodeOptionalType] => new JavaTypeApplication("decode.optional")
-    case t: DecodeOptionNamed => new JavaTypeApplication(t.namespace.fqn.asMangledString + "." + JavaDecodeTypeVisitor.classNameFromTypeName(
+    case t: OptionNamed => new JavaTypeApplication(t.namespace.fqn.asMangledString + "." + JavaDecodeTypeVisitor.classNameFromTypeName(
       // FIXME: handle Option
       t.optionName.get.asMangledString))
     case _ => sys.error("not implemented")

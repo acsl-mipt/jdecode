@@ -160,7 +160,7 @@ public class JavaDecodeSourcesGenerator implements Generator<JavaDecodeSourcesGe
     }
 
     @NotNull
-    private String getOrMakeUniqueName(DecodeOptionNamed optionalNameAware) {
+    private String getOrMakeUniqueName(OptionNamed optionalNameAware) {
         Option<DecodeName> optionalName = optionalNameAware.optionName();
         return optionalName.isDefined() ? optionalName.get().asMangledString() : makeUniqueName();
     }

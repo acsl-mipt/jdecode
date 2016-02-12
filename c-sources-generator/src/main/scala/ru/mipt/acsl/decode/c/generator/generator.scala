@@ -167,13 +167,12 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
     val guidDefines = Seq(CDefine("PHOTON_COMPONENTS", allComponentById.size.toString), CEol,
       CDefine("PHOTON_COMPONENT_IDS", '{' + allComponentById.keys.toSeq.sorted.mkString(", ") + '}'), CEol) ++
       allComponentById.flatMap { case (id, c) =>
-        val defineNamePrefix = upperCamelCaseToUpperUnderscore(c.prefixedTypeName)
-        Seq(CDefine(defineNamePrefix + "_GUID", '"' + c.fqn.asMangledString + '"'), CEol,
-          CDefine("PHOTON_COMPONENT_" + id + "_GUID", defineNamePrefix + "_GUID"), CEol,
-          CDefine(defineNamePrefix + "_ID",  id.toString), CEol)
-    } ++ Seq(CDefine("PHOTON_COMPONENT_GUIDS", '{' + allComponentById.toSeq.sortBy(_._1).map(_._2).map{ c =>
-        '"' + c.fqn.asMangledString + '"'
-      }.mkString(", ") + '}'), CEol)
+        val guidDefineName = c.guidDefineName
+        Seq(CDefine(guidDefineName, '"' + c.fqn.asMangledString + '"'), CEol,
+          CDefine("PHOTON_COMPONENT_" + id + "_GUID", guidDefineName), CEol,
+          CDefine(c.idDefineName,  id.toString), CEol)
+    } ++ Seq(CDefine("PHOTON_COMPONENT_GUIDS", '{' + allComponentById.toSeq.sortBy(_._1).map(_._2)
+      .map(_.guidDefineName).mkString(", ") + '}'), CEol)
 
     val methods = component.allMethods ++ component.allSubComponentsMethods
 
@@ -290,20 +289,9 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
     case _ => expr -> exprRight
   }
 
-  private def defineAndInitVar(v: CVar, parameter: DecodeCommandParameter): CAstElements = {
-    val paramType = parameter.paramType.obj
-    CStatements(v.define(paramType.cType), paramType.deserializeMethodName.call(v.ref, reader.v)._try)
-  }
-
   private def tryCall(methodName: String, exprs: CExpression*): CFuncCall = methodName.call(exprs: _*)._try
 
   implicit class RichArrayType(val t: DecodeArrayType) {
-
-    private def codeForArrayElements(expr: CExpression, codeGen: CExpression => CExpression, ref: Boolean): CAstElements = {
-      val dataExpr = expr -> dataVar(i.v)
-      Seq(CIndent, CForStatement(Seq(i.v.define(i.t, Some(CIntLiteral(0))), CComma, size.v.assign(expr -> size.v)),
-        Seq(CLess(i.v, size.v)), Seq(CIncBefore(i.v)), Seq(codeGen(if (ref) dataExpr.ref else dataExpr).line)), CEol)
-    }
 
     def serializeCodeForArrayElements(src: CExpression): CAstElements = {
       val baseType = t.baseType.obj
@@ -353,7 +341,7 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
     }
 
     def cTypeName: String = t match {
-      case t: DecodeNamed => lowerUnderscoreToUpperCamel(t.name.asMangledString)
+      case t: Named => lowerUnderscoreToUpperCamel(t.name.asMangledString)
       case t: DecodePrimitiveType => primitiveTypeToCTypeApplication(t).name
       case t: DecodeArrayType =>
         val baseCType = t.baseType.obj.cTypeName
@@ -370,7 +358,7 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
         t.genericType.obj.cTypeName +
           t.genericTypeArguments.map(_.map(_.obj.cTypeName).getOrElse("Void")).mkString
       // fixme: remove asInstanceOf
-      case t: DecodeOptionNamed => lowerUnderscoreToUpperCamel(t.asInstanceOf[DecodeOptionNamed].cTypeName)
+      case t: OptionNamed => lowerUnderscoreToUpperCamel(t.asInstanceOf[OptionNamed].cTypeName)
       case _ => sys.error("not implemented")
     }
 
@@ -664,6 +652,10 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
 
     def functionTableTypeName: String = prefixedTypeName + "UserFunctionTable"
 
+    def guidDefineName: String = upperCamelCaseToUpperUnderscore(component.prefixedTypeName) + "_GUID"
+
+    def idDefineName: String = upperCamelCaseToUpperUnderscore(component.prefixedTypeName) + "_ID"
+
     def allSubComponents: immutable.Set[DecodeComponent] =
       component.subComponents.flatMap { ref =>
         val c = ref.component.obj
@@ -861,7 +853,8 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
         val methodNamePart = command.executeMethodNamePart(component, subComponent)
         val vars = command.parameters.map { p => CVar(p.mangledCName) }
         val varInits = vars.zip(command.parameters).flatMap { case (v, parameter) =>
-          defineAndInitVar(v, parameter)
+          val paramType = parameter.paramType.obj
+          CStatements(v.define(paramType.cType), paramType.deserializeMethodName.call(v.ref, reader.v)._try)
         }
         val cmdResultVar = CVar("cmdResult")
         val cmdReturnType = command.returnType.map(_.obj)
@@ -884,7 +877,7 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
         component.allSubComponents.flatMap(_.allTypes)
 
     // todo: optimize: memoize
-    private def makeMapById[T <: DecodeHasOptionId](seq: Seq[T], subSeq: DecodeComponent => Seq[T])
+    private def makeMapById[T <: HasOptionId](seq: Seq[T], subSeq: DecodeComponent => Seq[T])
     : immutable.HashMap[Int, WithComponent[T]] = {
       var nextId = 0
       val mapById = mutable.HashMap.empty[Int, WithComponent[T]]
@@ -916,7 +909,8 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
     def allComponentsById: immutable.HashMap[Int, DecodeComponent] = {
       val map = mutable.HashMap.empty[Int, DecodeComponent]
       var nextId = 0
-      val (withId, withoutId) = (component +: component.allSubComponents.toSeq).span(_.id.isDefined)
+      val components = component +: component.allSubComponents.toSeq
+      val (withId, withoutId) = (components.filter(_.id.isDefined), components.filter(_.id.isEmpty))
       withId.foreach { c => assert(map.put(c.id.getOrElse(sys.error("wtf")), c).isEmpty) }
       map ++= withoutId.map { c =>
         while (map.contains(nextId))
@@ -942,7 +936,7 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
       rootComponent.prefixedTypeName.methodName("Write" + message.methodNamePart(rootComponent, component).capitalize)
   }
 
-  implicit class RichNamed(val named: DecodeNamed) {
+  implicit class RichNamed(val named: Named) {
 
     def executeMethodNamePart(rootComponent: DecodeComponent, component: DecodeComponent): String =
       "Execute" + methodNamePart(rootComponent, component).capitalize
@@ -1124,7 +1118,7 @@ object CSourcesGenerator {
   private var fileNameId: Int = 0
   private var typeNameId: Int = 0
 
-  implicit class RichOptionNamed(val optionNamed: DecodeOptionNamed) {
+  implicit class RichOptionNamed(val optionNamed: OptionNamed) {
     def fileName: String =
       optionNamed.optionName.map(_.asMangledString).getOrElse { fileNameId += 1; "type" + fileNameId }
 
@@ -1224,7 +1218,7 @@ object CSourcesGenerator {
 
   private val keywords = Seq("return")
 
-  private def casesForMap[T <: DecodeNamed](map: immutable.HashMap[Int, WithComponent[T]],
-                                            apply: (T, DecodeComponent) => CAstElements): Seq[CCase] =
+  private def casesForMap[T <: Named](map: immutable.HashMap[Int, WithComponent[T]],
+                                      apply: (T, DecodeComponent) => CAstElements): Seq[CCase] =
     map.toSeq.sortBy(_._1).map { case (id, WithComponent(c, _2)) => CCase(CIntLiteral(id), apply(_2, c)) }
 }

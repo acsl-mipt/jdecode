@@ -127,7 +127,7 @@ class CppSourcesGenerator(val config: CppGeneratorConfiguration) extends Generat
   }
 
   private def fileNameFor(t: DecodeType): String = t match {
-    case t: DecodeNamed => t.name.asMangledString
+    case t: Named => t.name.asMangledString
     case t: DecodeArrayType =>
       val baseTypeFileName: String = fileNameFor(t.baseType.obj)
       val min = t.size.min
@@ -142,13 +142,13 @@ class CppSourcesGenerator(val config: CppGeneratorConfiguration) extends Generat
     case t: DecodeGenericTypeSpecialized =>
       fileNameFor(t.genericType.obj) + "_" +
         t.genericTypeArguments.map(tp => if (tp.isDefined) fileNameFor(tp.get.obj) else "void").mkString("_")
-    case t: DecodeOptionNamed => fileNameFromOptionName(t.optionName)
+    case t: OptionNamed => fileNameFromOptionName(t.optionName)
     case _ => sys.error("not implemented")
   }
 
   private def cppTypeNameFor(t: DecodeType): String = {
     t match {
-      case t: DecodeNamed => t.name.asMangledString
+      case t: Named => t.name.asMangledString
       case t: DecodePrimitiveType => primitiveTypeToCTypeApplication(t).name
       case t: DecodeArrayType =>
         val baseCType: String = cppTypeNameFor(t.baseType.obj)
@@ -164,7 +164,7 @@ class CppSourcesGenerator(val config: CppGeneratorConfiguration) extends Generat
       case t: DecodeGenericTypeSpecialized =>
         cppTypeNameFor(t.genericType.obj) + "_" +
         t.genericTypeArguments.map(tp => if (tp.isDefined) cppTypeNameFor(tp.get.obj) else "void").mkString("_")
-      case t: DecodeOptionNamed => cppTypeNameFromOptionName(t.optionName)
+      case t: OptionNamed => cppTypeNameFromOptionName(t.optionName)
       case _ => sys.error("not implemented")
     }
   }
