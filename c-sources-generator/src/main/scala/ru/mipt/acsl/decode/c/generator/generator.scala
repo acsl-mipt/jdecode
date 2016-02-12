@@ -23,8 +23,7 @@ import scala.util.Random
 
 case class CGeneratorConfiguration(outputDir: io.File, registry: DecodeRegistry, rootComponentFqn: String,
                                    namespaceAliases: Map[DecodeFqn, Option[DecodeFqn]] = Map.empty,
-                                   prologueEpiloguePath: Option[String] = None, isSingleton: Boolean = false,
-                                   arrayAsPointer: Boolean = true)
+                                   prologueEpiloguePath: Option[String] = None, isSingleton: Boolean = false)
 
 class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[CGeneratorConfiguration] with LazyLogging {
 
@@ -86,16 +85,16 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
           } :+ tag.field))), Seq.empty)
       }
       case t: DecodeArrayType =>
-        val arrayType: CType = config.arrayAsPointer match {
-          case true => t.baseType.obj.cType.ptr
-          case false => CArrayType(t.baseType.obj.cType, t.maxLength, dataVar.name)
+        val arrayType: CType = t.size.max match {
+          case 0 => t.baseType.obj.cType.ptr
+          case _ => CArrayType(t.baseType.obj.cType, t.size.max, dataVar.name)
         }
         val typeDef = CTypeDefStatement(t.prefixedCTypeName, CStructTypeDef(Seq(
           CStructTypeDefField(size.name, sizeTType),
           CStructTypeDefField(dataVar.name, arrayType))))
         val defineNamePrefix = upperCamelCaseToUpperUnderscore(t.prefixedCTypeName)
-        (Seq(CDefine(defineNamePrefix + "_MIN_LEN", t.size.minLength.toString), CEol,
-          CDefine(defineNamePrefix + "_MAX_LEN", t.maxLength.toString), CEol, CEol, typeDef), CAstElements())
+        (Seq(CDefine(defineNamePrefix + "_MIN_SIZE", t.size.min.toString), CEol,
+          CDefine(defineNamePrefix + "_MAX_SIZE", t.size.max.toString), CEol, CEol, typeDef), CAstElements())
       case t: DecodeStructType => (Seq(t.cTypeDef(CStructTypeDef(t.fields.map(f =>
         CStructTypeDefField(f.name.asMangledString, f.typeUnit.t.obj.cType))))), Seq.empty)
       case t: DecodeAliasType =>
@@ -283,6 +282,10 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
 
   def mapIfSmall[A <: B, B <: CAstElement](el: A, t: DecodeType, f: A => B): B = if (t.isSmall) f(el) else el
   def mapIfNotSmall[A <: B, B <: CAstElement](el: A, t: DecodeType, f: A => B): B = if (t.isSmall) el else f(el)
+  def dotOrArrow(t: DecodeType, expr: CExpression, exprRight: CExpression): CExpression = t.isSmall match {
+    case true => expr.dot(exprRight)
+    case _ => expr -> exprRight
+  }
 
   private def defineAndInitVar(v: CVar, parameter: DecodeCommandParameter): CAstElements = {
     val paramType = parameter.paramType.obj
@@ -301,22 +304,18 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
 
     def serializeCodeForArrayElements(src: CExpression): CAstElements = {
       val baseType = t.baseType.obj
-      codeForArrayElements(src, baseType.serializeCallCode, ref = !baseType.isSmall)
+      val dataExpr = dotOrArrow(t, src, dataVar)(i.v)
+      val sizeExpr = dotOrArrow(t, src, size.v)
+      Seq(CIndent, CForStatement(Seq(i.v.define(i.t, Some(CIntLiteral(0))), CComma, size.v.assign(sizeExpr)),
+        Seq(CLess(i.v, size.v)), Seq(CIncBefore(i.v)),
+        Seq(baseType.serializeCallCode(mapIfNotSmall(dataExpr, baseType, (expr: CExpression) => expr.ref)).line)), CEol)
     }
 
     def deserializeCodeForArrayElements(dest: CExpression): CAstElements = {
       val baseType = t.baseType.obj
-      codeForArrayElements(dest, baseType.deserializeCallCode, ref = true)
-    }
-
-    def maxLength: Long = {
-      val size = t.size
-      if (t.isFixedSize)
-        size.minLength.min(256)
-      if (size.maxLength == 0)
-        256
-      else
-        size.maxLength.min(256)
+      val dataExpr = dest -> dataVar(i.v)
+      Seq(CIndent, CForStatement(Seq(i.v.define(i.t, Some(CIntLiteral(0))), CComma, size.v.assign(dest -> size.v)),
+        Seq(CLess(i.v, size.v)), Seq(CIncBefore(i.v)), Seq(baseType.deserializeCallCode(dataExpr.ref).line)), CEol)
     }
   }
 
@@ -355,8 +354,8 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
       case t: DecodePrimitiveType => primitiveTypeToCTypeApplication(t).name
       case t: DecodeArrayType =>
         val baseCType = t.baseType.obj.cTypeName
-        val min = t.size.minLength
-        val max = t.size.maxLength
+        val min = t.size.min
+        val max = t.size.max
         "Arr" + baseCType + ((t.isFixedSize, min, max) match {
           case (true, 0, _) | (false, 0, 0) => ""
           case (true, _, _) => s"Fixed$min"
@@ -384,7 +383,10 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
         case t: DecodeBerType => BER_BYTE_SIZE
         case _ => sys.error(s"not implemented for $t")
       }
-      case t: DecodeArrayType => (t.maxLength * t.baseType.obj.byteSize).toInt
+      case t: DecodeArrayType => t.size.max match {
+        case 0 => PTR_SIZE
+        case _ => (t.size.max * t.baseType.obj.byteSize).toInt
+      }
       case t: DecodeStructType => t.fields.map(_.typeUnit.t.obj.byteSize).sum
       case t: BaseTyped => t.baseType.obj.byteSize
       case t: DecodeGenericTypeSpecialized => t.genericType.obj match {
@@ -438,7 +440,8 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
       case _ => abstractMinSizeExpr
     }
 
-    private def writerSizeCheckCode(src: CExpression) = concreteMinSizeExpr(CParens(src.deref)).map { sizeExpr =>
+    private def writerSizeCheckCode(src: CExpression) = concreteMinSizeExpr(
+      mapIfNotSmall(src, t, (src: CExpression) => CParens(src.deref))).map { sizeExpr =>
       Seq(CIndent, CIf(CLess("PhotonWriter_WritableSize".call(writer.v), sizeExpr),
         Seq(CEol, CReturn("PhotonResult_NotEnoughSpace"._var).line)))
     }.getOrElse(Seq.empty)
@@ -551,7 +554,7 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
         Seq(fType.serializeCallCode((if (t.isSmall) src.dot(fVar) else src -> fVar).refIfNotSmall(fType)).line)
       }
       case t: DecodeArrayType =>
-        writerSizeCheckCode(src) ++ src.serializeCodeForArraySize ++ t.serializeCodeForArrayElements(src)
+        writerSizeCheckCode(src) ++ src.serializeCodeForArraySize(t) ++ t.serializeCodeForArrayElements(src)
       case t: DecodeAliasType => Seq(t.baseType.obj.serializeCallCode(src).line)
       case t: DecodeSubType => Seq(t.baseType.obj.serializeCallCode(src).line)
       case t: DecodeEnumType => Seq(t.baseType.obj.serializeCallCode(src).line)
@@ -568,7 +571,7 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
         Seq(f.typeUnit.t.obj.deserializeCallCode((dest -> f.cName._var).ref).line)
       }
       case t: DecodeArrayType =>
-        dest.deserializeCodeForArraySize ++ readerSizeCheckCode(dest) ++ t.deserializeCodeForArrayElements(dest)
+        dest.deserializeCodeForArraySize(t) ++ readerSizeCheckCode(dest) ++ t.deserializeCodeForArrayElements(dest)
       case t: DecodeAliasType => t.baseType.obj.deserializeCode(dest)
       case t: BaseTyped =>
         val baseType = t.baseType.obj
@@ -1028,17 +1031,20 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
 
     def cast(cType: CType): CTypeCast = CTypeCast(expr, cType)
 
-    private def _codeForArraySize(methodName: String, expr2: CExpression, ref: Boolean): CAstElements = {
-      val sizeExpr = expr -> size.v
-      CStatements(photonBerTypeName.methodName(methodName).call(
-        Seq(if (ref) sizeExpr.ref else sizeExpr, expr2): _*)._try)
+    def serializeCodeForArraySize(t: DecodeArrayType): CAstElements = {
+      val sizeExpr = t.isSmall match {
+        case false => expr -> size.v
+        case _ => expr.dot(size.v)
+      }
+      CStatements(photonBerTypeName.methodName(typeSerializeMethodName).call(
+        Seq(sizeExpr, writer.v): _*)._try)
     }
 
-    def serializeCodeForArraySize: CAstElements =
-      _codeForArraySize(typeSerializeMethodName, writer.v, ref = false)
-
-    def deserializeCodeForArraySize: CAstElements =
-      _codeForArraySize(typeDeserializeMethodName, reader.v, ref = true)
+    def deserializeCodeForArraySize(t: DecodeArrayType): CAstElements = {
+      val sizeExpr = expr -> size.v
+      CStatements(photonBerTypeName.methodName(typeDeserializeMethodName).call(
+        Seq(sizeExpr.ref, reader.v): _*)._try)
+    }
   }
 
   implicit class RichVar(val v: CVar) {
@@ -1136,6 +1142,7 @@ object CSourcesGenerator {
     }
   }
 
+  private val PTR_SIZE = 4
   private val BER_BYTE_SIZE = 8
 
   private val headerExt = ".h"

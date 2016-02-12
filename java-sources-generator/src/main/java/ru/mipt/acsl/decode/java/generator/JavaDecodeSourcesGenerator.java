@@ -21,7 +21,6 @@ import java.util.stream.Stream;
 
 import static ru.mipt.acsl.decode.java.generator.JavaDecodeTypeVisitor.*;
 import static scala.collection.JavaConversions.asJavaCollection;
-import static scala.collection.JavaConversions.bufferAsJavaList;
 import static scala.collection.JavaConversions.seqAsJavaList;
 
 /**
@@ -100,8 +99,8 @@ public class JavaDecodeSourcesGenerator implements Generator<JavaDecodeSourcesGe
                                 .extendsClass("decode.Array", new JavaTypeApplication("T"))
                                 .constuctor(Collections.emptyList(),
                                         new JavaSuperCallStatement(
-                                                new JavaLongExpr(arrayType.size().minLength()),
-                                                new JavaLongExpr(arrayType.size().maxLength())))
+                                                new JavaLongExpr(arrayType.size().min()),
+                                                new JavaLongExpr(arrayType.size().max())))
                                 .build();
                         return Optional.of(javaClass);
                     }

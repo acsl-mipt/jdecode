@@ -100,7 +100,7 @@ class DecodeStructTypeImpl(name: Option[DecodeName], namespace: DecodeNamespace,
     s"${this.getClass}{name = $name, namespace = $namespace, info = $info, fields = [${fields.map(_.toString).mkString(", ")}]"
 }
 
-case class ArraySizeImpl(minLength: Long = 0, maxLength: Long = 0) extends ArraySize
+case class ArraySizeImpl(min: Long = 0, max: Long = 0) extends ArraySize
 
 class DecodeBerType(optionalName: Option[DecodeName], namespace: DecodeNamespace, info: Option[String])
   extends AbstractDecodeType(optionalName, namespace, info) with DecodeNativeType {

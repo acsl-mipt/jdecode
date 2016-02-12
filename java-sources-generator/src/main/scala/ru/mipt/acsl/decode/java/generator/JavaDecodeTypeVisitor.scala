@@ -13,11 +13,11 @@ object JavaDecodeTypeVisitor {
 
   def classNameFromArrayType(arrayType: DecodeArrayType): String = "Array" + (
     if (arrayType.isFixedSize)
-      arrayType.size.minLength
-    else if (arrayType.size.maxLength == 0)
+      arrayType.size.min
+    else if (arrayType.size.max == 0)
       ""
     else
-      arrayType.size.minLength + "_" + arrayType.size.maxLength)
+      arrayType.size.min + "_" + arrayType.size.max)
 
   def getJavaTypeForDecodeType(t: DecodeType, genericUse: Boolean): JavaType = t match {
     case t: DecodePrimitiveType => (t.kind, t.bitLength, genericUse) match {

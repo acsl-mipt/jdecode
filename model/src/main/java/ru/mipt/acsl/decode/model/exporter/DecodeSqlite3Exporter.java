@@ -462,8 +462,8 @@ public class DecodeSqlite3Exporter
             {
                 insertArrayType.setLong(1, typeKeyByType.get(arrayType));
                 insertArrayType.setLong(2, typeKeyByType.get(arrayType.baseType().obj()));
-                insertArrayType.setLong(3, arrayType.size().minLength());
-                insertArrayType.setLong(4, arrayType.size().maxLength());
+                insertArrayType.setLong(3, arrayType.size().min());
+                insertArrayType.setLong(4, arrayType.size().max());
                 insertArrayType.execute();
             }
             catch (SQLException e)

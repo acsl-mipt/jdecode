@@ -207,8 +207,8 @@ trait DecodeEnumType extends DecodeType with BaseTyped {
 }
 
 trait ArraySize {
-  def minLength: Long
-  def maxLength: Long
+  def min: Long
+  def max: Long
 }
 
 trait DecodeArrayType extends DecodeType with BaseTyped {
@@ -216,8 +216,8 @@ trait DecodeArrayType extends DecodeType with BaseTyped {
 
   def isFixedSize: Boolean = {
     val thisSize: ArraySize = size
-    val maxLength: Long = thisSize.maxLength
-    thisSize.minLength == maxLength && maxLength != 0
+    val maxLength: Long = thisSize.max
+    thisSize.min == maxLength && maxLength != 0
   }
 
   def accept[T](visitor: DecodeTypeVisitor[T]): T = visitor.visit(this)

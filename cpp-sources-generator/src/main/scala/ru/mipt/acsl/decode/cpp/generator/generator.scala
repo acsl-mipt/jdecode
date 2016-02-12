@@ -130,8 +130,8 @@ class CppSourcesGenerator(val config: CppGeneratorConfiguration) extends Generat
     case t: DecodeNamed => t.name.asMangledString
     case t: DecodeArrayType =>
       val baseTypeFileName: String = fileNameFor(t.baseType.obj)
-      val min = t.size.minLength
-      val max = t.size.maxLength
+      val min = t.size.min
+      val max = t.size.max
       baseTypeFileName + "_arr" + ((t.isFixedSize, min, max) match {
         case (true, 0, _) | (false, 0, 0) => ""
         case (true, _, _) => s"_fixed_$min"
@@ -152,8 +152,8 @@ class CppSourcesGenerator(val config: CppGeneratorConfiguration) extends Generat
       case t: DecodePrimitiveType => primitiveTypeToCTypeApplication(t).name
       case t: DecodeArrayType =>
         val baseCType: String = cppTypeNameFor(t.baseType.obj)
-        val min = t.size.minLength
-        val max = t.size.maxLength
+        val min = t.size.min
+        val max = t.size.max
         "DECODE_ARRAY_TYPE_" + ((t.isFixedSize, min, max) match {
           case (true, 0, _) | (false, 0, 0) => s"NAME($baseCType)"
           case (true, _, _) => s"FIXED_SIZE_NAME($baseCType, $min)"
