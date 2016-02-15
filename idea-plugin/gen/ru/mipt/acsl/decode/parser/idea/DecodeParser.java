@@ -65,6 +65,12 @@ public class DecodeParser implements PsiParser, LightPsiParser {
     else if (t == EVENT_MESSAGE) {
       r = event_message(b, 0);
     }
+    else if (t == EVENT_MESSAGE_PARAMETERS_DECL) {
+      r = event_message_parameters_decl(b, 0);
+    }
+    else if (t == EVENT_PARAMETER_DECL) {
+      r = event_parameter_decl(b, 0);
+    }
     else if (t == FLOAT_LITERAL) {
       r = float_literal(b, 0);
     }
@@ -95,9 +101,6 @@ public class DecodeParser implements PsiParser, LightPsiParser {
     else if (t == MESSAGE_DECL) {
       r = message_decl(b, 0);
     }
-    else if (t == MESSAGE_PARAMETERS_DECL) {
-      r = message_parameters_decl(b, 0);
-    }
     else if (t == NAMESPACE_DECL) {
       r = namespace_decl(b, 0);
     }
@@ -118,6 +121,9 @@ public class DecodeParser implements PsiParser, LightPsiParser {
     }
     else if (t == STATUS_MESSAGE) {
       r = status_message(b, 0);
+    }
+    else if (t == STATUS_MESSAGE_PARAMETERS_DECL) {
+      r = status_message_parameters_decl(b, 0);
     }
     else if (t == STRING_VALUE) {
       r = string_value(b, 0);
@@ -145,6 +151,9 @@ public class DecodeParser implements PsiParser, LightPsiParser {
     }
     else if (t == UNIT_DECL) {
       r = unit_decl(b, 0);
+    }
+    else if (t == VAR_PARAMETER_ELEMENT) {
+      r = var_parameter_element(b, 0);
     }
     else {
       r = parse_root_(t, b, 0);
@@ -680,7 +689,7 @@ public class DecodeParser implements PsiParser, LightPsiParser {
   }
 
   /* ********************************************************** */
-  // info_string? EVENT element_name_rule entity_id? type_application message_parameters_decl
+  // info_string? EVENT element_name_rule entity_id? type_application event_message_parameters_decl
   public static boolean event_message(PsiBuilder b, int l) {
     if (!recursion_guard_(b, l, "event_message")) return false;
     boolean r;
@@ -690,7 +699,7 @@ public class DecodeParser implements PsiParser, LightPsiParser {
     r = r && element_name_rule(b, l + 1);
     r = r && event_message_3(b, l + 1);
     r = r && type_application(b, l + 1);
-    r = r && message_parameters_decl(b, l + 1);
+    r = r && event_message_parameters_decl(b, l + 1);
     exit_section_(b, l, m, EVENT_MESSAGE, r, false, null);
     return r;
   }
@@ -707,6 +716,82 @@ public class DecodeParser implements PsiParser, LightPsiParser {
     if (!recursion_guard_(b, l, "event_message_3")) return false;
     entity_id(b, l + 1);
     return true;
+  }
+
+  /* ********************************************************** */
+  // LEFT_PAREN event_parameter_decl (COMMA event_parameter_decl)* COMMA? RIGHT_PAREN
+  public static boolean event_message_parameters_decl(PsiBuilder b, int l) {
+    if (!recursion_guard_(b, l, "event_message_parameters_decl")) return false;
+    if (!nextTokenIs(b, LEFT_PAREN)) return false;
+    boolean r;
+    Marker m = enter_section_(b);
+    r = consumeToken(b, LEFT_PAREN);
+    r = r && event_parameter_decl(b, l + 1);
+    r = r && event_message_parameters_decl_2(b, l + 1);
+    r = r && event_message_parameters_decl_3(b, l + 1);
+    r = r && consumeToken(b, RIGHT_PAREN);
+    exit_section_(b, m, EVENT_MESSAGE_PARAMETERS_DECL, r);
+    return r;
+  }
+
+  // (COMMA event_parameter_decl)*
+  private static boolean event_message_parameters_decl_2(PsiBuilder b, int l) {
+    if (!recursion_guard_(b, l, "event_message_parameters_decl_2")) return false;
+    int c = current_position_(b);
+    while (true) {
+      if (!event_message_parameters_decl_2_0(b, l + 1)) break;
+      if (!empty_element_parsed_guard_(b, "event_message_parameters_decl_2", c)) break;
+      c = current_position_(b);
+    }
+    return true;
+  }
+
+  // COMMA event_parameter_decl
+  private static boolean event_message_parameters_decl_2_0(PsiBuilder b, int l) {
+    if (!recursion_guard_(b, l, "event_message_parameters_decl_2_0")) return false;
+    boolean r;
+    Marker m = enter_section_(b);
+    r = consumeToken(b, COMMA);
+    r = r && event_parameter_decl(b, l + 1);
+    exit_section_(b, m, null, r);
+    return r;
+  }
+
+  // COMMA?
+  private static boolean event_message_parameters_decl_3(PsiBuilder b, int l) {
+    if (!recursion_guard_(b, l, "event_message_parameters_decl_3")) return false;
+    consumeToken(b, COMMA);
+    return true;
+  }
+
+  /* ********************************************************** */
+  // info_string? (parameter_element | var_parameter_element)
+  public static boolean event_parameter_decl(PsiBuilder b, int l) {
+    if (!recursion_guard_(b, l, "event_parameter_decl")) return false;
+    boolean r;
+    Marker m = enter_section_(b, l, _NONE_, "<event parameter decl>");
+    r = event_parameter_decl_0(b, l + 1);
+    r = r && event_parameter_decl_1(b, l + 1);
+    exit_section_(b, l, m, EVENT_PARAMETER_DECL, r, false, null);
+    return r;
+  }
+
+  // info_string?
+  private static boolean event_parameter_decl_0(PsiBuilder b, int l) {
+    if (!recursion_guard_(b, l, "event_parameter_decl_0")) return false;
+    info_string(b, l + 1);
+    return true;
+  }
+
+  // parameter_element | var_parameter_element
+  private static boolean event_parameter_decl_1(PsiBuilder b, int l) {
+    if (!recursion_guard_(b, l, "event_parameter_decl_1")) return false;
+    boolean r;
+    Marker m = enter_section_(b);
+    r = parameter_element(b, l + 1);
+    if (!r) r = var_parameter_element(b, l + 1);
+    exit_section_(b, m, null, r);
+    return r;
   }
 
   /* ********************************************************** */
@@ -1107,52 +1192,6 @@ public class DecodeParser implements PsiParser, LightPsiParser {
   }
 
   /* ********************************************************** */
-  // LEFT_PAREN parameter_decl (COMMA parameter_decl)* COMMA? RIGHT_PAREN
-  public static boolean message_parameters_decl(PsiBuilder b, int l) {
-    if (!recursion_guard_(b, l, "message_parameters_decl")) return false;
-    if (!nextTokenIs(b, LEFT_PAREN)) return false;
-    boolean r;
-    Marker m = enter_section_(b);
-    r = consumeToken(b, LEFT_PAREN);
-    r = r && parameter_decl(b, l + 1);
-    r = r && message_parameters_decl_2(b, l + 1);
-    r = r && message_parameters_decl_3(b, l + 1);
-    r = r && consumeToken(b, RIGHT_PAREN);
-    exit_section_(b, m, MESSAGE_PARAMETERS_DECL, r);
-    return r;
-  }
-
-  // (COMMA parameter_decl)*
-  private static boolean message_parameters_decl_2(PsiBuilder b, int l) {
-    if (!recursion_guard_(b, l, "message_parameters_decl_2")) return false;
-    int c = current_position_(b);
-    while (true) {
-      if (!message_parameters_decl_2_0(b, l + 1)) break;
-      if (!empty_element_parsed_guard_(b, "message_parameters_decl_2", c)) break;
-      c = current_position_(b);
-    }
-    return true;
-  }
-
-  // COMMA parameter_decl
-  private static boolean message_parameters_decl_2_0(PsiBuilder b, int l) {
-    if (!recursion_guard_(b, l, "message_parameters_decl_2_0")) return false;
-    boolean r;
-    Marker m = enter_section_(b);
-    r = consumeToken(b, COMMA);
-    r = r && parameter_decl(b, l + 1);
-    exit_section_(b, m, null, r);
-    return r;
-  }
-
-  // COMMA?
-  private static boolean message_parameters_decl_3(PsiBuilder b, int l) {
-    if (!recursion_guard_(b, l, "message_parameters_decl_3")) return false;
-    consumeToken(b, COMMA);
-    return true;
-  }
-
-  /* ********************************************************** */
   // info_string? NAMESPACE element_id
   public static boolean namespace_decl(PsiBuilder b, int l) {
     if (!recursion_guard_(b, l, "namespace_decl")) return false;
@@ -1380,7 +1419,7 @@ public class DecodeParser implements PsiParser, LightPsiParser {
   }
 
   /* ********************************************************** */
-  // info_string? STATUS element_name_rule entity_id? (PRIORITY COLON NON_NEGATIVE_NUMBER)? message_parameters_decl
+  // info_string? STATUS element_name_rule entity_id? (PRIORITY COLON NON_NEGATIVE_NUMBER)? status_message_parameters_decl
   public static boolean status_message(PsiBuilder b, int l) {
     if (!recursion_guard_(b, l, "status_message")) return false;
     boolean r;
@@ -1390,7 +1429,7 @@ public class DecodeParser implements PsiParser, LightPsiParser {
     r = r && element_name_rule(b, l + 1);
     r = r && status_message_3(b, l + 1);
     r = r && status_message_4(b, l + 1);
-    r = r && message_parameters_decl(b, l + 1);
+    r = r && status_message_parameters_decl(b, l + 1);
     exit_section_(b, l, m, STATUS_MESSAGE, r, false, null);
     return r;
   }
@@ -1424,6 +1463,52 @@ public class DecodeParser implements PsiParser, LightPsiParser {
     r = consumeTokens(b, 0, PRIORITY, COLON, NON_NEGATIVE_NUMBER);
     exit_section_(b, m, null, r);
     return r;
+  }
+
+  /* ********************************************************** */
+  // LEFT_PAREN parameter_decl (COMMA parameter_decl)* COMMA? RIGHT_PAREN
+  public static boolean status_message_parameters_decl(PsiBuilder b, int l) {
+    if (!recursion_guard_(b, l, "status_message_parameters_decl")) return false;
+    if (!nextTokenIs(b, LEFT_PAREN)) return false;
+    boolean r;
+    Marker m = enter_section_(b);
+    r = consumeToken(b, LEFT_PAREN);
+    r = r && parameter_decl(b, l + 1);
+    r = r && status_message_parameters_decl_2(b, l + 1);
+    r = r && status_message_parameters_decl_3(b, l + 1);
+    r = r && consumeToken(b, RIGHT_PAREN);
+    exit_section_(b, m, STATUS_MESSAGE_PARAMETERS_DECL, r);
+    return r;
+  }
+
+  // (COMMA parameter_decl)*
+  private static boolean status_message_parameters_decl_2(PsiBuilder b, int l) {
+    if (!recursion_guard_(b, l, "status_message_parameters_decl_2")) return false;
+    int c = current_position_(b);
+    while (true) {
+      if (!status_message_parameters_decl_2_0(b, l + 1)) break;
+      if (!empty_element_parsed_guard_(b, "status_message_parameters_decl_2", c)) break;
+      c = current_position_(b);
+    }
+    return true;
+  }
+
+  // COMMA parameter_decl
+  private static boolean status_message_parameters_decl_2_0(PsiBuilder b, int l) {
+    if (!recursion_guard_(b, l, "status_message_parameters_decl_2_0")) return false;
+    boolean r;
+    Marker m = enter_section_(b);
+    r = consumeToken(b, COMMA);
+    r = r && parameter_decl(b, l + 1);
+    exit_section_(b, m, null, r);
+    return r;
+  }
+
+  // COMMA?
+  private static boolean status_message_parameters_decl_3(PsiBuilder b, int l) {
+    if (!recursion_guard_(b, l, "status_message_parameters_decl_3")) return false;
+    consumeToken(b, COMMA);
+    return true;
   }
 
   /* ********************************************************** */
@@ -1654,6 +1739,20 @@ public class DecodeParser implements PsiParser, LightPsiParser {
     r = consumeToken(b, BEFORE);
     if (!r) r = consumeToken(b, AFTER);
     exit_section_(b, m, null, r);
+    return r;
+  }
+
+  /* ********************************************************** */
+  // VAR type_unit_application element_name_rule
+  public static boolean var_parameter_element(PsiBuilder b, int l) {
+    if (!recursion_guard_(b, l, "var_parameter_element")) return false;
+    if (!nextTokenIs(b, VAR)) return false;
+    boolean r;
+    Marker m = enter_section_(b);
+    r = consumeToken(b, VAR);
+    r = r && type_unit_application(b, l + 1);
+    r = r && element_name_rule(b, l + 1);
+    exit_section_(b, m, VAR_PARAMETER_ELEMENT, r);
     return r;
   }
 

@@ -35,15 +35,15 @@ public class DecodeEventMessageImpl extends ASTWrapperPsiElement implements Deco
   }
 
   @Override
-  @Nullable
-  public DecodeInfoString getInfoString() {
-    return findChildByClass(DecodeInfoString.class);
+  @NotNull
+  public DecodeEventMessageParametersDecl getEventMessageParametersDecl() {
+    return findNotNullChildByClass(DecodeEventMessageParametersDecl.class);
   }
 
   @Override
-  @NotNull
-  public DecodeMessageParametersDecl getMessageParametersDecl() {
-    return findNotNullChildByClass(DecodeMessageParametersDecl.class);
+  @Nullable
+  public DecodeInfoString getInfoString() {
+    return findChildByClass(DecodeInfoString.class);
   }
 
   @Override

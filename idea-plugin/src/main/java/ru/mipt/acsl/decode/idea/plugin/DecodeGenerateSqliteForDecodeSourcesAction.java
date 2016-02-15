@@ -18,23 +18,23 @@ import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.openapi.vfs.VirtualFileWrapper;
 import com.intellij.psi.ClassFileViewProvider;
 import com.intellij.psi.PsiManager;
-import ru.mipt.acsl.decode.model.domain.DecodeDomainModelResolver;
-import ru.mipt.acsl.decode.model.domain.DecodeResolvingResult;
 import ru.mipt.acsl.decode.model.domain.impl.DecodeModelResolver;
-import ru.mipt.acsl.decode.model.domain.impl.DecodeRegistryImpl;
+import ru.mipt.acsl.decode.model.domain.impl.RegistryImpl;
+import ru.mipt.acsl.decode.modeling.ErrorLevel$;
 import ru.mipt.acsl.decode.modeling.ModelingMessage;
-import ru.mipt.acsl.decode.modeling.ResolvingMessage;
 import ru.mipt.acsl.decode.parser.psi.DecodeFile;
 import ru.mipt.acsl.decode.model.exporter.ModelExportingException;
 import ru.mipt.acsl.decode.model.exporter.DecodeSqlite3Exporter;
 import ru.mipt.acsl.decode.model.exporter.DecodeSqlite3ExporterConfiguration;
-import ru.mipt.acsl.decode.model.domain.DecodeReferenceable;
-import ru.mipt.acsl.decode.model.domain.DecodeRegistry;
+import ru.mipt.acsl.decode.model.domain.Registry;
 import ru.mipt.acsl.decode.modeling.TransformationResult;
 import ru.mipt.acsl.decode.parser.DecodeFileType;
-import scala.Function1;
+import scala.Some;
 import scala.collection.Iterable;
 import scala.collection.Iterator;
+import scala.collection.JavaConversions;
+import scala.collection.immutable.Seq;
+import scala.collection.immutable.Seq$;
 
 import java.io.File;
 import java.io.IOException;
@@ -60,8 +60,8 @@ public class DecodeGenerateSqliteForDecodeSourcesAction extends AnAction
             return;
         }
         PsiManager psiManager = PsiManager.getInstance(project);
-        DecodeRegistry registry = new DecodeRegistryImpl();
-        TransformationResult<DecodeRegistry> result = new DecodeTransformationResult(registry);
+        Registry registry = new RegistryImpl();
+        TransformationResult<Registry> result = new DecodeTransformationResult(Some.apply(registry), Seq$.MODULE$.empty());
         ProjectRootManager.getInstance(project).getFileIndex().iterateContent(virtualFile -> {
             if (virtualFile.getFileType().equals(
                     DecodeFileType.INSTANCE))
@@ -71,18 +71,18 @@ public class DecodeGenerateSqliteForDecodeSourcesAction extends AnAction
             }
             return true;
         });
-        result.getMessages().forEach(DecodeFileProcessor::notifyUser);
-        if (!result.hasError() && result.getResult().isPresent())
+        JavaConversions.asJavaCollection(result.messages()).forEach(DecodeFileProcessor::notifyUser);
+        if (!result.hasError() && result.result().isDefined())
         {
-            Preconditions.checkState(result.getResult().get() == registry);
-            Iterable<ResolvingMessage> messages = DecodeModelResolver.resolve(registry);
-            Iterator<ResolvingMessage> it = messages.iterator();
+            Preconditions.checkState(result.result().get() == registry);
+            Iterable<ModelingMessage> messages = DecodeModelResolver.resolve(registry);
+            Iterator<ModelingMessage> it = messages.iterator();
             while (it.hasNext())
             {
-                ResolvingMessage msg = it.next();
-                if (msg.getLevel() == ModelingMessage.Level.ERROR)
+                ModelingMessage msg = it.next();
+                if (msg.level() == ErrorLevel$.MODULE$)
                 {
-                    Iterator<ResolvingMessage> it2 = messages.iterator();
+                    Iterator<ModelingMessage> it2 = messages.iterator();
                     while (it2.hasNext())
                     {
                         DecodeFileProcessor.notifyUser(it2.next());

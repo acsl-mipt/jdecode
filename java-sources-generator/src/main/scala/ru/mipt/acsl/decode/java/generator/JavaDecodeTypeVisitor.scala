@@ -2,7 +2,7 @@ package ru.mipt.acsl.decode.java.generator
 
 import com.google.common.base.CaseFormat
 import ru.mipt.acsl.decode.model.domain._
-import ru.mipt.acsl.decode.model.domain.impl.`type`.{DecodeBerType, DecodeOptionalType, DecodeOrType}
+import ru.mipt.acsl.decode.model.domain.impl.`type`.{BerType, OptionalType, OrType}
 import ru.mipt.acsl.generator.java.ast.{JavaType, JavaTypeApplication}
 
 /**
@@ -11,7 +11,7 @@ import ru.mipt.acsl.generator.java.ast.{JavaType, JavaTypeApplication}
 object JavaDecodeTypeVisitor {
   def classNameFromTypeName(typeName: String): String = CaseFormat.LOWER_UNDERSCORE.to(CaseFormat.UPPER_CAMEL, typeName)
 
-  def classNameFromArrayType(arrayType: DecodeArrayType): String = "Array" + (
+  def classNameFromArrayType(arrayType: ArrayType): String = "Array" + (
     if (arrayType.isFixedSize)
       arrayType.size.min
     else if (arrayType.size.max == 0)
@@ -20,7 +20,7 @@ object JavaDecodeTypeVisitor {
       arrayType.size.min + "_" + arrayType.size.max)
 
   def getJavaTypeForDecodeType(t: DecodeType, genericUse: Boolean): JavaType = t match {
-    case t: DecodePrimitiveType => (t.kind, t.bitLength, genericUse) match {
+    case t: PrimitiveType => (t.kind, t.bitLength, genericUse) match {
       case (TypeKind.Int, 8, true) => JavaType.Std.BYTE
       case (TypeKind.Int, 8, false) => JavaType.Primitive.BYTE
       case (TypeKind.Int, 16, true) => JavaType.Std.SHORT
@@ -44,12 +44,12 @@ object JavaDecodeTypeVisitor {
       case (TypeKind.Float, _, false) => JavaType.Primitive.BOOLEAN
       case _ => sys.error("invalid bit length")
     }
-    case t: DecodeArrayType => new JavaTypeApplication(t.namespace.fqn.asMangledString + "." + JavaDecodeTypeVisitor.classNameFromArrayType(t),
+    case t: ArrayType => new JavaTypeApplication(t.namespace.fqn.asMangledString + "." + JavaDecodeTypeVisitor.classNameFromArrayType(t),
       JavaDecodeTypeVisitor.getJavaTypeForDecodeType(t.baseType.obj, genericUse = true))
-    case t: DecodeAliasType => getJavaTypeForDecodeType(t.baseType.obj, genericUse)
-    case t: DecodeNativeType if t.isInstanceOf[DecodeBerType] => new JavaTypeApplication("decode.ber")
-    case t: DecodeNativeType if t.isInstanceOf[DecodeOrType] => new JavaTypeApplication("decode.or")
-    case t: DecodeNativeType if t.isInstanceOf[DecodeOptionalType] => new JavaTypeApplication("decode.optional")
+    case t: AliasType => getJavaTypeForDecodeType(t.baseType.obj, genericUse)
+    case t: NativeType if t.isInstanceOf[BerType] => new JavaTypeApplication("decode.ber")
+    case t: NativeType if t.isInstanceOf[OrType] => new JavaTypeApplication("decode.or")
+    case t: NativeType if t.isInstanceOf[OptionalType] => new JavaTypeApplication("decode.optional")
     case t: OptionNamed => new JavaTypeApplication(t.namespace.fqn.asMangledString + "." + JavaDecodeTypeVisitor.classNameFromTypeName(
       // FIXME: handle Option
       t.optionName.get.asMangledString))

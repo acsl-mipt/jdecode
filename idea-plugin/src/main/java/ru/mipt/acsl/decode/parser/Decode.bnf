@@ -76,6 +76,7 @@
         LANGUAGE = "language"
         DEFAULT = "default"
         PRIORITY = "priority"
+        VAR = "var"
     ]
 }
 
@@ -122,15 +123,21 @@ message_decl ::= status_message | event_message
 
 entity_id ::= ID COLON NON_NEGATIVE_NUMBER
 
-status_message ::= info_string? STATUS element_name_rule entity_id? (PRIORITY COLON NON_NEGATIVE_NUMBER)? message_parameters_decl
+status_message ::= info_string? STATUS element_name_rule entity_id? (PRIORITY COLON NON_NEGATIVE_NUMBER)? status_message_parameters_decl
 
-message_parameters_decl ::= LEFT_PAREN parameter_decl (COMMA parameter_decl)* COMMA? RIGHT_PAREN
+status_message_parameters_decl ::= LEFT_PAREN parameter_decl (COMMA parameter_decl)* COMMA? RIGHT_PAREN
+
+event_message_parameters_decl ::= LEFT_PAREN event_parameter_decl (COMMA event_parameter_decl)* COMMA? RIGHT_PAREN
+
+event_parameter_decl ::= info_string? (parameter_element | var_parameter_element)
+
+var_parameter_element ::= VAR type_unit_application element_name_rule
 
 //deep_all_parameters ::= STAR DOT STAR
 
 //all_parameters ::= STAR
 
-event_message ::= info_string? EVENT element_name_rule entity_id? type_application message_parameters_decl
+event_message ::= info_string? EVENT element_name_rule entity_id? type_application event_message_parameters_decl
 
 //dynamic_status_message ::= DYNAMIC STATUS message_parameters_decl
 

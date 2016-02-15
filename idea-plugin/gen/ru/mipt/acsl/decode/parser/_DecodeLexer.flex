@@ -89,6 +89,7 @@ NON_NEGATIVE_NUMBER=[0-9]+
   "language"                 { return LANGUAGE; }
   "default"                  { return DEFAULT; }
   "priority"                 { return PRIORITY; }
+  "var"                      { return VAR; }
 
   {ESCAPED_NAME}             { return ESCAPED_NAME; }
   {ELEMENT_NAME_TOKEN}       { return ELEMENT_NAME_TOKEN; }

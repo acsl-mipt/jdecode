@@ -2,7 +2,7 @@ package ru.mipt.acsl.decode.java.generator;
 
 import org.jetbrains.annotations.NotNull;
 import org.kohsuke.args4j.Argument;
-import ru.mipt.acsl.decode.model.domain.DecodeRegistry;
+import ru.mipt.acsl.decode.model.domain.Registry;
 
 import java.io.File;
 
@@ -14,10 +14,10 @@ public class JavaDecodeSourcesGeneratorConfiguration
     @NotNull
     private File outputDir;
     @NotNull
-    private DecodeRegistry registry;
+    private Registry registry;
 
     public JavaDecodeSourcesGeneratorConfiguration(@NotNull File outputDir,
-                                                   @NotNull DecodeRegistry registry)
+                                                   @NotNull Registry registry)
     {
         this.outputDir = outputDir;
         this.registry = registry;
@@ -31,7 +31,7 @@ public class JavaDecodeSourcesGeneratorConfiguration
     }
 
     @NotNull
-    DecodeRegistry getRegistry()
+    Registry getRegistry()
     {
         return registry;
     }

@@ -5,9 +5,12 @@ import java.util.List;
 import org.jetbrains.annotations.*;
 import com.intellij.psi.PsiElement;
 
-public interface DecodeMessageParametersDecl extends PsiElement {
+public interface DecodeVarParameterElement extends PsiElement {
 
   @NotNull
-  List<DecodeParameterDecl> getParameterDeclList();
+  DecodeElementNameRule getElementNameRule();
+
+  @NotNull
+  DecodeTypeUnitApplication getTypeUnitApplication();
 
 }

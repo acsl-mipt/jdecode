@@ -21,11 +21,11 @@ public class DecodeSqlite3Exporter
     @NotNull
     private final Map<DecodeType, Long> typeKeyByType = new HashMap<>();
     @NotNull
-    private final Map<DecodeNamespace, Long> namespaceKeyByNamespaceMap = new HashMap<>();
+    private final Map<Namespace, Long> namespaceKeyByNamespaceMap = new HashMap<>();
     @NotNull
-    private final Map<DecodeUnit, Long> unitKeyByUnit = new HashMap<>();
+    private final Map<Measure, Long> unitKeyByUnit = new HashMap<>();
     @NotNull
-    private final Map<DecodeComponent, Long> componentKeyByComponentMap = new HashMap<>();
+    private final Map<Component, Long> componentKeyByComponentMap = new HashMap<>();
     @NotNull
     private final DecodeSqlite3ExporterConfiguration config;
     @NotNull
@@ -38,7 +38,7 @@ public class DecodeSqlite3Exporter
         this.config = config;
     }
 
-    public void export(@NotNull DecodeRegistry registry)
+    public void export(@NotNull Registry registry)
     {
         try
         {
@@ -53,7 +53,7 @@ public class DecodeSqlite3Exporter
         {
             this.connection = connection;
             connection.setAutoCommit(false);
-            Collection<DecodeNamespace> namespacesStream = JavaConversions.asJavaCollection(registry.rootNamespaces());
+            Collection<Namespace> namespacesStream = JavaConversions.asJavaCollection(registry.rootNamespaces());
             namespacesStream.forEach(this::insertNamespaceAndSubNamespaces);
             namespacesStream.forEach(this::insertUnits);
             namespacesStream.forEach(this::insertTypes);
@@ -66,7 +66,7 @@ public class DecodeSqlite3Exporter
         }
     }
 
-    private Void insertNamespaceAndSubNamespaces(@NotNull DecodeNamespace namespace)
+    private Void insertNamespaceAndSubNamespaces(@NotNull Namespace namespace)
     {
         try
         {
@@ -75,10 +75,10 @@ public class DecodeSqlite3Exporter
                     String.format("INSERT INTO %s (namespace_id, sub_namespace_id) VALUES (?, ?)",
                             TableName.SUB_NAMESPACE)))
             {
-                scala.collection.Iterator<DecodeNamespace> subNsIt = namespace.subNamespaces().iterator();
+                scala.collection.Iterator<Namespace> subNsIt = namespace.subNamespaces().iterator();
                 while (subNsIt.hasNext())
                 {
-                    DecodeNamespace subNamespace = subNsIt.next();
+                    Namespace subNamespace = subNsIt.next();
                     insertNamespaceAndSubNamespaces(subNamespace);
                     linkNamespaces.setLong(1, namespaceKeyByNamespaceMap.get(namespace));
                     linkNamespaces.setLong(2, namespaceKeyByNamespaceMap.get(subNamespace));
@@ -93,14 +93,14 @@ public class DecodeSqlite3Exporter
         return null;
     }
 
-    private Void insertComponents(@NotNull DecodeNamespace namespace)
+    private Void insertComponents(@NotNull Namespace namespace)
     {
         JavaConversions.asJavaCollection(namespace.components()).forEach(this::insertComponent);
         JavaConversions.asJavaCollection(namespace.subNamespaces()).forEach(this::insertComponents);
         return null;
     }
 
-    private void insertComponent(@NotNull DecodeComponent component)
+    private void insertComponent(@NotNull Component component)
     {
         if (componentKeyByComponentMap.containsKey(component))
         {
@@ -130,7 +130,7 @@ public class DecodeSqlite3Exporter
             while (subCompIt.hasNext())
             {
                 DecodeComponentRef subComp = subCompIt.next();
-                DecodeMaybeProxy<DecodeComponent> subComponent = subComp.component();
+                MaybeProxy<Component> subComponent = subComp.component();
                 insertComponent(subComponent.obj());
                 try (PreparedStatement linkComponents = connection.prepareStatement(
                         String.format("INSERT INTO %s (component_id, sub_component_index, sub_component_alias, sub_component_id) VALUES (?, ?, ?, ?)",
@@ -160,10 +160,10 @@ public class DecodeSqlite3Exporter
                     commandKey = getGeneratedKey(insertCommand);
                 }
                 long index = 0;
-                Iterator<DecodeCommandParameter> argsIt = command.parameters().iterator();
+                Iterator<Parameter> argsIt = command.parameters().iterator();
                 while (argsIt.hasNext())
                 {
-                    DecodeCommandParameter argument = argsIt.next();
+                    Parameter argument = argsIt.next();
                     try (PreparedStatement insertArgument = connection.prepareStatement(
                             String.format(
                                     "INSERT INTO %s (command_id, argument_index, name, type_id, unit_id, info) VALUES (?, ?, ?, ?, ?, ?)",
@@ -179,10 +179,10 @@ public class DecodeSqlite3Exporter
                     }
                 }
             }
-            Iterator<DecodeMessage> msgsIt = component.messages().iterator();
+            Iterator<Message> msgsIt = component.messages().iterator();
             while (msgsIt.hasNext())
             {
-                DecodeMessage message = msgsIt.next();
+                Message message = msgsIt.next();
                 long messageKey;
                 try (PreparedStatement insertMessage = connection.prepareStatement(
                         String.format("INSERT INTO %s (message_id, component_id, name, info) VALUES (?, ?, ?, ?)",
@@ -197,10 +197,11 @@ public class DecodeSqlite3Exporter
                 }
                 message.accept(new DecodeInsertMessageVisitor(messageKey, connection));
                 long index = 0;
-                Iterator<DecodeMessageParameter> parIt = message.parameters().iterator();
+                /*
+                Iterator<MessageParameter> parIt = message.parameters().iterator();
                 while (parIt.hasNext())
                 {
-                    DecodeMessageParameter parameter = parIt.next();
+                    MessageParameter parameter = parIt.next();
                     try (PreparedStatement insertParameter = connection.prepareStatement(
                             String.format("INSERT INTO %s (message_id, parameter_index, name) VALUES (?, ?, ?)",
                                     TableName.MESSAGE_PARAMETER)))
@@ -210,7 +211,7 @@ public class DecodeSqlite3Exporter
                         insertParameter.setString(3, parameter.value());
                         insertParameter.execute();
                     }
-                }
+                }*/
             }
         }
         catch (SQLException e)
@@ -246,7 +247,7 @@ public class DecodeSqlite3Exporter
     }
 
     private void setUnit(@NotNull PreparedStatement statement, int index,
-                                @NotNull Option<DecodeMaybeProxy<DecodeUnit>> unit) throws SQLException
+                                @NotNull Option<MaybeProxy<Measure>> unit) throws SQLException
     {
         if (unit.isDefined())
         {
@@ -258,7 +259,7 @@ public class DecodeSqlite3Exporter
         }
     }
 
-    private Void insertTypes(@NotNull DecodeNamespace namespace)
+    private Void insertTypes(@NotNull Namespace namespace)
     {
         JavaConversions.asJavaCollection(namespace.types()).forEach(this::insertType);
         JavaConversions.asJavaCollection(namespace.subNamespaces()).forEach(this::insertTypes);
@@ -302,30 +303,30 @@ public class DecodeSqlite3Exporter
         }
     }
 
-    private Void insertUnits(@NotNull DecodeNamespace namespace)
+    private Void insertUnits(@NotNull Namespace namespace)
     {
         JavaConversions.asJavaCollection(namespace.units()).forEach(this::insertUnit);
         JavaConversions.asJavaCollection(namespace.subNamespaces()).forEach(this::insertUnits);
         return null;
     }
 
-    private Void insertUnit(@NotNull DecodeUnit unit)
+    private Void insertUnit(@NotNull Measure measure)
     {
         try(PreparedStatement insertUnit = connection.prepareStatement(
                 String.format("INSERT INTO %s (namespace_id, name, display) VALUES (?, ?, ?)", TableName.UNIT)))
         {
-            insertUnit.setLong(1, namespaceKeyByNamespaceMap.get(unit.namespace()));
-            insertUnit.setString(2, unit.name().asMangledString());
-            if (unit.display().isDefined())
+            insertUnit.setLong(1, namespaceKeyByNamespaceMap.get(measure.namespace()));
+            insertUnit.setString(2, measure.name().asMangledString());
+            if (measure.display().isDefined())
             {
-                insertUnit.setString(3, unit.display().get());
+                insertUnit.setString(3, measure.display().get());
             }
             else
             {
                 insertUnit.setNull(3, Types.VARCHAR);
             }
             insertUnit.execute();
-            unitKeyByUnit.put(unit, getGeneratedKey(insertUnit));
+            unitKeyByUnit.put(measure, getGeneratedKey(insertUnit));
         }
         catch (SQLException e)
         {
@@ -334,7 +335,7 @@ public class DecodeSqlite3Exporter
         return null;
     }
 
-    private void insertNamespace(@NotNull DecodeNamespace namespace)
+    private void insertNamespace(@NotNull Namespace namespace)
     {
         try(PreparedStatement insertNamespace = connection.prepareStatement(
                 String.format("INSERT INTO %s (name) VALUES (?)", TableName.NAMESPACE)))
@@ -363,7 +364,7 @@ public class DecodeSqlite3Exporter
 
         @Nullable
         @Override
-        public Void visit(@NotNull DecodePrimitiveType primitiveType)
+        public Void visit(@NotNull PrimitiveType primitiveType)
         {
             try(PreparedStatement insertPrimitiveType = connection.prepareStatement(
                     String.format("INSERT INTO %s (type_id, kind, bit_length) VALUES (?, ?, ?)", TableName.PRIMITIVE_TYPE)))
@@ -381,7 +382,7 @@ public class DecodeSqlite3Exporter
         }
 
         @Override
-        public Void visit(@NotNull DecodeNativeType nativeType)
+        public Void visit(@NotNull NativeType nativeType)
         {
             try(PreparedStatement insertPrimitiveType = connection.prepareStatement(
                     String.format("INSERT INTO %s (type_id) VALUES (?)", TableName.NATIVE_TYPE)))
@@ -397,7 +398,7 @@ public class DecodeSqlite3Exporter
         }
 
         @Override
-        public Void visit(@NotNull DecodeSubType subType)
+        public Void visit(@NotNull SubType subType)
         {
             insertType(subType.baseType().obj());
             try(PreparedStatement insertSubType = connection.prepareStatement(
@@ -418,7 +419,7 @@ public class DecodeSqlite3Exporter
 
         @Nullable
         @Override
-        public Void visit(@NotNull DecodeEnumType enumType)
+        public Void visit(@NotNull EnumType enumType)
         {
             insertType(enumType.baseType().obj());
             try(PreparedStatement insertEnumType = connection.prepareStatement(
@@ -453,7 +454,7 @@ public class DecodeSqlite3Exporter
         }
 
         @Override
-        public Void visit(@NotNull DecodeArrayType arrayType)
+        public Void visit(@NotNull ArrayType arrayType)
         {
             insertType(arrayType.baseType().obj());
             try(PreparedStatement insertArrayType = connection.prepareStatement(
@@ -474,7 +475,7 @@ public class DecodeSqlite3Exporter
         }
 
         @Override
-        public Void visit(@NotNull DecodeStructType structType)
+        public Void visit(@NotNull StructType structType)
         {
             try(PreparedStatement insertStructType = connection.prepareStatement(
                     String.format("INSERT INTO %s (type_id) VALUES (?)", TableName.STRUCT_TYPE)))
@@ -514,7 +515,7 @@ public class DecodeSqlite3Exporter
         }
 
         @Override
-        public Void visit(@NotNull DecodeAliasType typeAlias)
+        public Void visit(@NotNull AliasType typeAlias)
         {
             insertType(typeAlias.baseType().obj());
             try(PreparedStatement insertArrayType = connection.prepareStatement(
@@ -533,13 +534,13 @@ public class DecodeSqlite3Exporter
         }
 
         @Override
-        public Void visit(@NotNull DecodeGenericType genericType)
+        public Void visit(@NotNull GenericType genericType)
         {
             throw new AssertionError("not implemented");
         }
 
         @Override
-        public Void visit(@NotNull DecodeGenericTypeSpecialized genericTypeSpecialized)
+        public Void visit(@NotNull GenericTypeSpecialized genericTypeSpecialized)
         {
             throw new AssertionError("not implemented");
         }
@@ -559,7 +560,7 @@ public class DecodeSqlite3Exporter
         }
 
         @Override
-        public Void visit(@NotNull DecodeEventMessage eventMessage)
+        public Void visit(@NotNull EventMessage eventMessage)
         {
             try(PreparedStatement insertEventMessage = connection.prepareStatement(
                     String.format("INSERT INTO %s (message_id) VALUES (?)", TableName.EVENT_MESSAGE)))
@@ -575,7 +576,7 @@ public class DecodeSqlite3Exporter
         }
 
         @Override
-        public Void visit(@NotNull DecodeStatusMessage statusMessage)
+        public Void visit(@NotNull StatusMessage statusMessage)
         {
             try(PreparedStatement insertEventMessage = connection.prepareStatement(
                     String.format("INSERT INTO %s (message_id) VALUES (?)", TableName.STATUS_MESSAGE)))

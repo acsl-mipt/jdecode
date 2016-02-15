@@ -2,11 +2,11 @@ package ru.mipt.acsl.decode.model.domain.impl
 
 import java.net.URI
 
-import ru.mipt.acsl.decode.model.domain.aliases.DecodeMessageParameterToken
+import ru.mipt.acsl.decode.model.domain.aliases.MessageParameterToken
 import ru.mipt.acsl.decode.model.domain._
-import ru.mipt.acsl.decode.model.domain.impl.`type`.AbstractDecodeNameNamespaceOptionalInfoAware
+import ru.mipt.acsl.decode.model.domain.impl.`type`.AbstractNameNamespaceOptionalInfoAware
 import ru.mipt.acsl.decode.model.domain.impl.`type`.AbstractDecodeOptionalInfoAware
-import ru.mipt.acsl.decode.model.domain.impl.`type`.DecodeNamespaceImpl
+import ru.mipt.acsl.decode.model.domain.impl.`type`.NamespaceImpl
 import ru.mipt.acsl.decode.model.domain.impl.proxy.{ProvidePrimitivesAndNativeTypesDecodeProxyResolver, FindExistingDecodeProxyResolver}
 
 import scala.util.{Failure, Success, Try}
@@ -25,19 +25,19 @@ object DecodeNameImpl {
   def newFromMangledName(name: String) = DecodeNameImpl(name)
 }
 
-case object TokenTypeWalker extends ((DecodeType, DecodeMessageParameterToken) => DecodeType) {
+case object TokenTypeWalker extends ((DecodeType, MessageParameterToken) => DecodeType) {
   private val optionWalker = TokenOptionTypeWalker
-  override def apply(t: DecodeType, token: DecodeMessageParameterToken): DecodeType = optionWalker(t, token).get
+  override def apply(t: DecodeType, token: MessageParameterToken): DecodeType = optionWalker(t, token).get
 }
 
-case object TokenOptionTypeWalker extends ((DecodeType, DecodeMessageParameterToken) => Option[DecodeType]) {
-  override def apply(t: DecodeType, token: DecodeMessageParameterToken): Option[DecodeType] = t match {
-    case t: DecodeSubType => apply(t.baseType.obj, token)
-    case t: DecodeArrayType =>
+case object TokenOptionTypeWalker extends ((DecodeType, MessageParameterToken) => Option[DecodeType]) {
+  override def apply(t: DecodeType, token: MessageParameterToken): Option[DecodeType] = t match {
+    case t: SubType => apply(t.baseType.obj, token)
+    case t: ArrayType =>
       if (!token.isRight)
         sys.error("invalid token")
       Some(t.baseType.obj)
-    case t: DecodeStructType =>
+    case t: StructType =>
       if (token.isRight)
         sys.error(s"invalid token ${token.right.get}")
       val name = token.left.get
@@ -45,55 +45,55 @@ case object TokenOptionTypeWalker extends ((DecodeType, DecodeMessageParameterTo
         .getOrElse {
           sys.error(s"Field '$name' not found in struct '$t'")
         }.typeUnit.t.obj)
-    case t: DecodeAliasType => apply(t.baseType.obj, token)
+    case t: AliasType => apply(t.baseType.obj, token)
     case _ => None
   }
 }
 
-abstract class AbstractImmutableDecodeMessage(val component: DecodeComponent, val name: DecodeName, val id: Option[Int],
-                                              info: Option[String], val parameters: Seq[DecodeMessageParameter]) extends AbstractDecodeMessage(info) {
+abstract class AbstractImmutableMessage(val component: Component, val name: DecodeName, val id: Option[Int],
+                                        info: Option[String]) extends AbstractMessage(info) {
   def optionName = Some(name)
 }
 
-case class DecodeComponentRefImpl(component: DecodeMaybeProxy[DecodeComponent], alias: Option[String] = None)
+case class DecodeComponentRefImpl(component: MaybeProxy[Component], alias: Option[String] = None)
   extends DecodeComponentRef
 
-class DecodeStatusMessageImpl(component: DecodeComponent, name: DecodeName, id: Option[Int], info: Option[String],
-                              parameters: Seq[DecodeMessageParameter], val priority: Option[Int] = None)
-  extends AbstractImmutableDecodeMessage(component, name, id, info, parameters) with DecodeStatusMessage
+class StatusMessageImpl(component: Component, name: DecodeName, id: Option[Int], info: Option[String],
+                        val parameters: Seq[MessageParameter], val priority: Option[Int] = None)
+  extends AbstractImmutableMessage(component, name, id, info) with StatusMessage
 
-class DecodeEventMessageImpl(component: DecodeComponent, name: DecodeName, id: Option[Int], info: Option[String],
-                             parameters: Seq[DecodeMessageParameter], val eventType: DecodeMaybeProxy[DecodeType])
-  extends AbstractImmutableDecodeMessage(component, name, id, info, parameters) with DecodeEventMessage
+class EventMessageImpl(component: Component, name: DecodeName, id: Option[Int], info: Option[String],
+                       val fields: Seq[Either[MessageParameter, Parameter]], val eventType: MaybeProxy[DecodeType])
+  extends AbstractImmutableMessage(component, name, id, info) with EventMessage
 
-class DecodeRegistryImpl(resolvers: DecodeProxyResolver*) extends DecodeRegistry {
+class RegistryImpl(resolvers: DecodeProxyResolver*) extends Registry {
   if (DecodeConstants.SYSTEM_NAMESPACE_FQN.size != 1)
     sys.error("not implemented")
 
-  var rootNamespaces: immutable.Seq[DecodeNamespace] = immutable.Seq(
-    new DecodeNamespaceImpl(DecodeConstants.SYSTEM_NAMESPACE_FQN.last, None))
+  var rootNamespaces: immutable.Seq[Namespace] = immutable.Seq(
+    new NamespaceImpl(DecodeConstants.SYSTEM_NAMESPACE_FQN.last, None))
 
   private val proxyResolvers = resolvers.to[immutable.Seq]
 
   def this() = this(new FindExistingDecodeProxyResolver(), new ProvidePrimitivesAndNativeTypesDecodeProxyResolver())
 
-  def resolve[T <: DecodeReferenceable](uri: URI, cls: Class[T]): DecodeResolvingResult[T] = {
+  def resolve[T <: Referenceable](uri: URI, cls: Class[T]): ResolvingResult[T] = {
     for (resolver <- proxyResolvers) {
       val result = resolver.resolve(this, uri, cls)
       if (result.resolvedObject.isDefined)
         return result
     }
-    SimpleDecodeResolvingResult.immutableEmpty()
+    ResolvingResult.empty
   }
 }
 
-object DecodeRegistryImpl {
-  def apply() = new DecodeRegistryImpl()
+object RegistryImpl {
+  def apply() = new RegistryImpl()
 }
 
-class DecodeMessageParameterRefWalker(var component: DecodeComponent, var structField: Option[DecodeStructField] = None,
-                                      var subTokens: Seq[DecodeMessageParameterToken] = Seq.empty)
-  extends DecodeMessageParameterRef {
+class MessageParameterRefWalker(var component: Component, var structField: Option[DecodeStructField] = None,
+                                var subTokens: Seq[MessageParameterToken] = Seq.empty)
+  extends MessageParameterRef {
 
   while (structField.isEmpty)
     walkOne()
@@ -107,9 +107,10 @@ class DecodeMessageParameterRefWalker(var component: DecodeComponent, var struct
 
   private def findSubComponent(tokenString: String): Option[Try[Unit]] =
     component.subComponents.find(tokenString == _.aliasOrMangledName).map { subComponent =>
-    component = subComponent.component.obj
-    structField = None
-    Success()}
+      component = subComponent.component.obj
+      structField = None
+      Success()
+    }
 
   private def findBaseTypeField(tokenString: String): Option[Try[Unit]] =
     component.baseType.flatMap(_.obj.fields.find(tokenString == _.name.asMangledString).map { f =>
@@ -117,7 +118,7 @@ class DecodeMessageParameterRefWalker(var component: DecodeComponent, var struct
       Success()
     })
 
-  private def findTokenString(token: DecodeMessageParameterToken): Option[Try[Unit]] =
+  private def findTokenString(token: MessageParameterToken): Option[Try[Unit]] =
     token.left.toOption.flatMap { tokenString =>
       findSubComponent(tokenString).orElse(findBaseTypeField(tokenString))
     }
@@ -135,15 +136,15 @@ class DecodeMessageParameterRefWalker(var component: DecodeComponent, var struct
 }
 
 class DecodeCommandImpl(val name: DecodeName, val id: Option[Int], info: Option[String],
-                        val parameters: immutable.Seq[DecodeCommandParameter],
-                        val returnType: Option[DecodeMaybeProxy[DecodeType]])
+                        val parameters: immutable.Seq[Parameter],
+                        val returnType: Option[MaybeProxy[DecodeType]])
   extends AbstractDecodeOptionalInfoAware(info) with DecodeCommand {
   override def optionName: Option[DecodeName] = Some(name)
 }
 
-class DecodeLanguageImpl(name: DecodeName, namespace: DecodeNamespace, val isDefault: Boolean, info: Option[String])
-  extends AbstractDecodeNameNamespaceOptionalInfoAware(name, namespace, info) with DecodeLanguage {
+class LanguageImpl(name: DecodeName, namespace: Namespace, val isDefault: Boolean, info: Option[String])
+  extends AbstractNameNamespaceOptionalInfoAware(name, namespace, info) with Language {
   override def accept[T](visitor: DecodeReferenceableVisitor[T]): T = visitor.visit(this)
 }
 
-class DecodeMessageParameterImpl(val value: String, val info: Option[String] = None) extends DecodeMessageParameter
+class MessageParameterImpl(val value: String, val info: Option[String] = None) extends MessageParameter

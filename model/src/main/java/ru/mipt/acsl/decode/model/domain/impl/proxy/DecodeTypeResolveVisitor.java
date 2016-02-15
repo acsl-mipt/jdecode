@@ -1,7 +1,6 @@
 package ru.mipt.acsl.decode.model.domain.impl.proxy;
 
 import org.jetbrains.annotations.NotNull;
-import ru.mipt.acsl.decode.ScalaUtil;
 import ru.mipt.acsl.decode.model.domain.*;
 import ru.mipt.acsl.decode.model.domain.impl.DecodeModelResolver;
 import scala.Option;
@@ -17,31 +16,31 @@ import static ru.mipt.acsl.decode.ScalaUtil.appendToBuffer;
 public class DecodeTypeResolveVisitor implements DecodeTypeVisitor<Void>
 {
     @NotNull
-    private final DecodeRegistry registry;
+    private final Registry registry;
     @NotNull
-    private final Buffer<DecodeResolvingResult<DecodeReferenceable>> resolvingResultList;
+    private final Buffer<ResolvingResult<Referenceable>> resolvingResultList;
 
-    public DecodeTypeResolveVisitor(@NotNull DecodeRegistry registry,
-                                    @NotNull Buffer<DecodeResolvingResult<DecodeReferenceable>> resolvingResultList)
+    public DecodeTypeResolveVisitor(@NotNull Registry registry,
+                                    @NotNull Buffer<ResolvingResult<Referenceable>> resolvingResultList)
     {
         this.registry = registry;
         this.resolvingResultList = resolvingResultList;
     }
 
     @Override
-    public Void visit(@NotNull DecodePrimitiveType baseType)
+    public Void visit(@NotNull PrimitiveType baseType)
     {
         return null;
     }
 
     @Override
-    public Void visit(@NotNull DecodeNativeType nativeType)
+    public Void visit(@NotNull NativeType nativeType)
     {
         return null;
     }
 
     @Override
-    public Void visit(@NotNull DecodeSubType subType)
+    public Void visit(@NotNull SubType subType)
     {
         appendToBuffer(resolvingResultList,
                 DecodeModelResolver.resolveWithTypeCheck(subType.baseType(), registry, DecodeType.class));
@@ -49,7 +48,7 @@ public class DecodeTypeResolveVisitor implements DecodeTypeVisitor<Void>
     }
 
     @Override
-    public Void visit(@NotNull DecodeEnumType enumType)
+    public Void visit(@NotNull EnumType enumType)
     {
         appendToBuffer(resolvingResultList,
                 DecodeModelResolver.resolveWithTypeCheck(enumType.baseType(), registry, DecodeType.class));
@@ -57,7 +56,7 @@ public class DecodeTypeResolveVisitor implements DecodeTypeVisitor<Void>
     }
 
     @Override
-    public Void visit(@NotNull DecodeArrayType arrayType)
+    public Void visit(@NotNull ArrayType arrayType)
     {
         appendToBuffer(resolvingResultList,
                 DecodeModelResolver.resolveWithTypeCheck(arrayType.baseType(), registry, DecodeType.class));
@@ -65,7 +64,7 @@ public class DecodeTypeResolveVisitor implements DecodeTypeVisitor<Void>
     }
 
     @Override
-    public Void visit(@NotNull DecodeStructType structType)
+    public Void visit(@NotNull StructType structType)
     {
         Iterator<DecodeStructField> iterator = structType.fields().iterator();
         while (iterator.hasNext())
@@ -81,14 +80,14 @@ public class DecodeTypeResolveVisitor implements DecodeTypeVisitor<Void>
             if (typeUnit.unit().isDefined())
             {
                 appendToBuffer(resolvingResultList,
-                        DecodeModelResolver.resolveWithTypeCheck(typeUnit.unit().get(), registry, DecodeUnit.class));
+                        DecodeModelResolver.resolveWithTypeCheck(typeUnit.unit().get(), registry, Measure.class));
             }
         }
         return null;
     }
 
     @Override
-    public Void visit(@NotNull DecodeAliasType typeAlias)
+    public Void visit(@NotNull AliasType typeAlias)
     {
         appendToBuffer(resolvingResultList,
                 DecodeModelResolver.resolveWithTypeCheck(typeAlias.baseType(), registry, DecodeType.class));
@@ -96,21 +95,21 @@ public class DecodeTypeResolveVisitor implements DecodeTypeVisitor<Void>
     }
 
     @Override
-    public Void visit(@NotNull DecodeGenericType genericType)
+    public Void visit(@NotNull GenericType genericType)
     {
         return null;
     }
 
     @Override
-    public Void visit(@NotNull DecodeGenericTypeSpecialized genericTypeSpecialized)
+    public Void visit(@NotNull GenericTypeSpecialized genericTypeSpecialized)
     {
         appendToBuffer(resolvingResultList,
                 DecodeModelResolver
-                        .resolveWithTypeCheck(genericTypeSpecialized.genericType(), registry, DecodeGenericType.class));
-        Iterator<Option<DecodeMaybeProxy<DecodeType>>> taIt = genericTypeSpecialized.genericTypeArguments().iterator();
+                        .resolveWithTypeCheck(genericTypeSpecialized.genericType(), registry, GenericType.class));
+        Iterator<Option<MaybeProxy<DecodeType>>> taIt = genericTypeSpecialized.genericTypeArguments().iterator();
         while (taIt.hasNext())
         {
-            Option<DecodeMaybeProxy<DecodeType>> ta = taIt.next();
+            Option<MaybeProxy<DecodeType>> ta = taIt.next();
             if (ta.isDefined())
                 appendToBuffer(resolvingResultList,
                                 DecodeModelResolver.resolveWithTypeCheck(ta.get(), registry, DecodeType.class));

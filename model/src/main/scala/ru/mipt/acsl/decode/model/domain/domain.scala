@@ -3,7 +3,7 @@ package ru.mipt.acsl.decode.model.domain
 import java.net.URI
 
 import ru.mipt.acsl.decode.model.domain.impl.`type`._
-import ru.mipt.acsl.decode.model.domain.impl.{DecodeMessageParameterRefWalker, DecodeNameImpl}
+import ru.mipt.acsl.decode.model.domain.impl.{MessageParameterRefWalker, DecodeNameImpl}
 
 import scala.collection.immutable
 
@@ -12,7 +12,7 @@ object DecodeConstants {
 }
 
 package object aliases {
-  type DecodeMessageParameterToken = Either[String, Int]
+  type MessageParameterToken = Either[String, Int]
 }
 
 import aliases._
@@ -66,44 +66,44 @@ trait DecodeFqn {
   def isEmpty: Boolean = parts.isEmpty
 }
 
-trait DecodeReferenceable extends OptionNamed {
+trait Referenceable extends OptionNamed {
   def accept[T](visitor: DecodeReferenceableVisitor[T]): T
 }
 
-trait DecodeLanguage extends DecodeReferenceable with DecodeNamespaceAware
+trait Language extends Referenceable with NamespaceAware
 
-trait DecodeNamespace extends DecodeReferenceable with Named {
+trait Namespace extends Referenceable with Named {
   def asString: String
 
-  def units: immutable.Seq[DecodeUnit]
+  def units: immutable.Seq[Measure]
 
-  def units_=(units: immutable.Seq[DecodeUnit])
+  def units_=(units: immutable.Seq[Measure])
 
   def types: immutable.Seq[DecodeType]
 
   def types_=(types: immutable.Seq[DecodeType])
 
-  def subNamespaces: immutable.Seq[DecodeNamespace]
+  def subNamespaces: immutable.Seq[Namespace]
 
-  def subNamespaces_=(namespaces: immutable.Seq[DecodeNamespace])
+  def subNamespaces_=(namespaces: immutable.Seq[Namespace])
 
-  def parent: Option[DecodeNamespace]
+  def parent: Option[Namespace]
 
-  def parent_=(parent: Option[DecodeNamespace])
+  def parent_=(parent: Option[Namespace])
 
-  def components: immutable.Seq[DecodeComponent]
+  def components: immutable.Seq[Component]
 
-  def components_=(components: immutable.Seq[DecodeComponent])
+  def components_=(components: immutable.Seq[Component])
 
   def accept[T](visitor: DecodeReferenceableVisitor[T]): T = visitor.visit(this)
 
-  def languages: immutable.Seq[DecodeLanguage]
+  def languages: immutable.Seq[Language]
 
-  def languages_=(languages: immutable.Seq[DecodeLanguage])
+  def languages_=(languages: immutable.Seq[Language])
 
   def fqn: DecodeFqn = {
     val parts: scala.collection.mutable.Buffer[DecodeName] = scala.collection.mutable.Buffer[DecodeName]()
-    var currentNamespace: DecodeNamespace = this
+    var currentNamespace: Namespace = this
     while (currentNamespace.parent.isDefined) {
       parts += currentNamespace.name
       currentNamespace = currentNamespace.parent.get
@@ -112,29 +112,29 @@ trait DecodeNamespace extends DecodeReferenceable with Named {
     DecodeFqnImpl(parts.reverse)
   }
 
-  def rootNamespace: DecodeNamespace = parent.map(_.rootNamespace).getOrElse(this)
+  def rootNamespace: Namespace = parent.map(_.rootNamespace).getOrElse(this)
 }
 
-trait DecodeNamespaceAware {
-  def namespace: DecodeNamespace
+trait NamespaceAware {
+  def namespace: Namespace
 
-  def namespace_=(namespace: DecodeNamespace)
+  def namespace_=(namespace: Namespace)
 }
 
 trait DecodeOptionalNameAndOptionalInfoAware extends HasOptionInfo with OptionNamed
 
-trait DecodeUnit extends Named with HasOptionInfo with DecodeReferenceable with DecodeNamespaceAware {
+trait Measure extends Named with HasOptionInfo with Referenceable with NamespaceAware {
   def display: Option[String]
 
   def accept[T] (visitor: DecodeReferenceableVisitor[T] ): T = visitor.visit(this)
 }
 
 trait DecodeReferenceableVisitor[T] {
-  def visit(namespace: DecodeNamespace): T
+  def visit(namespace: Namespace): T
   def visit(`type`: DecodeType): T
-  def visit(component: DecodeComponent): T
-  def visit(unit: DecodeUnit): T
-  def visit(language: DecodeLanguage): T
+  def visit(component: Component): T
+  def visit(measure: Measure): T
+  def visit(language: Language): T
 }
 
 // Types
@@ -162,13 +162,13 @@ object TypeKind extends Enumeration {
   }
 }
 
-trait DecodeType extends DecodeReferenceable with DecodeOptionalNameAndOptionalInfoAware with DecodeNamespaceAware {
+trait DecodeType extends Referenceable with DecodeOptionalNameAndOptionalInfoAware with NamespaceAware {
   def accept[T](visitor: DecodeTypeVisitor[T]): T
 
   def accept[T](visitor: DecodeReferenceableVisitor[T] ): T = visitor.visit(this)
 }
 
-trait DecodePrimitiveType extends DecodeType {
+trait PrimitiveType extends DecodeType {
   def bitLength: Long
 
   def kind: TypeKind.Value
@@ -176,22 +176,22 @@ trait DecodePrimitiveType extends DecodeType {
   def accept[T](visitor: DecodeTypeVisitor[T]): T = visitor.visit(this)
 }
 
-trait DecodeNativeType extends DecodeType with Named {
+trait NativeType extends DecodeType with Named {
 }
 
-object DecodeNativeType {
-  val MANGLED_TYPE_NAMES: Set[String] = immutable.HashSet[String](DecodeBerType.NAME, DecodeOrType.NAME, DecodeOptionalType.NAME)
+object NativeType {
+  val MANGLED_TYPE_NAMES: Set[String] = immutable.HashSet[String](BerType.NAME, OrType.NAME, OptionalType.NAME)
 }
 
 trait BaseTyped {
-  def baseType: DecodeMaybeProxy[DecodeType]
+  def baseType: MaybeProxy[DecodeType]
 }
 
-trait DecodeAliasType extends DecodeType with Named with BaseTyped {
+trait AliasType extends DecodeType with Named with BaseTyped {
   def accept[T](visitor: DecodeTypeVisitor[T]): T = visitor.visit(this)
 }
 
-trait DecodeSubType extends DecodeType with BaseTyped {
+trait SubType extends DecodeType with BaseTyped {
   def accept[T](visitor: DecodeTypeVisitor[T]): T = visitor.visit(this)
 }
 
@@ -200,7 +200,7 @@ trait DecodeEnumConstant extends HasOptionInfo {
   def value: String
 }
 
-trait DecodeEnumType extends DecodeType with BaseTyped {
+trait EnumType extends DecodeType with BaseTyped {
   def constants: Set[DecodeEnumConstant]
 
   override def accept[T](visitor: DecodeTypeVisitor[T]): T = visitor.visit(this)
@@ -211,7 +211,7 @@ trait ArraySize {
   def max: Long
 }
 
-trait DecodeArrayType extends DecodeType with BaseTyped {
+trait ArrayType extends DecodeType with BaseTyped {
   def size: ArraySize
 
   def isFixedSize: Boolean = {
@@ -224,148 +224,150 @@ trait DecodeArrayType extends DecodeType with BaseTyped {
 }
 
 trait DecodeTypeUnitApplication {
-  def t: DecodeMaybeProxy[DecodeType]
-  def unit: Option[DecodeMaybeProxy[DecodeUnit]]
+  def t: MaybeProxy[DecodeType]
+  def unit: Option[MaybeProxy[Measure]]
 }
 
 trait DecodeStructField extends Named with HasOptionInfo {
   def typeUnit: DecodeTypeUnitApplication
 }
 
-trait DecodeStructType extends DecodeType {
+trait StructType extends DecodeType {
   def fields: Seq[DecodeStructField]
 
   override def accept[T](visitor: DecodeTypeVisitor[T]): T = visitor.visit(this)
 }
 
-trait DecodeGenericType extends DecodeType {
+trait GenericType extends DecodeType {
   def typeParameters: Seq[Option[DecodeName]]
 
   def accept[T](visitor: DecodeTypeVisitor[T]): T = visitor.visit(this)
 }
 
-trait DecodeGenericTypeSpecialized extends DecodeType {
-  def genericType: DecodeMaybeProxy[DecodeGenericType]
+trait GenericTypeSpecialized extends DecodeType {
+  def genericType: MaybeProxy[GenericType]
 
-  def genericTypeArguments: Seq[Option[DecodeMaybeProxy[DecodeType]]]
+  def genericTypeArguments: Seq[Option[MaybeProxy[DecodeType]]]
 
   def accept[T] (visitor: DecodeTypeVisitor[T]): T = visitor.visit(this)
 }
 
 trait DecodeTypeVisitor[T] {
-  def visit(primitiveType: DecodePrimitiveType): T
-  def visit(nativeType: DecodeNativeType): T
-  def visit(subType: DecodeSubType): T
-  def visit(enumType: DecodeEnumType): T
-  def visit(arrayType: DecodeArrayType): T
-  def visit(structType: DecodeStructType): T
-  def visit(typeAlias: DecodeAliasType): T
-  def visit(genericType: DecodeGenericType): T
-  def visit(genericTypeSpecialized: DecodeGenericTypeSpecialized): T
+  def visit(primitiveType: PrimitiveType): T
+  def visit(nativeType: NativeType): T
+  def visit(subType: SubType): T
+  def visit(enumType: EnumType): T
+  def visit(arrayType: ArrayType): T
+  def visit(structType: StructType): T
+  def visit(typeAlias: AliasType): T
+  def visit(genericType: GenericType): T
+  def visit(genericTypeSpecialized: GenericTypeSpecialized): T
 }
 
 // Components
-trait DecodeCommandParameter extends Named with HasOptionInfo {
-  def unit: Option[DecodeMaybeProxy[DecodeUnit]]
-  def paramType: DecodeMaybeProxy[DecodeType]
+
+trait Parameter extends Named with HasOptionInfo {
+  def unit: Option[MaybeProxy[Measure]]
+  def paramType: MaybeProxy[DecodeType]
 }
 
 trait DecodeCommand extends HasOptionInfo with Named with HasOptionId {
-  def returnType: Option[DecodeMaybeProxy[DecodeType]]
-  def parameters: immutable.Seq[DecodeCommandParameter]
+  def returnType: Option[MaybeProxy[DecodeType]]
+  def parameters: immutable.Seq[Parameter]
 }
 
 // TODO: replace with case classes?
 trait DecodeMessageVisitor[T] {
-  def visit(eventMessage: DecodeEventMessage): T
-  def visit(statusMessage: DecodeStatusMessage): T
+  def visit(eventMessage: EventMessage): T
+  def visit(statusMessage: StatusMessage): T
 }
 
-trait DecodeMessage extends HasOptionInfo with Named with HasOptionId {
+trait Message extends HasOptionInfo with Named with HasOptionId {
   def accept[T](visitor: DecodeMessageVisitor[T] ): T
 
-  def parameters: Seq[DecodeMessageParameter]
-
-  def component: DecodeComponent
+  def component: Component
 }
 
-trait DecodeStatusMessage extends DecodeMessage {
+trait StatusMessage extends Message {
   def priority: Option[Int]
+
+  def parameters: Seq[MessageParameter]
 
   def accept[T](visitor: DecodeMessageVisitor[T]): T = visitor.visit(this)
 }
 
-abstract class AbstractDecodeMessage(info: Option[String]) extends AbstractDecodeOptionalInfoAware(info)
-with DecodeMessage
+abstract class AbstractMessage(info: Option[String]) extends AbstractDecodeOptionalInfoAware(info) with Message
 
 trait DecodeComponentRef {
-  def component: DecodeMaybeProxy[DecodeComponent]
+  def component: MaybeProxy[Component]
 
   def alias: Option[String]
 
   def aliasOrMangledName: String = alias.getOrElse(component.obj.name.asMangledString)
 }
 
-trait DecodeMessageParameterRef {
-  def component: DecodeComponent
+trait MessageParameterRef {
+  def component: Component
   def structField: Option[DecodeStructField]
-  def subTokens: Seq[DecodeMessageParameterToken]
+  def subTokens: Seq[MessageParameterToken]
   def t: DecodeType
 }
 
-trait DecodeMessageParameter extends HasOptionInfo {
+trait MessageParameter extends HasOptionInfo {
   def value: String
 
-  def ref(component: DecodeComponent): DecodeMessageParameterRef =
-    new DecodeMessageParameterRefWalker(component, None, tokens)
+  def ref(component: Component): MessageParameterRef =
+    new MessageParameterRefWalker(component, None, tokens)
 
-  private def tokens: Seq[DecodeMessageParameterToken] = DecodeParameterWalker(this).tokens
+  private def tokens: Seq[MessageParameterToken] = ParameterWalker(this).tokens
 }
 
-trait DecodeEventMessage extends DecodeMessage {
+trait EventMessage extends Message {
+  def fields: Seq[Either[MessageParameter, Parameter]]
   def accept[T](visitor: DecodeMessageVisitor[T]): T = visitor.visit(this)
 }
 
-trait DecodeFqned extends Named with DecodeNamespaceAware {
+trait Fqned extends Named with NamespaceAware {
   def fqn: DecodeFqn = DecodeFqnImpl.newFromFqn(namespace.fqn, name)
 }
 
-trait DecodeComponent extends HasOptionInfo with DecodeFqned with DecodeReferenceable with HasOptionId {
-  def messages: immutable.Seq[DecodeMessage]
-  def messages_=(messages: immutable.Seq[DecodeMessage])
+trait Component extends HasOptionInfo with Fqned with Referenceable with HasOptionId {
+  def messages: immutable.Seq[Message]
+  def messages_=(messages: immutable.Seq[Message])
   def commands: immutable.Seq[DecodeCommand]
   def commands_=(commands: immutable.Seq[DecodeCommand])
-  def baseType: Option[DecodeMaybeProxy[DecodeStructType]]
+  def baseType: Option[MaybeProxy[StructType]]
   def subComponents: immutable.Seq[DecodeComponentRef]
   override def accept[T](visitor: DecodeReferenceableVisitor[T]): T = visitor.visit(this)
 }
 
-trait DecodeDomainModelResolver {
-  def resolve(decodeRegistry: DecodeRegistry): DecodeResolvingResult[DecodeReferenceable]
+trait DomainModelResolver {
+  def resolve(registry: Registry): ResolvingResult[Referenceable]
 }
 
-trait DecodeRegistry {
-  def rootNamespaces: immutable.Seq[DecodeNamespace]
+trait Registry {
+  def rootNamespaces: immutable.Seq[Namespace]
 
-  def rootNamespaces_=(rootNamespaces: immutable.Seq[DecodeNamespace])
+  def rootNamespaces_=(rootNamespaces: immutable.Seq[Namespace])
 
-  def resolve[T <: DecodeReferenceable](uri: URI, cls: Class[T]): DecodeResolvingResult[T]
+  def resolve[T <: Referenceable](uri: URI, cls: Class[T]): ResolvingResult[T]
 
-  def getComponent(fqn: String): Option[DecodeComponent] = {
+  // TODO: refactoring
+  def component(fqn: String): Option[Component] = {
     val dotPos = fqn.lastIndexOf('.')
-    val namespaceOptional = getNamespace(fqn.substring(0, dotPos))
+    val namespaceOptional = namespace(fqn.substring(0, dotPos))
     if (namespaceOptional.isEmpty)
     {
-      return Option.empty
+      return None
     }
     val componentName = DecodeNameImpl.newFromMangledName(fqn.substring(dotPos + 1, fqn.length()))
     namespaceOptional.get.components.find(_.name == componentName)
   }
 
   // todo: refactoring
-  def getNamespace(fqn: String): Option[DecodeNamespace] = {
-    var currentNamespaces: Option[Seq[DecodeNamespace]] = Some(rootNamespaces)
-    var currentNamespace: Option[DecodeNamespace] = None
+  def namespace(fqn: String): Option[Namespace] = {
+    var currentNamespaces: Option[Seq[Namespace]] = Some(rootNamespaces)
+    var currentNamespace: Option[Namespace] = None
     "\\.".r.split(fqn).foreach(nsName => {
       if (currentNamespaces.isEmpty)
       {
@@ -385,13 +387,13 @@ trait DecodeRegistry {
     currentNamespace
   }
 
-  def getMessage(fqn: String): Option[DecodeMessage] = {
+  def message(fqn: String): Option[Message] = {
     val dotPos = fqn.lastIndexOf('.')
     val decodeName = DecodeNameImpl.newFromMangledName(fqn.substring(dotPos + 1, fqn.length()))
-    getComponent(fqn.substring(0, dotPos)).map(_.messages.find(_.name == decodeName).orNull)
+    component(fqn.substring(0, dotPos)).map(_.messages.find(_.name == decodeName).orNull)
   }
 
-  def getMessageOrThrow(fqn: String): DecodeMessage = {
-    getMessage(fqn).get
+  def messageOrFail(fqn: String): Message = {
+    message(fqn).getOrElse(sys.error("assertion error"))
   }
 }

@@ -13,11 +13,11 @@ public interface DecodeEventMessage extends PsiElement {
   @Nullable
   DecodeEntityId getEntityId();
 
+  @NotNull
+  DecodeEventMessageParametersDecl getEventMessageParametersDecl();
+
   @Nullable
   DecodeInfoString getInfoString();
-
-  @NotNull
-  DecodeMessageParametersDecl getMessageParametersDecl();
 
   @NotNull
   DecodeTypeApplication getTypeApplication();

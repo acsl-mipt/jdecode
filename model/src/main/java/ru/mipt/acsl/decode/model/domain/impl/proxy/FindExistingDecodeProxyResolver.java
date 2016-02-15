@@ -1,14 +1,13 @@
 package ru.mipt.acsl.decode.model.domain.impl.proxy;
 
 import com.google.common.base.Preconditions;
+import ru.mipt.acsl.decode.ScalaUtil;
 import ru.mipt.acsl.decode.model.domain.*;
 import ru.mipt.acsl.decode.model.domain.impl.*;
 import ru.mipt.acsl.decode.model.domain.impl.type.ArraySizeImpl;
-import ru.mipt.acsl.decode.model.domain.impl.type.DecodeArrayTypeImpl;
+import ru.mipt.acsl.decode.model.domain.impl.type.ArrayTypeImpl;
 import org.jetbrains.annotations.NotNull;
 import scala.Option;
-import scala.collection.mutable.ArrayBuffer;
-import scala.collection.mutable.Buffer;
 
 import java.net.URI;
 import java.util.Iterator;
@@ -19,8 +18,8 @@ import java.util.stream.Stream;
 import static ru.mipt.acsl.JavaToScala.asOption;
 import static ru.mipt.acsl.ScalaToJava.asOptional;
 import static ru.mipt.acsl.decode.ScalaUtil.append;
-import static ru.mipt.acsl.decode.model.domain.impl.proxy.SimpleDecodeMaybeProxy.proxy;
 import static scala.collection.JavaConversions.asJavaCollection;
+import static scala.collection.JavaConversions.asScalaBuffer;
 
 /**
  * @author Artem Shein
@@ -31,15 +30,15 @@ public class FindExistingDecodeProxyResolver implements DecodeProxyResolver
 
     @NotNull
     @Override
-    public <T extends DecodeReferenceable> DecodeResolvingResult<T> resolve(@NotNull DecodeRegistry registry,
-                                                                            @NotNull URI uri, @NotNull Class<T> cls)
+    public <T extends Referenceable> ResolvingResult<T> resolve(@NotNull Registry registry,
+                                                                @NotNull URI uri, @NotNull Class<T> cls)
     {
-        Iterator<String> iter = DecodeUtils.getUriParts(uri).iterator();
-        DecodeResolvingResult<DecodeReferenceable> current = SimpleDecodeResolvingResult.immutableEmpty();
+        scala.collection.Iterator<String> iter = DecodeUtils.getUriParts(uri).iterator();
+        ResolvingResult<Referenceable> current = ResolvingResult.empty();
         while (iter.hasNext())
         {
             String part = iter.next();
-            Option<DecodeReferenceable> resolvedObject = current.resolvedObject();
+            Option<Referenceable> resolvedObject = current.resolvedObject();
             if (resolvedObject.isDefined())
             {
                 current = Preconditions.checkNotNull(resolvedObject.get().accept(
@@ -48,31 +47,32 @@ public class FindExistingDecodeProxyResolver implements DecodeProxyResolver
             }
             else
             {
-                current = SimpleDecodeResolvingResult.newInstance(Option.apply(
+                current = ResolvingResult.apply(Option.apply(
                         asJavaCollection(registry.rootNamespaces()).stream()
                         .filter(n -> n.name().asMangledString().equals(part)).findAny()
-                        .map(DecodeReferenceable.class::cast).orElse(null)));
+                        .map(Referenceable.class::cast).orElse(null)), ScalaUtil.newSeq());
             }
             if (!current.resolvedObject().isDefined())
             {
-                return SimpleDecodeResolvingResult.newInstance(Option.empty());
+                return ResolvingResult.apply(Option.empty(), ScalaUtil.newSeq());
             }
         }
-        return SimpleDecodeResolvingResult
-                .newInstance(asOption(asOptional(current.resolvedObject()).filter(cls::isInstance).map(cls::cast)));
+        return ResolvingResult
+                .apply(asOption(asOptional(current.resolvedObject()).filter(cls::isInstance).map(cls::cast)),
+                        ScalaUtil.newSeq());
     }
 
 
 
     private static class ResolveDecodeReferenceableVisitor
-            implements DecodeReferenceableVisitor<DecodeResolvingResult<DecodeReferenceable>>
+            implements DecodeReferenceableVisitor<ResolvingResult<Referenceable>>
     {
         @NotNull
-        private final DecodeRegistry registry;
+        private final Registry registry;
         @NotNull
         private final DecodeNameImpl part;
 
-        public ResolveDecodeReferenceableVisitor(@NotNull DecodeRegistry registry, @NotNull DecodeNameImpl part)
+        public ResolveDecodeReferenceableVisitor(@NotNull Registry registry, @NotNull DecodeNameImpl part)
         {
             this.registry = registry;
             this.part = part;
@@ -80,19 +80,19 @@ public class FindExistingDecodeProxyResolver implements DecodeProxyResolver
 
         @Override
         @NotNull
-        public DecodeResolvingResult<DecodeReferenceable> visit(@NotNull DecodeNamespace namespace)
+        public ResolvingResult<Referenceable> visit(@NotNull Namespace namespace)
         {
-            Predicate<DecodeReferenceable> pred = (DecodeReferenceable nameAware) -> {
+            Predicate<Referenceable> pred = (Referenceable nameAware) -> {
                 Option<DecodeName> nameOption = nameAware.optionName();
                 return nameOption.isDefined() && nameOption.get().equals(part);
             };
-            Option<DecodeReferenceable> resolvedObject = asOption(Stream.concat(asJavaCollection(namespace.subNamespaces()).stream(),
+            Option<Referenceable> resolvedObject = asOption(Stream.concat(asJavaCollection(namespace.subNamespaces()).stream(),
                     Stream.concat(asJavaCollection(namespace.units()).stream(),
                             Stream.concat(asJavaCollection(namespace.types()).stream(),
                                 asJavaCollection(namespace.components()).stream()))).filter(pred).findAny());
             if (resolvedObject.isDefined())
             {
-                return SimpleDecodeResolvingResult.newInstance(resolvedObject);
+                return ResolvingResult.apply(resolvedObject, ScalaUtil.newSeq());
             }
             String partString = part.asMangledString();
             if (partString.startsWith("["))
@@ -117,53 +117,53 @@ public class FindExistingDecodeProxyResolver implements DecodeProxyResolver
                 }
                 final long finalMinLength = minLength;
                 final long finalMaxLength = maxLength;
-                DecodeArrayType newArrayType = asJavaCollection(namespace.types()).stream().filter(t -> {
+                ArrayType newArrayType = asJavaCollection(namespace.types()).stream().filter(t -> {
                     Option<DecodeName> nameOption = t.optionName();
-                    return nameOption.isDefined() && nameOption.get().equals(part) && (t instanceof DecodeArrayType);
-                }).findAny().map(DecodeArrayType.class::cast).orElseGet(() -> new DecodeArrayTypeImpl(
+                    return nameOption.isDefined() && nameOption.get().equals(part) && (t instanceof ArrayType);
+                }).findAny().map(ArrayType.class::cast).orElseGet(() -> new ArrayTypeImpl(
                                 Option.apply(part),
                                 namespace,
                                 Option.empty(),
-                                proxy(namespace.fqn(),
+                        MaybeProxy$.MODULE$.proxy(namespace.fqn(),
                                         DecodeNameImpl.newFromSourceName(
                                                 innerPart.substring(0, index == -1 ? innerPart.length() : index))),
                                 new ArraySizeImpl(finalMinLength, finalMaxLength)));
-                DecodeResolvingResult<DecodeType> resolvedBaseType = newArrayType.baseType()
+                ResolvingResult<DecodeType> resolvedBaseType = newArrayType.baseType()
                         .resolve(registry, DecodeType.class);
                 if (resolvedBaseType.resolvedObject().isDefined())
                 {
                     namespace.types_$eq(append(namespace.types(), newArrayType));
-                    return SimpleDecodeResolvingResult.newInstance(Option.apply(newArrayType));
+                    return ResolvingResult.apply(Option.apply(newArrayType), ScalaUtil.newSeq());
                 }
             }
-            return SimpleDecodeResolvingResult.immutableEmpty();
+            return ResolvingResult.empty();
         }
 
         @Override
         @NotNull
-        public DecodeResolvingResult<DecodeReferenceable> visit(@NotNull DecodeType type)
+        public ResolvingResult<Referenceable> visit(@NotNull DecodeType type)
         {
-            return SimpleDecodeResolvingResult.immutableEmpty();
+            return ResolvingResult.empty();
         }
 
         @Override
         @NotNull
-        public DecodeResolvingResult<DecodeReferenceable> visit(@NotNull DecodeComponent component)
+        public ResolvingResult<Referenceable> visit(@NotNull Component component)
         {
-            return SimpleDecodeResolvingResult.immutableEmpty();
+            return ResolvingResult.empty();
         }
 
         @Override
         @NotNull
-        public DecodeResolvingResult<DecodeReferenceable> visit(@NotNull DecodeUnit unit)
+        public ResolvingResult<Referenceable> visit(@NotNull Measure measure)
         {
-            return SimpleDecodeResolvingResult.immutableEmpty();
+            return ResolvingResult.empty();
         }
 
         @Override
-        public DecodeResolvingResult<DecodeReferenceable> visit(@NotNull DecodeLanguage language)
+        public ResolvingResult<Referenceable> visit(@NotNull Language language)
         {
-            return SimpleDecodeResolvingResult.immutableEmpty();
+            return ResolvingResult.empty();
         }
     }
 }

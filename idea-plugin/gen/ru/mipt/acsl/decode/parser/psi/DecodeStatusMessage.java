@@ -17,7 +17,7 @@ public interface DecodeStatusMessage extends PsiElement {
   DecodeInfoString getInfoString();
 
   @NotNull
-  DecodeMessageParametersDecl getMessageParametersDecl();
+  DecodeStatusMessageParametersDecl getStatusMessageParametersDecl();
 
   @Nullable
   PsiElement getNonNegativeNumber();

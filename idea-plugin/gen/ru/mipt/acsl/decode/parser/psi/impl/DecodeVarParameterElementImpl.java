@@ -11,14 +11,14 @@ import static ru.mipt.acsl.decode.parser.psi.DecodeTypes.*;
 import com.intellij.extapi.psi.ASTWrapperPsiElement;
 import ru.mipt.acsl.decode.parser.psi.*;
 
-public class DecodeStatusMessageImpl extends ASTWrapperPsiElement implements DecodeStatusMessage {
+public class DecodeVarParameterElementImpl extends ASTWrapperPsiElement implements DecodeVarParameterElement {
 
-  public DecodeStatusMessageImpl(ASTNode node) {
+  public DecodeVarParameterElementImpl(ASTNode node) {
     super(node);
   }
 
   public void accept(@NotNull PsiElementVisitor visitor) {
-    if (visitor instanceof DecodeVisitor) ((DecodeVisitor)visitor).visitStatusMessage(this);
+    if (visitor instanceof DecodeVisitor) ((DecodeVisitor)visitor).visitVarParameterElement(this);
     else super.accept(visitor);
   }
 
@@ -29,27 +29,9 @@ public class DecodeStatusMessageImpl extends ASTWrapperPsiElement implements Dec
   }
 
   @Override
-  @Nullable
-  public DecodeEntityId getEntityId() {
-    return findChildByClass(DecodeEntityId.class);
-  }
-
-  @Override
-  @Nullable
-  public DecodeInfoString getInfoString() {
-    return findChildByClass(DecodeInfoString.class);
-  }
-
-  @Override
   @NotNull
-  public DecodeStatusMessageParametersDecl getStatusMessageParametersDecl() {
-    return findNotNullChildByClass(DecodeStatusMessageParametersDecl.class);
-  }
-
-  @Override
-  @Nullable
-  public PsiElement getNonNegativeNumber() {
-    return findChildByType(NON_NEGATIVE_NUMBER);
+  public DecodeTypeUnitApplication getTypeUnitApplication() {
+    return findNotNullChildByClass(DecodeTypeUnitApplication.class);
   }
 
 }

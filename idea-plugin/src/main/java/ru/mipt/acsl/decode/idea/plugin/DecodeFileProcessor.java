@@ -9,31 +9,30 @@ import com.intellij.psi.PsiWhiteSpace;
 import org.apache.commons.lang.NotImplementedException;
 import ru.mipt.acsl.JavaToScala;
 import ru.mipt.acsl.ScalaToJava;
-import ru.mipt.acsl.decode.ScalaUtil;
 import ru.mipt.acsl.decode.model.domain.*;
 import ru.mipt.acsl.decode.model.domain.impl.*;
 import ru.mipt.acsl.decode.model.domain.impl.type.*;
-import ru.mipt.acsl.decode.modeling.ModelingMessage;
-import ru.mipt.acsl.decode.modeling.TransformationMessage;
-import ru.mipt.acsl.decode.modeling.TransformationResult;
+import ru.mipt.acsl.decode.modeling.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import ru.mipt.acsl.decode.modeling.impl.MessageImpl;
 import ru.mipt.acsl.decode.parser.psi.*;
 import ru.mipt.acsl.decode.parser.psi.DecodeTypeUnitApplication;
 import ru.mipt.acsl.decode.parser.psi.DecodeUnit;
 import scala.Option;
 import scala.Some;
+import scala.collection.Seq$;
+import scala.collection.immutable.Seq;
 import scala.collection.mutable.ArrayBuffer;
 import scala.collection.mutable.Buffer;
+import scala.collection.mutable.Buffer$;
+import scala.collection.mutable.Builder;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
 import static ru.mipt.acsl.JavaToScala.asOption;
 import static ru.mipt.acsl.decode.ScalaUtil.append;
-import static ru.mipt.acsl.decode.model.domain.impl.proxy.SimpleDecodeMaybeProxy.obj;
-import static ru.mipt.acsl.decode.model.domain.impl.proxy.SimpleDecodeMaybeProxy.proxy;
-import static ru.mipt.acsl.decode.model.domain.impl.proxy.SimpleDecodeMaybeProxy.proxyForSystem;
 
 /**
  * @author Artem Shein
@@ -41,17 +40,17 @@ import static ru.mipt.acsl.decode.model.domain.impl.proxy.SimpleDecodeMaybeProxy
 public class DecodeFileProcessor
 {
     @NotNull
-    private final DecodeRegistry registry;
+    private final Registry registry;
     @NotNull
-    private final TransformationResult<DecodeRegistry> result;
+    private final TransformationResult<Registry> result;
 
     public static void notifyUser(@NotNull ModelingMessage msg)
     {
         Notifications.Bus.notify(new Notification(DecodeGenerateSqliteForDecodeSourcesAction.GROUP_DISPLAY_ID,
-                msg.getLevel().name(), msg.getText(), getNotificationTypeForLevel(msg.getLevel())));
+                msg.level().name(), msg.text(), getNotificationTypeForLevel(msg.level())));
     }
 
-    public DecodeFileProcessor(@NotNull DecodeRegistry registry, @NotNull TransformationResult<DecodeRegistry> result)
+    public DecodeFileProcessor(@NotNull Registry registry, @NotNull TransformationResult<Registry> result)
     {
         this.registry = registry;
         this.result = result;
@@ -68,11 +67,12 @@ public class DecodeFileProcessor
         PsiElement namespaceDecl = it.next();
         if (!(namespaceDecl instanceof DecodeNamespaceDecl))
         {
-            error("Expected namespace declaration, found '%s'", namespaceDecl);
+            // FIXME
+            //result = new DecodeTransformationResult(Option.empty(), Seq$.MODULE$.)error("Expected namespace declaration, found '%s'", namespaceDecl);
             return;
         }
         String namespaceString = ((DecodeNamespaceDecl) namespaceDecl).getElementId().getText();
-        DecodeNamespace namespace = DecodeUtils.getOrCreateNamespaceByFqn(registry, namespaceString);
+        Namespace namespace = DecodeUtils.getOrCreateNamespaceByFqn(registry, namespaceString);
         while (it.hasNext())
         {
             PsiElement element = it.next();
@@ -80,7 +80,7 @@ public class DecodeFileProcessor
             if (element instanceof DecodeUnitDecl)
             {
                 namespace.units_$eq(append(namespace.units(),
-                        new DecodeUnitImpl(
+                        new MeasureImpl(
                                 DecodeNameImpl.newFromSourceName(
                                         ((DecodeUnitDecl) element).getElementNameRule().getText()),
                                 namespace,
@@ -98,7 +98,7 @@ public class DecodeFileProcessor
             else if (element instanceof DecodeAliasDecl)
             {
                 namespace.types_$eq(append(namespace.types(),
-                        new DecodeAliasTypeImpl(DecodeNameImpl.newFromSourceName(
+                        new AliasTypeImpl(DecodeNameImpl.newFromSourceName(
                                         ((DecodeAliasDecl) element).getElementId().getText()),
                                 namespace,
                                 makeProxyForTypeApplication(((DecodeAliasDecl) element).getTypeApplication(), namespace),
@@ -110,28 +110,26 @@ public class DecodeFileProcessor
             }
             else
             {
-                error("Unexpected '%s'", element);
+                // FIXME
+                //error("Unexpected '%s'", element);
             }
         }
     }
 
     @NotNull
-    private static NotificationType getNotificationTypeForLevel(@NotNull TransformationMessage.Level level)
+    private static NotificationType getNotificationTypeForLevel(@NotNull Level level)
     {
-        switch (level)
-        {
-            case ERROR:
-                return NotificationType.ERROR;
-            case WARN:
-                return NotificationType.WARNING;
-            case NOTICE:
-                return NotificationType.INFORMATION;
-        }
+        if (level == ErrorLevel$.MODULE$)
+            return NotificationType.ERROR;
+        else if (level == Warning$.MODULE$)
+            return NotificationType.WARNING;
+        else if (level == Notice$.MODULE$)
+            return NotificationType.INFORMATION;
         throw new AssertionError();
     }
 
     private void processComponentDefinition(@NotNull DecodeComponentDecl componentDecl,
-                                            @NotNull DecodeNamespace namespace)
+                                            @NotNull Namespace namespace)
     {
         throw new NotImplementedException();
         /*
@@ -210,9 +208,9 @@ public class DecodeFileProcessor
     }
 
     @NotNull
-    private DecodeMaybeProxy<DecodeType> makeProxyForTypeApplication(
+    private MaybeProxy<DecodeType> makeProxyForTypeApplication(
             @NotNull DecodeTypeApplication typeApplication,
-            @NotNull DecodeNamespace namespace)
+            @NotNull Namespace namespace)
     {
         DecodeArrayTypeApplication arrayType = typeApplication.getArrayTypeApplication();
         DecodePrimitiveTypeApplication primitiveType = typeApplication.getPrimitiveTypeApplication();
@@ -234,16 +232,16 @@ public class DecodeFileProcessor
     }
 
     @NotNull
-    private DecodeMaybeProxy<DecodeType> getProxyFor(@NotNull DecodeArrayTypeApplication arrayType,
-                                                   @NotNull DecodeNamespace namespace)
+    private MaybeProxy<DecodeType> getProxyFor(@NotNull DecodeArrayTypeApplication arrayType,
+                                               @NotNull Namespace namespace)
     {
-        return proxy(getNamespaceFqnFor(arrayType, namespace),
+        return MaybeProxy$.MODULE$.proxy(getNamespaceFqnFor(arrayType, namespace),
                 DecodeNameImpl.newFromSourceName(arrayType.getText()));
     }
 
     @NotNull
-    private DecodeMaybeProxy<DecodeType> getProxyFor(@NotNull DecodeTypeApplication typeApplication,
-                                                   @NotNull DecodeNamespace namespace)
+    private MaybeProxy<DecodeType> getProxyFor(@NotNull DecodeTypeApplication typeApplication,
+                                               @NotNull Namespace namespace)
     {
         DecodeArrayTypeApplication arrayTypeApplication = typeApplication.getArrayTypeApplication();
         DecodePrimitiveTypeApplication primitiveTypeApplication = typeApplication.getPrimitiveTypeApplication();
@@ -265,13 +263,13 @@ public class DecodeFileProcessor
     }
 
     @NotNull
-    private DecodeFqn getNamespaceFqnFor(@NotNull DecodeArrayTypeApplication arrayType, @NotNull DecodeNamespace namespace)
+    private DecodeFqn getNamespaceFqnFor(@NotNull DecodeArrayTypeApplication arrayType, @NotNull Namespace namespace)
     {
         return getNamespaceFqnFor(arrayType.getTypeApplication(), namespace);
     }
 
     private DecodeFqn getNamespaceFqnFor(@NotNull DecodeTypeApplication typeApplication,
-                                        @NotNull DecodeNamespace namespace)
+                                        @NotNull Namespace namespace)
     {
         DecodeArrayTypeApplication arrayType = typeApplication.getArrayTypeApplication();
         DecodePrimitiveTypeApplication primitiveType = typeApplication.getPrimitiveTypeApplication();
@@ -297,13 +295,14 @@ public class DecodeFileProcessor
     }
 
     @NotNull
-    private DecodeMaybeProxy<DecodeType> getProxyFor(@NotNull DecodePrimitiveTypeApplication primitiveType)
+    private MaybeProxy<DecodeType> getProxyFor(@NotNull DecodePrimitiveTypeApplication primitiveType)
     {
-        return proxyForSystem(DecodeNameImpl.newFromSourceName(primitiveType.getText()));
+        return MaybeProxy.proxyForSystem(DecodeNameImpl.newFromSourceName(primitiveType.getText()));
     }
 
+    /*
     @NotNull
-    private static List<DecodeMessageParameter> getMessageParameters(
+    private static List<MessageParameter> getMessageParameters(
             @NotNull DecodeMessageParametersDecl messageParametersDecl)
     {
         /*if (messageParametersDecl.getDeepAllParameters() != null)
@@ -313,16 +312,16 @@ public class DecodeFileProcessor
         if (messageParametersDecl.getAllParameters() != null)
         {
             return ImmutableList.of(ImmutableDecodeAllParameters.INSTANCE);
-        }*/
+        }
         return messageParametersDecl.getParameterDeclList().stream()
                 .map(DecodeParameterDecl::getParameterElement)
-                        .map(e -> new DecodeMessageParameterImpl(e.getText(), Option.empty()))
+                        .map(e -> new MessageParameterImpl(e.getText(), Option.empty()))
                         .collect(Collectors.toList());
-    }
+    }*/
 
     @NotNull
-    private DecodeMaybeProxy<DecodeType> findExistingOrCreateType(@NotNull Option<DecodeName> name, @NotNull DecodeTypeDeclBody typeDeclBody,
-                                                                  @NotNull DecodeNamespace namespace)
+    private MaybeProxy<DecodeType> findExistingOrCreateType(@NotNull Option<DecodeName> name, @NotNull DecodeTypeDeclBody typeDeclBody,
+                                                            @NotNull Namespace namespace)
     {
         DecodeTypeApplication typeApplication = typeDeclBody.getTypeApplication();
         DecodeEnumTypeDecl enumType = typeDeclBody.getEnumTypeDecl();
@@ -333,18 +332,18 @@ public class DecodeFileProcessor
         }
         if (enumType != null)
         {
-            return obj(newEnumType(name, enumType, namespace));
+            return MaybeProxy$.MODULE$.obj(newEnumType(name, enumType, namespace));
         }
         if (structType != null)
         {
-            return obj(newStructType(name, structType, namespace));
+            return MaybeProxy$.MODULE$.obj(newStructType(name, structType, namespace));
         }
         throw new AssertionError();
     }
 
     @NotNull
     private DecodeType newType(@NotNull Option<DecodeName> name, @NotNull DecodeTypeDeclBody typeDeclBody,
-                               @NotNull DecodeNamespace namespace)
+                               @NotNull Namespace namespace)
     {
         DecodeTypeApplication typeApplication = typeDeclBody.getTypeApplication();
         DecodeEnumTypeDecl enumType = typeDeclBody.getEnumTypeDecl();
@@ -366,7 +365,7 @@ public class DecodeFileProcessor
     }
 
     @NotNull
-    private DecodeType newType(@NotNull DecodeTypeDecl typeDecl, @NotNull DecodeNamespace namespace)
+    private DecodeType newType(@NotNull DecodeTypeDecl typeDecl, @NotNull Namespace namespace)
     {
         return newType(
                 Some.<DecodeName>apply(DecodeNameImpl.newFromSourceName(typeDecl.getElementNameRule().getText())),
@@ -374,10 +373,10 @@ public class DecodeFileProcessor
     }
 
     @NotNull
-    private DecodeStructType newStructType(
+    private StructType newStructType(
             @NotNull Option<DecodeName> name,
             @NotNull DecodeStructTypeDecl structTypeDecl,
-            @NotNull DecodeNamespace namespace)
+            @NotNull Namespace namespace)
     {
         Buffer<DecodeStructField> fields = new ArrayBuffer<>();
         for (DecodeCommandArg fieldElement : structTypeDecl.getCommandArgs().getCommandArgList())
@@ -388,18 +387,18 @@ public class DecodeFileProcessor
                             fieldElement.getElementNameRule().getText()),
                     new DecodeTypeUnitApplicationImpl(
                             makeProxyForTypeApplication(typeUnitApplication.getTypeApplication(), namespace),
-                            asOption(Optional.ofNullable(unit).map(u -> proxy(namespace.fqn(),
+                            asOption(Optional.ofNullable(unit).map(u -> MaybeProxy$.MODULE$.proxy(namespace.fqn(),
                                     DecodeNameImpl.newFromSourceName(u.getElementId().getText()))))),
                     getText(fieldElement.getInfoString())));
         }
-        return new DecodeStructTypeImpl(name, namespace, getText(structTypeDecl.getInfoString()), fields.toSeq());
+        return new StructTypeImpl(name, namespace, getText(structTypeDecl.getInfoString()), fields.toSeq());
     }
 
     @NotNull
-    private DecodeSubType newSubTypeForTypeApplication(@NotNull Option<DecodeName> name,
-                                                      @NotNull Option<String> info,
-                                                      @NotNull DecodeTypeApplication newTypeDeclBody,
-                                                      @NotNull DecodeNamespace namespace)
+    private SubType newSubTypeForTypeApplication(@NotNull Option<DecodeName> name,
+                                                 @NotNull Option<String> info,
+                                                 @NotNull DecodeTypeApplication newTypeDeclBody,
+                                                 @NotNull Namespace namespace)
     {
         DecodeArrayTypeApplication arrayTypeApplication = newTypeDeclBody.getArrayTypeApplication();
         DecodePrimitiveTypeApplication primitiveTypeApplication = newTypeDeclBody.getPrimitiveTypeApplication();
@@ -429,15 +428,15 @@ public class DecodeFileProcessor
     }
 
     @NotNull
-    private static DecodeMaybeProxy<DecodeType> makeProxyForPrimitiveType(
+    private static MaybeProxy<DecodeType> makeProxyForPrimitiveType(
             @NotNull DecodePrimitiveTypeApplication primitiveTypeApplication)
     {
         throw new AssertionError();
     }
 
     @NotNull
-    private static DecodeNamespace resolveNamespaceForTypeApplication(@NotNull DecodeTypeApplication typeApplication,
-                                                                     @NotNull DecodeNamespace namespace)
+    private static Namespace resolveNamespaceForTypeApplication(@NotNull DecodeTypeApplication typeApplication,
+                                                                @NotNull Namespace namespace)
     {
         DecodeArrayTypeApplication arrayTypeApplication = typeApplication.getArrayTypeApplication();
         DecodePrimitiveTypeApplication primitiveTypeApplication = typeApplication.getPrimitiveTypeApplication();
@@ -463,7 +462,7 @@ public class DecodeFileProcessor
 
     @NotNull
     private static DecodeType newEnumType(@NotNull Option<DecodeName> name, @NotNull DecodeEnumTypeDecl enumTypeDecl,
-                                          @NotNull DecodeNamespace namespace)
+                                          @NotNull Namespace namespace)
     {
         Set<DecodeEnumConstant> values = enumTypeDecl.getEnumTypeValues().getEnumTypeValueList().stream()
                 .map(child -> new DecodeEnumConstantImpl(
@@ -477,7 +476,7 @@ public class DecodeFileProcessor
 
     @NotNull
     private Optional<DecodeType> newPrimitiveType(@NotNull Optional<DecodeName> name,
-                                                 @NotNull DecodeNamespace namespace,
+                                                 @NotNull Namespace namespace,
                                                  @NotNull DecodePrimitiveTypeApplication primitiveTypeApplication)
     {
         throw new AssertionError("not implemented: native type");
@@ -527,11 +526,6 @@ public class DecodeFileProcessor
                 ScalaToJava.<DecodeStringValue>asOptional(stringValue)
                         .map(str -> Optional.ofNullable(str.getString()).orElse(str.getStringUnaryQuotes()))
                         .map(PsiElement::getText).map(text -> text.substring(1, text.length() - 1)));
-    }
-
-    private void error(@NotNull String msg, Object... params)
-    {
-        result.getMessages().add(new DecodeTransformationMessage(ModelingMessage.Level.ERROR, msg, params));
     }
 
 }

@@ -1,41 +1,40 @@
 package ru.mipt.acsl.decode.idea.plugin;
 
-import ru.mipt.acsl.decode.model.domain.DecodeRegistry;
-import ru.mipt.acsl.decode.modeling.ModelingMessage;
-import ru.mipt.acsl.decode.modeling.TransformationMessage;
-import ru.mipt.acsl.decode.modeling.TransformationResult;
 import org.jetbrains.annotations.NotNull;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import ru.mipt.acsl.decode.model.domain.Registry;
+import ru.mipt.acsl.decode.modeling.ErrorLevel$;
+import ru.mipt.acsl.decode.modeling.ModelingMessage;
+import ru.mipt.acsl.decode.modeling.TransformationResult;
+import scala.Option;
+import scala.Some;
+import scala.collection.JavaConversions;
+import scala.collection.immutable.Seq;
+import scala.collection.immutable.Seq$;
 
 /**
  * @author Artem Shein
  */
-class DecodeTransformationResult implements TransformationResult<DecodeRegistry>
+class DecodeTransformationResult implements TransformationResult<Registry>
 {
-    @NotNull
-    Optional<DecodeRegistry> result = Optional.empty();
-    @NotNull
-    List<TransformationMessage> messages = new ArrayList<>();
+    final Option<Registry> result;
+    final Seq<ModelingMessage> messages;
 
-    public DecodeTransformationResult(
-            @NotNull DecodeRegistry registry)
+    public DecodeTransformationResult(Option<Registry> registry, Seq<ModelingMessage> messages)
     {
-        result = Optional.of(registry);
+        result = registry;
+        this.messages = messages;
     }
 
     @NotNull
     @Override
-    public Optional<DecodeRegistry> getResult()
+    public Option<Registry> result()
     {
         return result;
     }
 
     @NotNull
     @Override
-    public List<TransformationMessage> getMessages()
+    public Seq<ModelingMessage> messages()
     {
         return messages;
     }
@@ -43,7 +42,7 @@ class DecodeTransformationResult implements TransformationResult<DecodeRegistry>
     @Override
     public boolean hasError()
     {
-        return messages.stream().filter(msg -> msg.getLevel().equals(ModelingMessage.Level.ERROR)).findAny()
-                .isPresent();
+        return JavaConversions.asJavaCollection(messages).stream()
+                .filter(msg -> msg.level().equals(ErrorLevel$.MODULE$)).findAny().isPresent();
     }
 }

@@ -22,6 +22,8 @@ public interface DecodeTypes {
   IElementType ENUM_TYPE_VALUE = new DecodeElementType("ENUM_TYPE_VALUE");
   IElementType ENUM_TYPE_VALUES = new DecodeElementType("ENUM_TYPE_VALUES");
   IElementType EVENT_MESSAGE = new DecodeElementType("EVENT_MESSAGE");
+  IElementType EVENT_MESSAGE_PARAMETERS_DECL = new DecodeElementType("EVENT_MESSAGE_PARAMETERS_DECL");
+  IElementType EVENT_PARAMETER_DECL = new DecodeElementType("EVENT_PARAMETER_DECL");
   IElementType FLOAT_LITERAL = new DecodeElementType("FLOAT_LITERAL");
   IElementType GENERIC_TYPE_APPLICATION = new DecodeElementType("GENERIC_TYPE_APPLICATION");
   IElementType IMPORT_ELEMENT = new DecodeElementType("IMPORT_ELEMENT");
@@ -32,7 +34,6 @@ public interface DecodeTypes {
   IElementType LENGTH_TO = new DecodeElementType("LENGTH_TO");
   IElementType LITERAL = new DecodeElementType("LITERAL");
   IElementType MESSAGE_DECL = new DecodeElementType("MESSAGE_DECL");
-  IElementType MESSAGE_PARAMETERS_DECL = new DecodeElementType("MESSAGE_PARAMETERS_DECL");
   IElementType NAMESPACE_DECL = new DecodeElementType("NAMESPACE_DECL");
   IElementType NATIVE_TYPE_KIND = new DecodeElementType("NATIVE_TYPE_KIND");
   IElementType PARAMETER_DECL = new DecodeElementType("PARAMETER_DECL");
@@ -40,6 +41,7 @@ public interface DecodeTypes {
   IElementType PRIMITIVE_TYPE_APPLICATION = new DecodeElementType("PRIMITIVE_TYPE_APPLICATION");
   IElementType PRIMITIVE_TYPE_KIND = new DecodeElementType("PRIMITIVE_TYPE_KIND");
   IElementType STATUS_MESSAGE = new DecodeElementType("STATUS_MESSAGE");
+  IElementType STATUS_MESSAGE_PARAMETERS_DECL = new DecodeElementType("STATUS_MESSAGE_PARAMETERS_DECL");
   IElementType STRING_VALUE = new DecodeElementType("STRING_VALUE");
   IElementType STRUCT_TYPE_DECL = new DecodeElementType("STRUCT_TYPE_DECL");
   IElementType SUBCOMPONENT_DECL = new DecodeElementType("SUBCOMPONENT_DECL");
@@ -49,6 +51,7 @@ public interface DecodeTypes {
   IElementType TYPE_UNIT_APPLICATION = new DecodeElementType("TYPE_UNIT_APPLICATION");
   IElementType UNIT = new DecodeElementType("UNIT");
   IElementType UNIT_DECL = new DecodeElementType("UNIT_DECL");
+  IElementType VAR_PARAMETER_ELEMENT = new DecodeElementType("VAR_PARAMETER_ELEMENT");
 
   IElementType AFTER = new DecodeTokenType("after");
   IElementType ALIAS = new DecodeTokenType("alias");
@@ -111,6 +114,7 @@ public interface DecodeTypes {
   IElementType TYPE_KEYWORD = new DecodeTokenType("type");
   IElementType UINT = new DecodeTokenType("uint");
   IElementType UNIT_TOKEN = new DecodeTokenType("unit");
+  IElementType VAR = new DecodeTokenType("var");
   IElementType WITH = new DecodeTokenType("with");
 
   class Factory {
@@ -158,6 +162,12 @@ public interface DecodeTypes {
       else if (type == EVENT_MESSAGE) {
         return new DecodeEventMessageImpl(node);
       }
+      else if (type == EVENT_MESSAGE_PARAMETERS_DECL) {
+        return new DecodeEventMessageParametersDeclImpl(node);
+      }
+      else if (type == EVENT_PARAMETER_DECL) {
+        return new DecodeEventParameterDeclImpl(node);
+      }
       else if (type == FLOAT_LITERAL) {
         return new DecodeFloatLiteralImpl(node);
       }
@@ -188,9 +198,6 @@ public interface DecodeTypes {
       else if (type == MESSAGE_DECL) {
         return new DecodeMessageDeclImpl(node);
       }
-      else if (type == MESSAGE_PARAMETERS_DECL) {
-        return new DecodeMessageParametersDeclImpl(node);
-      }
       else if (type == NAMESPACE_DECL) {
         return new DecodeNamespaceDeclImpl(node);
       }
@@ -211,6 +218,9 @@ public interface DecodeTypes {
       }
       else if (type == STATUS_MESSAGE) {
         return new DecodeStatusMessageImpl(node);
+      }
+      else if (type == STATUS_MESSAGE_PARAMETERS_DECL) {
+        return new DecodeStatusMessageParametersDeclImpl(node);
       }
       else if (type == STRING_VALUE) {
         return new DecodeStringValueImpl(node);
@@ -238,6 +248,9 @@ public interface DecodeTypes {
       }
       else if (type == UNIT_DECL) {
         return new DecodeUnitDeclImpl(node);
+      }
+      else if (type == VAR_PARAMETER_ELEMENT) {
+        return new DecodeVarParameterElementImpl(node);
       }
       throw new AssertionError("Unknown element type: " + type);
     }
