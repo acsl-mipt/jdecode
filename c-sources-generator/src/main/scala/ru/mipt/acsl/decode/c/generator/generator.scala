@@ -902,16 +902,13 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
           val paramType = parameter.paramType.obj
           CStatements(v.define(paramType.cType), paramType.deserializeMethodName.call(v.ref, reader.v)._try)
         }
-        val cmdResultVar = CVar("cmdResult")
         val cmdReturnType = command.returnType.map(_.obj)
         val cmdCReturnType = command.returnType.map(_.obj.cType)
         val funcCall = command.methodName(component, subComponent).call(
           vars.zip(command.parameters.map(_.paramType.obj)).map{ case (v, t) => v.refIfNotSmall(t) }: _*)
         CFuncImpl(CFuncDef(componentTypeName.methodName(methodNamePart), resultType, parameters),
-          varInits ++ cmdCReturnType.map(t => CStatements(cmdResultVar.define(
-            mapIfNotSmall(t, cmdReturnType.getOrElse { sys.error("wtf") }, (ct: CType) => ct.ptr.const), Some(funcCall)),
-            CReturn(cmdReturnType.getOrElse{ sys.error("not implemented") }.methodName(typeSerializeMethodName).call(
-              cmdResultVar, writer.v))))
+          varInits ++ cmdCReturnType.map(t => CStatements(CReturn(cmdReturnType
+            .getOrElse{ sys.error("not implemented") }.methodName(typeSerializeMethodName).call(funcCall, writer.v))))
             .getOrElse(CStatements(funcCall, CReturn(resultOk))))
       }
     }
