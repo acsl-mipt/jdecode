@@ -51,6 +51,8 @@ class MaybeProxy[T <: Referenceable](var v: Either[DecodeProxy[T], T]) {
   def obj: T = v.right.getOrElse(sys.error("assertion error"))
 
   def proxy: DecodeProxy[T] = v.left.getOrElse(sys.error("assertion error"))
+
+  override def toString: String = s"MaybeProxy{${if (isProxy) proxy else obj}}"
 }
 
 object MaybeProxy {

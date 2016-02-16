@@ -322,7 +322,7 @@ trait MessageParameter extends HasOptionInfo {
   private def tokens: Seq[MessageParameterToken] = ParameterWalker(this).tokens
 }
 
-trait EventMessage extends Message {
+trait EventMessage extends Message with BaseTyped {
   def fields: Seq[Either[MessageParameter, Parameter]]
   def accept[T](visitor: DecodeMessageVisitor[T]): T = visitor.visit(this)
 }

@@ -63,7 +63,7 @@ class StatusMessageImpl(component: Component, name: DecodeName, id: Option[Int],
   extends AbstractImmutableMessage(component, name, id, info) with StatusMessage
 
 class EventMessageImpl(component: Component, name: DecodeName, id: Option[Int], info: Option[String],
-                       val fields: Seq[Either[MessageParameter, Parameter]], val eventType: MaybeProxy[DecodeType])
+                       val fields: Seq[Either[MessageParameter, Parameter]], val baseType: MaybeProxy[DecodeType])
   extends AbstractImmutableMessage(component, name, id, info) with EventMessage
 
 class RegistryImpl(resolvers: DecodeProxyResolver*) extends Registry {

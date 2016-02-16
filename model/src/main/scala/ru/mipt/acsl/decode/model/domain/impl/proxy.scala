@@ -6,8 +6,7 @@ import ru.mipt.acsl.decode.model.domain._
 import ru.mipt.acsl.decode.model.domain.impl.proxy.DecodeTypeResolveVisitor
 import ru.mipt.acsl.decode.modeling.aliases.ResolvingMessage
 
-import scala.collection.{JavaConversions, mutable}
-import scala.collection.mutable.ArrayBuffer
+import scala.collection.mutable
 
 /**
   * @author Artem Shein
@@ -27,7 +26,7 @@ object DecodeProxyImpl {
 
 object DecodeModelResolver {
   def resolve(namespace: Namespace, registry: Registry): mutable.Buffer[ResolvingResult[Referenceable]] = {
-    val result = new ArrayBuffer[ResolvingResult[Referenceable]]()
+    val result = new mutable.ArrayBuffer[ResolvingResult[Referenceable]]()
     result ++= namespace.types.map(resolve(_, registry))
     result ++= namespace.subNamespaces.flatMap(resolve(_, registry))
     result ++= namespace.components.flatMap(resolve(_, registry))
@@ -61,15 +60,20 @@ object DecodeModelResolver {
         resultList += DecodeModelResolver.resolve(t.obj, registry)
     }
     component.commands.foreach { cmd =>
-      cmd.returnType.foreach { rt =>
-        resultList += resolveWithTypeCheck(rt, registry, classOf[DecodeType])
-      }
+      cmd.returnType.foreach(rt => resultList += resolveWithTypeCheck(rt, registry, classOf[DecodeType]))
       cmd.parameters.foreach { arg =>
         resultList += resolveWithTypeCheck(arg.paramType, registry, classOf[DecodeType])
-        arg.unit.map { u =>
-          resultList += resolveWithTypeCheck(u, registry, classOf[Measure])
-        }
+        arg.unit.map(u => resultList += resolveWithTypeCheck(u, registry, classOf[Measure]))
       }
+    }
+    component.messages.foreach {
+      case e: EventMessage =>
+        resultList += resolveWithTypeCheck(e.baseType, registry, classOf[DecodeType])
+        e.fields.foreach {
+          case Right(p) => resultList += resolveWithTypeCheck(p.paramType, registry, classOf[DecodeType])
+          case _ =>
+        }
+      case _ =>
     }
     component.subComponents.foreach { scr =>
       val sc = scr.component

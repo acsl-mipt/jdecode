@@ -19,6 +19,7 @@ import resource._
 import scala.collection.immutable.HashMap
 import scala.collection.mutable
 import scala.collection.immutable
+import scala.util.Either.RightProjection
 import scala.util.Random
 
 case class CGeneratorConfiguration(outputDir: io.File, registry: Registry, rootComponentFqn: String,
@@ -627,9 +628,9 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
       else
         rootComponent.prefixedTypeName.methodName(component.cName + readExecuteCommandMethodNamePart)
 
-    def writeMessageMethodName(rootComponent: Component): String =
+    def writeStatusMessageMethodName(rootComponent: Component): String =
       if (component == rootComponent)
-        component.prefixedTypeName.methodName("WriteMessage")
+        component.prefixedTypeName.methodName("WriteStatusMessage")
       else
         rootComponent.prefixedTypeName.methodName(component.cName + "WriteMessage")
 
@@ -668,14 +669,18 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
       }
     }
 
-    def writeMessageMethod: CFuncImpl = writeMessageMethod(component)
+    def writeStatusMessageMethod: CFuncImpl = writeStatusMessageMethod(component)
 
-    def writeMessageMethod(rootComponent: Component): CFuncImpl = {
-      CFuncImpl(CFuncDef(component.writeMessageMethodName(rootComponent), resultType,
+    def writeStatusMessageMethod(rootComponent: Component): CFuncImpl = {
+      CFuncImpl(CFuncDef(component.writeStatusMessageMethodName(rootComponent), resultType,
         Seq(writer.param, messageId.param)),
         Seq(messageId.v.serializeBer._try.line, CIndent, CSwitch(messageId.v,
-          casesForMap(component.allMessagesById, (message: Message, c: Component) =>
-            CStatements(CReturn(message.fullMethodName(rootComponent, c).call(writer.v)))),
+          casesForMap(component.allMessagesById, { (message: Message, c: Component) => message match {
+              case message: StatusMessage =>
+                Some(CStatements(CReturn(message.fullMethodName(rootComponent, c).call(writer.v))))
+              case _ => None
+            }
+          }),
           default = CStatements(CReturn(invalidMessageId))), CEol))
     }
 
@@ -685,7 +690,7 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
       CFuncImpl(CFuncDef(component.isStatusMessageMethodName, b8Type,
         Seq(messageId.param)), Seq(CIndent, CSwitch(messageId.v, casesForMap(component.allMessagesById,
         (message: Message, c: Component) =>
-          CStatements(CReturn(message.isInstanceOf[StatusMessage].toString._var))),
+          Some(CStatements(CReturn(message.isInstanceOf[StatusMessage].toString._var)))),
         default = CStatements(CReturn("false"._var))), CEol))
 
     def executeCommandMethod: CFuncImpl = executeCommandMethod(component)
@@ -695,7 +700,7 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
         Seq(reader.param, writer.param, commandId.param)),
         Seq(CIndent, CSwitch(commandId.v, casesForMap(component.allCommandsById,
           (command: DecodeCommand, c: Component) =>
-            CStatements(CReturn(command.executeMethodName(rootComponent, c).call(reader.v, writer.v)))),
+            Some(CStatements(CReturn(command.executeMethodName(rootComponent, c).call(reader.v, writer.v))))),
           default = CStatements(CReturn(invalidCommandId))), CEol))
     }
 
@@ -740,7 +745,8 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
     }
 
     def allMethods: Seq[CFuncImpl] = component.allCommandsMethods ++ component.allStatusMessageMethods ++
-      Seq(component.executeCommandMethod, component.readExecuteCommandMethod, component.writeMessageMethod,
+      component.allEventMessageMethods ++
+      Seq(component.executeCommandMethod, component.readExecuteCommandMethod, component.writeStatusMessageMethod,
         component.isStatusMessageMethod, component.executeCommandForComponentMethod) ++
       component.allSubComponents.map(_.executeCommandForComponentMethod(component))
 
@@ -748,32 +754,59 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
       rootComponent.prefixedTypeName.methodName(parameter.ref(component).structField
         .getOrElse { sys.error("not implemented") }.cStructFieldName(rootComponent, component))
 
+    def allEventMessageMethods: Seq[CFuncImpl] = {
+      allMessagesById.toSeq.sortBy(_._1).map(_._2).flatMap {
+        case ComponentMessage(c, message: EventMessage) =>
+          Some(CFuncImpl(CFuncDef(message.fullMethodName(component, c), resultType,
+            Seq(writer.param, CFuncParam("event", message.baseType.obj.cType)) ++ message.fields.flatMap {
+            case Right(e) =>
+              val t = e.paramType.obj
+              Seq(CFuncParam(e.cName, mapIfNotSmall(t.cType, t, (t: CType) => t.ptr.const)))
+            case _ => Seq.empty
+          }),
+            CStatements(message.baseType.obj.serializeCallCode("event"._var)) ++
+            message.fields.flatMap {
+              case Left(p) =>
+                val v = p.varName._var
+                val parameterRef = p.ref(c)
+                val structField = parameterRef.structField.getOrElse { sys.error("not implemented") }
+                val t = structField.typeUnit.t.obj
+                if (parameterRef.structField.isDefined) {
+                  val t = parameterRef.t
+                  if (parameterRef.subTokens.isEmpty)
+                    CStatements(t.serializeCallCode(c.parameterMethodName(p, component).call()))
+                  else
+                    sys.error("not implemented")
+                } else {
+                  sys.error("not implemented")
+                }
+              case Right(p) =>
+                CStatements(p.paramType.obj.serializeCallCode(p.cName._var))
+            } :+ CReturn(resultOk).line
+          ))
+        case _ => None
+      }
+    }
+
     def allStatusMessageMethods: Seq[CFuncImpl] = {
-      allMessagesById.toSeq.sortBy(_._1).map(_._2).map { case ComponentMessage(c, message: StatusMessage) =>
-        CFuncImpl(CFuncDef(message.fullMethodName(component, c), resultType,
-          Seq(writer.param)),
-          message.parameters.map { p =>
-            val v = p.varName._var
-            val parameterRef = p.ref(c)
-            val structField = parameterRef.structField.getOrElse { sys.error("not implemented") }
-            val t = structField.typeUnit.t.obj
-            v.define(mapIfNotSmall(t.cType, t, (ct: CType) => ct.ptr.const),
-              Some(c.parameterMethodName(p, component).call())).line
-          } ++
+      allMessagesById.toSeq.sortBy(_._1).map(_._2).flatMap {
+        case ComponentMessage(c, message: StatusMessage) =>
+          Some(CFuncImpl(CFuncDef(message.fullMethodName(component, c), resultType,
+            Seq(writer.param)),
             message.parameters.flatMap { p =>
               val v = p.varName._var
               val parameterRef = p.ref(c)
               if (parameterRef.structField.isDefined) {
                 val t = parameterRef.t
                 if (parameterRef.subTokens.isEmpty)
-                  Seq(t.serializeCallCode(v).line)
+                  Seq(t.serializeCallCode(c.parameterMethodName(p, component).call()).line)
                 else
                   sys.error("not implemented")
               } else {
                 sys.error("not implemented")
               }
-            } :+
-            CReturn(resultOk).line)
+            } :+ CReturn(resultOk).line))
+        case _ => None
       }
     }
 
@@ -855,7 +888,7 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
     def allSubComponentsMethods: Seq[CFuncImpl] = {
       component.allSubComponents.toSeq.flatMap { subComponent =>
         Seq(subComponent.executeCommandMethod(component), subComponent.readExecuteCommandMethod(component),
-          subComponent.writeMessageMethod(component), subComponent.isStatusMessageMethod(component))
+          subComponent.writeStatusMessageMethod(component), subComponent.isStatusMessageMethod(component))
       }
     }
 
@@ -886,6 +919,10 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
     def allTypes: immutable.Set[DecodeType] =
       (component.commands.flatMap(cmd => cmd.returnType.map(_.obj.typeWithDependentTypes).getOrElse(Seq.empty) ++
         cmd.parameters.flatMap(_.paramType.obj.typeWithDependentTypes)) ++
+        component.messages.flatMap {
+          case e: EventMessage => Some(e.baseType.obj)
+          case _ => None
+        } ++
         component.baseType.map(_.obj.fields.flatMap(_.typeUnit.t.obj.typeWithDependentTypes)).getOrElse(Seq.empty)).toSet ++
         component.allSubComponents.flatMap(_.allTypes)
 
@@ -1232,6 +1269,6 @@ object CSourcesGenerator {
   private val keywords = Seq("return")
 
   private def casesForMap[T <: Named](map: immutable.HashMap[Int, WithComponent[T]],
-                                      apply: (T, Component) => CAstElements): Seq[CCase] =
-    map.toSeq.sortBy(_._1).map { case (id, WithComponent(c, _2)) => CCase(CIntLiteral(id), apply(_2, c)) }
+                                      apply: (T, Component) => Option[CAstElements]): Seq[CCase] =
+    map.toSeq.sortBy(_._1).flatMap { case (id, WithComponent(c, _2)) => apply(_2, c).map(els => CCase(CIntLiteral(id), els)) }
 }
