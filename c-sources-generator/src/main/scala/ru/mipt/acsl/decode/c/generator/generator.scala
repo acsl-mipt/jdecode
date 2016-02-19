@@ -173,7 +173,7 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
       component.commandMethodImplDefs.flatMap(m => Seq(CEol, m)).eol ++
       "USER parameter implementation functions, MUST BE implemented".comment ++
       component.parameterMethodImplDefs.flatMap(m => Seq(CEol, m)).eol ++
-      "USER other functions, MUST BE impleemented".comment ++
+      "USER other functions, MUST BE implemented".comment ++
       Seq(CFuncDef(component.isEventAllowedMethodName, b8Type, Seq(messageId.param, eventId.param))) ++
       "Component defines".comment.eol ++ guidDefines ++
       "Message ID for component defines".comment.eol ++ component.allMessageDefines ++
