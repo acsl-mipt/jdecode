@@ -370,8 +370,9 @@ class CppSourcesGenerator(val config: CppGeneratorConfiguration) extends Generat
               if (cmd.returnType.isDefined) Return(methodCall) else CppStatement(methodCall))
           } else CppStatements()))
     } ++
-      comp.messages.map{msg => ClassMethodDef("write" + msg.name.asMangledString.capitalize, voidType,
-          mutable.Buffer(writerParameter))} ++
+      (comp.statusMessages ++ comp.eventMessages).map{msg =>
+        ClassMethodDef("write" + msg.name.asMangledString.capitalize, voidType, mutable.Buffer(writerParameter))
+      } ++
       comp.baseType.map(_.obj.fields.map { f =>
           ClassMethodDef(methodNameForDecodeName(f.name), cppTypeForDecodeType(f.typeUnit.t.obj))
         }).getOrElse(Seq.empty) ++

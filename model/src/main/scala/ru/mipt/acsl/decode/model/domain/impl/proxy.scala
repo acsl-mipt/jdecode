@@ -66,15 +66,15 @@ object DecodeModelResolver {
         arg.unit.map(u => resultList += resolveWithTypeCheck(u, registry, classOf[Measure]))
       }
     }
-    component.messages.foreach {
-      case e: EventMessage =>
+
+    component.eventMessages.foreach { e =>
         resultList += resolveWithTypeCheck(e.baseType, registry, classOf[DecodeType])
         e.fields.foreach {
           case Right(p) => resultList += resolveWithTypeCheck(p.paramType, registry, classOf[DecodeType])
           case _ =>
         }
-      case _ =>
     }
+
     component.subComponents.foreach { scr =>
       val sc = scr.component
       resultList += resolveWithTypeCheck(sc, registry, classOf[Component])

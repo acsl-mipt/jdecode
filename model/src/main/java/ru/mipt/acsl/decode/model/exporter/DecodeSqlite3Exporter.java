@@ -179,6 +179,7 @@ public class DecodeSqlite3Exporter
                     }
                 }
             }
+            /*
             Iterator<Message> msgsIt = component.messages().iterator();
             while (msgsIt.hasNext())
             {
@@ -212,7 +213,7 @@ public class DecodeSqlite3Exporter
                         insertParameter.execute();
                     }
                 }*/
-            }
+            //}
         }
         catch (SQLException e)
         {

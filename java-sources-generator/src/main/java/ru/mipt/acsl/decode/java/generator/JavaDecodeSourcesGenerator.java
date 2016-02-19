@@ -237,7 +237,7 @@ public class JavaDecodeSourcesGenerator implements Generator<JavaDecodeSourcesGe
         JavaClass.Builder componentClassBuilder = JavaClass.newBuilder(component.namespace().fqn().asMangledString(),
                 componentClassName).visibilityPublic();
         componentClassBuilder.publicStaticFinalField(String.class, "FQN", new JavaStringExpr(component.namespace().fqn().asMangledString() + "." + component.name().asMangledString()));
-        asJavaCollection(component.messages()).stream().forEach(m ->
+        /*asJavaCollection(component.messages()).stream().forEach(m ->
         {
             JavaClass.Builder messageClassBuilder = JavaClass.newBuilder("", classNameFromMessageName(
                     m.name().asMangledString()));
@@ -254,12 +254,12 @@ public class JavaDecodeSourcesGenerator implements Generator<JavaDecodeSourcesGe
                 messageClassBuilder.publicMethod(type, "get" + StringUtils.capitalize(name), Collections.emptyList(),
                         Lists.newArrayList(new JavaReturnStatement(new JavaVarExpr(name))));*/
             //}
-            messageClassBuilder.publicStaticFinalField(String.class, "FQN", new JavaAddExpr(new JavaClassFieldExpr(
+          /*  messageClassBuilder.publicStaticFinalField(String.class, "FQN", new JavaAddExpr(new JavaClassFieldExpr(
                     new JavaTypeApplication(componentClassName), "FQN"),
                     new JavaStringExpr("." + m.name().asMangledString())));
             messageClassBuilder.constuctor(ctorArgs, ctorStatements);
             componentClassBuilder.innerClass(messageClassBuilder.build());
-        });
+        });*/
         generateJavaClass(componentClassBuilder.build());
     }
 

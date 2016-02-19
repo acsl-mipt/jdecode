@@ -198,8 +198,6 @@ class DecodeParboiledParser(val input: ParserInput) extends Parser with LazyLogg
       (Ew ~ "priority" ~ Ew.? ~ ':' ~ Ew.? ~ NonNegativeIntegerAsInt).? ~ Ew.? ~ MessageParameters ~> newStatusMessage _
   }
 
-  def Message: Rule1[Message] = rule { StatusMessage | EventMessage }
-
   private def newComponent(info: Option[String], id: Option[Int], subComponents: Option[immutable.Seq[DecodeFqn]],
                            baseType: Option[StructType]): Component = {
     component = Some(new ComponentImpl(componentName.get, ns.get, id,
@@ -222,7 +220,8 @@ class DecodeParboiledParser(val input: ParserInput) extends Parser with LazyLogg
       (Ew ~ atomic("with") ~ Ew ~ ElementId.+(Ew.? ~ ',' ~ Ew.?)).? ~
       Ew.? ~ '{' ~ (Ew.? ~ ComponentParameters).? ~> newComponent _ ~
       (Ew.? ~ (Command ~> { command => component.get.commands = component.get.commands :+ command }
-      | Message ~> { message => component.get.messages = component.get.messages :+ message })).* ~
+      | (StatusMessage ~> { statusMessage => component.get.statusMessages = component.get.statusMessages :+ statusMessage }
+        | EventMessage ~> { eventMessage => component.get.eventMessages = component.get.eventMessages :+ eventMessage }))).* ~
       Ew.? ~ '}'
   }
 

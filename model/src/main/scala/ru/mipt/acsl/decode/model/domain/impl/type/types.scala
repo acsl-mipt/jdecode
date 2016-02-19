@@ -154,7 +154,8 @@ class ComponentImpl(name: DecodeName, namespace: Namespace, var id: Option[Int],
                     var baseType: Option[MaybeProxy[StructType]], info: Option[String],
                     var subComponents: immutable.Seq[DecodeComponentRef],
                     var commands: immutable.Seq[DecodeCommand] = immutable.Seq.empty,
-                    var messages: immutable.Seq[Message] = immutable.Seq.empty)
+                    var eventMessages: immutable.Seq[EventMessage] = immutable.Seq.empty,
+                    var statusMessages: immutable.Seq[StatusMessage] = immutable.Seq.empty)
   extends AbstractNameNamespaceOptionalInfoAware(name, namespace, info) with Component
 
 case class ParameterWalker(parameter: MessageParameter)

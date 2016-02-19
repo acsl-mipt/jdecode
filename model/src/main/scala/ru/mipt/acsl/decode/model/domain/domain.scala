@@ -332,8 +332,10 @@ trait Fqned extends Named with NamespaceAware {
 }
 
 trait Component extends HasOptionInfo with Fqned with Referenceable with HasOptionId {
-  def messages: immutable.Seq[Message]
-  def messages_=(messages: immutable.Seq[Message])
+  def statusMessages: immutable.Seq[StatusMessage]
+  def statusMessages_=(messages: immutable.Seq[StatusMessage])
+  def eventMessages: immutable.Seq[EventMessage]
+  def eventMessages_=(messages: immutable.Seq[EventMessage])
   def commands: immutable.Seq[DecodeCommand]
   def commands_=(commands: immutable.Seq[DecodeCommand])
   def baseType: Option[MaybeProxy[StructType]]
@@ -387,13 +389,23 @@ trait Registry {
     currentNamespace
   }
 
-  def message(fqn: String): Option[Message] = {
+  def eventMessage(fqn: String): Option[EventMessage] = {
     val dotPos = fqn.lastIndexOf('.')
     val decodeName = DecodeNameImpl.newFromMangledName(fqn.substring(dotPos + 1, fqn.length()))
-    component(fqn.substring(0, dotPos)).map(_.messages.find(_.name == decodeName).orNull)
+    component(fqn.substring(0, dotPos)).map(_.eventMessages.find(_.name == decodeName).orNull)
   }
 
-  def messageOrFail(fqn: String): Message = {
-    message(fqn).getOrElse(sys.error("assertion error"))
+  def statusMessage(fqn: String): Option[StatusMessage] = {
+    val dotPos = fqn.lastIndexOf('.')
+    val decodeName = DecodeNameImpl.newFromMangledName(fqn.substring(dotPos + 1, fqn.length()))
+    component(fqn.substring(0, dotPos)).map(_.statusMessages.find(_.name == decodeName).orNull)
+  }
+
+  def statusMessageOrFail(fqn: String): StatusMessage = {
+    statusMessage(fqn).getOrElse(sys.error("assertion error"))
+  }
+
+  def eventMessageOrFail(fqn: String): EventMessage = {
+    eventMessage(fqn).getOrElse(sys.error("assertion error"))
   }
 }

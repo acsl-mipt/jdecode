@@ -214,7 +214,7 @@ public class DecodeSqlProvider
                     }
                 }
 
-                Seq<Message> messages = newSeq();
+                /*Seq<Message> messages = newSeq();
                 int componentForcedId = componentRs.getInt("component_id");
                 boolean isComponentForcedIdProvided = !componentRs.wasNull();
                 component = new ComponentImpl(
@@ -273,9 +273,9 @@ public class DecodeSqlProvider
                             }
 
                             messages = append(messages, Preconditions.checkNotNull(message, "invalid message"));*/
-                        }
-                    }
-                }
+                //        }
+                //    }
+                //}
 
                 componentById.put(componentId, component);
                 namespace.components_$eq(append(namespace.components(), component));
