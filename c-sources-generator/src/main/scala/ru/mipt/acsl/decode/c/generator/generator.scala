@@ -679,7 +679,7 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
       CFuncImpl(CFuncDef(component.writeStatusMessageMethodName(rootComponent), resultType,
         Seq(writer.param, messageId.param)),
         Seq(messageId.v.serializeBer._try.line, CIndent, CSwitch(messageId.v,
-          casesForMap(component.allStatusMessagesById, { (message: Message, c: Component) => message match {
+          casesForMap(component.allStatusMessagesById, { (message: TmMessage, c: Component) => message match {
               case message: StatusMessage =>
                 Some(CStatements(CReturn(message.fullMethodName(rootComponent, c).call(writer.v))))
               case _ => None
@@ -973,7 +973,7 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
     }
   }
 
-  implicit class RichMessage(val message: Message) {
+  implicit class RichMessage(val message: TmMessage) {
     def fullMethodName(rootComponent: Component, component: Component): String =
       rootComponent.prefixedTypeName.methodName("Write" + message.methodNamePart(rootComponent, component).capitalize)
   }

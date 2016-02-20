@@ -280,13 +280,13 @@ trait DecodeMessageVisitor[T] {
   def visit(statusMessage: StatusMessage): T
 }
 
-trait Message extends HasOptionInfo with Named with HasOptionId {
+trait TmMessage extends HasOptionInfo with Named with HasOptionId {
   def accept[T](visitor: DecodeMessageVisitor[T] ): T
 
   def component: Component
 }
 
-trait StatusMessage extends Message {
+trait StatusMessage extends TmMessage {
   def priority: Option[Int]
 
   def parameters: Seq[MessageParameter]
@@ -294,7 +294,7 @@ trait StatusMessage extends Message {
   def accept[T](visitor: DecodeMessageVisitor[T]): T = visitor.visit(this)
 }
 
-abstract class AbstractMessage(info: Option[String]) extends AbstractDecodeOptionalInfoAware(info) with Message
+abstract class AbstractMessage(info: Option[String]) extends AbstractDecodeOptionalInfoAware(info) with TmMessage
 
 trait DecodeComponentRef {
   def component: MaybeProxy[Component]
@@ -320,7 +320,7 @@ trait MessageParameter extends HasOptionInfo {
   private def tokens: Seq[MessageParameterToken] = ParameterWalker(this).tokens
 }
 
-trait EventMessage extends Message with BaseTyped {
+trait EventMessage extends TmMessage with BaseTyped {
   def fields: Seq[Either[MessageParameter, Parameter]]
   def accept[T](visitor: DecodeMessageVisitor[T]): T = visitor.visit(this)
 }
