@@ -4,9 +4,9 @@ import java.net.URI
 
 import ru.mipt.acsl.decode.model.domain.aliases.MessageParameterToken
 import ru.mipt.acsl.decode.model.domain._
-import ru.mipt.acsl.decode.model.domain.impl.`type`.AbstractNameNamespaceOptionalInfoAware
-import ru.mipt.acsl.decode.model.domain.impl.`type`.AbstractDecodeOptionalInfoAware
-import ru.mipt.acsl.decode.model.domain.impl.`type`.NamespaceImpl
+import ru.mipt.acsl.decode.model.domain.impl.types.AbstractNameNamespaceOptionalInfoAware
+import ru.mipt.acsl.decode.model.domain.impl.types.AbstractDecodeOptionalInfoAware
+import ru.mipt.acsl.decode.model.domain.impl.types.NamespaceImpl
 import ru.mipt.acsl.decode.model.domain.impl.proxy.{ProvidePrimitivesAndNativeTypesDecodeProxyResolver, FindExistingDecodeProxyResolver}
 
 import scala.util.{Failure, Success, Try}
@@ -77,9 +77,9 @@ class RegistryImpl(resolvers: DecodeProxyResolver*) extends Registry {
 
   def this() = this(new FindExistingDecodeProxyResolver(), new ProvidePrimitivesAndNativeTypesDecodeProxyResolver())
 
-  def resolve[T <: Referenceable](uri: URI, cls: Class[T]): ResolvingResult[T] = {
+  def resolve[T <: Referenceable](path: ProxyPath, cls: Class[T]): ResolvingResult[T] = {
     for (resolver <- proxyResolvers) {
-      val result = resolver.resolve(this, uri, cls)
+      val result = resolver.resolve(this, path, cls)
       if (result.resolvedObject.isDefined)
         return result
     }

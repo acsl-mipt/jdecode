@@ -4,7 +4,7 @@ import java.net.{URI, URLDecoder, URLEncoder}
 
 import com.google.common.base.Charsets
 import ru.mipt.acsl.decode.model.domain._
-import ru.mipt.acsl.decode.model.domain.impl.`type`.{DecodeFqnImpl, NamespaceImpl}
+import ru.mipt.acsl.decode.model.domain.impl.types.{FqnImpl, NamespaceImpl}
 
 import scala.collection.immutable
 
@@ -34,7 +34,7 @@ object DecodeUtils {
   }
 
   // TODO: refactoring
-  def getNamespaceByFqn(registry: Registry, namespaceFqn: DecodeFqn): Option[Namespace] = {
+  def getNamespaceByFqn(registry: Registry, namespaceFqn: Fqn): Option[Namespace] = {
     var namespaces = registry.rootNamespaces
     var namespace: Option[Namespace] = None
     for (nsName <- namespaceFqn.parts) {
@@ -51,7 +51,7 @@ object DecodeUtils {
     namespace
   }
 
-  def getUriForNamespaceAndName(namespaceFqn: DecodeFqn, name: DecodeName): URI = {
+  def getUriForNamespaceAndName(namespaceFqn: Fqn, name: DecodeName): URI = {
     val namespaceNameParts = namespaceFqn.parts :+ name
     URI.create("/" + namespaceNameParts.map(_.asMangledString).map(s => URLEncoder.encode(s, Charsets.UTF_8.name()))
       .mkString("/"))
@@ -62,7 +62,7 @@ object DecodeUtils {
     "\\/".r.split(s.substring(1)).map(part => URLDecoder.decode(part, Charsets.UTF_8.name())).toSeq
   }
 
-  def newRootDecodeNamespaceForFqn(namespaceFqn: DecodeFqn): Namespace = {
+  def newRootDecodeNamespaceForFqn(namespaceFqn: Fqn): Namespace = {
     namespaceFqn.parts.reverseIterator.drop(1).foldLeft(NamespaceImpl(namespaceFqn.last, None)) { (ns, name) =>
       val parentNamespace = NamespaceImpl.apply(name, None)
       ns.parent = Some(parentNamespace)
@@ -72,7 +72,7 @@ object DecodeUtils {
   }
 
   // TODO: refactoring -- use fold instead
-  def newNamespaceForFqn(fqn: DecodeFqn): Namespace = {
+  def newNamespaceForFqn(fqn: Fqn): Namespace = {
     var currentNamespace: Option[Namespace] = None
     for (part <- fqn.parts) {
       val ns = NamespaceImpl(part, currentNamespace)
@@ -84,26 +84,26 @@ object DecodeUtils {
     currentNamespace.getOrElse(sys.error("assertion error"))
   }
 
-  def getNamespaceFqnFromUri(uri: URI): DecodeFqn = {
+  def getNamespaceFqnFromUri(uri: URI): Fqn = {
     val uriParts = getUriParts(uri)
-    DecodeFqnImpl(uriParts.take(uriParts.size - 1).map(DecodeNameImpl.newFromMangledName))
+    FqnImpl(uriParts.take(uriParts.size - 1).map(DecodeNameImpl.newFromMangledName))
   }
 
-  def getUriForSourceTypeFqnString(typeFqnString: String, defaultNamespaceFqn: DecodeFqn): URI = {
+  def getUriForSourceTypeFqnString(typeFqnString: String, defaultNamespaceFqn: Fqn): URI = {
     require(!typeFqnString.contains("/"), s"illegal type fqn '$typeFqnString'")
     val genericStartIndex = processQuestionMarks(normalizeSourceTypeString(typeFqnString)).indexOf('<')
     if (genericStartIndex != -1)
     {
-      val namespaceFqn = DecodeFqnImpl.newFromSource(typeFqnString.substring(0, genericStartIndex))
+      val namespaceFqn = FqnImpl.newFromSource(typeFqnString.substring(0, genericStartIndex))
       return getUriForTypeNamespaceNameGenericArguments(
         if (namespaceFqn.size > 1) namespaceFqn.copyDropLast() else defaultNamespaceFqn,
         namespaceFqn.last, typeFqnString.substring(genericStartIndex))
     }
-    val namespaceFqn = DecodeFqnImpl.newFromSource(typeFqnString)
+    val namespaceFqn = FqnImpl.newFromSource(typeFqnString)
     getUriForNamespaceAndName(namespaceFqn.copyDropLast(), namespaceFqn.last)
   }
 
-  def  getUriForTypeNamespaceNameGenericArguments(namespaceFqn: DecodeFqn, typeName: DecodeName,
+  def  getUriForTypeNamespaceNameGenericArguments(namespaceFqn: Fqn, typeName: DecodeName,
                                                   typeGenericArguments: String): URI = {
     URI.create("/" + URLEncoder.encode((namespaceFqn.parts :+ typeName).map(_.asMangledString)
       .map(s => URLEncoder.encode(s, Charsets.UTF_8.name())).mkString("/") + typeGenericArguments,
@@ -125,8 +125,9 @@ object DecodeUtils {
 
   def typeUriToTypeName(uri: String): String = typeFqnStringFromUriString(uri.toString)
 
-  def uriToOptionalMaybeProxyType(typeUriString: String): Option[MaybeProxy[DecodeType]] =
-    if (typeUriString.isEmpty) None else Some(MaybeProxy.proxy(URI.create(typeUriString)))
+  // TODO: remove me
+  //def uriToOptionalMaybeProxyType(typeUriString: String): Option[MaybeProxy[DecodeType]] =
+  //  if (typeUriString.isEmpty) None else Some(MaybeProxy.proxy(ProxyPath(typeUriString)))
 
   def typeFqnStringFromUriString(typeUriString: String): String =
     URLDecoder.decode(typeUriString, Charsets.UTF_8.name()).substring(1).replaceAllLiterally("/", ".")

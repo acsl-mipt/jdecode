@@ -1,4 +1,4 @@
-package ru.mipt.acsl.decode.model.domain.impl.`type`
+package ru.mipt.acsl.decode.model.domain.impl.types
 
 import ru.mipt.acsl.decode.model.domain.aliases.MessageParameterToken
 import ru.mipt.acsl.decode.model.domain._
@@ -9,14 +9,14 @@ import scala.collection.immutable
 /**
   * @author Artem Shein
   */
-case class DecodeFqnImpl(var parts: Seq[DecodeName]) extends DecodeFqn {
-  def copyDropLast(): DecodeFqn = new DecodeFqnImpl(parts.dropRight(1))
+case class FqnImpl(var parts: Seq[DecodeName]) extends Fqn {
+  def copyDropLast(): Fqn = new FqnImpl(parts.dropRight(1))
 }
 
-object DecodeFqnImpl {
-  def newFromFqn(fqn: DecodeFqn, last: DecodeName) = new DecodeFqnImpl(fqn.parts :+ last)
-  def newFromSource(sourceText: String): DecodeFqn =
-    new DecodeFqnImpl("\\.".r.split(sourceText).map(DecodeNameImpl.newFromSourceName))
+object FqnImpl {
+  def newFromFqn(fqn: Fqn, last: DecodeName) = new FqnImpl(fqn.parts :+ last)
+  def newFromSource(sourceText: String): Fqn =
+    new FqnImpl("\\.".r.split(sourceText).map(DecodeNameImpl.newFromSourceName))
 }
 
 abstract class AbstractDecodeOptionalInfoAware(val info: Option[String]) extends HasOptionInfo
@@ -100,7 +100,10 @@ class StructTypeImpl(name: Option[DecodeName], namespace: Namespace, info: Optio
     s"${this.getClass}{name = $name, namespace = $namespace, info = $info, fields = [${fields.map(_.toString).mkString(", ")}]"
 }
 
-case class ArraySizeImpl(min: Long = 0, max: Long = 0) extends ArraySize
+case class ArraySizeImpl(min: Long = 0, max: Long = 0) extends ArraySize {
+  require(min >= 0)
+  require(max >= 0)
+}
 
 class BerType(optionalName: Option[DecodeName], namespace: Namespace, info: Option[String])
   extends AbstractType(optionalName, namespace, info) with NativeType {

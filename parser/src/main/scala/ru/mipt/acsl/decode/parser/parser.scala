@@ -8,18 +8,7 @@ import com.typesafe.scalalogging.LazyLogging
 import org.parboiled2.ParserInput.StringBasedParserInput
 import org.parboiled2._
 import ru.mipt.acsl.decode.model.domain.impl._
-import ru.mipt.acsl.decode.model.domain.impl.`type`.AliasTypeImpl
-import ru.mipt.acsl.decode.model.domain.impl.`type`.ParameterImpl
-import ru.mipt.acsl.decode.model.domain.impl.`type`.ComponentImpl
-import ru.mipt.acsl.decode.model.domain.impl.`type`.DecodeEnumConstantImpl
-import ru.mipt.acsl.decode.model.domain.impl.`type`.EnumTypeImpl
-import ru.mipt.acsl.decode.model.domain.impl.`type`.DecodeStructFieldImpl
-import ru.mipt.acsl.decode.model.domain.impl.`type`.StructTypeImpl
-import ru.mipt.acsl.decode.model.domain.impl.`type`.SubTypeImpl
-import ru.mipt.acsl.decode.model.domain.impl.`type`.DecodeTypeUnitApplicationImpl
-import ru.mipt.acsl.decode.model.domain.impl.`type`.MeasureImpl
-import ru.mipt.acsl.decode.model.domain.impl.`type`.DecodeFqnImpl
-import ru.mipt.acsl.decode.model.domain.impl.`type`.NamespaceImpl
+import ru.mipt.acsl.decode.model.domain.impl.types._
 import ru.mipt.acsl.decode.model.domain._
 
 import scala.collection.{immutable, mutable}
@@ -49,11 +38,11 @@ class DecodeParboiledParser(val input: ParserInput) extends Parser with LazyLogg
 
   def ElementIdLiteral: Rule0 = rule { ElementNameLiteral.+('.') }
 
-  def ElementId: Rule1[DecodeFqn] = rule { ElementName.+('.') ~> DecodeFqnImpl.apply _ }
+  def ElementId: Rule1[Fqn] = rule { ElementName.+('.') ~> FqnImpl.apply _ }
 
   def Namespace: Rule1[Namespace] = rule {
     InfoEw.? ~ atomic("namespace") ~ Ew ~ ElementId ~>
-      ((info: Option[String], fqn: DecodeFqn) => newNamespace(info, fqn))
+      ((info: Option[String], fqn: Fqn) => newNamespace(info, fqn))
   }
 
   private def ImportPart: Rule1[ImportPart] = rule {
@@ -62,22 +51,22 @@ class DecodeParboiledParser(val input: ParserInput) extends Parser with LazyLogg
       | MATCH ~> (ImportPartName(_: DecodeName)))
   }
 
-  def addImport(fqn: DecodeFqn, importPart: ImportPart) {
+  def addImport(fqn: Fqn, importPart: ImportPart) {
     require(!imports.contains(importPart.alias), importPart.alias)
-    imports.put(importPart.alias, MaybeProxy.proxy(fqn, importPart.originalName))
+    imports.put(importPart.alias, MaybeProxy.proxy(fqn, TypeName(importPart.originalName)))
   }
 
-  def addImport(fqn: DecodeFqn) {
+  def addImport(fqn: Fqn) {
     require(!imports.contains(fqn.last.asMangledString), fqn.last.asMangledString)
-    imports.put(fqn.last.asMangledString, MaybeProxy.proxy(fqn.copyDropLast(), fqn.last))
+    imports.put(fqn.last.asMangledString, MaybeProxy.proxy(fqn.copyDropLast(), TypeName(fqn.last)))
   }
 
   def Import: Rule0 = rule {
     atomic("import") ~ Ew ~ ElementId ~
       ('.' ~ Ew.? ~ '{' ~ Ew.? ~ ImportPart.+(Ew.? ~ ',' ~ Ew.?)
         ~ Ew.? ~ ','.? ~ Ew.? ~ '}'
-        ~> ((fqn: DecodeFqn, parts: Seq[ImportPart]) => parts.foreach(addImport(fqn, _)))
-        | MATCH ~> (addImport(_: DecodeFqn)))
+        ~> ((fqn: Fqn, parts: Seq[ImportPart]) => parts.foreach(addImport(fqn, _)))
+        | MATCH ~> (addImport(_: Fqn)))
   }
 
   def NonNegativeIntegerLiteral: Rule0 = rule { CharPredicate.Digit.+ }
@@ -91,7 +80,7 @@ class DecodeParboiledParser(val input: ParserInput) extends Parser with LazyLogg
   private def makeNewSystemName(name: DecodeName): DecodeName =
     DecodeNameImpl.newFromSourceName(name.asMangledString + '$')
 
-  private def unitForFqn(unitFqn: DecodeFqn): MaybeProxy[Measure] = {
+  private def unitForFqn(unitFqn: Fqn): MaybeProxy[Measure] = {
     if (unitFqn.size == 1 && imports.contains(unitFqn.asMangledString))
       // todo: remove asInstanceOf
       imports.getOrElse(unitFqn.asMangledString, sys.error("not found")).asInstanceOf[MaybeProxy[Measure]]
@@ -99,14 +88,14 @@ class DecodeParboiledParser(val input: ParserInput) extends Parser with LazyLogg
       MaybeProxy.proxyDefaultNamespace(unitFqn, ns.get)
   }
 
-  def UnitApplication: Rule1[DecodeFqn] = rule { '/' ~ ElementId ~ '/' }
+  def UnitApplication: Rule1[Fqn] = rule { '/' ~ ElementId ~ '/' }
 
   private def newTypeUnitApplication(t: Option[MaybeProxy[DecodeType]],
                                      unit: Option[MaybeProxy[Measure]]) =
     new DecodeTypeUnitApplicationImpl(t.get, unit)
 
   def TypeUnitApplication: Rule1[DecodeTypeUnitApplication] = rule {
-    TypeApplication ~ (Ew.? ~ UnitApplication ~> (unitForFqn(_: DecodeFqn))).? ~> newTypeUnitApplication _
+    TypeApplication ~ (Ew.? ~ UnitApplication ~> (unitForFqn(_: Fqn))).? ~> newTypeUnitApplication _
   }
 
   private def newStructField(info: Option[String], typeUnit: DecodeTypeUnitApplication, name: DecodeName) =
@@ -162,9 +151,9 @@ class DecodeParboiledParser(val input: ParserInput) extends Parser with LazyLogg
 
   // TODO: parameter case
   def EventMessageParameter: Rule1[Either[MessageParameter, Parameter]] = rule {
-    InfoEw.? ~ ((atomic("var") ~ Ew ~ TypeUnitApplication ~ Ew ~ ElementName ~> (newCommandArg _)
-      ~> (Right[MessageParameter, Parameter] _)) |
-      (MessageParameterElement ~> newMessageParameter _ ~> (Left[MessageParameter, Parameter] _)))
+    InfoEw.? ~ ((atomic("var") ~ Ew ~ TypeUnitApplication ~ Ew ~ ElementName ~> newCommandArg _
+      ~> Right[MessageParameter, Parameter] _) |
+      (MessageParameterElement ~> newMessageParameter _ ~> Left[MessageParameter, Parameter] _))
   }
 
   def EventMessageParameters: Rule1[Seq[Either[MessageParameter, Parameter]]] = rule {
@@ -198,7 +187,7 @@ class DecodeParboiledParser(val input: ParserInput) extends Parser with LazyLogg
       (Ew ~ "priority" ~ Ew.? ~ ':' ~ Ew.? ~ NonNegativeIntegerAsInt).? ~ Ew.? ~ MessageParameters ~> newStatusMessage _
   }
 
-  private def newComponent(info: Option[String], id: Option[Int], subComponents: Option[immutable.Seq[DecodeFqn]],
+  private def newComponent(info: Option[String], id: Option[Int], subComponents: Option[immutable.Seq[Fqn]],
                            baseType: Option[StructType]): Component = {
     component = Some(new ComponentImpl(componentName.get, ns.get, id,
       baseType.map(MaybeProxy.obj), info, subComponents.map(_.map{ fqn =>
@@ -278,7 +267,7 @@ class DecodeParboiledParser(val input: ParserInput) extends Parser with LazyLogg
 
   def definition(keyword: String) = rule { InfoEw.? ~ atomic(keyword) ~ Ew ~ ElementName }
 
-  def proxyForTypeFqn[T <: Referenceable](namespace: Namespace, typeFqn: DecodeFqn): MaybeProxy[T] =
+  def proxyForTypeFqn[T <: Referenceable](namespace: Namespace, typeFqn: Fqn): MaybeProxy[T] =
     if (typeFqn.size == 1 && imports.contains(typeFqn.last.asMangledString))
       imports.get(typeFqn.last.asMangledString).get.asInstanceOf[MaybeProxy[T]]
     else
@@ -287,43 +276,42 @@ class DecodeParboiledParser(val input: ParserInput) extends Parser with LazyLogg
   def NativeTypeApplication: Rule1[Option[MaybeProxy[DecodeType]]] = rule {
     atomic("void") ~> (() => None) |
       capture(atomic("ber")) ~> { t: String =>
-        Some(MaybeProxy.proxyForSystem[DecodeType](DecodeNameImpl.newFromSourceName(t)))
+        Some(MaybeProxy.proxyForSystem[DecodeType](TypeName(DecodeNameImpl.newFromSourceName(t))))
       }
   }
 
-  def PrimitiveTypeKind: Rule0 = rule { atomic("uint" | "int" | "float" | "bool").named("primitiveTypeKind") }
+  def PrimitiveTypeKind: Rule1[String] = rule { capture("uint" | "int" | "float" | "bool").named("primitiveTypeKind") }
 
   def PrimitiveTypeApplication: Rule1[MaybeProxy[DecodeType]] = rule {
-    capture(PrimitiveTypeKind ~ ':' ~ NonNegativeIntegerLiteral) ~> { t: String =>
-      MaybeProxy.proxyForSystem[DecodeType](DecodeNameImpl.newFromSourceName(t))
+    PrimitiveTypeKind ~ ':' ~ NonNegativeIntegerAsInt ~> { (typeKindName: String, bitSize: Int) =>
+      MaybeProxy.proxyForSystem[DecodeType](PrimitiveTypeName(TypeKind.typeKindByName(typeKindName).get, bitSize))
     }
   }
 
-  def LengthTo: Rule1[Int] = rule { NonNegativeIntegerAsInt | ch('*') ~> (() => -1) }
+  def LengthTo: Rule1[Int] = rule { NonNegativeIntegerAsInt | ch('*') ~> (() => 0) }
 
-  private def newTypeProxy(typeApplication: Option[MaybeProxy[DecodeType]], fromTo: Option[(Int, Option[Int])],
-                           capture: String): Option[MaybeProxy[DecodeType]] =
-    Some(MaybeProxy.proxy(DecodeUtils.getNamespaceFqnFromUri(typeApplication.get.proxy.uri),
-      DecodeNameImpl.newFromSourceName(capture)))
-
-  def ArrayTypeApplication: Rule1[Option[MaybeProxy[DecodeType]]] = rule {
-    capture('[' ~ Ew.? ~ TypeApplication ~ (Ew.? ~ ',' ~ Ew.? ~ NonNegativeIntegerAsInt
-      ~ (Ew.? ~ ".." ~ Ew.? ~ LengthTo).? ~> ((_, _))).? ~ Ew.? ~ ']') ~> newTypeProxy _
+  private def newTypeProxy(typeApplication: Option[MaybeProxy[DecodeType]],
+                           fromTo: Option[(Int, Option[Int])]): Option[MaybeProxy[DecodeType]] = {
+    val path = typeApplication.get.proxy.path
+    Some(MaybeProxy.proxy(ProxyPath(path.ns, ArrayTypePath(path,
+        new ArraySizeImpl(fromTo.map(_._1.toLong).getOrElse(0l),
+          fromTo.map(_._2.map(_.toLong).getOrElse(0l)).getOrElse(0l))))))
   }
 
-  def genericTypesListToTypesUriString(genericTypesVar: Seq[Option[MaybeProxy[DecodeType]]]): String = {
-    genericTypesVar.map(_.map{ p =>
-      URLEncoder.encode(p.proxy.uri.toString, Charsets.UTF_8.name)
-    }.getOrElse("void")).mkString(",")
+  def ArrayTypeApplication: Rule1[Option[MaybeProxy[DecodeType]]] = rule {
+    '[' ~ Ew.? ~ TypeApplication ~ (Ew.? ~ ',' ~ Ew.? ~ NonNegativeIntegerAsInt
+      ~ (Ew.? ~ ".." ~ Ew.? ~ LengthTo).? ~> ((_, _))).? ~ Ew.? ~ ']' ~> newTypeProxy _
   }
 
   private def newGenericTypeProxy(b: Option[MaybeProxy[DecodeType]],
-                                  g: Seq[Option[MaybeProxy[DecodeType]]]): Option[MaybeProxy[DecodeType]] =
-    Some(MaybeProxy.proxyForTypeUriString(
-      s"${b.get.proxy.uri}%3C${genericTypesListToTypesUriString(g)}%3E", ns.get.fqn))
+                                  g: Seq[Option[MaybeProxy[DecodeType]]]): Option[MaybeProxy[DecodeType]] = {
+    val path = b.get.proxy.path
+    Some(MaybeProxy.proxy(ProxyPath(path.ns, GenericTypeName(path.element.asInstanceOf[TypeName].typeName,
+      g.map(_.map(_.proxy.path)).to[immutable.Seq]))))
+  }
 
   private def newOptionalTypeProxy(t: Option[MaybeProxy[DecodeType]]): Option[MaybeProxy[DecodeType]] =
-    Some(MaybeProxy.proxyForSystem(DecodeNameImpl.newFromSourceName(s"optional<${t.get.proxy.uri}>")))
+    Some(MaybeProxy.proxyForSystem(GenericTypeName(OptionalType.MANGLED_NAME, immutable.Seq(Some(t.get.proxy.path)))))
 
   def TypeApplication: Rule1[Option[MaybeProxy[DecodeType]]] = rule {
     (PrimitiveTypeApplication ~> (Some(_)) | NativeTypeApplication | ArrayTypeApplication
@@ -358,7 +346,7 @@ class DecodeParboiledParser(val input: ParserInput) extends Parser with LazyLogg
       Ew.? ~ EOI
   }
 
-  def newNamespace(info: Option[String], fqn: DecodeFqn): Namespace = {
+  def newNamespace(info: Option[String], fqn: Fqn): Namespace = {
     var parentNamespace: Option[Namespace] = None
     if (fqn.size > 1)
       parentNamespace = Some(DecodeUtils.newNamespaceForFqn(fqn.copyDropLast()))

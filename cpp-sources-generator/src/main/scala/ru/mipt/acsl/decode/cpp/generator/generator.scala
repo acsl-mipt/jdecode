@@ -17,7 +17,7 @@ import scala.collection.immutable
 import scala.util.Random
 
 class CppGeneratorConfiguration(val outputDir: io.File, val registry: Registry, val rootComponentFqn: String,
-                                val namespaceAlias: Map[DecodeFqn, DecodeFqn] = Map(), val usePragmaOnce: Boolean = true)
+                                val namespaceAlias: Map[Fqn, Fqn] = Map(), val usePragmaOnce: Boolean = true)
 
 object CppSourcesGenerator {
   private val voidType = CppTypeApplication("void")

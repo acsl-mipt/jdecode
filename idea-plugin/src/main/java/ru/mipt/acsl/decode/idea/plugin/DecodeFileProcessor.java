@@ -11,11 +11,10 @@ import ru.mipt.acsl.JavaToScala;
 import ru.mipt.acsl.ScalaToJava;
 import ru.mipt.acsl.decode.model.domain.*;
 import ru.mipt.acsl.decode.model.domain.impl.*;
-import ru.mipt.acsl.decode.model.domain.impl.type.*;
+import ru.mipt.acsl.decode.model.domain.impl.types.*;
 import ru.mipt.acsl.decode.modeling.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import ru.mipt.acsl.decode.modeling.impl.MessageImpl;
 import ru.mipt.acsl.decode.parser.psi.*;
 import ru.mipt.acsl.decode.parser.psi.DecodeTypeUnitApplication;
 import ru.mipt.acsl.decode.parser.psi.DecodeUnit;
@@ -263,13 +262,13 @@ public class DecodeFileProcessor
     }
 
     @NotNull
-    private DecodeFqn getNamespaceFqnFor(@NotNull DecodeArrayTypeApplication arrayType, @NotNull Namespace namespace)
+    private Fqn getNamespaceFqnFor(@NotNull DecodeArrayTypeApplication arrayType, @NotNull Namespace namespace)
     {
         return getNamespaceFqnFor(arrayType.getTypeApplication(), namespace);
     }
 
-    private DecodeFqn getNamespaceFqnFor(@NotNull DecodeTypeApplication typeApplication,
-                                        @NotNull Namespace namespace)
+    private Fqn getNamespaceFqnFor(@NotNull DecodeTypeApplication typeApplication,
+                                   @NotNull Namespace namespace)
     {
         DecodeArrayTypeApplication arrayType = typeApplication.getArrayTypeApplication();
         DecodePrimitiveTypeApplication primitiveType = typeApplication.getPrimitiveTypeApplication();
@@ -287,7 +286,7 @@ public class DecodeFileProcessor
             String name = genericTypeApplication.getElementId().getText();
             if (name.contains("."))
             {
-                return DecodeFqnImpl.newFromSource(name.substring(0, name.lastIndexOf('.') - 1));
+                return FqnImpl.newFromSource(name.substring(0, name.lastIndexOf('.') - 1));
             }
             return namespace.fqn();
         }

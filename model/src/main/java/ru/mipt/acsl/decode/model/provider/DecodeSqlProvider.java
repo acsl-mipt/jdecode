@@ -4,15 +4,13 @@ import com.google.common.base.Preconditions;
 import org.jetbrains.annotations.NotNull;
 import ru.mipt.acsl.decode.model.domain.*;
 import ru.mipt.acsl.decode.model.domain.impl.*;
-import ru.mipt.acsl.decode.model.domain.impl.type.*;
+import ru.mipt.acsl.decode.model.domain.impl.types.*;
 import ru.mipt.acsl.decode.model.exporter.TableName;
 import ru.mipt.acsl.decode.model.exporter.ModelExportingException;
 import scala.Int;
 import scala.Option;
 import scala.collection.JavaConversions;
 import scala.collection.immutable.*;
-import scala.util.Either;
-import scala.util.Left;
 
 import java.sql.*;
 import java.util.HashMap;

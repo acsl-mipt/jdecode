@@ -7,9 +7,9 @@ import java.security.MessageDigest
 import com.google.common.base.CaseFormat
 import com.typesafe.scalalogging.LazyLogging
 import ru.mipt.acsl.decode.model.domain._
-import ru.mipt.acsl.decode.model.domain.impl.`type`.BerType
-import ru.mipt.acsl.decode.model.domain.impl.`type`.OptionalType
-import ru.mipt.acsl.decode.model.domain.impl.`type`.OrType
+import ru.mipt.acsl.decode.model.domain.impl.types.BerType
+import ru.mipt.acsl.decode.model.domain.impl.types.OptionalType
+import ru.mipt.acsl.decode.model.domain.impl.types.OrType
 import ru.mipt.acsl.generation.Generator
 import ru.mipt.acsl.generator.c.ast.implicits._
 import ru.mipt.acsl.generator.c.ast._
@@ -23,7 +23,7 @@ import scala.util.Either.RightProjection
 import scala.util.Random
 
 case class CGeneratorConfiguration(outputDir: io.File, registry: Registry, rootComponentFqn: String,
-                                   namespaceAliases: Map[DecodeFqn, Option[DecodeFqn]] = Map.empty,
+                                   namespaceAliases: Map[Fqn, Option[Fqn]] = Map.empty,
                                    prologueEpiloguePath: Option[String] = None, isSingleton: Boolean = false)
 
 class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[CGeneratorConfiguration] with LazyLogging {

@@ -1,11 +1,11 @@
 package ru.mipt.acsl.decode.model.domain
 
-import java.net.URI
-
-import ru.mipt.acsl.decode.model.domain.impl.{DecodeUtils, DecodeProxyImpl}
+import ru.mipt.acsl.decode.model.domain.impl.{DecodeNameImpl, ProxyImpl}
 import ru.mipt.acsl.decode.modeling.ErrorLevel
 import ru.mipt.acsl.decode.modeling.aliases.ResolvingMessage
 import ru.mipt.acsl.decode.modeling.impl.MessageImpl
+
+import scala.collection.immutable
 
 /**
   * @author Artem Shein
@@ -23,13 +23,44 @@ object ResolvingResult {
     ResolvingResult[T](left.resolvedObject.orElse(right.resolvedObject), left.messages ++ right.messages)
 }
 
-trait DecodeProxy[T <: Referenceable] {
-  def resolve(registry: Registry, cls: Class[T]): ResolvingResult[T]
-
-  def uri: URI
+sealed abstract class ProxyElementName {
+  def mangledName: DecodeName
+  override def toString: String = mangledName.asMangledString
+}
+case class PrimitiveTypeName(typeKind: TypeKind.Value, bitSize: Int) extends ProxyElementName {
+  override def mangledName: DecodeName =
+    DecodeNameImpl.newFromMangledName(TypeKind.nameForTypeKind(typeKind) + ":" + bitSize)
+}
+case class GenericTypeName(typeName: DecodeName, genericArgumentPaths: immutable.Seq[Option[ProxyPath]])
+  extends ProxyElementName {
+  override def mangledName: DecodeName = DecodeNameImpl.newFromMangledName(typeName.asMangledString + "<" +
+    genericArgumentPaths.map(_.map(_.mangledName).getOrElse(DecodeNameImpl.newFromMangledName("void"))).mkString(",") +
+    ">")
+}
+case class TypeName(typeName: DecodeName) extends ProxyElementName {
+  override def mangledName: DecodeName = typeName
+}
+case class ArrayTypePath(baseTypePath: ProxyPath, arraySize: ArraySize) extends ProxyElementName {
+  def mangledName: DecodeName = DecodeNameImpl.newFromMangledName(s"[${baseTypePath.mangledName}]")
 }
 
-class MaybeProxy[T <: Referenceable](var v: Either[DecodeProxy[T], T]) {
+class ProxyPath(val ns: Fqn, val element: ProxyElementName) {
+  def mangledName: DecodeName = DecodeNameImpl.newFromMangledName(s"$ns.${element.mangledName.asMangledString}")
+  override def toString: String = s"ProxyPath{${ns.asMangledString}.$element}"
+}
+
+object ProxyPath {
+  def apply(nsFqn: Fqn, name: DecodeName): ProxyPath = new ProxyPath(nsFqn, TypeName(name))
+  def apply(nsFqn: Fqn, element: ProxyElementName): ProxyPath = new ProxyPath(nsFqn, element)
+}
+
+trait Proxy[T <: Referenceable] {
+  def resolve(registry: Registry, cls: Class[T]): ResolvingResult[T]
+
+  def path: ProxyPath
+}
+
+class MaybeProxy[T <: Referenceable](var v: Either[Proxy[T], T]) {
 
   // TODO: refactoring
   def resolve(registry: Registry, cls: Class[T]): ResolvingResult[T] = {
@@ -48,42 +79,33 @@ class MaybeProxy[T <: Referenceable](var v: Either[DecodeProxy[T], T]) {
 
   def isResolved: Boolean = v.isRight
 
-  def obj: T = v.right.getOrElse(sys.error("assertion error"))
+  def obj: T = v.right.getOrElse(sys.error(s"assertion error for $proxy"))
 
-  def proxy: DecodeProxy[T] = v.left.getOrElse(sys.error("assertion error"))
+  def proxy: Proxy[T] = v.left.getOrElse(sys.error("assertion error"))
 
   override def toString: String = s"MaybeProxy{${if (isProxy) proxy else obj}}"
 }
 
 object MaybeProxy {
-  def proxy[T <: Referenceable](proxy: DecodeProxy[T]): MaybeProxy[T] = new MaybeProxy[T](Left(proxy))
+  def proxy[T <: Referenceable](proxy: Proxy[T]): MaybeProxy[T] = new MaybeProxy[T](Left(proxy))
 
-  def proxy[T <: Referenceable](uri: URI): MaybeProxy[T] = proxy(DecodeProxyImpl[T](uri))
+  def proxy[T <: Referenceable](path: ProxyPath): MaybeProxy[T] = proxy(ProxyImpl[T](path))
 
-  def proxy[T <: Referenceable](namespaceFqn: DecodeFqn, name: DecodeName): MaybeProxy[T] =
-    proxy(DecodeUtils.getUriForNamespaceAndName(namespaceFqn, name))
+  def proxy[T <: Referenceable](namespaceFqn: Fqn, name: ProxyElementName): MaybeProxy[T] =
+    proxy(ProxyPath(namespaceFqn, name))
 
-  def proxyForTypeString[T <: Referenceable](string: String, defaultNamespaceFqn: DecodeFqn): MaybeProxy[T] =
-    proxy(DecodeUtils.getUriForSourceTypeFqnString(string, defaultNamespaceFqn))
+  def proxyForSystem[T <: Referenceable](elementName: ProxyElementName): MaybeProxy[T] =
+    proxy(DecodeConstants.SYSTEM_NAMESPACE_FQN, elementName)
 
-  def proxyForSystemTypeString[T <: Referenceable](typeString: String): MaybeProxy[T] =
-    proxyForTypeString(DecodeUtils.normalizeSourceTypeString(typeString), DecodeConstants.SYSTEM_NAMESPACE_FQN)
-
-  def proxyForSystem[T <: Referenceable](decodeName: DecodeName): MaybeProxy[T] =
-    proxy(DecodeConstants.SYSTEM_NAMESPACE_FQN, decodeName)
-
-  def proxyDefaultNamespace[T <: Referenceable](elementFqn: DecodeFqn, defaultNamespace: Namespace): MaybeProxy[T] =
+  def proxyDefaultNamespace[T <: Referenceable](elementFqn: Fqn, defaultNamespace: Namespace): MaybeProxy[T] =
     if (elementFqn.size > 1)
-      proxy(elementFqn.copyDropLast(), elementFqn.last)
+      proxy(elementFqn.copyDropLast(), TypeName(elementFqn.last))
     else
-      proxy(defaultNamespace.fqn, elementFqn.last)
+      proxy(defaultNamespace.fqn, TypeName(elementFqn.last))
 
   def obj[T <: Referenceable](obj: T) = new MaybeProxy[T](Right(obj))
-
-  def proxyForTypeUriString[T <: Referenceable](typeUriString: String, defaultNsFqn: DecodeFqn) =
-    new MaybeProxy(Left(DecodeProxyImpl.newInstanceFromTypeUriString[T](typeUriString, defaultNsFqn)))
 }
 
 trait DecodeProxyResolver {
-  def resolve[T <: Referenceable](registry: Registry, uri: URI, cls: Class[T]): ResolvingResult[T]
+  def resolve[T <: Referenceable](registry: Registry, path: ProxyPath, cls: Class[T]): ResolvingResult[T]
 }

@@ -1,14 +1,12 @@
 package ru.mipt.acsl.decode.model.domain
 
-import java.net.URI
-
-import ru.mipt.acsl.decode.model.domain.impl.`type`._
+import ru.mipt.acsl.decode.model.domain.impl.types._
 import ru.mipt.acsl.decode.model.domain.impl.{MessageParameterRefWalker, DecodeNameImpl}
 
 import scala.collection.immutable
 
 object DecodeConstants {
-  val SYSTEM_NAMESPACE_FQN: DecodeFqn = DecodeFqnImpl.newFromSource("decode")
+  val SYSTEM_NAMESPACE_FQN: Fqn = FqnImpl.newFromSource("decode")
 }
 
 package object aliases {
@@ -52,14 +50,14 @@ trait HasOptionId {
   def id: Option[Int]
 }
 
-trait DecodeFqn {
+trait Fqn {
   def parts: Seq[DecodeName]
 
   def asMangledString: String = parts.map(_.asMangledString).mkString(".")
 
   def last: DecodeName = parts.last
 
-  def copyDropLast(): DecodeFqn
+  def copyDropLast(): Fqn
 
   def size: Int = parts.size
 
@@ -101,7 +99,7 @@ trait Namespace extends Referenceable with Named {
 
   def languages_=(languages: immutable.Seq[Language])
 
-  def fqn: DecodeFqn = {
+  def fqn: Fqn = {
     val parts: scala.collection.mutable.Buffer[DecodeName] = scala.collection.mutable.Buffer[DecodeName]()
     var currentNamespace: Namespace = this
     while (currentNamespace.parent.isDefined) {
@@ -109,7 +107,7 @@ trait Namespace extends Referenceable with Named {
       currentNamespace = currentNamespace.parent.get
     }
     parts += currentNamespace.name
-    DecodeFqnImpl(parts.reverse)
+    FqnImpl(parts.reverse)
   }
 
   def rootNamespace: Namespace = parent.map(_.rootNamespace).getOrElse(this)
@@ -328,7 +326,7 @@ trait EventMessage extends Message with BaseTyped {
 }
 
 trait Fqned extends Named with NamespaceAware {
-  def fqn: DecodeFqn = DecodeFqnImpl.newFromFqn(namespace.fqn, name)
+  def fqn: Fqn = FqnImpl.newFromFqn(namespace.fqn, name)
 }
 
 trait Component extends HasOptionInfo with Fqned with Referenceable with HasOptionId {
@@ -352,7 +350,7 @@ trait Registry {
 
   def rootNamespaces_=(rootNamespaces: immutable.Seq[Namespace])
 
-  def resolve[T <: Referenceable](uri: URI, cls: Class[T]): ResolvingResult[T]
+  def resolve[T <: Referenceable](path: ProxyPath, cls: Class[T]): ResolvingResult[T]
 
   // TODO: refactoring
   def component(fqn: String): Option[Component] = {

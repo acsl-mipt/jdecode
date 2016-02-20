@@ -1,7 +1,5 @@
 package ru.mipt.acsl.decode.model.domain.impl
 
-import java.net.URI
-
 import ru.mipt.acsl.decode.model.domain._
 import ru.mipt.acsl.decode.model.domain.impl.proxy.DecodeTypeResolveVisitor
 import ru.mipt.acsl.decode.modeling.aliases.ResolvingMessage
@@ -11,17 +9,13 @@ import scala.collection.mutable
 /**
   * @author Artem Shein
   */
-class DecodeProxyImpl[T <: Referenceable](val uri: URI) extends DecodeProxy[T] {
-  override def resolve(registry: Registry, cls: Class[T]): ResolvingResult[T] = registry.resolve(uri, cls)
-  override def toString: String = uri.toString
+class ProxyImpl[T <: Referenceable](val path: ProxyPath) extends Proxy[T] {
+  override def resolve(registry: Registry, cls: Class[T]): ResolvingResult[T] = registry.resolve(path, cls)
+  override def toString: String = path.toString
 }
 
-object DecodeProxyImpl {
-  def newInstanceFromTypeUriString[T <: Referenceable](typeUriString: String, defaultNsFqn: DecodeFqn):  DecodeProxy[T] =
-    apply(URI.create(if (typeUriString.startsWith("/")) typeUriString else "/" + defaultNsFqn.parts.map(_.asMangledString).mkString("/") + typeUriString))
-
-
-  def apply[T <: Referenceable](uri: URI): DecodeProxy[T] = new DecodeProxyImpl[T](uri)
+object ProxyImpl {
+  def apply[T <: Referenceable](path: ProxyPath): Proxy[T] = new ProxyImpl[T](path)
 }
 
 object DecodeModelResolver {
@@ -34,7 +28,7 @@ object DecodeModelResolver {
   }
 
   def resolveWithTypeCheck[T <: Referenceable](maybeProxy: MaybeProxy[T], registry: Registry, cls: Class[T]): ResolvingResult[Referenceable] = {
-    // TODO: this is dumb copypaste from Java, Scala can do better i believe
+    // TODO: this is dumb copy-paste from Java, Scala can do better i believe
     maybeProxy.resolve(registry, cls) match {
       case a: ResolvingResult[T] => a
       case _ => sys.error("wtf")
