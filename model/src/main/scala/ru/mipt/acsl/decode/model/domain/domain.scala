@@ -4,7 +4,7 @@ import ru.mipt.acsl.decode.model.domain.aliases.MessageParameterToken
 import ru.mipt.acsl.decode.model.domain.impl.types._
 import ru.mipt.acsl.decode.model.domain.impl.{ElementName, MessageParameterRefWalker}
 import ru.mipt.acsl.decode.model.domain.proxy.aliases.ResolvingResult
-import ru.mipt.acsl.decode.model.domain.proxy.{MaybeProxy, ProxyPath}
+import ru.mipt.acsl.decode.model.domain.proxy.{Result, MaybeProxy, ProxyPath}
 
 import scala.collection.{mutable, immutable}
 import scala.reflect.ClassTag
@@ -15,10 +15,17 @@ object DecodeConstants {
 
 package object aliases {
   type MessageParameterToken = Either[String, Int]
+  type ValidatingResult = ResolvingResult
 }
+
+import aliases._
 
 trait Resolvable {
   def resolve(registry: Registry): ResolvingResult
+}
+
+trait Validatable {
+  def validate(registry: Registry): ValidatingResult
 }
 
 trait ElementName {
@@ -59,7 +66,7 @@ trait Referenceable extends HasOptionName
 
 trait Language extends Referenceable with NamespaceAware
 
-trait Namespace extends Referenceable with HasName with Resolvable {
+trait Namespace extends Referenceable with HasName with Resolvable with Validatable {
   def asString: String
 
   def units: immutable.Seq[Measure]
@@ -108,7 +115,7 @@ trait NamespaceAware {
 
 trait OptionNameAndOptionInfoAware extends HasOptionInfo with HasOptionName
 
-trait Measure extends HasName with HasOptionInfo with Referenceable with NamespaceAware {
+trait Measure extends HasName with HasOptionInfo with Referenceable with NamespaceAware with Validatable {
   def display: Option[String]
 }
 
@@ -137,10 +144,15 @@ object TypeKind extends Enumeration {
   }
 }
 
-trait DecodeType extends Referenceable with OptionNameAndOptionInfoAware with NamespaceAware with Resolvable {
+trait DecodeType extends Referenceable with OptionNameAndOptionInfoAware with NamespaceAware with Resolvable with Validatable {
   override def resolve(registry: Registry): ResolvingResult = {
     val resolvingResultList = mutable.Buffer.empty[ResolvingResult]
     this match {
+      case t: EnumType =>
+        resolvingResultList += (t.extendsOrBaseType match {
+          case Left(extendsType) => extendsType.resolve(registry)
+          case Right(baseType) => baseType.resolve(registry)
+        })
       case t: HasBaseType =>
         resolvingResultList += t.baseType.resolve(registry)
       case t: StructType =>
@@ -159,6 +171,26 @@ trait DecodeType extends Referenceable with OptionNameAndOptionInfoAware with Na
       case _ =>
     }
     resolvingResultList.flatten
+  }
+  override def validate(registry: Registry): ValidatingResult = {
+    val result = mutable.Buffer.empty[ValidatingResult]
+    this match {
+      case t: EnumType =>
+        t.extendsOrBaseType match {
+          case Left(extendsType) => extendsType match {
+            case e: EnumType =>
+            case e =>
+              result += Result.error(s"enum type can extend an enum, not a ${e.getClass}")
+          }
+          case Right(baseType) => baseType match {
+            case _: PrimitiveType | _: NativeType =>
+            case b =>
+              result += Result.error(s"enum base type must be an instance of PrimitiveType or NativeType, not a ${b.getClass}")
+          }
+        }
+      case _ =>
+    }
+    result.flatten
   }
 }
 
@@ -189,7 +221,11 @@ trait EnumConstant extends HasOptionInfo {
 }
 
 trait EnumType extends DecodeType with HasBaseType {
+  def isFinal: Boolean
+  def extendsOrBaseType: Either[MaybeProxy[EnumType], MaybeProxy[DecodeType]]
+  def extendsType: Option[MaybeProxy[EnumType]]
   def constants: Set[EnumConstant]
+  def allConstants: Set[EnumConstant] = constants ++ extendsType.map(_.obj.allConstants).getOrElse(Set.empty)
 }
 
 trait ArraySize {
@@ -254,7 +290,7 @@ trait StatusMessage extends TmMessage {
 
 abstract class AbstractMessage(info: Option[String]) extends AbstractDecodeOptionalInfoAware(info) with TmMessage
 
-trait DecodeComponentRef {
+trait ComponentRef {
   def component: MaybeProxy[Component]
 
   def alias: Option[String]
@@ -286,7 +322,7 @@ trait Fqned extends HasName with NamespaceAware {
   def fqn: Fqn = FqnImpl.newFromFqn(namespace.fqn, name)
 }
 
-trait Component extends HasOptionInfo with Fqned with Referenceable with HasOptionId with Resolvable {
+trait Component extends HasOptionInfo with Fqned with Referenceable with HasOptionId with Resolvable with Validatable {
   def statusMessages: immutable.Seq[StatusMessage]
   def statusMessages_=(messages: immutable.Seq[StatusMessage]): Unit
   def eventMessages: immutable.Seq[EventMessage]
@@ -295,14 +331,14 @@ trait Component extends HasOptionInfo with Fqned with Referenceable with HasOpti
   def commands_=(commands: immutable.Seq[Command]): Unit
   def baseType: Option[MaybeProxy[StructType]]
   def baseType_=(maybeProxy: Option[MaybeProxy[StructType]]): Unit
-  def subComponents: immutable.Seq[DecodeComponentRef]
+  def subComponents: immutable.Seq[ComponentRef]
 }
 
 trait DomainModelResolver {
   def resolve(registry: Registry): ResolvingResult
 }
 
-trait Registry extends Referenceable with HasName with Resolvable {
+trait Registry extends Referenceable with HasName with Resolvable with Validatable {
   def rootNamespaces: immutable.Seq[Namespace]
 
   def rootNamespaces_=(rootNamespaces: immutable.Seq[Namespace])

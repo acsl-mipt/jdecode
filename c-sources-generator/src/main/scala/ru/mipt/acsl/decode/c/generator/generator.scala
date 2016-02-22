@@ -63,7 +63,7 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
       case t: SubType => (Seq(t.cTypeDef(t.baseType.obj.cType)), Seq.empty)
       case t: EnumType =>
         val prefixedEnumName = upperCamelCaseToUpperUnderscore(t.prefixedCTypeName)
-        (Seq(t.cTypeDef(CEnumTypeDef(t.constants.map(c =>
+        (Seq(t.cTypeDef(CEnumTypeDef(t.allConstants.toSeq.sortBy(_.value.toInt).map(c =>
           CEnumTypeDefConst(prefixedEnumName + "_" + c.name.asMangledString, c.value.toInt))))),
           Seq.empty)
       case t: GenericType =>

@@ -8,6 +8,7 @@ case object ErrorLevel extends Level("error")
 package object aliases {
   type ResolvingMessage = ModelingMessage
   type TransformationMessage = ModelingMessage
+  type ValidatingMessage = ModelingMessage
 }
 
 import aliases._

@@ -37,7 +37,7 @@ class PrimitiveAndNativeTypesProxyResolver extends DecodeProxyResolver {
           val primitiveTypeName = primitiveType.optionName.get
           if (!systemNamespace.types.exists(_.optionName.exists(_.equals(primitiveTypeName))))
             systemNamespace.types = systemNamespace.types :+ primitiveType
-          (Some(primitiveType), ResolvingResult.empty)
+          (Some(primitiveType), Result.empty)
         // Generic type
         case e: GenericTypeName =>
           val maybeProxy = MaybeProxy.proxy[GenericType](ProxyPath(nsFqn, e.typeName))
@@ -53,12 +53,12 @@ class PrimitiveAndNativeTypesProxyResolver extends DecodeProxyResolver {
             specializedType
           })
           val argsResult = specializedType.genericTypeArguments.map(_.map(_.resolve(registry))
-            .getOrElse(ResolvingResult.empty))
-            .foldLeft(ResolvingResult.empty)(_ ++ _)
+            .getOrElse(Result.empty))
+            .foldLeft(Result.empty)(_ ++ _)
           if (argsResult.hasError)
             (None, argsResult)
           else
-            (Some(specializedType), ResolvingResult.empty)
+            (Some(specializedType), Result.empty)
         // Native type
         case e: TypeName if NativeType.MANGLED_TYPE_NAMES.contains(e.typeName.asMangledString) =>
           val name = ElementName.newFromMangledName(e.typeName.asMangledString)
@@ -76,12 +76,12 @@ class PrimitiveAndNativeTypesProxyResolver extends DecodeProxyResolver {
           })
           if (!systemNamespace.types.exists(_.optionName.equals(nativeType.optionName)))
             systemNamespace.types = systemNamespace.types :+ nativeType
-          (Some(nativeType), ResolvingResult.empty)
+          (Some(nativeType), Result.empty)
         case _ =>
-          (None, ResolvingResult.empty)
+          (None, Result.empty)
       }
     } else {
-      (None, ResolvingResult.empty)
+      (None, Result.empty)
     }
   }
 }

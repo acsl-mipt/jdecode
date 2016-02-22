@@ -151,7 +151,6 @@ class DecodeParboiledParser(val input: ParserInput) extends Parser with LazyLogg
     InfoEw.? ~ MessageParameterElement ~> newMessageParameter _
   }
 
-  // TODO: parameter case
   def EventMessageParameter: Rule1[Either[MessageParameter, Parameter]] = rule {
     InfoEw.? ~ ((atomic("var") ~ Ew ~ TypeUnitApplication ~ Ew ~ ElementName_ ~> newCommandArg _
       ~> Right[MessageParameter, Parameter] _) |
@@ -195,9 +194,9 @@ class DecodeParboiledParser(val input: ParserInput) extends Parser with LazyLogg
       baseType.map(MaybeProxy.obj), info, subComponents.map(_.map{ fqn =>
       val alias = fqn.asMangledString
       if (fqn.size == 1 && imports.contains(alias))
-        new DecodeComponentRefImpl(imports.get(alias).get.asInstanceOf[MaybeProxy[Component]], Some(alias))
+        new ComponentRefImpl(imports.get(alias).get.asInstanceOf[MaybeProxy[Component]], Some(alias))
       else
-        new DecodeComponentRefImpl(MaybeProxy.proxyDefaultNamespace(fqn, ns.get), None)
+        new ComponentRefImpl(MaybeProxy.proxyDefaultNamespace(fqn, ns.get), None)
       }).getOrElse(immutable.Seq.empty)))
     component.get
   }
@@ -216,12 +215,12 @@ class DecodeParboiledParser(val input: ParserInput) extends Parser with LazyLogg
       Ew.? ~ '}'
   }
 
-  private def newUnit(display: Option[String], name: ElementName, info: Option[String]) =
+  private def newMeasure(display: Option[String], name: ElementName, info: Option[String]) =
     new MeasureImpl(name, ns.get, display, info)
 
   def Unit_ : Rule1[Measure] = rule {
     definition("unit") ~ (Ew ~ atomic("display") ~ Ew ~ StringValue).? ~
-      (Ew ~ atomic("placement") ~ Ew ~ atomic("before" | "after")).? ~> newUnit _
+      (Ew ~ atomic("placement") ~ Ew ~ atomic("before" | "after")).? ~> newMeasure _
   }
 
   def FloatLiteral: Rule0 = rule {
@@ -242,13 +241,21 @@ class DecodeParboiledParser(val input: ParserInput) extends Parser with LazyLogg
 
   def EnumTypeValues: Rule1[Seq[EnumConstant]] = rule { EnumTypeValue.+(Ew.? ~ ',' ~ Ew.?) ~ (Ew.? ~ ',').? }
 
-  private def newEnumType(name: ElementName, info: Option[String], t: Option[MaybeProxy[DecodeType]],
+  private def newEnumType(info: Option[String], name: ElementName, isFinal: Boolean,
+                          t: Either[MaybeProxy[EnumType], MaybeProxy[DecodeType]],
                           constants: Seq[EnumConstant]): EnumType =
-    new EnumTypeImpl(Some(name), ns.get, t.get, info, constants.to[immutable.Set])
+    new EnumTypeImpl(Some(name), ns.get, t, info, constants.to[immutable.Set], isFinal)
+
+  def ExtendsEnumType: Rule1[Either[MaybeProxy[EnumType], MaybeProxy[DecodeType]]] = rule {
+    ElementId ~> { (fqn: Fqn) => Left(proxyForTypeFqn[EnumType](ns.get, fqn)) }
+  }
 
   def EnumType = rule {
-    InfoEw.? ~ atomic("enum") ~ Ew ~ TypeApplication ~ Ew.? ~ '(' ~ Ew.? ~ EnumTypeValues ~ Ew.? ~ ')' ~>
-      newEnumType _
+    (atomic("final") ~ Ew ~> (() => true) | MATCH ~> (() => false)) ~ atomic("enum") ~ Ew ~
+      (atomic("extends") ~ Ew ~ ExtendsEnumType | TypeApplication ~> { (ta: Option[MaybeProxy[DecodeType]]) =>
+        Right[MaybeProxy[EnumType], MaybeProxy[DecodeType]](ta.get)
+      }) ~ Ew.? ~
+      '(' ~ Ew.? ~ EnumTypeValues ~ Ew.? ~ ')' ~> newEnumType _
   }
 
   private def newStructType(info: Option[String], name: ElementName, fields: Seq[StructField]): StructType =

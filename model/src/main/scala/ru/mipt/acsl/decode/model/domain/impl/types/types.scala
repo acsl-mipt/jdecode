@@ -1,10 +1,10 @@
 package ru.mipt.acsl.decode.model.domain.impl.types
 
-import ru.mipt.acsl.decode.model.domain.aliases.MessageParameterToken
+import ru.mipt.acsl.decode.model.domain.aliases.{ValidatingResult, MessageParameterToken}
 import ru.mipt.acsl.decode.model.domain._
 import ru.mipt.acsl.decode.model.domain.impl.{ElementName, ParameterParser}
 import ru.mipt.acsl.decode.model.domain.proxy.aliases.ResolvingResult
-import ru.mipt.acsl.decode.model.domain.proxy.{MaybeProxy}
+import ru.mipt.acsl.decode.model.domain.proxy.{Result, MaybeProxy}
 
 import scala.collection.immutable
 import scala.collection.mutable
@@ -39,6 +39,10 @@ class AbstractNameNamespaceOptionalInfoAware(name: ElementName, var namespace: N
 
 class MeasureImpl(name: ElementName, var namespace: Namespace, var display: Option[String], info: Option[String])
   extends AbstractDecodeNameAndOptionalInfoAware(name, info) with Measure {
+  override def validate(registry: Registry): ValidatingResult = {
+    // TODO
+    Result.empty
+  }
 }
 
 class NamespaceImpl(var name: ElementName, var parent: Option[Namespace] = None,
@@ -56,6 +60,14 @@ class NamespaceImpl(var name: ElementName, var parent: Option[Namespace] = None,
     result ++= types.map(_.resolve(registry))
     result ++= subNamespaces.map(_.resolve(registry))
     result ++= components.map(_.resolve(registry))
+    result.flatten
+  }
+
+  override def validate(registry: Registry): ValidatingResult = {
+    val result = new mutable.ArrayBuffer[ValidatingResult]()
+    result ++= types.map(_.validate(registry))
+    result ++= subNamespaces.map(_.validate(registry))
+    result ++= components.map(_.validate(registry))
     result.flatten
   }
 }
@@ -90,9 +102,13 @@ class SubTypeImpl(optionName: Option[ElementName], namespace: Namespace, info: O
 class EnumConstantImpl(val name: ElementName, val value: String, info: Option[String])
   extends AbstractDecodeOptionalInfoAware(info) with EnumConstant
 
-class EnumTypeImpl(name: Option[ElementName], namespace: Namespace, baseType: MaybeProxy[DecodeType],
-                   info: Option[String], var constants: Set[EnumConstant])
-  extends AbstractTypeWithBaseType(name, namespace, info, baseType) with EnumType {
+class EnumTypeImpl(name: Option[ElementName], namespace: Namespace,
+                   var extendsOrBaseType: Either[MaybeProxy[EnumType], MaybeProxy[DecodeType]],
+                   info: Option[String], var constants: Set[EnumConstant], var isFinal: Boolean)
+  extends AbstractType(name, namespace, info) with EnumType {
+  override def extendsType: Option[MaybeProxy[EnumType]] = extendsOrBaseType.left.toOption
+  def baseTypeOption: Option[MaybeProxy[DecodeType]] = extendsOrBaseType.right.toOption
+  override def baseType: MaybeProxy[DecodeType] = extendsOrBaseType.right.getOrElse(extendsType.get.obj.baseType)
 }
 
 class TypeUnitImpl(val t: MaybeProxy[DecodeType], val unit: Option[MaybeProxy[Measure]])
@@ -166,39 +182,65 @@ class ParameterImpl(name: ElementName, info: Option[String], val paramType: Mayb
 
 class ComponentImpl(name: ElementName, namespace: Namespace, var id: Option[Int],
                     var baseType: Option[MaybeProxy[StructType]], info: Option[String],
-                    var subComponents: immutable.Seq[DecodeComponentRef],
+                    var subComponents: immutable.Seq[ComponentRef],
                     var commands: immutable.Seq[Command] = immutable.Seq.empty,
                     var eventMessages: immutable.Seq[EventMessage] = immutable.Seq.empty,
                     var statusMessages: immutable.Seq[StatusMessage] = immutable.Seq.empty)
   extends AbstractNameNamespaceOptionalInfoAware(name, namespace, info) with Component {
   override def resolve(registry: Registry): ResolvingResult = {
-    val resultList = mutable.Buffer.empty[ResolvingResult]
+    val result = mutable.Buffer.empty[ResolvingResult]
     baseType.map { t =>
-      resultList += t.resolve(registry)
+      result += t.resolve(registry)
       if (t.isResolved)
-        resultList += t.obj.resolve(registry)
+        result += t.obj.resolve(registry)
     }
     commands.foreach { cmd =>
-      cmd.returnType.foreach(rt => resultList += rt.resolve(registry))
+      cmd.returnType.foreach(rt => result += rt.resolve(registry))
       cmd.parameters.foreach { arg =>
-        resultList += arg.paramType.resolve(registry)
-        arg.unit.map(u => resultList += u.resolve(registry))
+        result += arg.paramType.resolve(registry)
+        arg.unit.map(u => result += u.resolve(registry))
       }
     }
     eventMessages.foreach { e =>
-      resultList += e.baseType.resolve(registry)
+      result += e.baseType.resolve(registry)
       e.fields.foreach {
-        case Right(p) => resultList += p.paramType.resolve(registry)
+        case Right(p) => result += p.paramType.resolve(registry)
         case _ =>
       }
     }
     subComponents.foreach { scr =>
       val sc = scr.component
-      resultList += sc.resolve(registry)
+      result += sc.resolve(registry)
       if (sc.isResolved)
-        resultList += sc.obj.resolve(registry)
+        result += sc.obj.resolve(registry)
     }
-    resultList.flatten
+    result.flatten
+  }
+
+  override def validate(registry: Registry): ValidatingResult = {
+    val result = mutable.Buffer.empty[ResolvingResult]
+    baseType.map { t =>
+        result += t.obj.validate(registry)
+    }
+    commands.foreach { cmd =>
+      cmd.returnType.foreach(rt => result += rt.obj.validate(registry))
+      cmd.parameters.foreach { arg =>
+        result += arg.paramType.obj.validate(registry)
+        arg.unit.map(u => result += u.obj.validate(registry))
+      }
+    }
+    eventMessages.foreach { e =>
+      result += e.baseType.obj.validate(registry)
+      e.fields.foreach {
+        case Right(p) => result += p.paramType.obj.validate(registry)
+        case _ =>
+      }
+    }
+    subComponents.foreach { scr =>
+      val sc = scr.component
+      result += sc.obj.validate(registry)
+    }
+    result.flatten
   }
 }
 

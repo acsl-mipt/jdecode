@@ -1,6 +1,6 @@
 package ru.mipt.acsl.decode.model.domain.impl
 
-import ru.mipt.acsl.decode.model.domain.aliases.MessageParameterToken
+import ru.mipt.acsl.decode.model.domain.aliases.{ValidatingResult, MessageParameterToken}
 import ru.mipt.acsl.decode.model.domain._
 import ru.mipt.acsl.decode.model.domain.impl.types.AbstractNameNamespaceOptionalInfoAware
 import ru.mipt.acsl.decode.model.domain.impl.types.AbstractDecodeOptionalInfoAware
@@ -70,8 +70,8 @@ abstract class AbstractImmutableMessage(val component: Component, val name: Elem
   def optionName = Some(name)
 }
 
-case class DecodeComponentRefImpl(component: MaybeProxy[Component], alias: Option[String] = None)
-  extends DecodeComponentRef
+case class ComponentRefImpl(component: MaybeProxy[Component], alias: Option[String] = None)
+  extends ComponentRef
 
 class StatusMessageImpl(component: Component, name: ElementName, id: Option[Int], info: Option[String],
                         val parameters: Seq[MessageParameter], val priority: Option[Int] = None)
@@ -108,12 +108,15 @@ private class RegistryImpl(val name: ElementName, resolvers: DecodeProxyResolver
     (None, Seq(Message(ErrorLevel, s"path $path can not be resolved")))
   }
 
-  def resolve: ResolvingResult = resolve(this)
+  def resolve(): ResolvingResult = resolve(this)
 
   override def resolve(registry: Registry): ResolvingResult =
     registry.rootNamespaces.flatMap(_.resolve(registry))
 
   override def optionName: Option[ElementName] = Some(name)
+
+  override def validate(registry: Registry): ValidatingResult =
+    registry.rootNamespaces.flatMap(_.validate(registry))
 }
 
 object Registry {

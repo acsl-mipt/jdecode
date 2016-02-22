@@ -23,10 +23,10 @@ package object aliases {
 
 import ru.mipt.acsl.decode.model.domain.proxy.aliases._
 
-object ResolvingResult {
+object Result {
   def apply(msgs: ResolvingMessage*): ResolvingResult = msgs
-  def error(msg: String): ResolvingResult = ResolvingResult(Message(ErrorLevel, msg))
-  def empty: ResolvingResult = ResolvingResult()
+  def error(msg: String): ResolvingResult = Result(Message(ErrorLevel, msg))
+  def empty: ResolvingResult = Result()
 }
 
 sealed abstract class ProxyElementName {
@@ -70,7 +70,7 @@ class MaybeProxy[T <: Referenceable : ClassTag](var v: Either[Proxy, T]) extends
 
   def resolve(registry: Registry): ResolvingResult = {
     if (isResolved)
-      return ResolvingResult.empty
+      return Result.empty
     val resolvingResult = registry.resolveElement[T](proxy.path)
     resolvingResult._1.foreach { o =>
         v = Right(o)
