@@ -16,7 +16,6 @@
         <module>common</module>
         <module>model</module>
         <module>parser</module>
-        <module>idea-plugin</module>
         <module>java-sources-generator</module>
         <module>c-sources-generator</module>
         <module>cpp-sources-generator</module>
