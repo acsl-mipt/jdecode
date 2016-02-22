@@ -6,7 +6,7 @@ import ru.mipt.acsl.decode.modeling.aliases.TransformationMessage
 /**
   * @author Artem Shein
   */
-case class MessageImpl(level: Level, text: String) extends TransformationMessage {
+case class Message(level: Level, text: String) extends TransformationMessage {
 
   def error(msg: String): TransformationMessage = message(ErrorLevel, msg)
 
@@ -14,5 +14,5 @@ case class MessageImpl(level: Level, text: String) extends TransformationMessage
 
   def notice(msg: String): TransformationMessage = message(Notice, msg)
 
-  def message(level: Level, msg: String): TransformationMessage = MessageImpl(level, msg)
+  def message(level: Level, msg: String): TransformationMessage = Message(level, msg)
 }

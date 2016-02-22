@@ -1,9 +1,13 @@
 package ru.mipt.acsl.decode.model.domain
 
+import ru.mipt.acsl.decode.model.domain.aliases.MessageParameterToken
 import ru.mipt.acsl.decode.model.domain.impl.types._
-import ru.mipt.acsl.decode.model.domain.impl.{MessageParameterRefWalker, DecodeNameImpl}
+import ru.mipt.acsl.decode.model.domain.impl.{ElementName, MessageParameterRefWalker}
+import ru.mipt.acsl.decode.model.domain.proxy.aliases.ResolvingResult
+import ru.mipt.acsl.decode.model.domain.proxy.{MaybeProxy, ProxyPath}
 
-import scala.collection.immutable
+import scala.collection.{mutable, immutable}
+import scala.reflect.ClassTag
 
 object DecodeConstants {
   val SYSTEM_NAMESPACE_FQN: Fqn = FqnImpl.newFromSource("decode")
@@ -13,33 +17,20 @@ package object aliases {
   type MessageParameterToken = Either[String, Int]
 }
 
-import aliases._
+trait Resolvable {
+  def resolve(registry: Registry): ResolvingResult
+}
 
-trait DecodeName {
+trait ElementName {
   def asMangledString: String
 }
 
-object DecodeName {
-  def mangleName(name: String): String = {
-    var result = name
-    if (result.startsWith("^")) {
-      result = result.substring(1)
-    }
-    result = "[ \\\\^]".r.replaceAllIn(result, "")
-    if (result.isEmpty)
-      sys.error("invalid name")
-    result
-  }
+trait HasOptionName {
+  def optionName: Option[ElementName]
 }
 
-trait DecodeElement
-
-trait OptionNamed {
-  def optionName: Option[DecodeName]
-}
-
-trait Named extends OptionNamed {
-  def name: DecodeName
+trait HasName extends HasOptionName {
+  def name: ElementName
 }
 
 trait HasOptionInfo {
@@ -51,11 +42,11 @@ trait HasOptionId {
 }
 
 trait Fqn {
-  def parts: Seq[DecodeName]
+  def parts: Seq[ElementName]
 
   def asMangledString: String = parts.map(_.asMangledString).mkString(".")
 
-  def last: DecodeName = parts.last
+  def last: ElementName = parts.last
 
   def copyDropLast(): Fqn
 
@@ -64,13 +55,11 @@ trait Fqn {
   def isEmpty: Boolean = parts.isEmpty
 }
 
-trait Referenceable extends OptionNamed {
-  def accept[T](visitor: DecodeReferenceableVisitor[T]): T
-}
+trait Referenceable extends HasOptionName
 
 trait Language extends Referenceable with NamespaceAware
 
-trait Namespace extends Referenceable with Named {
+trait Namespace extends Referenceable with HasName with Resolvable {
   def asString: String
 
   def units: immutable.Seq[Measure]
@@ -93,14 +82,12 @@ trait Namespace extends Referenceable with Named {
 
   def components_=(components: immutable.Seq[Component])
 
-  def accept[T](visitor: DecodeReferenceableVisitor[T]): T = visitor.visit(this)
-
   def languages: immutable.Seq[Language]
 
   def languages_=(languages: immutable.Seq[Language])
 
   def fqn: Fqn = {
-    val parts: scala.collection.mutable.Buffer[DecodeName] = scala.collection.mutable.Buffer[DecodeName]()
+    val parts: scala.collection.mutable.Buffer[ElementName] = scala.collection.mutable.Buffer[ElementName]()
     var currentNamespace: Namespace = this
     while (currentNamespace.parent.isDefined) {
       parts += currentNamespace.name
@@ -119,20 +106,10 @@ trait NamespaceAware {
   def namespace_=(namespace: Namespace)
 }
 
-trait DecodeOptionalNameAndOptionalInfoAware extends HasOptionInfo with OptionNamed
+trait OptionNameAndOptionInfoAware extends HasOptionInfo with HasOptionName
 
-trait Measure extends Named with HasOptionInfo with Referenceable with NamespaceAware {
+trait Measure extends HasName with HasOptionInfo with Referenceable with NamespaceAware {
   def display: Option[String]
-
-  def accept[T] (visitor: DecodeReferenceableVisitor[T] ): T = visitor.visit(this)
-}
-
-trait DecodeReferenceableVisitor[T] {
-  def visit(namespace: Namespace): T
-  def visit(`type`: DecodeType): T
-  def visit(component: Component): T
-  def visit(measure: Measure): T
-  def visit(language: Language): T
 }
 
 // Types
@@ -160,48 +137,59 @@ object TypeKind extends Enumeration {
   }
 }
 
-trait DecodeType extends Referenceable with DecodeOptionalNameAndOptionalInfoAware with NamespaceAware {
-  def accept[T](visitor: DecodeTypeVisitor[T]): T
-
-  def accept[T](visitor: DecodeReferenceableVisitor[T] ): T = visitor.visit(this)
+trait DecodeType extends Referenceable with OptionNameAndOptionInfoAware with NamespaceAware with Resolvable {
+  override def resolve(registry: Registry): ResolvingResult = {
+    val resolvingResultList = mutable.Buffer.empty[ResolvingResult]
+    this match {
+      case t: HasBaseType =>
+        resolvingResultList += t.baseType.resolve(registry)
+      case t: StructType =>
+        t.fields.foreach { f =>
+          val typeUnit = f.typeUnit
+          resolvingResultList += typeUnit.t.resolve(registry)
+          if (typeUnit.t.isResolved)
+            resolvingResultList += typeUnit.t.obj.resolve(registry)
+          for (unit <- typeUnit.unit)
+            resolvingResultList += unit.resolve(registry)
+        }
+      case t: GenericTypeSpecialized =>
+        resolvingResultList += t.genericType.resolve(registry)
+        t.genericTypeArguments.foreach(_.foreach(gta =>
+          resolvingResultList += gta.resolve(registry)))
+      case _ =>
+    }
+    resolvingResultList.flatten
+  }
 }
 
 trait PrimitiveType extends DecodeType {
   def bitLength: Long
 
   def kind: TypeKind.Value
-
-  def accept[T](visitor: DecodeTypeVisitor[T]): T = visitor.visit(this)
 }
 
-trait NativeType extends DecodeType with Named {
+trait NativeType extends DecodeType with HasName {
 }
 
 object NativeType {
   val MANGLED_TYPE_NAMES: Set[String] = immutable.HashSet[String](BerType.NAME, OrType.NAME, OptionalType.NAME)
 }
 
-trait BaseTyped {
+trait HasBaseType {
   def baseType: MaybeProxy[DecodeType]
 }
 
-trait AliasType extends DecodeType with Named with BaseTyped {
-  def accept[T](visitor: DecodeTypeVisitor[T]): T = visitor.visit(this)
-}
+trait AliasType extends DecodeType with HasName with HasBaseType
 
-trait SubType extends DecodeType with BaseTyped {
-  def accept[T](visitor: DecodeTypeVisitor[T]): T = visitor.visit(this)
-}
+trait SubType extends DecodeType with HasBaseType
 
-trait DecodeEnumConstant extends HasOptionInfo {
-  def name: DecodeName
+trait EnumConstant extends HasOptionInfo {
+  def name: ElementName
   def value: String
 }
 
-trait EnumType extends DecodeType with BaseTyped {
-  def constants: Set[DecodeEnumConstant]
-
-  override def accept[T](visitor: DecodeTypeVisitor[T]): T = visitor.visit(this)
+trait EnumType extends DecodeType with HasBaseType {
+  def constants: Set[EnumConstant]
 }
 
 trait ArraySize {
@@ -209,7 +197,7 @@ trait ArraySize {
   def max: Long
 }
 
-trait ArrayType extends DecodeType with BaseTyped {
+trait ArrayType extends DecodeType with HasBaseType {
   def size: ArraySize
 
   def isFixedSize: Boolean = {
@@ -217,72 +205,44 @@ trait ArrayType extends DecodeType with BaseTyped {
     val maxLength: Long = thisSize.max
     thisSize.min == maxLength && maxLength != 0
   }
-
-  def accept[T](visitor: DecodeTypeVisitor[T]): T = visitor.visit(this)
 }
 
-trait DecodeTypeUnitApplication {
+trait TypeUnit {
   def t: MaybeProxy[DecodeType]
   def unit: Option[MaybeProxy[Measure]]
 }
 
-trait DecodeStructField extends Named with HasOptionInfo {
-  def typeUnit: DecodeTypeUnitApplication
+trait StructField extends HasName with HasOptionInfo {
+  def typeUnit: TypeUnit
 }
 
 trait StructType extends DecodeType {
-  def fields: Seq[DecodeStructField]
-
-  override def accept[T](visitor: DecodeTypeVisitor[T]): T = visitor.visit(this)
+  def fields: Seq[StructField]
 }
 
 trait GenericType extends DecodeType {
-  def typeParameters: Seq[Option[DecodeName]]
-
-  def accept[T](visitor: DecodeTypeVisitor[T]): T = visitor.visit(this)
+  def typeParameters: Seq[Option[ElementName]]
 }
 
 trait GenericTypeSpecialized extends DecodeType {
   def genericType: MaybeProxy[GenericType]
 
   def genericTypeArguments: Seq[Option[MaybeProxy[DecodeType]]]
-
-  def accept[T] (visitor: DecodeTypeVisitor[T]): T = visitor.visit(this)
-}
-
-trait DecodeTypeVisitor[T] {
-  def visit(primitiveType: PrimitiveType): T
-  def visit(nativeType: NativeType): T
-  def visit(subType: SubType): T
-  def visit(enumType: EnumType): T
-  def visit(arrayType: ArrayType): T
-  def visit(structType: StructType): T
-  def visit(typeAlias: AliasType): T
-  def visit(genericType: GenericType): T
-  def visit(genericTypeSpecialized: GenericTypeSpecialized): T
 }
 
 // Components
 
-trait Parameter extends Named with HasOptionInfo {
+trait Parameter extends HasName with HasOptionInfo {
   def unit: Option[MaybeProxy[Measure]]
   def paramType: MaybeProxy[DecodeType]
 }
 
-trait DecodeCommand extends HasOptionInfo with Named with HasOptionId {
+trait Command extends HasOptionInfo with HasName with HasOptionId {
   def returnType: Option[MaybeProxy[DecodeType]]
   def parameters: immutable.Seq[Parameter]
 }
 
-// TODO: replace with case classes?
-trait DecodeMessageVisitor[T] {
-  def visit(eventMessage: EventMessage): T
-  def visit(statusMessage: StatusMessage): T
-}
-
-trait TmMessage extends HasOptionInfo with Named with HasOptionId {
-  def accept[T](visitor: DecodeMessageVisitor[T] ): T
-
+trait TmMessage extends HasOptionInfo with HasName with HasOptionId {
   def component: Component
 }
 
@@ -290,8 +250,6 @@ trait StatusMessage extends TmMessage {
   def priority: Option[Int]
 
   def parameters: Seq[MessageParameter]
-
-  def accept[T](visitor: DecodeMessageVisitor[T]): T = visitor.visit(this)
 }
 
 abstract class AbstractMessage(info: Option[String]) extends AbstractDecodeOptionalInfoAware(info) with TmMessage
@@ -306,7 +264,7 @@ trait DecodeComponentRef {
 
 trait MessageParameterRef {
   def component: Component
-  def structField: Option[DecodeStructField]
+  def structField: Option[StructField]
   def subTokens: Seq[MessageParameterToken]
   def t: DecodeType
 }
@@ -320,37 +278,38 @@ trait MessageParameter extends HasOptionInfo {
   private def tokens: Seq[MessageParameterToken] = ParameterWalker(this).tokens
 }
 
-trait EventMessage extends TmMessage with BaseTyped {
+trait EventMessage extends TmMessage with HasBaseType {
   def fields: Seq[Either[MessageParameter, Parameter]]
-  def accept[T](visitor: DecodeMessageVisitor[T]): T = visitor.visit(this)
 }
 
-trait Fqned extends Named with NamespaceAware {
+trait Fqned extends HasName with NamespaceAware {
   def fqn: Fqn = FqnImpl.newFromFqn(namespace.fqn, name)
 }
 
-trait Component extends HasOptionInfo with Fqned with Referenceable with HasOptionId {
+trait Component extends HasOptionInfo with Fqned with Referenceable with HasOptionId with Resolvable {
   def statusMessages: immutable.Seq[StatusMessage]
-  def statusMessages_=(messages: immutable.Seq[StatusMessage])
+  def statusMessages_=(messages: immutable.Seq[StatusMessage]): Unit
   def eventMessages: immutable.Seq[EventMessage]
-  def eventMessages_=(messages: immutable.Seq[EventMessage])
-  def commands: immutable.Seq[DecodeCommand]
-  def commands_=(commands: immutable.Seq[DecodeCommand])
+  def eventMessages_=(messages: immutable.Seq[EventMessage]): Unit
+  def commands: immutable.Seq[Command]
+  def commands_=(commands: immutable.Seq[Command]): Unit
   def baseType: Option[MaybeProxy[StructType]]
+  def baseType_=(maybeProxy: Option[MaybeProxy[StructType]]): Unit
   def subComponents: immutable.Seq[DecodeComponentRef]
-  override def accept[T](visitor: DecodeReferenceableVisitor[T]): T = visitor.visit(this)
 }
 
 trait DomainModelResolver {
-  def resolve(registry: Registry): ResolvingResult[Referenceable]
+  def resolve(registry: Registry): ResolvingResult
 }
 
-trait Registry {
+trait Registry extends Referenceable with HasName with Resolvable {
   def rootNamespaces: immutable.Seq[Namespace]
 
   def rootNamespaces_=(rootNamespaces: immutable.Seq[Namespace])
 
-  def resolve[T <: Referenceable](path: ProxyPath, cls: Class[T]): ResolvingResult[T]
+  def resolve(): ResolvingResult
+
+  def resolveElement[T <: Referenceable](path: ProxyPath)(implicit ct: ClassTag[T]): (Option[T], ResolvingResult)
 
   // TODO: refactoring
   def component(fqn: String): Option[Component] = {
@@ -360,7 +319,7 @@ trait Registry {
     {
       return None
     }
-    val componentName = DecodeNameImpl.newFromMangledName(fqn.substring(dotPos + 1, fqn.length()))
+    val componentName = ElementName.newFromMangledName(fqn.substring(dotPos + 1, fqn.length()))
     namespaceOptional.get.components.find(_.name == componentName)
   }
 
@@ -373,7 +332,7 @@ trait Registry {
       {
         return None
       }
-      val decodeName = DecodeNameImpl.newFromMangledName(nsName)
+      val decodeName = ElementName.newFromMangledName(nsName)
       currentNamespace = currentNamespaces.get.find(_.name == decodeName)
       if (currentNamespace.isDefined)
       {
@@ -389,13 +348,13 @@ trait Registry {
 
   def eventMessage(fqn: String): Option[EventMessage] = {
     val dotPos = fqn.lastIndexOf('.')
-    val decodeName = DecodeNameImpl.newFromMangledName(fqn.substring(dotPos + 1, fqn.length()))
+    val decodeName = ElementName.newFromMangledName(fqn.substring(dotPos + 1, fqn.length()))
     component(fqn.substring(0, dotPos)).map(_.eventMessages.find(_.name == decodeName).orNull)
   }
 
   def statusMessage(fqn: String): Option[StatusMessage] = {
     val dotPos = fqn.lastIndexOf('.')
-    val decodeName = DecodeNameImpl.newFromMangledName(fqn.substring(dotPos + 1, fqn.length()))
+    val decodeName = ElementName.newFromMangledName(fqn.substring(dotPos + 1, fqn.length()))
     component(fqn.substring(0, dotPos)).map(_.statusMessages.find(_.name == decodeName).orNull)
   }
 

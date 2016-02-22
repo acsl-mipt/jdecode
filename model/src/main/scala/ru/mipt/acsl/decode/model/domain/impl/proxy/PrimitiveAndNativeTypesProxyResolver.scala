@@ -5,20 +5,22 @@ import ru.mipt.acsl.decode.model.domain.impl.types.BerType
 import ru.mipt.acsl.decode.model.domain.impl.types.GenericTypeSpecializedImpl
 import ru.mipt.acsl.decode.model.domain.impl.types.OptionalType
 import ru.mipt.acsl.decode.model.domain.impl.types.OrType
-import ru.mipt.acsl.decode.model.domain.impl.{DecodeNameImpl, DecodeUtils}
+import ru.mipt.acsl.decode.model.domain.impl.{ElementName, DecodeUtils}
 import ru.mipt.acsl.decode.model.domain.impl.types.PrimitiveTypeImpl
+import ru.mipt.acsl.decode.model.domain.proxy._
+import ru.mipt.acsl.decode.model.domain.proxy.aliases._
 
 import scala.collection.mutable
 
 /**
   * Created by metadeus on 20.02.16.
   */
-class ProvidePrimitivesAndNativeTypesDecodeProxyResolver extends DecodeProxyResolver {
-  private val primitiveTypeByTypeKindBitSize: mutable.Map[DecodeName, PrimitiveType] = mutable.HashMap.empty
-  private val nativeTypeByNameMap: mutable.Map[DecodeName, DecodeType] = mutable.HashMap.empty
-  private val genericTypeSpecializedByTypeNameMap: mutable.Map[DecodeName, GenericTypeSpecialized] = mutable.HashMap.empty
+class PrimitiveAndNativeTypesProxyResolver extends DecodeProxyResolver {
+  private val primitiveTypeByTypeKindBitSize: mutable.Map[ElementName, PrimitiveType] = mutable.HashMap.empty
+  private val nativeTypeByNameMap: mutable.Map[ElementName, DecodeType] = mutable.HashMap.empty
+  private val genericTypeSpecializedByTypeNameMap: mutable.Map[ElementName, GenericTypeSpecialized] = mutable.HashMap.empty
 
-  override def resolve[T <: Referenceable](registry: Registry, path: ProxyPath, cls: Class[T]): ResolvingResult[T] = {
+  override def resolveElement(registry: Registry, path: ProxyPath): (Option[Referenceable], ResolvingResult) = {
     assert(DecodeConstants.SYSTEM_NAMESPACE_FQN.size == 1, "not implemented")
     val nsFqn = path.ns
     if (nsFqn.equals(DecodeConstants.SYSTEM_NAMESPACE_FQN)) {
@@ -30,18 +32,19 @@ class ProvidePrimitivesAndNativeTypesDecodeProxyResolver extends DecodeProxyReso
         case e: PrimitiveTypeName =>
           val primitiveType = primitiveTypeByTypeKindBitSize.getOrElseUpdate(path.mangledName,
             new PrimitiveTypeImpl(
-              Some(DecodeNameImpl.newFromMangledName(s"${TypeKind.nameForTypeKind(e.typeKind)}:${e.bitSize}")),
+              Some(ElementName.newFromMangledName(s"${TypeKind.nameForTypeKind(e.typeKind)}:${e.bitSize}")),
               systemNamespace, None, e.typeKind, e.bitSize))
           val primitiveTypeName = primitiveType.optionName.get
           if (!systemNamespace.types.exists(_.optionName.exists(_.equals(primitiveTypeName))))
             systemNamespace.types = systemNamespace.types :+ primitiveType
-          ResolvingResult(Some(primitiveType.asInstanceOf[T]))
+          (Some(primitiveType), ResolvingResult.empty)
         // Generic type
         case e: GenericTypeName =>
-          val result = MaybeProxy.proxy(ProxyPath(nsFqn, e.typeName)).resolve(registry, classOf[GenericType])
+          val maybeProxy = MaybeProxy.proxy[GenericType](ProxyPath(nsFqn, e.typeName))
+          val result = maybeProxy.resolve(registry)
           if (result.hasError)
-            return result.asInstanceOf[ResolvingResult[T]]
-          val genericType = result.resolvedObject.get
+            return (None, result)
+          val genericType = maybeProxy.obj
           val specializedType = genericTypeSpecializedByTypeNameMap.getOrElseUpdate(path.mangledName, {
             val specializedType = new GenericTypeSpecializedImpl(None, genericType.namespace, None,
               MaybeProxy.obj(genericType),
@@ -49,16 +52,16 @@ class ProvidePrimitivesAndNativeTypesDecodeProxyResolver extends DecodeProxyReso
             systemNamespace.types = systemNamespace.types :+ specializedType
             specializedType
           })
-          val argsResult = specializedType.genericTypeArguments.map(_.map(_.resolve(registry, classOf[DecodeType]))
-            .getOrElse(ResolvingResult.empty[DecodeType]))
-            .foldLeft(ResolvingResult.empty[DecodeType])(ResolvingResult.merge[DecodeType])
+          val argsResult = specializedType.genericTypeArguments.map(_.map(_.resolve(registry))
+            .getOrElse(ResolvingResult.empty))
+            .foldLeft(ResolvingResult.empty)(_ ++ _)
           if (argsResult.hasError)
-            ResolvingResult[T](None, argsResult.messages)
+            (None, argsResult)
           else
-            ResolvingResult(Some(specializedType.asInstanceOf[T]))
+            (Some(specializedType), ResolvingResult.empty)
         // Native type
         case e: TypeName if NativeType.MANGLED_TYPE_NAMES.contains(e.typeName.asMangledString) =>
-          val name = DecodeNameImpl.newFromMangledName(e.typeName.asMangledString)
+          val name = ElementName.newFromMangledName(e.typeName.asMangledString)
           val nativeType = nativeTypeByNameMap.getOrElseUpdate(path.mangledName, {
             name match {
               case BerType.MANGLED_NAME =>
@@ -73,12 +76,12 @@ class ProvidePrimitivesAndNativeTypesDecodeProxyResolver extends DecodeProxyReso
           })
           if (!systemNamespace.types.exists(_.optionName.equals(nativeType.optionName)))
             systemNamespace.types = systemNamespace.types :+ nativeType
-          ResolvingResult(Some(nativeType.asInstanceOf[T]))
+          (Some(nativeType), ResolvingResult.empty)
         case _ =>
-          ResolvingResult.empty
+          (None, ResolvingResult.empty)
       }
     } else {
-      ResolvingResult.empty
+      (None, ResolvingResult.empty)
     }
   }
 }

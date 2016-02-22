@@ -10,6 +10,7 @@ import ru.mipt.acsl.decode.model.domain._
 import ru.mipt.acsl.decode.model.domain.impl.types.BerType
 import ru.mipt.acsl.decode.model.domain.impl.types.OptionalType
 import ru.mipt.acsl.decode.model.domain.impl.types.OrType
+import ru.mipt.acsl.decode.model.domain.proxy.MaybeProxy
 import ru.mipt.acsl.generation.Generator
 import ru.mipt.acsl.generator.c.ast.implicits._
 import ru.mipt.acsl.generator.c.ast._
@@ -210,7 +211,7 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
   }
 
   private def structTypeFieldForCommand(structComponent: Component, component: Component,
-                                        command: DecodeCommand): CStructTypeDefField = {
+                                        command: Command): CStructTypeDefField = {
     val methodName = command.cStructFieldName(structComponent, component)
     CStructTypeDefField(methodName, CFuncType(command.returnType.map(_.obj.cType).getOrElse(voidType),
       command.cFuncParameterTypes(structComponent), methodName))
@@ -330,12 +331,12 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
     def isBasedOnEnum: Boolean = t match {
       case _: EnumType => true
       case _: ArrayType => false
-      case t: BaseTyped => t.baseType.obj.isBasedOnEnum
+      case t: HasBaseType => t.baseType.obj.isBasedOnEnum
       case _ => false
     }
 
     def cTypeName: String = t match {
-      case t: Named => lowerUnderscoreToUpperCamel(t.name.asMangledString)
+      case t: HasName => lowerUnderscoreToUpperCamel(t.name.asMangledString)
       case t: PrimitiveType => primitiveTypeToCTypeApplication(t).name
       case t: ArrayType =>
         val baseCType = t.baseType.obj.cTypeName
@@ -352,7 +353,7 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
         t.genericType.obj.cTypeName +
           t.genericTypeArguments.map(_.map(_.obj.cTypeName).getOrElse("Void")).mkString
       // fixme: remove asInstanceOf
-      case t: OptionNamed => lowerUnderscoreToUpperCamel(t.asInstanceOf[OptionNamed].cTypeName)
+      case t: HasOptionName => lowerUnderscoreToUpperCamel(t.asInstanceOf[HasOptionName].cTypeName)
       case _ => sys.error("not implemented")
     }
 
@@ -373,7 +374,7 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
         case _ => (t.size.max * t.baseType.obj.byteSize).toInt
       }
       case t: StructType => t.fields.map(_.typeUnit.t.obj.byteSize).sum
-      case t: BaseTyped => t.baseType.obj.byteSize
+      case t: HasBaseType => t.baseType.obj.byteSize
       case t: GenericTypeSpecialized => t.genericType.obj match {
         case _: OptionalType => 1 + t.genericTypeArguments.head.getOrElse { sys.error("wtf") }.obj.byteSize
         case _: OrType => 1 + t.genericTypeArguments.map(_.map(_.obj.byteSize).getOrElse(0)).max
@@ -387,7 +388,7 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
     def typeWithDependentTypes: immutable.Set[DecodeType] =
       (t match {
         case t: StructType => t.fields.flatMap(_.typeUnit.t.obj.typeWithDependentTypes).toSet
-        case t: BaseTyped => t.baseType.obj.typeWithDependentTypes
+        case t: HasBaseType => t.baseType.obj.typeWithDependentTypes
         case t: GenericTypeSpecialized =>
           t.genericTypeArguments.flatMap(_.map(_.obj.typeWithDependentTypes).getOrElse(Set.empty)).toSet ++
             t.genericType.obj.t.typeWithDependentTypes
@@ -459,7 +460,7 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
         case t: BerType => callCodeForBer(typeSerializeMethodName, src, writer.v)
         case _ => sys.error(s"not implemented for $t")
       }
-      case t: BaseTyped => t.baseType.obj.serializeCallCode(src)
+      case t: HasBaseType => t.baseType.obj.serializeCallCode(src)
       case t: PrimitiveType =>
         callCodeForPrimitiveType(t, src, photonWriterTypeName, "Write", writer.v, src)
       case _ => sys.error(s"not implemented for $t")
@@ -471,7 +472,7 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
         case t: BerType => callCodeForBer(typeDeserializeMethodName, dest, reader.v)
         case _ => sys.error(s"not implemented for $t")
       }
-      case t: BaseTyped =>
+      case t: HasBaseType =>
         val baseType = t.baseType.obj
         baseType.deserializeCallCode(dest.cast(baseType.cType.ptr))
       case t: PrimitiveType =>
@@ -558,7 +559,7 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
       case t: ArrayType =>
         dest.deserializeCodeForArraySize(t) ++ readerSizeCheckCode(dest) ++ t.deserializeCodeForArrayElements(dest)
       case t: AliasType => t.baseType.obj.deserializeCode(dest)
-      case t: BaseTyped =>
+      case t: HasBaseType =>
         val baseType = t.baseType.obj
         Seq(baseType.deserializeCallCode(dest.cast(baseType.cType.ptr)).line)
       case _: PrimitiveType | _: NativeType => Seq(t.deserializeCallCode(dest).line)
@@ -571,7 +572,7 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
     def collectNamespaces(set: mutable.Set[Namespace]) {
       set += t.namespace
       t match {
-        case t: BaseTyped => collectNsForType(t.baseType, set)
+        case t: HasBaseType => collectNsForType(t.baseType, set)
         case t: StructType => t.fields.foreach(f => collectNsForType(f.typeUnit.t, set))
         case t: GenericTypeSpecialized => t.genericTypeArguments.foreach(_.foreach(collectNsForType(_, set)))
         case _ =>
@@ -593,7 +594,7 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
           case or: OrType =>
             s.genericTypeArguments.flatMap(_.map(p => Seq(p.obj)).getOrElse(Seq.empty))
         }
-      case t: BaseTyped =>
+      case t: HasBaseType =>
         if (t.baseType.obj.isPrimitiveOrNative)
           Seq.empty
         else
@@ -603,7 +604,7 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
   }
 
   implicit class RichComponent(val component: Component) {
-    def allCommands: Seq[WithComponent[DecodeCommand]] =
+    def allCommands: Seq[WithComponent[Command]] =
       allSubComponents.toSeq.flatMap(sc => sc.commands.map(ComponentCommand(sc, _)))
 
     def allParameters: Seq[ComponentParameterField] =
@@ -694,7 +695,7 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
       CFuncImpl(CFuncDef(component.executeCommandMethodName(rootComponent), resultType,
         Seq(reader.param, writer.param, commandId.param)),
         Seq(CIndent, CSwitch(commandId.v, casesForMap(component.allCommandsById,
-          (command: DecodeCommand, c: Component) =>
+          (command: Command, c: Component) =>
             Some(CStatements(CReturn(command.executeMethodName(rootComponent, c).call(reader.v, writer.v))))),
           default = CStatements(CReturn(invalidCommandId))), CEol))
     }
@@ -939,7 +940,7 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
       immutable.HashMap(mapById.toSeq: _*)
     }
 
-    def allCommandsById: immutable.HashMap[Int, WithComponent[DecodeCommand]] =
+    def allCommandsById: immutable.HashMap[Int, WithComponent[Command]] =
       makeMapById(component.commands, _.commands)
 
     def allStatusMessagesById: immutable.HashMap[Int, WithComponent[StatusMessage]] =
@@ -964,7 +965,7 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
     }
   }
 
-  implicit class RichCommand(val command: DecodeCommand) {
+  implicit class RichCommand(val command: Command) {
     def cFuncParameterTypes(component: Component): Seq[CType] = {
       component.ptrType +: command.parameters.map(p => {
         val t = p.paramType.obj
@@ -978,7 +979,7 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
       rootComponent.prefixedTypeName.methodName("Write" + message.methodNamePart(rootComponent, component).capitalize)
   }
 
-  implicit class RichNamed(val named: Named) {
+  implicit class RichNamed(val named: HasName) {
 
     def executeMethodNamePart(rootComponent: Component, component: Component): String =
       "Execute" + methodNamePart(rootComponent, component).capitalize
@@ -1018,10 +1019,10 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
 
     def initMethodName: String = methodName(typeInitMethodName)
 
-    def methodName(command: DecodeCommand, rootComponent: Component, component: Component): String =
+    def methodName(command: Command, rootComponent: Component, component: Component): String =
       methodName(command.methodNamePart(rootComponent, component))
 
-    def methodName(f: DecodeStructField, rootComponent: Component, component: Component): String =
+    def methodName(f: StructField, rootComponent: Component, component: Component): String =
       methodName(f.methodNamePart(rootComponent, component))
 
     def comment: CAstElements = Seq(CEol, CComment(str), CEol)
@@ -1118,7 +1119,7 @@ private case class TypedVar(name: String, t: CType) {
   val field = CStructTypeDefField(name, t)
 }
 
-case class ComponentParameterField(component: Component, field: DecodeStructField)
+case class ComponentParameterField(component: Component, field: StructField)
 
 object CSourcesGenerator {
 
@@ -1131,9 +1132,9 @@ object CSourcesGenerator {
   }
 
   object ComponentCommand {
-    def apply(component: Component, command: DecodeCommand) = WithComponent[DecodeCommand](component, command)
+    def apply(component: Component, command: Command) = WithComponent[Command](component, command)
 
-    def unapply(o: WithComponent[DecodeCommand]) = WithComponent.unapply(o)
+    def unapply(o: WithComponent[Command]) = WithComponent.unapply(o)
   }
 
   object ComponentEventMessage {
@@ -1166,7 +1167,7 @@ object CSourcesGenerator {
   private var fileNameId: Int = 0
   private var typeNameId: Int = 0
 
-  implicit class RichOptionNamed(val optionNamed: OptionNamed) {
+  implicit class RichOptionNamed(val optionNamed: HasOptionName) {
     def fileName: String =
       optionNamed.optionName.map(_.asMangledString).getOrElse { fileNameId += 1; "type" + fileNameId }
 
@@ -1268,7 +1269,7 @@ object CSourcesGenerator {
 
   private val keywords = Seq("return")
 
-  private def casesForMap[T <: Named](map: immutable.HashMap[Int, WithComponent[T]],
-                                      apply: (T, Component) => Option[CAstElements]): Seq[CCase] =
+  private def casesForMap[T <: HasName](map: immutable.HashMap[Int, WithComponent[T]],
+                                        apply: (T, Component) => Option[CAstElements]): Seq[CCase] =
     map.toSeq.sortBy(_._1).flatMap { case (id, WithComponent(c, _2)) => apply(_2, c).map(els => CCase(CIntLiteral(id), els)) }
 }

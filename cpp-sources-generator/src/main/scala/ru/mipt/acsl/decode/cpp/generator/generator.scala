@@ -7,6 +7,7 @@ import java.security.MessageDigest
 import com.typesafe.scalalogging.LazyLogging
 import ru.mipt.acsl.decode.model.domain.TypeKind
 import ru.mipt.acsl.decode.model.domain._
+import ru.mipt.acsl.decode.model.domain.proxy.MaybeProxy
 import ru.mipt.acsl.generation.Generator
 import ru.mipt.acsl.generator.cpp.ast._
 
@@ -108,7 +109,7 @@ class CppSourcesGenerator(val config: CppGeneratorConfiguration) extends Generat
   var fileNameId: Int = 0
   var typeNameId: Int = 0
 
-  private def fileNameFromOptionName(name: Option[DecodeName]): String = {
+  private def fileNameFromOptionName(name: Option[ElementName]): String = {
     if (name.isDefined) {
       name.get.asMangledString
     } else {
@@ -117,7 +118,7 @@ class CppSourcesGenerator(val config: CppGeneratorConfiguration) extends Generat
     }
   }
 
-  private def cppTypeNameFromOptionName(name: Option[DecodeName]): String = {
+  private def cppTypeNameFromOptionName(name: Option[ElementName]): String = {
     if (name.isDefined) {
       name.get.asMangledString
     } else {
@@ -127,7 +128,7 @@ class CppSourcesGenerator(val config: CppGeneratorConfiguration) extends Generat
   }
 
   private def fileNameFor(t: DecodeType): String = t match {
-    case t: Named => t.name.asMangledString
+    case t: HasName => t.name.asMangledString
     case t: ArrayType =>
       val baseTypeFileName: String = fileNameFor(t.baseType.obj)
       val min = t.size.min
@@ -142,13 +143,13 @@ class CppSourcesGenerator(val config: CppGeneratorConfiguration) extends Generat
     case t: GenericTypeSpecialized =>
       fileNameFor(t.genericType.obj) + "_" +
         t.genericTypeArguments.map(tp => if (tp.isDefined) fileNameFor(tp.get.obj) else "void").mkString("_")
-    case t: OptionNamed => fileNameFromOptionName(t.optionName)
+    case t: HasOptionName => fileNameFromOptionName(t.optionName)
     case _ => sys.error("not implemented")
   }
 
   private def cppTypeNameFor(t: DecodeType): String = {
     t match {
-      case t: Named => t.name.asMangledString
+      case t: HasName => t.name.asMangledString
       case t: PrimitiveType => primitiveTypeToCTypeApplication(t).name
       case t: ArrayType =>
         val baseCType: String = cppTypeNameFor(t.baseType.obj)
@@ -164,7 +165,7 @@ class CppSourcesGenerator(val config: CppGeneratorConfiguration) extends Generat
       case t: GenericTypeSpecialized =>
         cppTypeNameFor(t.genericType.obj) + "_" +
         t.genericTypeArguments.map(tp => if (tp.isDefined) cppTypeNameFor(tp.get.obj) else "void").mkString("_")
-      case t: OptionNamed => cppTypeNameFromOptionName(t.optionName)
+      case t: HasOptionName => cppTypeNameFromOptionName(t.optionName)
       case _ => sys.error("not implemented")
     }
   }
@@ -250,7 +251,7 @@ class CppSourcesGenerator(val config: CppGeneratorConfiguration) extends Generat
   private def collectNsForType(t: DecodeType, set: mutable.Set[Namespace]) {
     set += t.namespace
     t match {
-      case t: BaseTyped => collectNsForType(t.baseType, set)
+      case t: HasBaseType => collectNsForType(t.baseType, set)
       case t: StructType => t.fields.foreach(f => collectNsForType(f.typeUnit.t, set))
       case t: GenericTypeSpecialized => t.genericTypeArguments
         .filter(_.isDefined).foreach(a => collectNsForType(a.get, set))
@@ -326,7 +327,7 @@ class CppSourcesGenerator(val config: CppGeneratorConfiguration) extends Generat
 
   private val keywords = Seq("return")
 
-  private def methodNameForDecodeName(name: DecodeName): String = {
+  private def methodNameForDecodeName(name: ElementName): String = {
     var methodName = name.asMangledString
     if (keywords.contains(methodName))
       methodName = "_" + methodName
@@ -396,7 +397,7 @@ class CppSourcesGenerator(val config: CppGeneratorConfiguration) extends Generat
 
   private def casesForCommands(comp: Component): Seq[CppCase] = {
     var commandNextId = 0
-    val commandsById = mutable.HashMap.empty[Int, (Component, DecodeCommand)]
+    val commandsById = mutable.HashMap.empty[Int, (Component, Command)]
     comp.commands.foreach { cmd =>
       assert(commandsById.put(cmd.id.getOrElse({commandNextId += 1; commandNextId - 1}), (comp, cmd)).isEmpty)
     }

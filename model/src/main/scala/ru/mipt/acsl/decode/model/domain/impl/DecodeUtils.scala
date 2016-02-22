@@ -22,7 +22,7 @@ object DecodeUtils {
     "\\.".r.split(namespaceFqn).foreach { nsName =>
       val parentNamespace = namespace
       namespace = Some(namespaces.find(_.name.asMangledString == nsName).getOrElse {
-        val newNamespace = NamespaceImpl(DecodeNameImpl.newFromMangledName(nsName), parentNamespace)
+        val newNamespace = NamespaceImpl(ElementName.newFromMangledName(nsName), parentNamespace)
         parentNamespace match {
           case Some(parentNs) => parentNs.subNamespaces = parentNs.subNamespaces :+ newNamespace
           case _ => registry.rootNamespaces = registry.rootNamespaces :+ newNamespace
@@ -51,7 +51,7 @@ object DecodeUtils {
     namespace
   }
 
-  def getUriForNamespaceAndName(namespaceFqn: Fqn, name: DecodeName): URI = {
+  def getUriForNamespaceAndName(namespaceFqn: Fqn, name: ElementName): URI = {
     val namespaceNameParts = namespaceFqn.parts :+ name
     URI.create("/" + namespaceNameParts.map(_.asMangledString).map(s => URLEncoder.encode(s, Charsets.UTF_8.name()))
       .mkString("/"))
@@ -86,7 +86,7 @@ object DecodeUtils {
 
   def getNamespaceFqnFromUri(uri: URI): Fqn = {
     val uriParts = getUriParts(uri)
-    FqnImpl(uriParts.take(uriParts.size - 1).map(DecodeNameImpl.newFromMangledName))
+    FqnImpl(uriParts.take(uriParts.size - 1).map(ElementName.newFromMangledName))
   }
 
   def getUriForSourceTypeFqnString(typeFqnString: String, defaultNamespaceFqn: Fqn): URI = {
@@ -103,7 +103,7 @@ object DecodeUtils {
     getUriForNamespaceAndName(namespaceFqn.copyDropLast(), namespaceFqn.last)
   }
 
-  def  getUriForTypeNamespaceNameGenericArguments(namespaceFqn: Fqn, typeName: DecodeName,
+  def  getUriForTypeNamespaceNameGenericArguments(namespaceFqn: Fqn, typeName: ElementName,
                                                   typeGenericArguments: String): URI = {
     URI.create("/" + URLEncoder.encode((namespaceFqn.parts :+ typeName).map(_.asMangledString)
       .map(s => URLEncoder.encode(s, Charsets.UTF_8.name())).mkString("/") + typeGenericArguments,
