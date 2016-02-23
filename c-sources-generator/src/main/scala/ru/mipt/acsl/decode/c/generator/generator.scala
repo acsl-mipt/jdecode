@@ -1245,20 +1245,20 @@ object CSourcesGenerator {
   private def primitiveTypeToCTypeApplication(primitiveType: PrimitiveType): CTypeApplication = {
     import TypeKind._
     (primitiveType.kind, primitiveType.bitLength) match {
-      case (Bool, 8) => CUnsignedCharType
-      case (Bool, 16) => CUnsignedShortType
-      case (Bool, 32) => CUnsignedIntType
-      case (Bool, 64) => CUnsignedLongType
+      case (Bool, 8) => CUint8TType
+      case (Bool, 16) => CUint16TType
+      case (Bool, 32) => CUint32TType
+      case (Bool, 64) => CUint64TType
       case (Float, 32) => CFloatType
       case (Float, 64) => CDoubleType
-      case (Int, 8) => CSignedCharType
-      case (Int, 16) => CSignedShortType
-      case (Int, 32) => CSignedIntType
-      case (Int, 64) => CSignedLongType
-      case (Uint, 8) => CUnsignedCharType
-      case (Uint, 16) => CUnsignedShortType
-      case (Uint, 32) => CUnsignedIntType
-      case (Uint, 64) => CUnsignedLongType
+      case (Int, 8) => CInt8TType
+      case (Int, 16) => CInt16TType
+      case (Int, 32) => CInt32TType
+      case (Int, 64) => CInt64TType
+      case (Uint, 8) => CUint8TType
+      case (Uint, 16) => CUint16TType
+      case (Uint, 32) => CUint32TType
+      case (Uint, 64) => CUint64TType
       case _ => sys.error("illegal bit length")
     }
   }

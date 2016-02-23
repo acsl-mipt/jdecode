@@ -188,6 +188,15 @@ case object CFloatType extends CNativeType("float")
 
 case object CDoubleType extends CNativeType("double")
 
+case object CInt8TType extends CNativeType("int8_t")
+case object CInt16TType extends CNativeType("int16_t")
+case object CInt32TType extends CNativeType("int32_t")
+case object CInt64TType extends CNativeType("int64_t")
+case object CUint8TType extends CNativeType("uint8_t")
+case object CUint16TType extends CNativeType("uint16_t")
+case object CUint32TType extends CNativeType("uint32_t")
+case object CUint64TType extends CNativeType("uint64_t")
+
 class CTypeApplication(val name: String) extends CType {
   override def generate(s: CGenState): Unit = s.append(name)
 }
