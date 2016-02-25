@@ -1,7 +1,6 @@
 package ru.mipt.acsl.decode.model.domain.impl
 
 import org.parboiled2._
-import shapeless.HList
 
 /**
   * @author Artem Shein

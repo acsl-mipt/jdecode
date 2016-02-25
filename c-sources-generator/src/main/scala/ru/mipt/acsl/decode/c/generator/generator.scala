@@ -1,26 +1,19 @@
 package ru.mipt.acsl.decode.c.generator
 
 import java.io
-import java.io.{File, OutputStreamWriter, FileOutputStream}
-import java.security.MessageDigest
+import java.io.{File, FileOutputStream, OutputStreamWriter}
 
 import com.google.common.base.CaseFormat
 import com.typesafe.scalalogging.LazyLogging
+import resource._
 import ru.mipt.acsl.decode.model.domain._
-import ru.mipt.acsl.decode.model.domain.impl.types.BerType
-import ru.mipt.acsl.decode.model.domain.impl.types.OptionalType
-import ru.mipt.acsl.decode.model.domain.impl.types.OrType
+import ru.mipt.acsl.decode.model.domain.impl.types.{BerType, OptionalType, OrType}
 import ru.mipt.acsl.decode.model.domain.proxy.MaybeProxy
 import ru.mipt.acsl.generation.Generator
-import ru.mipt.acsl.generator.c.ast.implicits._
 import ru.mipt.acsl.generator.c.ast._
+import ru.mipt.acsl.generator.c.ast.implicits._
 
-import resource._
-
-import scala.collection.immutable.HashMap
-import scala.collection.mutable
-import scala.collection.immutable
-import scala.util.Either.RightProjection
+import scala.collection.{immutable, mutable}
 import scala.util.Random
 
 case class CGeneratorConfiguration(outputDir: io.File, registry: Registry, rootComponentFqn: String,
@@ -370,7 +363,7 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
         case _ => sys.error(s"not implemented for $t")
       }
       case t: ArrayType => t.size.max match {
-        case 0 => PTR_SIZE
+        case 0 => BER_BYTE_SIZE + PTR_SIZE
         case _ => (t.size.max * t.baseType.obj.byteSize).toInt
       }
       case t: StructType => t.fields.map(_.typeUnit.t.obj.byteSize).sum
