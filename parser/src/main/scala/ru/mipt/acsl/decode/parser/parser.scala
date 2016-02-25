@@ -254,8 +254,7 @@ class DecodeParboiledParser(val input: ParserInput) extends Parser with LazyLogg
     (atomic("final") ~ Ew ~> (() => true) | MATCH ~> (() => false)) ~ atomic("enum") ~ Ew ~
       (atomic("extends") ~ Ew ~ ExtendsEnumType | TypeApplication ~> { (ta: Option[MaybeProxy[DecodeType]]) =>
         Right[MaybeProxy[EnumType], MaybeProxy[DecodeType]](ta.get)
-      }) ~ Ew.? ~
-      '(' ~ Ew.? ~ EnumTypeValues ~ Ew.? ~ ')' ~> newEnumType _
+      }) ~ Ew.? ~ '(' ~ Ew.? ~ EnumTypeValues ~ Ew.? ~ ')' ~> newEnumType _
   }
 
   private def newStructType(info: Option[String], name: ElementName, fields: Seq[StructField]): StructType =
@@ -378,7 +377,7 @@ private case class ImportPartNameAlias(originalName: ElementName, _alias: Elemen
   def alias: String = _alias.asMangledString
 }
 
-object DecodeParser {
+object OldDecodeParser {
   def parse(input: ParserInput): Try[Namespace] = {
     val parser: DecodeParboiledParser = new DecodeParboiledParser(input)
     parser.File.run()
@@ -398,7 +397,7 @@ class DecodeSourceProvider extends LazyLogging {
       val resource: String = resourcePath + "/" + name
       logger.debug(s"Parsing $resource...")
       val input: StringBasedParserInput = Source.fromInputStream(getClass.getResourceAsStream(resource)).mkString
-      DecodeParser.parse(input) match {
+      OldDecodeParser.parse(input) match {
         case Success(v) => v.rootNamespace
         case Failure(e) => e match {
           case p: ParseError =>
