@@ -5,7 +5,7 @@ import com.intellij.openapi.fileTypes.LanguageFileType
 import javax.swing.Icon
 
 object DecodeFileType {
-    val instance = new DecodeFileType()
+    val instance : DecodeFileType = new DecodeFileType()
 }
 
 /**
