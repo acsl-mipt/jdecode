@@ -9,99 +9,13 @@ import resource._
 import ru.mipt.acsl.decode.model.domain._
 import ru.mipt.acsl.generation.Generator
 import ru.mipt.acsl.generator.html.ast._
+import ru.mipt.acsl.generator.html.ast.tags._
 import ru.mipt.acsl.generator.html.ast.implicits._
-
-import scala.util.{Failure, Success, Try}
 
 /**
   * @author Artem Shein
   */
 case class HtmlDocsGeneratorConfiguration(outputFile: io.File, registry: Registry, exclude: Set[Fqn] = Set.empty)
-
-object HttpEquivAttr {
-  def apply(value: String): Attr = Attr("http-equiv", value)
-}
-
-object ContentAttr {
-  def apply(value: String): Attr = Attr("content", value)
-}
-
-object CharsetAttr {
-  def apply(value: String): Attr = Attr("charset", value)
-}
-
-object meta {
-  def apply(httpEquiv: String = null, content: String = null, charset: String = null): HtmlTag =
-    new HtmlTag("meta", Seq(Option(httpEquiv).map(HttpEquivAttr(_)), Option(content).map(ContentAttr(_)),
-      Option(charset).map(CharsetAttr(_))).flatten)
-}
-
-case object doctype extends HtmlElement {
-  override def generate(s: HtmlGenState): Unit = s.append("<!DOCTYPE html>")
-}
-
-package object tags {
-  val html = new HtmlTag("html")
-  val head = new HtmlTag("head")
-  val title = new HtmlTag("title")
-  val link = new HtmlTag("link")
-  val script = new HtmlTagExt("script")
-  val body = new HtmlTag("body")
-  val div = new HtmlTag("div")
-  val table = new HtmlTag("table")
-  val tbody = new HtmlTag("tbody")
-  val thead = new HtmlTag("thead")
-  val tr = new HtmlTag("tr")
-  val td = new HtmlTag("td")
-  val th = new HtmlTag("th")
-  val h1 = new HtmlTag("h1")
-  val h2 = new HtmlTag("h2")
-  val h3 = new HtmlTag("h3")
-  val h4 = new HtmlTag("h4")
-  val h5 = new HtmlTag("h5")
-  val small = new HtmlTag("small")
-  val br = new HtmlTag("br")
-  val ul = new HtmlTag("ul")
-  val ol = new HtmlTag("ol")
-  val li = new HtmlTag("li")
-  val a = new HtmlTag("a")
-  val p = new HtmlTag("p")
-  val hr = new HtmlTag("hr")
-}
-
-object rel {
-  def apply(str: String): Attr = Attr("rel", str)
-}
-
-object id {
-  def apply(str: String): Attr = Attr("id", str)
-}
-
-object href {
-  def apply(str: String): Attr = Attr("href", str)
-}
-
-object src {
-  def apply(str: String): Attr = Attr("src", str)
-}
-
-object _class {
-  def apply(str: String): Attr = Attr("class", str)
-}
-
-object style {
-  def apply(str: String): Attr = Attr("style", str)
-}
-
-object text {
-  def apply(str: String): HtmlString = HtmlString(str)
-}
-
-object unsafe {
-  def apply(str: String): HtmlUnsafeString = HtmlUnsafeString(str)
-}
-
-import tags._
 
 class HtmlDocsGenerator(val config: HtmlDocsGeneratorConfiguration) extends Generator[HtmlDocsGeneratorConfiguration] {
   override def getConfiguration: HtmlDocsGeneratorConfiguration = config
@@ -244,8 +158,8 @@ class HtmlDocsGenerator(val config: HtmlDocsGeneratorConfiguration) extends Gene
       ul(e.allConstants.toSeq.sortBy(_.value.toInt).map(c => li(c.name.asMangledString + " = " + c.value)): _*))
     case p: PrimitiveType => td(p.bitLength + "-битный " + TypeKind.nameForTypeKind(p.kind))
     case n: NativeType => td("Системный встроенный тип")
-    case g: GenericType => td("Обобщенный тип ")(g.name.asMangledString)(
-      g.typeParameters.map(_.map(_.asMangledString).getOrElse("")).mkString(", "))
+    case g: GenericType => td("Обобщенный тип ")(g.name.asMangledString)('<' +
+      g.typeParameters.map(_.map(_.asMangledString).getOrElse("")).mkString(", ") + '>')
     case s: GenericTypeSpecialized =>
       td("Специализированный обобщенный тип ", typeNameWithLink(s.genericType.obj), "<",
         unsafe(s.genericTypeArguments.map(
@@ -328,13 +242,13 @@ class HtmlDocsGenerator(val config: HtmlDocsGeneratorConfiguration) extends Gene
   def trForMessageParameter(mp: MessageParameter, component: Component): HtmlTag =
     tr(
       td("Параметр " + mp.value),
-      td(typeName(mp.ref(component).t)),
+      td(typeNameWithLink(mp.ref(component).t)),
       td(mp.info.getOrElse("")))
 
   def trForParameter(p: Parameter): HtmlTag =
     tr(
       td(p.name.asMangledString),
-      td(typeName(p.paramType.obj)),
+      td(typeNameWithLink(p.paramType.obj)),
       td(p.info.getOrElse("")))
 
   implicit class RichFile(val file: io.File) {
