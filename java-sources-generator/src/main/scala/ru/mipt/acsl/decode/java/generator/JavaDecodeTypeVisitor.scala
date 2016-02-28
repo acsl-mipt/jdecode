@@ -2,7 +2,6 @@ package ru.mipt.acsl.decode.java.generator
 
 import com.google.common.base.CaseFormat
 import ru.mipt.acsl.decode.model.domain._
-import ru.mipt.acsl.decode.model.domain.impl.types.{BerType, OptionalType, OrType}
 import ru.mipt.acsl.generator.java.ast.{JavaType, JavaTypeApplication}
 
 /**
@@ -47,9 +46,6 @@ object JavaDecodeTypeVisitor {
     case t: ArrayType => new JavaTypeApplication(t.namespace.fqn.asMangledString + "." + JavaDecodeTypeVisitor.classNameFromArrayType(t),
       JavaDecodeTypeVisitor.getJavaTypeForDecodeType(t.baseType.obj, genericUse = true))
     case t: AliasType => getJavaTypeForDecodeType(t.baseType.obj, genericUse)
-    case t: NativeType if t.isInstanceOf[BerType] => new JavaTypeApplication("decode.ber")
-    case t: NativeType if t.isInstanceOf[OrType] => new JavaTypeApplication("decode.or")
-    case t: NativeType if t.isInstanceOf[OptionalType] => new JavaTypeApplication("decode.optional")
     case t: HasOptionName => new JavaTypeApplication(t.namespace.fqn.asMangledString + "." + JavaDecodeTypeVisitor.classNameFromTypeName(
       // FIXME: handle Option
       t.optionName.get.asMangledString))

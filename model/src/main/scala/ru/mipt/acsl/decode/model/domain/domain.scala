@@ -10,7 +10,7 @@ import scala.collection.{mutable, immutable}
 import scala.reflect.ClassTag
 
 object DecodeConstants {
-  val SYSTEM_NAMESPACE_FQN: Fqn = FqnImpl.newFromSource("decode")
+  val SYSTEM_NAMESPACE_FQN: Fqn = Fqn.newFromSource("decode")
 }
 
 package object aliases {
@@ -36,7 +36,7 @@ trait HasOptionName {
   def optionName: Option[ElementName]
 }
 
-trait HasName extends HasOptionName {
+trait HasName {
   def name: ElementName
 }
 
@@ -55,18 +55,18 @@ trait Fqn {
 
   def last: ElementName = parts.last
 
-  def copyDropLast(): Fqn
+  def copyDropLast: Fqn
 
   def size: Int = parts.size
 
   def isEmpty: Boolean = parts.isEmpty
 }
 
-trait Referenceable extends HasOptionName
+trait Referenceable extends HasName
 
 trait Language extends Referenceable with NamespaceAware
 
-trait Namespace extends Referenceable with HasName with Resolvable with Validatable {
+trait Namespace extends Referenceable with HasName with HasOptionInfo with Resolvable with Validatable {
   def asString: String
 
   def units: immutable.Seq[Measure]
@@ -101,10 +101,14 @@ trait Namespace extends Referenceable with HasName with Resolvable with Validata
       currentNamespace = currentNamespace.parent.get
     }
     parts += currentNamespace.name
-    FqnImpl(parts.reverse)
+    Fqn(parts.reverse)
   }
 
   def rootNamespace: Namespace = parent.map(_.rootNamespace).getOrElse(this)
+
+  def allComponents: Seq[Component] = components ++ subNamespaces.flatMap(_.allComponents)
+
+  def allNamespaces: Seq[Namespace] = this +: subNamespaces.flatMap(_.allNamespaces)
 }
 
 trait NamespaceAware {
@@ -113,7 +117,7 @@ trait NamespaceAware {
   def namespace_=(namespace: Namespace)
 }
 
-trait OptionNameAndOptionInfoAware extends HasOptionInfo with HasOptionName
+trait NameAndOptionInfoAware extends HasOptionInfo with HasName
 
 trait Measure extends HasName with HasOptionInfo with Referenceable with NamespaceAware with Validatable {
   def display: Option[String]
@@ -144,7 +148,10 @@ object TypeKind extends Enumeration {
   }
 }
 
-trait DecodeType extends Referenceable with OptionNameAndOptionInfoAware with NamespaceAware with Resolvable with Validatable {
+trait DecodeType extends Referenceable with HasName with HasOptionInfo with NamespaceAware with Resolvable with Validatable {
+
+  def fqn: Fqn = Fqn(namespace.fqn.parts :+ name)
+
   override def resolve(registry: Registry): ResolvingResult = {
     val resolvingResultList = mutable.Buffer.empty[ResolvingResult]
     this match {
@@ -200,11 +207,12 @@ trait PrimitiveType extends DecodeType {
   def kind: TypeKind.Value
 }
 
-trait NativeType extends DecodeType with HasName {
-}
+trait NativeType extends DecodeType
+
+private class NativeTypeImpl(name: ElementName, ns: Namespace, info: Option[String]) extends AbstractType(name, ns, info) with NativeType
 
 object NativeType {
-  val MANGLED_TYPE_NAMES: Set[String] = immutable.HashSet[String](BerType.NAME, OrType.NAME, OptionalType.NAME)
+  def apply(name: ElementName, ns: Namespace, info: Option[String]): NativeType = new NativeTypeImpl(name, ns, info)
 }
 
 trait HasBaseType {
@@ -288,7 +296,7 @@ trait StatusMessage extends TmMessage {
   def parameters: Seq[MessageParameter]
 }
 
-abstract class AbstractMessage(info: Option[String]) extends AbstractDecodeOptionalInfoAware(info) with TmMessage
+abstract class AbstractMessage(info: Option[String]) extends AbstractOptionalInfoAware(info) with TmMessage
 
 trait ComponentRef {
   def component: MaybeProxy[Component]
@@ -319,7 +327,7 @@ trait EventMessage extends TmMessage with HasBaseType {
 }
 
 trait Fqned extends HasName with NamespaceAware {
-  def fqn: Fqn = FqnImpl.newFromFqn(namespace.fqn, name)
+  def fqn: Fqn = Fqn.newFromFqn(namespace.fqn, name)
 }
 
 trait Component extends HasOptionInfo with Fqned with Referenceable with HasOptionId with Resolvable with Validatable {
@@ -346,6 +354,10 @@ trait Registry extends Referenceable with HasName with Resolvable with Validatab
   def resolve(): ResolvingResult
 
   def resolveElement[T <: Referenceable](path: ProxyPath)(implicit ct: ClassTag[T]): (Option[T], ResolvingResult)
+
+  def allComponents: Seq[Component] = rootNamespaces.flatMap(_.allComponents)
+
+  def allNamespaces: Seq[Namespace] = rootNamespaces.flatMap(_.allNamespaces)
 
   // TODO: refactoring
   def component(fqn: String): Option[Component] = {

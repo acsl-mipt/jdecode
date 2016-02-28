@@ -19,6 +19,7 @@
         <module>java-sources-generator</module>
         <module>c-sources-generator</module>
         <module>cpp-sources-generator</module>
+        <module>docs-generator</module>
         <module>mavlink-sources-generator</module>
     </modules>
 

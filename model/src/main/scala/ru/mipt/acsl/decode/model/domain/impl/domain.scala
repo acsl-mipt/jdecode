@@ -1,11 +1,11 @@
 package ru.mipt.acsl.decode.model.domain.impl
 
-import ru.mipt.acsl.decode.model.domain.aliases.{ValidatingResult, MessageParameterToken}
+import ru.mipt.acsl.decode.model.domain.aliases.{MessageParameterToken, ValidatingResult}
 import ru.mipt.acsl.decode.model.domain._
 import ru.mipt.acsl.decode.model.domain.impl.types.AbstractNameNamespaceOptionalInfoAware
-import ru.mipt.acsl.decode.model.domain.impl.types.AbstractDecodeOptionalInfoAware
-import ru.mipt.acsl.decode.model.domain.impl.types.NamespaceImpl
-import ru.mipt.acsl.decode.model.domain.impl.proxy.{PrimitiveAndNativeTypesProxyResolver, ExistingElementsProxyResolver}
+import ru.mipt.acsl.decode.model.domain.impl.types.AbstractOptionalInfoAware
+import ru.mipt.acsl.decode.model.domain.impl.types.{Namespace, NamespaceImpl}
+import ru.mipt.acsl.decode.model.domain.impl.proxy.{ExistingElementsProxyResolver, PrimitiveAndGenericTypesProxyResolver}
 import ru.mipt.acsl.decode.model.domain.proxy.aliases.ResolvingResult
 import ru.mipt.acsl.decode.model.domain.proxy.{DecodeProxyResolver, MaybeProxy, ProxyPath}
 import ru.mipt.acsl.decode.modeling.ErrorLevel
@@ -85,14 +85,13 @@ private class RegistryImpl(val name: ElementName, resolvers: DecodeProxyResolver
   if (DecodeConstants.SYSTEM_NAMESPACE_FQN.size != 1)
     sys.error("not implemented")
 
-  var rootNamespaces: immutable.Seq[Namespace] = immutable.Seq(
-    new NamespaceImpl(DecodeConstants.SYSTEM_NAMESPACE_FQN.last, None))
+  var rootNamespaces: immutable.Seq[Namespace] = immutable.Seq.empty
 
   private val proxyResolvers = resolvers.to[immutable.Seq]
 
   def this() = this(ElementName.newFromMangledName("GlobalRegistry"),
     new ExistingElementsProxyResolver(),
-    new PrimitiveAndNativeTypesProxyResolver())
+    new PrimitiveAndGenericTypesProxyResolver())
 
   override def resolveElement[T <: Referenceable](path: ProxyPath)(implicit ct: ClassTag[T]): (Option[T], ResolvingResult) = {
     for (resolver <- proxyResolvers) {
@@ -112,8 +111,6 @@ private class RegistryImpl(val name: ElementName, resolvers: DecodeProxyResolver
 
   override def resolve(registry: Registry): ResolvingResult =
     registry.rootNamespaces.flatMap(_.resolve(registry))
-
-  override def optionName: Option[ElementName] = Some(name)
 
   override def validate(registry: Registry): ValidatingResult =
     registry.rootNamespaces.flatMap(_.validate(registry))
@@ -170,12 +167,9 @@ class MessageParameterRefWalker(var component: Component, var structField: Optio
 class CommandImpl(val name: ElementName, val id: Option[Int], info: Option[String],
                   val parameters: immutable.Seq[Parameter],
                   val returnType: Option[MaybeProxy[DecodeType]])
-  extends AbstractDecodeOptionalInfoAware(info) with Command {
-  override def optionName: Option[ElementName] = Some(name)
-}
+  extends AbstractOptionalInfoAware(info) with Command
 
 class LanguageImpl(name: ElementName, namespace: Namespace, val isDefault: Boolean, info: Option[String])
-  extends AbstractNameNamespaceOptionalInfoAware(name, namespace, info) with Language {
-}
+  extends AbstractNameNamespaceOptionalInfoAware(name, namespace, info) with Language
 
 class MessageParameterImpl(val value: String, val info: Option[String] = None) extends MessageParameter

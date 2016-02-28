@@ -4,7 +4,7 @@ import java.net.{URI, URLDecoder, URLEncoder}
 
 import com.google.common.base.Charsets
 import ru.mipt.acsl.decode.model.domain._
-import ru.mipt.acsl.decode.model.domain.impl.types.{FqnImpl, NamespaceImpl}
+import ru.mipt.acsl.decode.model.domain.impl.types.{Fqn, Namespace, NamespaceImpl}
 
 import scala.collection.immutable
 
@@ -22,7 +22,7 @@ object DecodeUtils {
     "\\.".r.split(namespaceFqn).foreach { nsName =>
       val parentNamespace = namespace
       namespace = Some(namespaces.find(_.name.asMangledString == nsName).getOrElse {
-        val newNamespace = NamespaceImpl(ElementName.newFromMangledName(nsName), parentNamespace)
+        val newNamespace = Namespace(ElementName.newFromMangledName(nsName), parent = parentNamespace)
         parentNamespace match {
           case Some(parentNs) => parentNs.subNamespaces = parentNs.subNamespaces :+ newNamespace
           case _ => registry.rootNamespaces = registry.rootNamespaces :+ newNamespace
@@ -63,8 +63,8 @@ object DecodeUtils {
   }
 
   def newRootDecodeNamespaceForFqn(namespaceFqn: Fqn): Namespace = {
-    namespaceFqn.parts.reverseIterator.drop(1).foldLeft(NamespaceImpl(namespaceFqn.last, None)) { (ns, name) =>
-      val parentNamespace = NamespaceImpl.apply(name, None)
+    namespaceFqn.parts.reverseIterator.drop(1).foldLeft(Namespace(namespaceFqn.last)) { (ns, name) =>
+      val parentNamespace = Namespace(name)
       ns.parent = Some(parentNamespace)
       parentNamespace.subNamespaces = parentNamespace.subNamespaces :+ ns
       parentNamespace
@@ -75,7 +75,7 @@ object DecodeUtils {
   def newNamespaceForFqn(fqn: Fqn): Namespace = {
     var currentNamespace: Option[Namespace] = None
     for (part <- fqn.parts) {
-      val ns = NamespaceImpl(part, currentNamespace)
+      val ns = Namespace(part, parent = currentNamespace)
       currentNamespace = Some(ns)
       for (parent <- ns.parent) {
         parent.subNamespaces = parent.subNamespaces :+ ns
@@ -86,7 +86,7 @@ object DecodeUtils {
 
   def getNamespaceFqnFromUri(uri: URI): Fqn = {
     val uriParts = getUriParts(uri)
-    FqnImpl(uriParts.take(uriParts.size - 1).map(ElementName.newFromMangledName))
+    Fqn(uriParts.take(uriParts.size - 1).map(ElementName.newFromMangledName))
   }
 
   def getUriForSourceTypeFqnString(typeFqnString: String, defaultNamespaceFqn: Fqn): URI = {
@@ -94,13 +94,13 @@ object DecodeUtils {
     val genericStartIndex = processQuestionMarks(normalizeSourceTypeString(typeFqnString)).indexOf('<')
     if (genericStartIndex != -1)
     {
-      val namespaceFqn = FqnImpl.newFromSource(typeFqnString.substring(0, genericStartIndex))
+      val namespaceFqn = Fqn.newFromSource(typeFqnString.substring(0, genericStartIndex))
       return getUriForTypeNamespaceNameGenericArguments(
-        if (namespaceFqn.size > 1) namespaceFqn.copyDropLast() else defaultNamespaceFqn,
+        if (namespaceFqn.size > 1) namespaceFqn.copyDropLast else defaultNamespaceFqn,
         namespaceFqn.last, typeFqnString.substring(genericStartIndex))
     }
-    val namespaceFqn = FqnImpl.newFromSource(typeFqnString)
-    getUriForNamespaceAndName(namespaceFqn.copyDropLast(), namespaceFqn.last)
+    val namespaceFqn = Fqn.newFromSource(typeFqnString)
+    getUriForNamespaceAndName(namespaceFqn.copyDropLast, namespaceFqn.last)
   }
 
   def  getUriForTypeNamespaceNameGenericArguments(namespaceFqn: Fqn, typeName: ElementName,
@@ -150,8 +150,8 @@ object DecodeUtils {
 
     val types = targetNamespace.types
     namespace.types.foreach { t =>
-      val name = t.optionName
-      if (types.exists(t2 => t2.optionName == name))
+      val name = t.name
+      if (types.exists(t2 => t2.name.equals(name)))
         sys.error(s"type name collision '$name'")
       t.namespace = targetNamespace
     }

@@ -47,11 +47,11 @@ case class TypeName(typeName: ElementName) extends ProxyElementName {
   override def mangledName: ElementName = typeName
 }
 case class ArrayTypePath(baseTypePath: ProxyPath, arraySize: ArraySize) extends ProxyElementName {
-  def mangledName: ElementName = ElementName.newFromMangledName(s"[${baseTypePath.mangledName}]")
+  def mangledName: ElementName = ElementName.newFromMangledName(s"[${baseTypePath.mangledName.asMangledString}]")
 }
 
 class ProxyPath(val ns: Fqn, val element: ProxyElementName) {
-  def mangledName: ElementName = ElementName.newFromMangledName(s"$ns.${element.mangledName.asMangledString}")
+  def mangledName: ElementName = ElementName.newFromMangledName(s"${ns.asMangledString}.${element.mangledName.asMangledString}")
   override def toString: String = s"ProxyPath{${ns.asMangledString}.$element}"
 }
 
@@ -69,13 +69,13 @@ trait Proxy {
 class MaybeProxy[T <: Referenceable : ClassTag](var v: Either[Proxy, T]) extends Resolvable {
 
   def resolve(registry: Registry): ResolvingResult = {
-    if (isResolved)
-      return Result.empty
-    val resolvingResult = registry.resolveElement[T](proxy.path)
-    resolvingResult._1.foreach { o =>
-        v = Right(o)
+    isResolved match {
+      case true => Result.empty
+      case _ =>
+        val resolvingResult = registry.resolveElement[T](proxy.path)
+        resolvingResult._1.foreach(o => v = Right(o))
+        resolvingResult._2
     }
-    resolvingResult._2
   }
 
   def isProxy: Boolean = v.isLeft
@@ -102,7 +102,7 @@ object MaybeProxy {
 
   def proxyDefaultNamespace[T <: Referenceable : ClassTag](elementFqn: Fqn, defaultNamespace: Namespace): MaybeProxy[T] =
     if (elementFqn.size > 1)
-      proxy(elementFqn.copyDropLast(), TypeName(elementFqn.last))
+      proxy(elementFqn.copyDropLast, TypeName(elementFqn.last))
     else
       proxy(defaultNamespace.fqn, TypeName(elementFqn.last))
 

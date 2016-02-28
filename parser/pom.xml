@@ -59,15 +59,16 @@
             <artifactId>grammar-kit</artifactId>
             <version>1.0-SNAPSHOT</version>
             <scope>system</scope>
-            <systemPath>${project.basedir}/libs/grammar-kit.jar</systemPath>
+            <systemPath>${project.basedir}/lib/grammar-kit.jar</systemPath>
         </dependency>
+
 
         <dependency>
             <groupId>org.intellij</groupId>
             <artifactId>light-psi-all</artifactId>
             <version>1.0-SNAPSHOT</version>
             <scope>system</scope>
-            <systemPath>${project.basedir}/libs/light-psi-all.jar</systemPath>
+            <systemPath>${project.basedir}/lib/light-psi-all.jar</systemPath>
         </dependency>
 
     </dependencies>

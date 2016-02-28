@@ -1,12 +1,9 @@
 package ru.mipt.acsl.decode.model.domain.impl.proxy
 
 import ru.mipt.acsl.decode.model.domain._
-import ru.mipt.acsl.decode.model.domain.impl.types.BerType
 import ru.mipt.acsl.decode.model.domain.impl.types.GenericTypeSpecializedImpl
-import ru.mipt.acsl.decode.model.domain.impl.types.OptionalType
-import ru.mipt.acsl.decode.model.domain.impl.types.OrType
-import ru.mipt.acsl.decode.model.domain.impl.{ElementName, DecodeUtils}
-import ru.mipt.acsl.decode.model.domain.impl.types.PrimitiveTypeImpl
+import ru.mipt.acsl.decode.model.domain.impl.{DecodeUtils, ElementName}
+import ru.mipt.acsl.decode.model.domain.impl.types.{GenericTypeSpecialized, PrimitiveTypeImpl}
 import ru.mipt.acsl.decode.model.domain.proxy._
 import ru.mipt.acsl.decode.model.domain.proxy.aliases._
 
@@ -15,9 +12,8 @@ import scala.collection.mutable
 /**
   * Created by metadeus on 20.02.16.
   */
-class PrimitiveAndNativeTypesProxyResolver extends DecodeProxyResolver {
+class PrimitiveAndGenericTypesProxyResolver extends DecodeProxyResolver {
   private val primitiveTypeByTypeKindBitSize: mutable.Map[ElementName, PrimitiveType] = mutable.HashMap.empty
-  private val nativeTypeByNameMap: mutable.Map[ElementName, DecodeType] = mutable.HashMap.empty
   private val genericTypeSpecializedByTypeNameMap: mutable.Map[ElementName, GenericTypeSpecialized] = mutable.HashMap.empty
 
   override def resolveElement(registry: Registry, path: ProxyPath): (Option[Referenceable], ResolvingResult) = {
@@ -32,10 +28,10 @@ class PrimitiveAndNativeTypesProxyResolver extends DecodeProxyResolver {
         case e: PrimitiveTypeName =>
           val primitiveType = primitiveTypeByTypeKindBitSize.getOrElseUpdate(path.mangledName,
             new PrimitiveTypeImpl(
-              Some(ElementName.newFromMangledName(s"${TypeKind.nameForTypeKind(e.typeKind)}:${e.bitSize}")),
+              ElementName.newFromMangledName(s"${TypeKind.nameForTypeKind(e.typeKind)}:${e.bitSize}"),
               systemNamespace, None, e.typeKind, e.bitSize))
-          val primitiveTypeName = primitiveType.optionName.get
-          if (!systemNamespace.types.exists(_.optionName.exists(_.equals(primitiveTypeName))))
+          val primitiveTypeName = primitiveType.name
+          if (!systemNamespace.types.exists(_.name.equals(primitiveTypeName)))
             systemNamespace.types = systemNamespace.types :+ primitiveType
           (Some(primitiveType), Result.empty)
         // Generic type
@@ -45,10 +41,12 @@ class PrimitiveAndNativeTypesProxyResolver extends DecodeProxyResolver {
           if (result.hasError)
             return (None, result)
           val genericType = maybeProxy.obj
-          val specializedType = genericTypeSpecializedByTypeNameMap.getOrElseUpdate(path.mangledName, {
-            val specializedType = new GenericTypeSpecializedImpl(None, genericType.namespace, None,
+          val name = path.element.mangledName
+          val specializedType = systemNamespace.types.find(_.name.equals(name))
+            .map(_.asInstanceOf[GenericTypeSpecialized]).getOrElse({
+            val specializedType = GenericTypeSpecialized(name, genericType.namespace, None,
               MaybeProxy.obj(genericType),
-              e.genericArgumentPaths.map(_.map { arg => MaybeProxy.proxy[DecodeType](arg) }))
+              e.genericArgumentPaths.map(_.map(arg => MaybeProxy.proxy[DecodeType](arg))))
             systemNamespace.types = systemNamespace.types :+ specializedType
             specializedType
           })
@@ -59,24 +57,6 @@ class PrimitiveAndNativeTypesProxyResolver extends DecodeProxyResolver {
             (None, argsResult)
           else
             (Some(specializedType), Result.empty)
-        // Native type
-        case e: TypeName if NativeType.MANGLED_TYPE_NAMES.contains(e.typeName.asMangledString) =>
-          val name = ElementName.newFromMangledName(e.typeName.asMangledString)
-          val nativeType = nativeTypeByNameMap.getOrElseUpdate(path.mangledName, {
-            name match {
-              case BerType.MANGLED_NAME =>
-                BerType(systemNamespace, None)
-              case OptionalType.MANGLED_NAME =>
-                new OptionalType(Some(name), systemNamespace, None)
-              case OrType.MANGLED_NAME =>
-                new OrType(Some(name), systemNamespace, None)
-              case _ =>
-                sys.error("not implemented")
-            }
-          })
-          if (!systemNamespace.types.exists(_.optionName.equals(nativeType.optionName)))
-            systemNamespace.types = systemNamespace.types :+ nativeType
-          (Some(nativeType), Result.empty)
         case _ =>
           (None, Result.empty)
       }

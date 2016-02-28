@@ -4,18 +4,35 @@ import java.io.InputStream
 import java.net.URLEncoder
 
 import com.google.common.base.Charsets
+import com.intellij.lang.{ASTNode, DefaultASTFactory, DefaultASTFactoryImpl, PsiBuilderFactory}
+import com.intellij.lang.impl.{PsiBuilderFactoryImpl, PsiBuilderImpl}
+import com.intellij.mock.{MockApplicationEx, MockProject, MockProjectEx}
+import com.intellij.openapi.Disposable
+import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.extensions.Extensions
+import com.intellij.openapi.fileTypes.{FileTypeManager, FileTypeRegistry}
+import com.intellij.openapi.progress.ProgressManager
+import com.intellij.openapi.progress.impl.ProgressManagerImpl
+import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.{Disposer, Getter}
+import com.intellij.openapi.vfs.encoding.{EncodingManager, EncodingManagerImpl}
+import com.intellij.psi.impl.source.resolve.reference.{ReferenceProvidersRegistry, ReferenceProvidersRegistryImpl}
+import com.intellij.psi.impl.source.tree.FileElement
 import com.typesafe.scalalogging.LazyLogging
 import org.parboiled2.ParserInput.StringBasedParserInput
 import org.parboiled2._
+import org.picocontainer.PicoContainer
+import org.picocontainer.defaults.AbstractComponentAdapter
 import ru.mipt.acsl.decode.model.domain.impl._
 import ru.mipt.acsl.decode.model.domain.impl.types._
 import ru.mipt.acsl.decode.model.domain._
 import ru.mipt.acsl.decode.model.domain.proxy._
+import ru.mipt.acsl.decode.parser.psi.DecodeTypes
 
 import scala.collection.{immutable, mutable}
 import scala.io.Source
 import scala.reflect.ClassTag
-import scala.util.{Try, Success, Failure}
+import scala.util.{Failure, Success, Try}
 
 class DecodeParboiledParser(val input: ParserInput) extends Parser with LazyLogging {
 
@@ -40,9 +57,9 @@ class DecodeParboiledParser(val input: ParserInput) extends Parser with LazyLogg
 
   def ElementIdLiteral: Rule0 = rule { ElementNameLiteral.+('.') }
 
-  def ElementId: Rule1[Fqn] = rule { ElementName_.+('.') ~> FqnImpl.apply _ }
+  def ElementId: Rule1[Fqn] = rule { ElementName_.+('.') ~> Fqn.apply _ }
 
-  def Namespace: Rule1[Namespace] = rule {
+  def Namespace_ : Rule1[Namespace] = rule {
     InfoEw.? ~ atomic("namespace") ~ Ew ~ ElementId ~>
       ((info: Option[String], fqn: Fqn) => newNamespace(info, fqn))
   }
@@ -60,7 +77,7 @@ class DecodeParboiledParser(val input: ParserInput) extends Parser with LazyLogg
 
   def addImport(fqn: Fqn) {
     require(!imports.contains(fqn.last.asMangledString), fqn.last.asMangledString)
-    imports.put(fqn.last.asMangledString, MaybeProxy.proxy(fqn.copyDropLast(), TypeName(fqn.last)))
+    imports.put(fqn.last.asMangledString, MaybeProxy.proxy(fqn.copyDropLast, TypeName(fqn.last)))
   }
 
   def Import: Rule0 = rule {
@@ -153,8 +170,8 @@ class DecodeParboiledParser(val input: ParserInput) extends Parser with LazyLogg
 
   def EventMessageParameter: Rule1[Either[MessageParameter, Parameter]] = rule {
     InfoEw.? ~ ((atomic("var") ~ Ew ~ TypeUnitApplication ~ Ew ~ ElementName_ ~> newCommandArg _
-      ~> Right[MessageParameter, Parameter] _) |
-      (MessageParameterElement ~> newMessageParameter _ ~> Left[MessageParameter, Parameter] _))
+      ~> Right[MessageParameter, Parameter] _)
+      | (MessageParameterElement ~> newMessageParameter _ ~> Left[MessageParameter, Parameter] _))
   }
 
   def EventMessageParameters: Rule1[Seq[Either[MessageParameter, Parameter]]] = rule {
@@ -193,9 +210,11 @@ class DecodeParboiledParser(val input: ParserInput) extends Parser with LazyLogg
     component = Some(new ComponentImpl(componentName.get, ns.get, id,
       baseType.map(MaybeProxy.obj), info, subComponents.map(_.map{ fqn =>
       val alias = fqn.asMangledString
-      if (fqn.size == 1 && imports.contains(alias))
-        new ComponentRefImpl(imports.get(alias).get.asInstanceOf[MaybeProxy[Component]], Some(alias))
-      else
+      if (fqn.size == 1 && imports.contains(alias)) {
+        val _import = imports.get(alias).get
+        new ComponentRefImpl(_import.asInstanceOf[MaybeProxy[Component]],
+          if (_import.proxy.path.element.mangledName.asMangledString.equals(alias)) None else Some(alias))
+      } else
         new ComponentRefImpl(MaybeProxy.proxyDefaultNamespace(fqn, ns.get), None)
       }).getOrElse(immutable.Seq.empty)))
     component.get
@@ -241,10 +260,13 @@ class DecodeParboiledParser(val input: ParserInput) extends Parser with LazyLogg
 
   def EnumTypeValues: Rule1[Seq[EnumConstant]] = rule { EnumTypeValue.+(Ew.? ~ ',' ~ Ew.?) ~ (Ew.? ~ ',').? }
 
-  private def newEnumType(info: Option[String], name: ElementName, isFinal: Boolean,
+  private def newEnumType(info: Option[String], name: ElementName, genericParameters: Option[Seq[ElementName]],
+                          isFinal: Boolean,
                           t: Either[MaybeProxy[EnumType], MaybeProxy[DecodeType]],
-                          constants: Seq[EnumConstant]): EnumType =
-    new EnumTypeImpl(Some(name), ns.get, t, info, constants.to[immutable.Set], isFinal)
+                          constants: Seq[EnumConstant]): EnumType = {
+    require(genericParameters.isEmpty, "not implemented")
+    new EnumTypeImpl(name, ns.get, t, info, constants.to[immutable.Set], isFinal)
+  }
 
   def ExtendsEnumType: Rule1[Either[MaybeProxy[EnumType], MaybeProxy[DecodeType]]] = rule {
     ElementId ~> { (fqn: Fqn) => Left(proxyForTypeFqn[EnumType](ns.get, fqn)) }
@@ -258,18 +280,38 @@ class DecodeParboiledParser(val input: ParserInput) extends Parser with LazyLogg
   }
 
   private def newStructType(info: Option[String], name: ElementName, fields: Seq[StructField]): StructType =
-    new StructTypeImpl(Some(name), ns.get, info, fields)
+    newStructTypeWithParameters(info, name, None, fields)
 
-  def StructType = rule { atomic("struct") ~ Ew.? ~ StructTypeFields ~> newStructType _ }
+  private def newStructTypeWithParameters(info: Option[String], name: ElementName, genericParameters: Option[Seq[Option[ElementName]]],
+                            fields: Seq[StructField]): StructType = {
+    require(genericParameters.isEmpty, "not implemented")
+    StructType(name, ns.get, info, fields)
+  }
 
-  private def newSubType(info: Option[String], name: ElementName,
-                         baseType: Option[MaybeProxy[DecodeType]]): SubType =
-    new SubTypeImpl(Some(name), ns.get, info, baseType.get)
+  def StructType_ = rule { atomic("struct") ~ Ew.? ~ StructTypeFields ~> newStructTypeWithParameters _ }
+
+  private def newSubType(info: Option[String], name: ElementName, genericParameters: Option[Seq[ElementName]],
+                         baseType: Option[MaybeProxy[DecodeType]]): SubType = {
+    require(genericParameters.isEmpty, "not implemented")
+    SubType(name, ns.get, info, baseType.get)
+  }
+
+  private def newNativeType(info: Option[String], name: ElementName,
+                            typeParameters: Option[Seq[Option[ElementName]]]): DecodeType =
+    typeParameters.map(gp => GenericType(name, ns.get, info, gp))
+      .getOrElse(NativeType(name, ns.get, info))
+
+  def NativeType_ = rule { atomic("native") ~> newNativeType _ }
+
+  def TypeParameters: Rule1[Seq[Option[ElementName]]] = rule {
+    '<' ~ Ew.? ~ ElementName_.?.*(Ew.? ~ ',' ~ Ew.?) ~ Ew.? ~ '>'
+  }
 
   def Type: Rule1[DecodeType] = rule {
-    definition("type") ~ Ew ~ (
+    definition("type") ~ (Ew.? ~ TypeParameters).? ~ Ew ~ (
         EnumType
-      | StructType
+      | StructType_
+      | NativeType_
       | TypeApplication ~> newSubType _)
   }
 
@@ -280,13 +322,6 @@ class DecodeParboiledParser(val input: ParserInput) extends Parser with LazyLogg
       imports.get(typeFqn.last.asMangledString).get.asInstanceOf[MaybeProxy[T]]
     else
       MaybeProxy.proxyDefaultNamespace[T](typeFqn, namespace)
-
-  def NativeTypeApplication: Rule1[Option[MaybeProxy[DecodeType]]] = rule {
-    atomic("void") ~> (() => None) |
-      capture(atomic("ber")) ~> { t: String =>
-        Some(MaybeProxy.proxyForSystem[DecodeType](TypeName(ElementName.newFromSourceName(t))))
-      }
-  }
 
   def PrimitiveTypeKind: Rule1[String] = rule { capture("uint" | "int" | "float" | "bool").named("primitiveTypeKind") }
 
@@ -302,7 +337,7 @@ class DecodeParboiledParser(val input: ParserInput) extends Parser with LazyLogg
                            fromTo: Option[(Int, Option[Int])]): Option[MaybeProxy[DecodeType]] = {
     val path = typeApplication.get.proxy.path
     Some(MaybeProxy.proxy(ProxyPath(path.ns, ArrayTypePath(path,
-        new ArraySizeImpl(fromTo.map(_._1.toLong).getOrElse(0l),
+        ArraySize(fromTo.map(_._1.toLong).getOrElse(0l),
           fromTo.map(_._2.map(_.toLong).getOrElse(0l)).getOrElse(0l))))))
   }
 
@@ -314,15 +349,17 @@ class DecodeParboiledParser(val input: ParserInput) extends Parser with LazyLogg
   private def newGenericTypeProxy(b: Option[MaybeProxy[DecodeType]],
                                   g: Seq[Option[MaybeProxy[DecodeType]]]): Option[MaybeProxy[DecodeType]] = {
     val path = b.get.proxy.path
+    // TODO: remove asInstanceOf
     Some(MaybeProxy.proxy(ProxyPath(path.ns, GenericTypeName(path.element.asInstanceOf[TypeName].typeName,
       g.map(_.map(_.proxy.path)).to[immutable.Seq]))))
   }
 
   private def newOptionalTypeProxy(t: Option[MaybeProxy[DecodeType]]): Option[MaybeProxy[DecodeType]] =
-    Some(MaybeProxy.proxyForSystem(GenericTypeName(OptionalType.MANGLED_NAME, immutable.Seq(Some(t.get.proxy.path)))))
+    Some(MaybeProxy.proxyForSystem(GenericTypeName(ElementName.newFromMangledName("optional"),
+      immutable.Seq(Some(t.get.proxy.path)))))
 
   def TypeApplication: Rule1[Option[MaybeProxy[DecodeType]]] = rule {
-    (PrimitiveTypeApplication ~> (Some(_)) | NativeTypeApplication | ArrayTypeApplication
+    (PrimitiveTypeApplication ~> (Some(_)) | ArrayTypeApplication
       | ElementId ~> { fqn => Some(proxyForTypeFqn[DecodeType](ns.get, fqn))}) ~
     (Ew.? ~ '<' ~ TypeApplication.+(Ew.? ~ ',' ~ Ew.?) ~ ','.? ~ Ew.? ~ '>' ~> newGenericTypeProxy _).? ~
     (Ew.? ~ '?' ~> newOptionalTypeProxy _).?
@@ -343,7 +380,7 @@ class DecodeParboiledParser(val input: ParserInput) extends Parser with LazyLogg
 
   // todo: refactoring
   def File: Rule1[Namespace] = rule {
-    run(imports.clear()) ~ Namespace ~>
+    run(imports.clear()) ~ Namespace_ ~>
       { _ns => ns = Some(_ns); _ns } ~
       (Ew ~ Import).* ~
       (Ew.? ~ (Component ~> { c => ns.get.components = ns.get.components :+ c }
@@ -357,8 +394,8 @@ class DecodeParboiledParser(val input: ParserInput) extends Parser with LazyLogg
   def newNamespace(info: Option[String], fqn: Fqn): Namespace = {
     var parentNamespace: Option[Namespace] = None
     if (fqn.size > 1)
-      parentNamespace = Some(DecodeUtils.newNamespaceForFqn(fqn.copyDropLast()))
-    val result: Namespace = NamespaceImpl(fqn.last, parentNamespace)
+      parentNamespace = Some(DecodeUtils.newNamespaceForFqn(fqn.copyDropLast))
+    val result = Namespace(fqn.last, parent = parentNamespace)
     parentNamespace.foreach(ns => ns.subNamespaces = ns.subNamespaces :+ result)
     result
   }
@@ -387,11 +424,77 @@ object OldDecodeParser {
 case class DecodeSourceProviderConfiguration(resourcePath: String)
 
 class DecodeSourceProvider extends LazyLogging {
+
+  def processNode(node: ASTNode): Namespace = {
+    Namespace(ElementName.newFromMangledName("t"))
+  }
+
+  val disposable = new Disposable {
+    override def dispose(): Unit = sys.error("must not dispose?")
+  }
+
+  def getApplication: MockApplicationEx = ApplicationManager.getApplication.asInstanceOf[MockApplicationEx]
+
+  def initApplication(): Unit = {
+    //if (ApplicationManager.getApplication() instanceof MockApplicationEx) return;
+    val instance = new MockApplicationEx(disposable)
+    ApplicationManager.setApplication(instance,
+      new Getter[FileTypeRegistry]() {
+        override def get: FileTypeRegistry = FileTypeManager.getInstance
+      }, disposable)
+    getApplication.registerService(classOf[EncodingManager], classOf[EncodingManagerImpl])
+  }
+
+  Extensions.registerAreaClass("IDEA_PROJECT", null);
+  private val project: MockProjectEx = new MockProjectEx(disposable)
+
+  protected def registerApplicationService[T](aClass: Class[T] , obj: T): Unit = {
+    getApplication.registerService(aClass, obj)
+    Disposer.register(project, new Disposable() {
+      override def dispose(): Unit = getApplication.getPicoContainer.unregisterComponent(aClass.getName)
+    })
+  }
+
+  def provideNew(config: DecodeSourceProviderConfiguration): Registry = {
+    val resourcePath = config.resourcePath
+    val registry = Registry()
+    val resourcesAsStream = getClass.getResourceAsStream(resourcePath)
+    require(resourcesAsStream != null, resourcePath)
+    initApplication()
+    getApplication.getPicoContainer.registerComponent(new AbstractComponentAdapter(classOf[ProgressManager].getName, classOf[Object]) {
+      override def getComponentInstance(container: PicoContainer): ProgressManager = new ProgressManagerImpl()
+
+      override def verify(container: PicoContainer): Unit = { }
+    })
+    registerApplicationService(classOf[PsiBuilderFactory], new PsiBuilderFactoryImpl())
+    registerApplicationService(classOf[DefaultASTFactory], new DefaultASTFactoryImpl())
+    registerApplicationService(classOf[ReferenceProvidersRegistry], new ReferenceProvidersRegistryImpl())
+    registry.rootNamespaces ++= DecodeUtils.mergeRootNamespaces(Source.fromInputStream(resourcesAsStream).getLines().
+      filter(_.endsWith(".decode")).map { name =>
+      val resource: String = resourcePath + "/" + name
+      logger.debug(s"Parsing $resource...")
+      val parserDefinition = new DecodeParserDefinition()
+      processNode(new DecodeParser().parse(DecodeParserDefinition.FILE, new PsiBuilderFactoryImpl().createBuilder(parserDefinition,
+        parserDefinition.createLexer(null),
+        Source.fromInputStream(getClass.getResourceAsStream(resource)).mkString)))
+    }.toTraversable)
+    registry
+  }
+
   def provide(config: DecodeSourceProviderConfiguration): Registry = {
     val resourcePath = config.resourcePath
     val registry = Registry()
     val resourcesAsStream = getClass.getResourceAsStream(resourcePath)
     require(resourcesAsStream != null, resourcePath)
+    initApplication()
+    getApplication.getPicoContainer.registerComponent(new AbstractComponentAdapter(classOf[ProgressManager].getName, classOf[Object]) {
+      override def getComponentInstance(container: PicoContainer): ProgressManager = new ProgressManagerImpl()
+
+      override def verify(container: PicoContainer): Unit = { }
+    })
+    registerApplicationService(classOf[PsiBuilderFactory], new PsiBuilderFactoryImpl())
+    registerApplicationService(classOf[DefaultASTFactory], new DefaultASTFactoryImpl())
+    registerApplicationService(classOf[ReferenceProvidersRegistry], new ReferenceProvidersRegistryImpl())
     registry.rootNamespaces ++= DecodeUtils.mergeRootNamespaces(Source.fromInputStream(resourcesAsStream).getLines().
       filter(_.endsWith(".decode")).map { name =>
       val resource: String = resourcePath + "/" + name
@@ -400,11 +503,11 @@ class DecodeSourceProvider extends LazyLogging {
       OldDecodeParser.parse(input) match {
         case Success(v) => v.rootNamespace
         case Failure(e) => e match {
-          case p: ParseError =>
-            val formatter: ErrorFormatter = new ErrorFormatter(showTraces = true)
-            logger.error(formatter.format(p, input))
-        }
-        throw e
+            case p: ParseError =>
+              val formatter: ErrorFormatter = new ErrorFormatter(showTraces = true)
+              logger.error(formatter.format(p, input))
+          }
+         throw e
       }
     }.toTraversable)
     registry

@@ -128,7 +128,6 @@ class CppSourcesGenerator(val config: CppGeneratorConfiguration) extends Generat
   }
 
   private def fileNameFor(t: DecodeType): String = t match {
-    case t: HasName => t.name.asMangledString
     case t: ArrayType =>
       val baseTypeFileName: String = fileNameFor(t.baseType.obj)
       val min = t.size.min
@@ -143,13 +142,12 @@ class CppSourcesGenerator(val config: CppGeneratorConfiguration) extends Generat
     case t: GenericTypeSpecialized =>
       fileNameFor(t.genericType.obj) + "_" +
         t.genericTypeArguments.map(tp => if (tp.isDefined) fileNameFor(tp.get.obj) else "void").mkString("_")
-    case t: HasOptionName => fileNameFromOptionName(t.optionName)
+    case t: HasName => t.name.asMangledString
     case _ => sys.error("not implemented")
   }
 
   private def cppTypeNameFor(t: DecodeType): String = {
     t match {
-      case t: HasName => t.name.asMangledString
       case t: PrimitiveType => primitiveTypeToCTypeApplication(t).name
       case t: ArrayType =>
         val baseCType: String = cppTypeNameFor(t.baseType.obj)
@@ -165,7 +163,7 @@ class CppSourcesGenerator(val config: CppGeneratorConfiguration) extends Generat
       case t: GenericTypeSpecialized =>
         cppTypeNameFor(t.genericType.obj) + "_" +
         t.genericTypeArguments.map(tp => if (tp.isDefined) cppTypeNameFor(tp.get.obj) else "void").mkString("_")
-      case t: HasOptionName => cppTypeNameFromOptionName(t.optionName)
+      case t: HasName => t.name.asMangledString
       case _ => sys.error("not implemented")
     }
   }
@@ -289,9 +287,8 @@ class CppSourcesGenerator(val config: CppGeneratorConfiguration) extends Generat
     compSet.foreach(generateComponent)
   }
 
-  def cppTypeForDecodeType(t: DecodeType): CppType = {
-    t.optionName.map{on => CppTypeApplication(on.asMangledString)}.getOrElse(CppTypeApplication("<not implemented>"))
-  }
+  def cppTypeForDecodeType(t: DecodeType): CppType =
+    CppTypeApplication(t.name.asMangledString)
 
   private def classNameForComponent(comp: Component): String = comp.name.asMangledString + "Component"
 

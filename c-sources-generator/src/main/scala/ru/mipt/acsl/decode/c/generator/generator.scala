@@ -7,7 +7,8 @@ import com.google.common.base.CaseFormat
 import com.typesafe.scalalogging.LazyLogging
 import resource._
 import ru.mipt.acsl.decode.model.domain._
-import ru.mipt.acsl.decode.model.domain.impl.types.{BerType, OptionalType, OrType}
+import ru.mipt.acsl.decode.model.domain.impl.ElementName
+import ru.mipt.acsl.decode.model.domain.impl.types.Fqn
 import ru.mipt.acsl.decode.model.domain.proxy.MaybeProxy
 import ru.mipt.acsl.generation.Generator
 import ru.mipt.acsl.generator.c.ast._
@@ -62,7 +63,7 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
       case t: GenericType =>
         (CAstElements(), CAstElements())
       case t: GenericTypeSpecialized => t.genericType.obj match {
-        case optional: OptionalType =>
+        case optional if optional.name.equals(ElementName.newFromMangledName("optional")) =>
           require(t.genericTypeArguments.size == 1)
           val head = t.genericTypeArguments.head.getOrElse { sys.error("wtf") }
           head.obj match {
@@ -72,7 +73,7 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
               CStructTypeDefField("value", t.genericTypeArguments.head.get.obj.cType),
               CStructTypeDefField("flag", b8Type))))), Seq.empty)
           }
-        case or: OrType =>
+        case or if or.name.equals(ElementName.newFromMangledName("or")) =>
           var index = 0
           (Seq(t.cTypeDef(CStructTypeDef(t.genericTypeArguments.flatMap { ot =>
             index += 1
@@ -260,7 +261,7 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
       hFile.writeIfNotEmptyWithComment((CEol +: appendPrologEpilog(h).eol).protectDoubleInclude(relPathForType(t)),
         "Type header")
     else
-      logger.debug(s"Omitting type ${t.optionName.toString}")
+      logger.debug(s"Omitting type ${t.name.asMangledString}")
     if (c.nonEmpty)
       cFile.writeIfNotEmptyWithComment(CInclude(relPathForType(t)).eol.eol ++ c, "Type implementation")
   }
@@ -276,6 +277,8 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
     case true => expr.dot(exprRight)
     case _ => expr -> exprRight
   }
+
+  private def isAliasNameTheSame(t: AliasType): Boolean = t.cTypeName.equals(t.baseType.obj.cTypeName)
 
   private def tryCall(methodName: String, exprs: CExpression*): CFuncCall = methodName.call(exprs: _*)._try
 
@@ -329,7 +332,6 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
     }
 
     def cTypeName: String = t match {
-      case t: HasName => lowerUnderscoreToUpperCamel(t.name.asMangledString)
       case t: PrimitiveType => primitiveTypeToCTypeApplication(t).name
       case t: ArrayType =>
         val baseCType = t.baseType.obj.cTypeName
@@ -346,7 +348,7 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
         t.genericType.obj.cTypeName +
           t.genericTypeArguments.map(_.map(_.obj.cTypeName).getOrElse("Void")).mkString
       // fixme: remove asInstanceOf
-      case t: HasOptionName => lowerUnderscoreToUpperCamel(t.asInstanceOf[HasOptionName].cTypeName)
+      case t: HasName => lowerUnderscoreToUpperCamel(t.asInstanceOf[HasName].cTypeName)
       case _ => sys.error("not implemented")
     }
 
@@ -356,10 +358,22 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
       case _ => true
     }
 
+    private val berFqn = Fqn.newFromSource("decode.ber")
+    private val orFqn = Fqn.newFromSource("decode.or")
+    private val optionalFqn = Fqn.newFromSource("decode.optional")
+    def isBerType(t: NativeType): Boolean = t.fqn.equals(berFqn)
+    def isOrType(t: GenericType): Boolean = t.fqn.equals(orFqn)
+    def isOptionalType(t: GenericType): Boolean = t.fqn.equals(optionalFqn)
+
     def byteSize: Int = t match {
       case t: PrimitiveType => (t.bitLength / 8).toInt
+      case t: GenericTypeSpecialized => t.genericType.obj match {
+        case optional if isOptionalType(optional) => 1 + t.genericTypeArguments.head.getOrElse { sys.error("wtf") }.obj.byteSize
+        case or if isOrType(or) => 1 + t.genericTypeArguments.map(_.map(_.obj.byteSize).getOrElse(0)).max
+        case _ => sys.error(s"not implemented for $t")
+      }
       case t: NativeType => t match {
-        case t: BerType => BER_BYTE_SIZE
+        case t if isBerType(t) => BER_BYTE_SIZE
         case _ => sys.error(s"not implemented for $t")
       }
       case t: ArrayType => t.size.max match {
@@ -368,11 +382,6 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
       }
       case t: StructType => t.fields.map(_.typeUnit.t.obj.byteSize).sum
       case t: HasBaseType => t.baseType.obj.byteSize
-      case t: GenericTypeSpecialized => t.genericType.obj match {
-        case _: OptionalType => 1 + t.genericTypeArguments.head.getOrElse { sys.error("wtf") }.obj.byteSize
-        case _: OrType => 1 + t.genericTypeArguments.map(_.map(_.obj.byteSize).getOrElse(0)).max
-        case _ => sys.error(s"not implemented for $t")
-      }
       case _ => sys.error(s"not implemented for $t")
     }
 
@@ -394,7 +403,7 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
     private val berSizeOf = "sizeof".call(berType)
 
     def abstractMinSizeExpr: Option[CExpression] = t match {
-      case t: BerType => Some(berSizeOf)
+      case t: NativeType if isBerType(t) => Some(berSizeOf)
       case t: AliasType => t.baseType.obj.abstractMinSizeExpr
       case t: SubType => t.baseType.obj.abstractMinSizeExpr
       case t: PrimitiveType => Some("sizeof".call(t.cType))
@@ -450,7 +459,7 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
     def serializeCallCode(src: CExpression): CExpression = t match {
       case _: ArrayType | _: StructType => trySerializeCode(src)
       case t: NativeType => t match {
-        case t: BerType => callCodeForBer(typeSerializeMethodName, src, writer.v)
+        case t if isBerType(t) => callCodeForBer(typeSerializeMethodName, src, writer.v)
         case _ => sys.error(s"not implemented for $t")
       }
       case t: HasBaseType => t.baseType.obj.serializeCallCode(src)
@@ -462,7 +471,7 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
     def deserializeCallCode(dest: CExpression): CExpression = t match {
       case _: ArrayType | _: StructType => tryDeserializeCode(dest)
       case t: NativeType => t match {
-        case t: BerType => callCodeForBer(typeDeserializeMethodName, dest, reader.v)
+        case t if isBerType(t) => callCodeForBer(typeDeserializeMethodName, dest, reader.v)
         case _ => sys.error(s"not implemented for $t")
       }
       case t: HasBaseType =>
@@ -480,7 +489,7 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
     private def serializeGenericTypeSpecializedCode(t: GenericTypeSpecialized, src: CExpression): CAstElements = {
       val isSmall = t.isSmall
       t.genericType.obj match {
-        case _: OrType =>
+        case or if isOrType(or) =>
           val tagField = if (isSmall) src.dot(tagVar) else src -> tagVar
           photonBerTypeName.methodName(typeSerializeMethodName).call(tagField, writer.v)._try.line +:
             Seq(CIndent, CSwitch(tagField, t.genericTypeArguments.zipWithIndex.map { case (omp, idx) =>
@@ -493,7 +502,7 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
                 Seq(CStatementLine(CBreak, CSemicolon))
               })
             }, default = CStatements(CReturn(invalidValue))), CEol)
-        case _: OptionalType =>
+        case optional if isOptionalType(optional) =>
           val flagField = if (isSmall) src.dot(flagVar) else src -> flagVar
           photonBerTypeName.methodName(typeSerializeMethodName).call(
             flagField, writer.v)._try.line +:
@@ -508,7 +517,7 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
 
     private def deserializeGenericTypeSpecializedCode(t: GenericTypeSpecialized, dest: CExpression): CAstElements =
       t.genericType.obj match {
-        case _: OrType =>
+        case or if isOrType(or) =>
           photonBerTypeName.methodName(typeDeserializeMethodName).call((dest -> tagVar).ref, reader.v)._try.line +:
             Seq(CIndent, CSwitch(dest -> tagVar, t.genericTypeArguments.zipWithIndex.map{ case (omp, idx) =>
               CCase(CIntLiteral(idx), omp.map { mp =>
@@ -516,7 +525,7 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
                   CIndent, CBreak, CSemicolon, CEol)
               }.getOrElse { Seq(CStatementLine(CBreak, CSemicolon)) })
             }, default = CStatements(CReturn(invalidValue))), CEol)
-        case _: OptionalType =>
+        case optional if isOptionalType(optional) =>
           photonBerTypeName.methodName(typeDeserializeMethodName).call(
             (dest -> flagVar).ref.cast(CTypeApplication(photonBerTypeName).ptr), reader.v)._try.line +:
             Seq(CIndent, CIf(dest -> flagVar, CEol +:
@@ -582,9 +591,9 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
       }
       case s: GenericTypeSpecialized =>
         s.genericType.obj match {
-          case optional: OptionalType =>
+          case optional if isOptionalType(optional) =>
             Seq(s.genericTypeArguments.head.getOrElse{ sys.error("invalid optional types") }.obj)
-          case or: OrType =>
+          case or if isOrType(or) =>
             s.genericTypeArguments.flatMap(_.map(p => Seq(p.obj)).getOrElse(Seq.empty))
         }
       case t: HasBaseType =>
@@ -989,6 +998,10 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
 
     def cName: String = named.name.asMangledString
 
+    def fileName: String = named.name.asMangledString
+
+    def cTypeName: String = named.name.asMangledString
+
     def mangledCName: String = {
       var methodName = cName
       if (keywords.contains(methodName))
@@ -1087,14 +1100,10 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
   }
 
   implicit class RichCAstElements(val els: CAstElements) {
-    private val rand = new Random()
 
     def protectDoubleInclude(filePath: String): CAstElements = {
-      //val bytes = new Array[Byte](20)
-      //rand.nextBytes(bytes)
       val uniqueName = "__" + filePath.split(io.File.separatorChar).map(p =>
         upperCamelCaseToUpperUnderscore(p).replaceAll("\\.", "_")).mkString("_") + "__"
-      /*"_" + MessageDigest.getInstance("MD5").digest(bytes).map("%02x".format(_)).mkString +*/
       "DO NOT EDIT! FILE IS AUTO GENERATED".comment.eol ++ Seq(CIfNDef(uniqueName), CEol, CDefine(uniqueName)) ++ els :+ CEndIf
     }
 
@@ -1155,17 +1164,6 @@ object CSourcesGenerator {
 
   implicit class RichCType(val ct: CType) {
     def const: CConstType = CConstType(ct)
-  }
-
-  private var fileNameId: Int = 0
-  private var typeNameId: Int = 0
-
-  implicit class RichOptionNamed(val optionNamed: HasOptionName) {
-    def fileName: String =
-      optionNamed.optionName.map(_.asMangledString).getOrElse { fileNameId += 1; "type" + fileNameId }
-
-    def cTypeName: String =
-      optionNamed.optionName.map(_.asMangledString).getOrElse { typeNameId += 1; "type" + typeNameId }
   }
 
   implicit class RichFile(val file: io.File) {
@@ -1257,8 +1255,6 @@ object CSourcesGenerator {
   }
 
   private def upperCamelCaseToUpperUnderscore(s: String) = CaseFormat.UPPER_CAMEL.to(CaseFormat.UPPER_UNDERSCORE, s)
-
-  private def isAliasNameTheSame(t: AliasType): Boolean = t.cTypeName == t.baseType.obj.cTypeName
 
   private val keywords = Seq("return")
 
