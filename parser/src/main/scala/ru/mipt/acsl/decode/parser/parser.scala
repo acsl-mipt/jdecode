@@ -158,7 +158,7 @@ class DecodeParboiledParser(val input: ParserInput) extends Parser with LazyLogg
 
   def MessageParameterElement: Rule1[String] = rule {
     capture(ElementIdLiteral ~ ('[' ~ Ew.? ~ NonNegativeIntegerLiteral ~ Ew.? ~
-      (atomic("..") ~ Ew.? ~ NonNegativeIntegerLiteral ~ Ew.?).? ~ ']'
+      (atomic("src/main") ~ Ew.? ~ NonNegativeIntegerLiteral ~ Ew.?).? ~ ']'
       | '.' ~ ElementIdLiteral).*)
   }
 
@@ -343,7 +343,7 @@ class DecodeParboiledParser(val input: ParserInput) extends Parser with LazyLogg
 
   def ArrayTypeApplication: Rule1[Option[MaybeProxy[DecodeType]]] = rule {
     '[' ~ Ew.? ~ TypeApplication ~ (Ew.? ~ ',' ~ Ew.? ~ NonNegativeIntegerAsInt
-      ~ (Ew.? ~ ".." ~ Ew.? ~ LengthTo).? ~> ((_, _))).? ~ Ew.? ~ ']' ~> newTypeProxy _
+      ~ (Ew.? ~ "src/main" ~ Ew.? ~ LengthTo).? ~> ((_, _))).? ~ Ew.? ~ ']' ~> newTypeProxy _
   }
 
   private def newGenericTypeProxy(b: Option[MaybeProxy[DecodeType]],
@@ -474,7 +474,7 @@ class DecodeSourceProvider extends LazyLogging {
       val resource: String = resourcePath + "/" + name
       logger.debug(s"Parsing $resource...")
       val parserDefinition = new DecodeParserDefinition()
-      processNode(new DecodeParser().parse(DecodeParserDefinition.FILE, new PsiBuilderFactoryImpl().createBuilder(parserDefinition,
+      processNode(new DecodeParser().parse(DecodeParserDefinition.file, new PsiBuilderFactoryImpl().createBuilder(parserDefinition,
         parserDefinition.createLexer(null),
         Source.fromInputStream(getClass.getResourceAsStream(resource)).mkString)))
     }.toTraversable)

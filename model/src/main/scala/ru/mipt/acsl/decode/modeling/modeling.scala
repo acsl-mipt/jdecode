@@ -21,5 +21,5 @@ trait ModelingMessage {
 trait TransformationResult[T] {
   def result: Option[T]
   def messages: Seq[TransformationMessage]
-  def hasError: Boolean
+  def hasError: Boolean = messages.exists(_.level == ErrorLevel)
 }
