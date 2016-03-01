@@ -11,14 +11,14 @@ import static ru.mipt.acsl.decode.parser.psi.DecodeTypes.*;
 import com.intellij.extapi.psi.ASTWrapperPsiElement;
 import ru.mipt.acsl.decode.parser.psi.*;
 
-public class DecodeNativeTypeKindImpl extends ASTWrapperPsiElement implements DecodeNativeTypeKind {
+public class DecodeNativeTypeDeclImpl extends ASTWrapperPsiElement implements DecodeNativeTypeDecl {
 
-  public DecodeNativeTypeKindImpl(ASTNode node) {
+  public DecodeNativeTypeDeclImpl(ASTNode node) {
     super(node);
   }
 
   public void accept(@NotNull PsiElementVisitor visitor) {
-    if (visitor instanceof DecodeVisitor) ((DecodeVisitor)visitor).visitNativeTypeKind(this);
+    if (visitor instanceof DecodeVisitor) ((DecodeVisitor)visitor).visitNativeTypeDecl(this);
     else super.accept(visitor);
   }
 

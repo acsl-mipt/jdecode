@@ -9,9 +9,10 @@ import com.intellij.psi.tree.IElementType;
 import com.intellij.lang.ASTNode;
 import com.intellij.psi.tree.TokenSet;
 import com.intellij.lang.PsiParser;
+import com.intellij.lang.LightPsiParser;
 
 @SuppressWarnings({"SimplifiableIfStatement", "UnusedAssignment"})
-public class DecodeParser implements PsiParser {
+public class DecodeParser implements PsiParser, LightPsiParser {
 
   public ASTNode parse(IElementType t, PsiBuilder b) {
     parseLight(t, b);
@@ -103,8 +104,8 @@ public class DecodeParser implements PsiParser {
     else if (t == NAMESPACE_DECL) {
       r = namespace_decl(b, 0);
     }
-    else if (t == NATIVE_TYPE_KIND) {
-      r = native_type_kind(b, 0);
+    else if (t == NATIVE_TYPE_DECL) {
+      r = native_type_decl(b, 0);
     }
     else if (t == PARAMETER_DECL) {
       r = parameter_decl(b, 0);
@@ -601,14 +602,15 @@ public class DecodeParser implements PsiParser {
   }
 
   /* ********************************************************** */
-  // info_string? ENUM type_application LEFT_PAREN enum_type_values RIGHT_PAREN
+  // FINAL? ENUM (EXTENDS element_name_rule | type_application) LEFT_PAREN enum_type_values RIGHT_PAREN
   public static boolean enum_type_decl(PsiBuilder b, int l) {
     if (!recursion_guard_(b, l, "enum_type_decl")) return false;
+    if (!nextTokenIs(b, "<enum type decl>", ENUM, FINAL)) return false;
     boolean r;
     Marker m = enter_section_(b, l, _NONE_, "<enum type decl>");
     r = enum_type_decl_0(b, l + 1);
     r = r && consumeToken(b, ENUM);
-    r = r && type_application(b, l + 1);
+    r = r && enum_type_decl_2(b, l + 1);
     r = r && consumeToken(b, LEFT_PAREN);
     r = r && enum_type_values(b, l + 1);
     r = r && consumeToken(b, RIGHT_PAREN);
@@ -616,11 +618,33 @@ public class DecodeParser implements PsiParser {
     return r;
   }
 
-  // info_string?
+  // FINAL?
   private static boolean enum_type_decl_0(PsiBuilder b, int l) {
     if (!recursion_guard_(b, l, "enum_type_decl_0")) return false;
-    info_string(b, l + 1);
+    consumeToken(b, FINAL);
     return true;
+  }
+
+  // EXTENDS element_name_rule | type_application
+  private static boolean enum_type_decl_2(PsiBuilder b, int l) {
+    if (!recursion_guard_(b, l, "enum_type_decl_2")) return false;
+    boolean r;
+    Marker m = enter_section_(b);
+    r = enum_type_decl_2_0(b, l + 1);
+    if (!r) r = type_application(b, l + 1);
+    exit_section_(b, m, null, r);
+    return r;
+  }
+
+  // EXTENDS element_name_rule
+  private static boolean enum_type_decl_2_0(PsiBuilder b, int l) {
+    if (!recursion_guard_(b, l, "enum_type_decl_2_0")) return false;
+    boolean r;
+    Marker m = enter_section_(b);
+    r = consumeToken(b, EXTENDS);
+    r = r && element_name_rule(b, l + 1);
+    exit_section_(b, m, null, r);
+    return r;
   }
 
   /* ********************************************************** */
@@ -1211,14 +1235,14 @@ public class DecodeParser implements PsiParser {
   }
 
   /* ********************************************************** */
-  // BER
-  public static boolean native_type_kind(PsiBuilder b, int l) {
-    if (!recursion_guard_(b, l, "native_type_kind")) return false;
-    if (!nextTokenIs(b, BER)) return false;
+  // NATIVE
+  public static boolean native_type_decl(PsiBuilder b, int l) {
+    if (!recursion_guard_(b, l, "native_type_decl")) return false;
+    if (!nextTokenIs(b, NATIVE)) return false;
     boolean r;
     Marker m = enter_section_(b);
-    r = consumeToken(b, BER);
-    exit_section_(b, m, NATIVE_TYPE_KIND, r);
+    r = consumeToken(b, NATIVE);
+    exit_section_(b, m, NATIVE_TYPE_DECL, r);
     return r;
   }
 
@@ -1381,25 +1405,14 @@ public class DecodeParser implements PsiParser {
   }
 
   /* ********************************************************** */
-  // primitive_type_kind COLON NON_NEGATIVE_NUMBER | native_type_kind
+  // primitive_type_kind COLON NON_NEGATIVE_NUMBER
   public static boolean primitive_type_application(PsiBuilder b, int l) {
     if (!recursion_guard_(b, l, "primitive_type_application")) return false;
     boolean r;
     Marker m = enter_section_(b, l, _NONE_, "<primitive type application>");
-    r = primitive_type_application_0(b, l + 1);
-    if (!r) r = native_type_kind(b, l + 1);
-    exit_section_(b, l, m, PRIMITIVE_TYPE_APPLICATION, r, false, null);
-    return r;
-  }
-
-  // primitive_type_kind COLON NON_NEGATIVE_NUMBER
-  private static boolean primitive_type_application_0(PsiBuilder b, int l) {
-    if (!recursion_guard_(b, l, "primitive_type_application_0")) return false;
-    boolean r;
-    Marker m = enter_section_(b);
     r = primitive_type_kind(b, l + 1);
     r = r && consumeTokens(b, 0, COLON, NON_NEGATIVE_NUMBER);
-    exit_section_(b, m, null, r);
+    exit_section_(b, l, m, PRIMITIVE_TYPE_APPLICATION, r, false, null);
     return r;
   }
 
@@ -1588,7 +1601,7 @@ public class DecodeParser implements PsiParser {
   }
 
   /* ********************************************************** */
-  // info_string? TYPE_KEYWORD element_name_rule type_decl_body
+  // info_string? TYPE_KEYWORD element_name_rule (LT element_name_rule? (COMMA element_name_rule?)* GT)? type_decl_body
   public static boolean type_decl(PsiBuilder b, int l) {
     if (!recursion_guard_(b, l, "type_decl")) return false;
     boolean r;
@@ -1596,6 +1609,7 @@ public class DecodeParser implements PsiParser {
     r = type_decl_0(b, l + 1);
     r = r && consumeToken(b, TYPE_KEYWORD);
     r = r && element_name_rule(b, l + 1);
+    r = r && type_decl_3(b, l + 1);
     r = r && type_decl_body(b, l + 1);
     exit_section_(b, l, m, TYPE_DECL, r, false, null);
     return r;
@@ -1608,35 +1622,75 @@ public class DecodeParser implements PsiParser {
     return true;
   }
 
-  /* ********************************************************** */
-  // (info_string? type_application) | enum_type_decl | struct_type_decl
-  public static boolean type_decl_body(PsiBuilder b, int l) {
-    if (!recursion_guard_(b, l, "type_decl_body")) return false;
-    boolean r;
-    Marker m = enter_section_(b, l, _NONE_, "<type decl body>");
-    r = type_decl_body_0(b, l + 1);
-    if (!r) r = enum_type_decl(b, l + 1);
-    if (!r) r = struct_type_decl(b, l + 1);
-    exit_section_(b, l, m, TYPE_DECL_BODY, r, false, null);
-    return r;
+  // (LT element_name_rule? (COMMA element_name_rule?)* GT)?
+  private static boolean type_decl_3(PsiBuilder b, int l) {
+    if (!recursion_guard_(b, l, "type_decl_3")) return false;
+    type_decl_3_0(b, l + 1);
+    return true;
   }
 
-  // info_string? type_application
-  private static boolean type_decl_body_0(PsiBuilder b, int l) {
-    if (!recursion_guard_(b, l, "type_decl_body_0")) return false;
+  // LT element_name_rule? (COMMA element_name_rule?)* GT
+  private static boolean type_decl_3_0(PsiBuilder b, int l) {
+    if (!recursion_guard_(b, l, "type_decl_3_0")) return false;
     boolean r;
     Marker m = enter_section_(b);
-    r = type_decl_body_0_0(b, l + 1);
-    r = r && type_application(b, l + 1);
+    r = consumeToken(b, LT);
+    r = r && type_decl_3_0_1(b, l + 1);
+    r = r && type_decl_3_0_2(b, l + 1);
+    r = r && consumeToken(b, GT);
     exit_section_(b, m, null, r);
     return r;
   }
 
-  // info_string?
-  private static boolean type_decl_body_0_0(PsiBuilder b, int l) {
-    if (!recursion_guard_(b, l, "type_decl_body_0_0")) return false;
-    info_string(b, l + 1);
+  // element_name_rule?
+  private static boolean type_decl_3_0_1(PsiBuilder b, int l) {
+    if (!recursion_guard_(b, l, "type_decl_3_0_1")) return false;
+    element_name_rule(b, l + 1);
     return true;
+  }
+
+  // (COMMA element_name_rule?)*
+  private static boolean type_decl_3_0_2(PsiBuilder b, int l) {
+    if (!recursion_guard_(b, l, "type_decl_3_0_2")) return false;
+    int c = current_position_(b);
+    while (true) {
+      if (!type_decl_3_0_2_0(b, l + 1)) break;
+      if (!empty_element_parsed_guard_(b, "type_decl_3_0_2", c)) break;
+      c = current_position_(b);
+    }
+    return true;
+  }
+
+  // COMMA element_name_rule?
+  private static boolean type_decl_3_0_2_0(PsiBuilder b, int l) {
+    if (!recursion_guard_(b, l, "type_decl_3_0_2_0")) return false;
+    boolean r;
+    Marker m = enter_section_(b);
+    r = consumeToken(b, COMMA);
+    r = r && type_decl_3_0_2_0_1(b, l + 1);
+    exit_section_(b, m, null, r);
+    return r;
+  }
+
+  // element_name_rule?
+  private static boolean type_decl_3_0_2_0_1(PsiBuilder b, int l) {
+    if (!recursion_guard_(b, l, "type_decl_3_0_2_0_1")) return false;
+    element_name_rule(b, l + 1);
+    return true;
+  }
+
+  /* ********************************************************** */
+  // type_application | enum_type_decl | struct_type_decl | native_type_decl
+  public static boolean type_decl_body(PsiBuilder b, int l) {
+    if (!recursion_guard_(b, l, "type_decl_body")) return false;
+    boolean r;
+    Marker m = enter_section_(b, l, _NONE_, "<type decl body>");
+    r = type_application(b, l + 1);
+    if (!r) r = enum_type_decl(b, l + 1);
+    if (!r) r = struct_type_decl(b, l + 1);
+    if (!r) r = native_type_decl(b, l + 1);
+    exit_section_(b, l, m, TYPE_DECL_BODY, r, false, null);
+    return r;
   }
 
   /* ********************************************************** */

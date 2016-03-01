@@ -50,7 +50,6 @@ NON_NEGATIVE_NUMBER=[0-9]+
   "event"                    { return EVENT; }
   "dynamic"                  { return DYNAMIC; }
   "parameter"                { return PARAMETER; }
-  "info"                     { return INFO; }
   "subcomponent"             { return SUBCOMPONENT; }
   "parameters"               { return PARAMETERS; }
   "unit"                     { return UNIT_TOKEN; }
@@ -63,12 +62,10 @@ NON_NEGATIVE_NUMBER=[0-9]+
   "float"                    { return FLOAT; }
   "bool"                     { return BOOL; }
   "array"                    { return ARRAY; }
-  "ber"                      { return BER; }
   "enum"                     { return ENUM; }
   "placement"                { return PLACEMENT; }
   "before"                   { return BEFORE; }
   "after"                    { return AFTER; }
-  "base_type"                { return BASE_TYPE; }
   "struct"                   { return STRUCT; }
   "/"                        { return SLASH; }
   "*"                        { return STAR; }
@@ -90,6 +87,9 @@ NON_NEGATIVE_NUMBER=[0-9]+
   "default"                  { return DEFAULT; }
   "priority"                 { return PRIORITY; }
   "var"                      { return VAR; }
+  "native"                   { return NATIVE; }
+  "final"                    { return FINAL; }
+  "extends"                  { return EXTENDS; }
 
   {ESCAPED_NAME}             { return ESCAPED_NAME; }
   {ELEMENT_NAME_TOKEN}       { return ELEMENT_NAME_TOKEN; }

@@ -1,6 +1,6 @@
 {
     parserClass = "ru.mipt.acsl.decode.parser.DecodeParser"
-  parserUtilClass="ru.mipt.acsl.decode.parser.DecodeParserUtil"
+    parserUtilClass="ru.mipt.acsl.decode.parser.DecodeParserUtil"
 
     extends = "com.intellij.extapi.psi.ASTWrapperPsiElement"
 
@@ -34,7 +34,6 @@
         EVENT = "event"
         DYNAMIC = "dynamic"
         PARAMETER = "parameter"
-        INFO = "info"
         STRING = 'regexp:"([^"\\]|\\.)*"'
         STRING_UNARY_QUOTES = "regexp:'([^'\\]|\\.)*'"
         SUBCOMPONENT = "subcomponent"
@@ -50,12 +49,10 @@
         FLOAT = "float"
         BOOL = "bool"
         ARRAY = "array"
-        BER = "ber"
         ENUM = "enum"
         PLACEMENT = "placement"
         BEFORE = "before"
         AFTER = "after"
-        BASE_TYPE = "base_type"
         STRUCT = "struct"
         SLASH = '/'
         STAR = '*'
@@ -77,6 +74,9 @@
         DEFAULT = "default"
         PRIORITY = "priority"
         VAR = "var"
+        NATIVE = "native"
+        FINAL = "final"
+        EXTENDS = "extends"
     ]
 }
 
@@ -111,7 +111,7 @@ generic_type_application ::= element_id (LT type_unit_application (COMMA type_un
 
 unit ::= SLASH element_id SLASH
 
-primitive_type_application ::= primitive_type_kind COLON NON_NEGATIVE_NUMBER | native_type_kind
+primitive_type_application ::= primitive_type_kind COLON NON_NEGATIVE_NUMBER
 
 array_type_application ::= LEFT_BRACKET type_application (COMMA length_from (DOTS (length_to | STAR))?)? RIGHT_BRACKET
 
@@ -154,19 +154,19 @@ subcomponent_decl ::= element_name_rule
 
 unit_decl ::= info_string? UNIT_TOKEN element_name_rule (DISPLAY string_value)? (PLACEMENT (BEFORE | AFTER))?
 
-type_decl ::= info_string? TYPE_KEYWORD element_name_rule type_decl_body
+type_decl ::= info_string? TYPE_KEYWORD element_name_rule (LT element_name_rule? (COMMA element_name_rule?)* GT)? type_decl_body
 
 primitive_type_kind ::= UINT | INT | FLOAT | BOOL
-
-native_type_kind ::= BER
 
 length_from ::= NON_NEGATIVE_NUMBER
 
 length_to ::= NON_NEGATIVE_NUMBER
 
-type_decl_body ::= (info_string? type_application) | enum_type_decl | struct_type_decl
+type_decl_body ::= type_application | enum_type_decl | struct_type_decl | native_type_decl
 
-enum_type_decl ::= info_string? ENUM type_application LEFT_PAREN enum_type_values RIGHT_PAREN
+native_type_decl ::= NATIVE
+
+enum_type_decl ::= FINAL? ENUM (EXTENDS element_name_rule | type_application) LEFT_PAREN enum_type_values RIGHT_PAREN
 
 enum_type_values ::= enum_type_value (COMMA enum_type_value)* COMMA?
 

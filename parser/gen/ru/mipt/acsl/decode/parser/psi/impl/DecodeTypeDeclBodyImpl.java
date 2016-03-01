@@ -30,8 +30,8 @@ public class DecodeTypeDeclBodyImpl extends ASTWrapperPsiElement implements Deco
 
   @Override
   @Nullable
-  public DecodeInfoString getInfoString() {
-    return findChildByClass(DecodeInfoString.class);
+  public DecodeNativeTypeDecl getNativeTypeDecl() {
+    return findChildByClass(DecodeNativeTypeDecl.class);
   }
 
   @Override

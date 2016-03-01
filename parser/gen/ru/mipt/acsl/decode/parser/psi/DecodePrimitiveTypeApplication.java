@@ -7,13 +7,10 @@ import com.intellij.psi.PsiElement;
 
 public interface DecodePrimitiveTypeApplication extends PsiElement {
 
-  @Nullable
-  DecodeNativeTypeKind getNativeTypeKind();
-
-  @Nullable
+  @NotNull
   DecodePrimitiveTypeKind getPrimitiveTypeKind();
 
-  @Nullable
+  @NotNull
   PsiElement getNonNegativeNumber();
 
 }

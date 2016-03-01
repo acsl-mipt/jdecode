@@ -13,13 +13,13 @@ import ru.mipt.acsl.decode.parser.DecodeLanguage;
 public class DecodeFile extends PsiFileBase
 {
     public DecodeFile(FileViewProvider viewProvider) {
-        super(viewProvider, DecodeLanguage.instance());
+        super(viewProvider, DecodeLanguage.INSTANCE);
     }
 
     @Override
     @NotNull
-    public  FileType getFileType() { return DecodeFileType.instance(); }
+    public  FileType getFileType() { return DecodeFileType.INSTANCE; }
 
     @Override
-    public String toString() { return "Device components definition file"; }
+    public String toString() { return "Device components definition FILE"; }
 }

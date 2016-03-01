@@ -62,7 +62,6 @@
             <systemPath>${project.basedir}/lib/grammar-kit.jar</systemPath>
         </dependency>
 
-
         <dependency>
             <groupId>org.intellij</groupId>
             <artifactId>light-psi-all</artifactId>

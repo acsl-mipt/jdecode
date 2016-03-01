@@ -6,7 +6,7 @@ import com.intellij.psi.tree.IElementType
 /**
  * @author Artem Shein
  */
-class DecodeTokenType(debugName: String) extends IElementType(debugName, DecodeLanguage.instance)
+class DecodeTokenType(debugName: String) extends IElementType(debugName, DecodeLanguage.INSTANCE)
 {
     override def toString: String = "DecodeTokenType." + super.toString
 }

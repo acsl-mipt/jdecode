@@ -23,21 +23,15 @@ public class DecodePrimitiveTypeApplicationImpl extends ASTWrapperPsiElement imp
   }
 
   @Override
-  @Nullable
-  public DecodeNativeTypeKind getNativeTypeKind() {
-    return findChildByClass(DecodeNativeTypeKind.class);
-  }
-
-  @Override
-  @Nullable
+  @NotNull
   public DecodePrimitiveTypeKind getPrimitiveTypeKind() {
-    return findChildByClass(DecodePrimitiveTypeKind.class);
+    return findNotNullChildByClass(DecodePrimitiveTypeKind.class);
   }
 
   @Override
-  @Nullable
+  @NotNull
   public PsiElement getNonNegativeNumber() {
-    return findChildByType(NON_NEGATIVE_NUMBER);
+    return findNotNullChildByType(NON_NEGATIVE_NUMBER);
   }
 
 }

@@ -6,4 +6,4 @@ import com.intellij.psi.tree.IElementType
 /**
  * @author Artem Shein
  */
-class DecodeElementType(debugName: String) extends IElementType(debugName, DecodeLanguage.instance)
+class DecodeElementType(debugName: String) extends IElementType(debugName, DecodeLanguage.INSTANCE)

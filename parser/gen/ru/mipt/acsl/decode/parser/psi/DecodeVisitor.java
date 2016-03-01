@@ -115,7 +115,7 @@ public class DecodeVisitor extends PsiElementVisitor {
     visitPsiElement(o);
   }
 
-  public void visitNativeTypeKind(@NotNull DecodeNativeTypeKind o) {
+  public void visitNativeTypeDecl(@NotNull DecodeNativeTypeDecl o) {
     visitPsiElement(o);
   }
 

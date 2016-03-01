@@ -35,7 +35,7 @@ public interface DecodeTypes {
   IElementType LITERAL = new DecodeElementType("LITERAL");
   IElementType MESSAGE_DECL = new DecodeElementType("MESSAGE_DECL");
   IElementType NAMESPACE_DECL = new DecodeElementType("NAMESPACE_DECL");
-  IElementType NATIVE_TYPE_KIND = new DecodeElementType("NATIVE_TYPE_KIND");
+  IElementType NATIVE_TYPE_DECL = new DecodeElementType("NATIVE_TYPE_DECL");
   IElementType PARAMETER_DECL = new DecodeElementType("PARAMETER_DECL");
   IElementType PARAMETER_ELEMENT = new DecodeElementType("PARAMETER_ELEMENT");
   IElementType PRIMITIVE_TYPE_APPLICATION = new DecodeElementType("PRIMITIVE_TYPE_APPLICATION");
@@ -58,9 +58,7 @@ public interface DecodeTypes {
   IElementType ARRAY = new DecodeTokenType("array");
   IElementType ARROW = new DecodeTokenType("->");
   IElementType AS = new DecodeTokenType("as");
-  IElementType BASE_TYPE = new DecodeTokenType("base_type");
   IElementType BEFORE = new DecodeTokenType("before");
-  IElementType BER = new DecodeTokenType("ber");
   IElementType BOOL = new DecodeTokenType("bool");
   IElementType COLON = new DecodeTokenType(":");
   IElementType COMMA = new DecodeTokenType(",");
@@ -77,12 +75,13 @@ public interface DecodeTypes {
   IElementType EQ_SIGN = new DecodeTokenType("=");
   IElementType ESCAPED_NAME = new DecodeTokenType("ESCAPED_NAME");
   IElementType EVENT = new DecodeTokenType("event");
+  IElementType EXTENDS = new DecodeTokenType("extends");
   IElementType FALSE = new DecodeTokenType("false");
+  IElementType FINAL = new DecodeTokenType("final");
   IElementType FLOAT = new DecodeTokenType("float");
   IElementType GT = new DecodeTokenType(">");
   IElementType ID = new DecodeTokenType("id");
   IElementType IMPORT = new DecodeTokenType("import");
-  IElementType INFO = new DecodeTokenType("info");
   IElementType INT = new DecodeTokenType("int");
   IElementType LANGUAGE = new DecodeTokenType("language");
   IElementType LEFT_BRACE = new DecodeTokenType("{");
@@ -93,6 +92,7 @@ public interface DecodeTypes {
   IElementType MINUS = new DecodeTokenType("-");
   IElementType MULTILINE_COMMENT = new DecodeTokenType("MULTILINE_COMMENT");
   IElementType NAMESPACE = new DecodeTokenType("namespace");
+  IElementType NATIVE = new DecodeTokenType("native");
   IElementType NON_NEGATIVE_NUMBER = new DecodeTokenType("NON_NEGATIVE_NUMBER");
   IElementType PARAMETER = new DecodeTokenType("parameter");
   IElementType PARAMETERS = new DecodeTokenType("parameters");
@@ -201,8 +201,8 @@ public interface DecodeTypes {
       else if (type == NAMESPACE_DECL) {
         return new DecodeNamespaceDeclImpl(node);
       }
-      else if (type == NATIVE_TYPE_KIND) {
-        return new DecodeNativeTypeKindImpl(node);
+      else if (type == NATIVE_TYPE_DECL) {
+        return new DecodeNativeTypeDeclImpl(node);
       }
       else if (type == PARAMETER_DECL) {
         return new DecodeParameterDeclImpl(node);
