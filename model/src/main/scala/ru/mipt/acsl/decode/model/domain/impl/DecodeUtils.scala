@@ -72,10 +72,11 @@ object DecodeUtils {
   }
 
   // TODO: refactoring -- use fold instead
-  def newNamespaceForFqn(fqn: Fqn): Namespace = {
+  def newNamespaceForFqn(fqn: Fqn, info: Option[String] = None): Namespace = {
     var currentNamespace: Option[Namespace] = None
-    for (part <- fqn.parts) {
-      val ns = Namespace(part, parent = currentNamespace)
+    val size = fqn.size
+    for ((part, i) <- fqn.parts.zipWithIndex) {
+      val ns = Namespace(part, parent = currentNamespace, info = if (i == size - 1) info else None)
       currentNamespace = Some(ns)
       for (parent <- ns.parent) {
         parent.subNamespaces = parent.subNamespaces :+ ns

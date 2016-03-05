@@ -23,9 +23,21 @@ public class DecodeLanguageDeclImpl extends ASTWrapperPsiElement implements Deco
   }
 
   @Override
+  @Nullable
+  public DecodeDefaultLanguage getDefaultLanguage() {
+    return findChildByClass(DecodeDefaultLanguage.class);
+  }
+
+  @Override
   @NotNull
   public DecodeElementNameRule getElementNameRule() {
     return findNotNullChildByClass(DecodeElementNameRule.class);
+  }
+
+  @Override
+  @Nullable
+  public DecodeInfoString getInfoString() {
+    return findChildByClass(DecodeInfoString.class);
   }
 
 }

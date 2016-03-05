@@ -35,6 +35,10 @@ public class DecodeVisitor extends PsiElementVisitor {
     visitPsiElement(o);
   }
 
+  public void visitDefaultLanguage(@NotNull DecodeDefaultLanguage o) {
+    visitPsiElement(o);
+  }
+
   public void visitElementId(@NotNull DecodeElementId o) {
     visitPsiElement(o);
   }
@@ -71,15 +75,35 @@ public class DecodeVisitor extends PsiElementVisitor {
     visitPsiElement(o);
   }
 
+  public void visitFinalEnum(@NotNull DecodeFinalEnum o) {
+    visitPsiElement(o);
+  }
+
   public void visitFloatLiteral(@NotNull DecodeFloatLiteral o) {
     visitPsiElement(o);
   }
 
-  public void visitGenericTypeApplication(@NotNull DecodeGenericTypeApplication o) {
+  public void visitGenericArg(@NotNull DecodeGenericArg o) {
+    visitPsiElement(o);
+  }
+
+  public void visitGenericArgs(@NotNull DecodeGenericArgs o) {
+    visitPsiElement(o);
+  }
+
+  public void visitGenericParameters(@NotNull DecodeGenericParameters o) {
     visitPsiElement(o);
   }
 
   public void visitImportElement(@NotNull DecodeImportElement o) {
+    visitPsiElement(o);
+  }
+
+  public void visitImportElementAs(@NotNull DecodeImportElementAs o) {
+    visitPsiElement(o);
+  }
+
+  public void visitImportElementStar(@NotNull DecodeImportElementStar o) {
     visitPsiElement(o);
   }
 
@@ -115,7 +139,15 @@ public class DecodeVisitor extends PsiElementVisitor {
     visitPsiElement(o);
   }
 
+  public void visitNativeTypeApplication(@NotNull DecodeNativeTypeApplication o) {
+    visitPsiElement(o);
+  }
+
   public void visitNativeTypeDecl(@NotNull DecodeNativeTypeDecl o) {
+    visitPsiElement(o);
+  }
+
+  public void visitOptional(@NotNull DecodeOptional o) {
     visitPsiElement(o);
   }
 

@@ -28,10 +28,4 @@ public class DecodeStructTypeDeclImpl extends ASTWrapperPsiElement implements De
     return findNotNullChildByClass(DecodeCommandArgs.class);
   }
 
-  @Override
-  @Nullable
-  public DecodeInfoString getInfoString() {
-    return findChildByClass(DecodeInfoString.class);
-  }
-
 }

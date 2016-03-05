@@ -5,4 +5,5 @@ out/*
 *.iml
 *~
 *.zip
-
+parser/JFlex.jar
+parser/idea-flex.skeleton

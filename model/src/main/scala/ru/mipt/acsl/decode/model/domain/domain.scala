@@ -1,17 +1,11 @@
 package ru.mipt.acsl.decode.model.domain
 
 import ru.mipt.acsl.decode.model.domain.aliases.MessageParameterToken
-import ru.mipt.acsl.decode.model.domain.impl.types._
-import ru.mipt.acsl.decode.model.domain.impl.{ElementName, MessageParameterRefWalker}
 import ru.mipt.acsl.decode.model.domain.proxy.aliases.ResolvingResult
 import ru.mipt.acsl.decode.model.domain.proxy.{Result, MaybeProxy, ProxyPath}
 
 import scala.collection.{mutable, immutable}
 import scala.reflect.ClassTag
-
-object DecodeConstants {
-  val SYSTEM_NAMESPACE_FQN: Fqn = Fqn.newFromSource("decode")
-}
 
 package object aliases {
   type MessageParameterToken = Either[String, Int]
@@ -69,9 +63,9 @@ trait Language extends Referenceable with NamespaceAware
 trait Namespace extends Referenceable with HasName with HasOptionInfo with Resolvable with Validatable {
   def asString: String
 
-  def units: immutable.Seq[Measure]
+  def units: immutable.Seq[DecodeUnit]
 
-  def units_=(units: immutable.Seq[Measure])
+  def units_=(units: immutable.Seq[DecodeUnit])
 
   def types: immutable.Seq[DecodeType]
 
@@ -93,16 +87,7 @@ trait Namespace extends Referenceable with HasName with HasOptionInfo with Resol
 
   def languages_=(languages: immutable.Seq[Language])
 
-  def fqn: Fqn = {
-    val parts: scala.collection.mutable.Buffer[ElementName] = scala.collection.mutable.Buffer[ElementName]()
-    var currentNamespace: Namespace = this
-    while (currentNamespace.parent.isDefined) {
-      parts += currentNamespace.name
-      currentNamespace = currentNamespace.parent.get
-    }
-    parts += currentNamespace.name
-    Fqn(parts.reverse)
-  }
+  def fqn: Fqn
 
   def rootNamespace: Namespace = parent.map(_.rootNamespace).getOrElse(this)
 
@@ -119,7 +104,7 @@ trait NamespaceAware {
 
 trait NameAndOptionInfoAware extends HasOptionInfo with HasName
 
-trait Measure extends HasName with HasOptionInfo with Referenceable with NamespaceAware with Validatable {
+trait DecodeUnit extends HasName with HasOptionInfo with Referenceable with NamespaceAware with Validatable {
   def display: Option[String]
 }
 
@@ -150,7 +135,7 @@ object TypeKind extends Enumeration {
 
 trait DecodeType extends Referenceable with HasName with HasOptionInfo with NamespaceAware with Resolvable with Validatable {
 
-  def fqn: Fqn = Fqn(namespace.fqn.parts :+ name)
+  def fqn: Fqn
 
   override def resolve(registry: Registry): ResolvingResult = {
     val resolvingResultList = mutable.Buffer.empty[ResolvingResult]
@@ -209,12 +194,6 @@ trait PrimitiveType extends DecodeType {
 
 trait NativeType extends DecodeType
 
-private class NativeTypeImpl(name: ElementName, ns: Namespace, info: Option[String]) extends AbstractType(name, ns, info) with NativeType
-
-object NativeType {
-  def apply(name: ElementName, ns: Namespace, info: Option[String]): NativeType = new NativeTypeImpl(name, ns, info)
-}
-
 trait HasBaseType {
   def baseType: MaybeProxy[DecodeType]
 }
@@ -253,7 +232,7 @@ trait ArrayType extends DecodeType with HasBaseType {
 
 trait TypeUnit {
   def t: MaybeProxy[DecodeType]
-  def unit: Option[MaybeProxy[Measure]]
+  def unit: Option[MaybeProxy[DecodeUnit]]
 }
 
 trait StructField extends HasName with HasOptionInfo {
@@ -277,7 +256,7 @@ trait GenericTypeSpecialized extends DecodeType {
 // Components
 
 trait Parameter extends HasName with HasOptionInfo {
-  def unit: Option[MaybeProxy[Measure]]
+  def unit: Option[MaybeProxy[DecodeUnit]]
   def paramType: MaybeProxy[DecodeType]
 }
 
@@ -295,8 +274,6 @@ trait StatusMessage extends TmMessage {
 
   def parameters: Seq[MessageParameter]
 }
-
-abstract class AbstractMessage(info: Option[String]) extends AbstractOptionalInfoAware(info) with TmMessage
 
 trait ComponentRef {
   def component: MaybeProxy[Component]
@@ -316,10 +293,7 @@ trait MessageParameterRef {
 trait MessageParameter extends HasOptionInfo {
   def value: String
 
-  def ref(component: Component): MessageParameterRef =
-    new MessageParameterRefWalker(component, None, tokens)
-
-  private def tokens: Seq[MessageParameterToken] = ParameterWalker(this).tokens
+  def ref(component: Component): MessageParameterRef
 }
 
 trait EventMessage extends TmMessage with HasBaseType {
@@ -327,7 +301,7 @@ trait EventMessage extends TmMessage with HasBaseType {
 }
 
 trait Fqned extends HasName with NamespaceAware {
-  def fqn: Fqn = Fqn.newFromFqn(namespace.fqn, name)
+  def fqn: Fqn
 }
 
 trait Component extends HasOptionInfo with Fqned with Referenceable with HasOptionId with Resolvable with Validatable {
@@ -359,58 +333,17 @@ trait Registry extends Referenceable with HasName with Resolvable with Validatab
 
   def allNamespaces: Seq[Namespace] = rootNamespaces.flatMap(_.allNamespaces)
 
-  // TODO: refactoring
-  def component(fqn: String): Option[Component] = {
-    val dotPos = fqn.lastIndexOf('.')
-    val namespaceOptional = namespace(fqn.substring(0, dotPos))
-    if (namespaceOptional.isEmpty)
-    {
-      return None
-    }
-    val componentName = ElementName.newFromMangledName(fqn.substring(dotPos + 1, fqn.length()))
-    namespaceOptional.get.components.find(_.name == componentName)
-  }
+  def component(fqn: String): Option[Component]
 
-  // todo: refactoring
-  def namespace(fqn: String): Option[Namespace] = {
-    var currentNamespaces: Option[Seq[Namespace]] = Some(rootNamespaces)
-    var currentNamespace: Option[Namespace] = None
-    "\\.".r.split(fqn).foreach(nsName => {
-      if (currentNamespaces.isEmpty)
-      {
-        return None
-      }
-      val decodeName = ElementName.newFromMangledName(nsName)
-      currentNamespace = currentNamespaces.get.find(_.name == decodeName)
-      if (currentNamespace.isDefined)
-      {
-        currentNamespaces = Some(currentNamespace.get.subNamespaces)
-      }
-      else
-      {
-        currentNamespaces = None
-      }
-    })
-    currentNamespace
-  }
+  def namespace(fqn: String): Option[Namespace]
 
-  def eventMessage(fqn: String): Option[EventMessage] = {
-    val dotPos = fqn.lastIndexOf('.')
-    val decodeName = ElementName.newFromMangledName(fqn.substring(dotPos + 1, fqn.length()))
-    component(fqn.substring(0, dotPos)).map(_.eventMessages.find(_.name == decodeName).orNull)
-  }
+  def eventMessage(fqn: String): Option[EventMessage]
 
-  def statusMessage(fqn: String): Option[StatusMessage] = {
-    val dotPos = fqn.lastIndexOf('.')
-    val decodeName = ElementName.newFromMangledName(fqn.substring(dotPos + 1, fqn.length()))
-    component(fqn.substring(0, dotPos)).map(_.statusMessages.find(_.name == decodeName).orNull)
-  }
+  def statusMessage(fqn: String): Option[StatusMessage]
 
-  def statusMessageOrFail(fqn: String): StatusMessage = {
+  def statusMessageOrFail(fqn: String): StatusMessage =
     statusMessage(fqn).getOrElse(sys.error("assertion error"))
-  }
 
-  def eventMessageOrFail(fqn: String): EventMessage = {
+  def eventMessageOrFail(fqn: String): EventMessage =
     eventMessage(fqn).getOrElse(sys.error("assertion error"))
-  }
 }

@@ -36,6 +36,12 @@ public class DecodeEnumTypeDeclImpl extends ASTWrapperPsiElement implements Deco
 
   @Override
   @Nullable
+  public DecodeFinalEnum getFinalEnum() {
+    return findChildByClass(DecodeFinalEnum.class);
+  }
+
+  @Override
+  @Nullable
   public DecodeTypeApplication getTypeApplication() {
     return findChildByClass(DecodeTypeApplication.class);
   }

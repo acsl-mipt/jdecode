@@ -34,4 +34,10 @@ public class DecodeImportStmtImpl extends ASTWrapperPsiElement implements Decode
     return PsiTreeUtil.getChildrenOfTypeAsList(this, DecodeImportElement.class);
   }
 
+  @Override
+  @Nullable
+  public DecodeImportElementStar getImportElementStar() {
+    return findChildByClass(DecodeImportElementStar.class);
+  }
+
 }

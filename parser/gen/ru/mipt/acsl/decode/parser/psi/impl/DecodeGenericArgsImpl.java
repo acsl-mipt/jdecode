@@ -11,27 +11,21 @@ import static ru.mipt.acsl.decode.parser.psi.DecodeTypes.*;
 import com.intellij.extapi.psi.ASTWrapperPsiElement;
 import ru.mipt.acsl.decode.parser.psi.*;
 
-public class DecodeComponentParametersDeclImpl extends ASTWrapperPsiElement implements DecodeComponentParametersDecl {
+public class DecodeGenericArgsImpl extends ASTWrapperPsiElement implements DecodeGenericArgs {
 
-  public DecodeComponentParametersDeclImpl(ASTNode node) {
+  public DecodeGenericArgsImpl(ASTNode node) {
     super(node);
   }
 
   public void accept(@NotNull PsiElementVisitor visitor) {
-    if (visitor instanceof DecodeVisitor) ((DecodeVisitor)visitor).visitComponentParametersDecl(this);
+    if (visitor instanceof DecodeVisitor) ((DecodeVisitor)visitor).visitGenericArgs(this);
     else super.accept(visitor);
   }
 
   @Override
   @NotNull
-  public DecodeCommandArgs getCommandArgs() {
-    return findNotNullChildByClass(DecodeCommandArgs.class);
-  }
-
-  @Override
-  @Nullable
-  public DecodeInfoString getInfoString() {
-    return findChildByClass(DecodeInfoString.class);
+  public List<DecodeGenericArg> getGenericArgList() {
+    return PsiTreeUtil.getChildrenOfTypeAsList(this, DecodeGenericArg.class);
   }
 
 }

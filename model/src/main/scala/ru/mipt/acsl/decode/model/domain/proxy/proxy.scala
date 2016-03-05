@@ -89,26 +89,6 @@ class MaybeProxy[T <: Referenceable : ClassTag](var v: Either[Proxy, T]) extends
   override def toString: String = s"MaybeProxy{${if (isProxy) proxy else obj}}"
 }
 
-object MaybeProxy {
-  def proxy[T <: Referenceable : ClassTag](proxy: Proxy): MaybeProxy[T] = new MaybeProxy[T](Left(proxy))
-
-  def proxy[T <: Referenceable : ClassTag](path: ProxyPath): MaybeProxy[T] = proxy(impl.proxy.Proxy(path))
-
-  def proxy[T <: Referenceable : ClassTag](namespaceFqn: Fqn, name: ProxyElementName): MaybeProxy[T] =
-    proxy(ProxyPath(namespaceFqn, name))
-
-  def proxyForSystem[T <: Referenceable : ClassTag](elementName: ProxyElementName): MaybeProxy[T] =
-    proxy(DecodeConstants.SYSTEM_NAMESPACE_FQN, elementName)
-
-  def proxyDefaultNamespace[T <: Referenceable : ClassTag](elementFqn: Fqn, defaultNamespace: Namespace): MaybeProxy[T] =
-    if (elementFqn.size > 1)
-      proxy(elementFqn.copyDropLast, TypeName(elementFqn.last))
-    else
-      proxy(defaultNamespace.fqn, TypeName(elementFqn.last))
-
-  def obj[T <: Referenceable : ClassTag](obj: T) = new MaybeProxy[T](Right(obj))
-}
-
 trait DecodeProxyResolver {
   def resolveElement(registry: Registry, path: ProxyPath): (Option[Referenceable], ResolvingResult)
 }

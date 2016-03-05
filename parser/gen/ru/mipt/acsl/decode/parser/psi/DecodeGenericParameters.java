@@ -5,10 +5,7 @@ import java.util.List;
 import org.jetbrains.annotations.*;
 import com.intellij.psi.PsiElement;
 
-public interface DecodeGenericTypeApplication extends PsiElement {
-
-  @NotNull
-  DecodeElementId getElementId();
+public interface DecodeGenericParameters extends PsiElement {
 
   @NotNull
   List<DecodeTypeUnitApplication> getTypeUnitApplicationList();

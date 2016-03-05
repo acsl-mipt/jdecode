@@ -24,8 +24,14 @@ public class DecodeTypeDeclImpl extends ASTWrapperPsiElement implements DecodeTy
 
   @Override
   @NotNull
-  public List<DecodeElementNameRule> getElementNameRuleList() {
-    return PsiTreeUtil.getChildrenOfTypeAsList(this, DecodeElementNameRule.class);
+  public DecodeElementNameRule getElementNameRule() {
+    return findNotNullChildByClass(DecodeElementNameRule.class);
+  }
+
+  @Override
+  @Nullable
+  public DecodeGenericArgs getGenericArgs() {
+    return findChildByClass(DecodeGenericArgs.class);
   }
 
   @Override

@@ -11,7 +11,10 @@ public interface DecodeTypeApplication extends PsiElement {
   DecodeArrayTypeApplication getArrayTypeApplication();
 
   @Nullable
-  DecodeGenericTypeApplication getGenericTypeApplication();
+  DecodeNativeTypeApplication getNativeTypeApplication();
+
+  @Nullable
+  DecodeOptional getOptional();
 
   @Nullable
   DecodePrimitiveTypeApplication getPrimitiveTypeApplication();

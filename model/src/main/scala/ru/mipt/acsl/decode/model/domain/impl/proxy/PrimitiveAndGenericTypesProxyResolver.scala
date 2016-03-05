@@ -2,8 +2,8 @@ package ru.mipt.acsl.decode.model.domain.impl.proxy
 
 import ru.mipt.acsl.decode.model.domain._
 import ru.mipt.acsl.decode.model.domain.impl.types.GenericTypeSpecializedImpl
-import ru.mipt.acsl.decode.model.domain.impl.{DecodeUtils, ElementName}
-import ru.mipt.acsl.decode.model.domain.impl.types.{GenericTypeSpecialized, PrimitiveTypeImpl}
+import ru.mipt.acsl.decode.model.domain.impl.{DecodeConstants, DecodeUtils, ElementName}
+import ru.mipt.acsl.decode.model.domain.impl.types.{GenericTypeSpecialized, PrimitiveType, PrimitiveTypeImpl}
 import ru.mipt.acsl.decode.model.domain.proxy._
 import ru.mipt.acsl.decode.model.domain.proxy.aliases._
 
@@ -27,7 +27,7 @@ class PrimitiveAndGenericTypesProxyResolver extends DecodeProxyResolver {
         // Primitive type
         case e: PrimitiveTypeName =>
           val primitiveType = primitiveTypeByTypeKindBitSize.getOrElseUpdate(path.mangledName,
-            new PrimitiveTypeImpl(
+            PrimitiveType(
               ElementName.newFromMangledName(s"${TypeKind.nameForTypeKind(e.typeKind)}:${e.bitSize}"),
               systemNamespace, None, e.typeKind, e.bitSize))
           val primitiveTypeName = primitiveType.name

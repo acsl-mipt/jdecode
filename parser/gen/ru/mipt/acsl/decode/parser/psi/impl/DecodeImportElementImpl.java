@@ -24,8 +24,14 @@ public class DecodeImportElementImpl extends ASTWrapperPsiElement implements Dec
 
   @Override
   @NotNull
-  public List<DecodeElementNameRule> getElementNameRuleList() {
-    return PsiTreeUtil.getChildrenOfTypeAsList(this, DecodeElementNameRule.class);
+  public DecodeElementNameRule getElementNameRule() {
+    return findNotNullChildByClass(DecodeElementNameRule.class);
+  }
+
+  @Override
+  @Nullable
+  public DecodeImportElementAs getImportElementAs() {
+    return findChildByClass(DecodeImportElementAs.class);
   }
 
 }

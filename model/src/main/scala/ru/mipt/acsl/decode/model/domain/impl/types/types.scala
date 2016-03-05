@@ -23,38 +23,44 @@ object Fqn {
     FqnImpl("\\.".r.split(sourceText).map(ElementName.newFromSourceName))
 }
 
-abstract class AbstractOptionalInfoAware(val info: Option[String]) extends HasOptionInfo
+private[domain] abstract class AbstractOptionalInfoAware(val info: Option[String]) extends HasOptionInfo
 
-abstract class AbstractNameAndOptionInfoAware(val name: ElementName, info: Option[String])
+private abstract class AbstractNameAndOptionInfoAware(val name: ElementName, info: Option[String])
   extends AbstractOptionalInfoAware(info) with NameAndOptionInfoAware {
 }
 
-class AbstractNameAndOptionalInfoAware(val name: ElementName, info: Option[String])
+private[domain] class AbstractNameAndOptionalInfoAware(val name: ElementName, info: Option[String])
   extends AbstractOptionalInfoAware(info) with HasName
 
-class AbstractNameNamespaceOptionalInfoAware(name: ElementName, var namespace: Namespace, info: Option[String])
+private[domain] class AbstractNameNamespaceOptionalInfoAware(name: ElementName, var namespace: Namespace, info: Option[String])
   extends AbstractNameAndOptionalInfoAware(name, info) with NamespaceAware
 
-class MeasureImpl(name: ElementName, var namespace: Namespace, var display: Option[String], info: Option[String])
-  extends AbstractNameAndOptionalInfoAware(name, info) with Measure {
+private class DecodeUnitImpl(name: ElementName, var namespace: Namespace, var display: Option[String], info: Option[String])
+  extends AbstractNameAndOptionalInfoAware(name, info) with DecodeUnit {
   override def validate(registry: Registry): ValidatingResult = {
     // TODO
     Result.empty
   }
 }
 
-object Namespace {
-  def apply(name: ElementName, info: String = null, parent: Option[Namespace] = None,
-            types: immutable.Seq[DecodeType] = immutable.Seq.empty,
-            units: immutable.Seq[Measure] = immutable.Seq.empty,
-            subNamespaces: immutable.Seq[Namespace] = immutable.Seq.empty,
-            components: immutable.Seq[Component] = immutable.Seq.empty,
-            languages: immutable.Seq[Language] = immutable.Seq.empty) =
-    new NamespaceImpl(name, Option(info), parent, types, units, subNamespaces, components, languages)
+object DecodeUnit {
+  def apply(name: ElementName, namespace: Namespace, display: Option[String] = None,
+            info: Option[String] = None): DecodeUnit =
+    new DecodeUnitImpl(name, namespace, display, info)
 }
 
-class NamespaceImpl(var name: ElementName, var info: Option[String], var parent: Option[Namespace],
-                    var types: immutable.Seq[DecodeType], var units: immutable.Seq[Measure],
+object Namespace {
+  def apply(name: ElementName, info: Option[String] = None, parent: Option[Namespace] = None,
+            types: immutable.Seq[DecodeType] = immutable.Seq.empty,
+            units: immutable.Seq[DecodeUnit] = immutable.Seq.empty,
+            subNamespaces: immutable.Seq[Namespace] = immutable.Seq.empty,
+            components: immutable.Seq[Component] = immutable.Seq.empty,
+            languages: immutable.Seq[Language] = immutable.Seq.empty): Namespace =
+    new NamespaceImpl(name, info, parent, types, units, subNamespaces, components, languages)
+}
+
+private class NamespaceImpl(var name: ElementName, var info: Option[String], var parent: Option[Namespace],
+                    var types: immutable.Seq[DecodeType], var units: immutable.Seq[DecodeUnit],
                     var subNamespaces: immutable.Seq[Namespace], var components: immutable.Seq[Component],
                     var languages: immutable.Seq[Language])
   extends HasName with Namespace {
@@ -75,25 +81,54 @@ class NamespaceImpl(var name: ElementName, var info: Option[String], var parent:
     result ++= components.map(_.validate(registry))
     result.flatten
   }
+
+  override def fqn: Fqn = {
+    val parts: scala.collection.mutable.Buffer[ElementName] = scala.collection.mutable.Buffer[ElementName]()
+    var currentNamespace: Namespace = this
+    while (currentNamespace.parent.isDefined) {
+      parts += currentNamespace.name
+      currentNamespace = currentNamespace.parent.get
+    }
+    parts += currentNamespace.name
+    Fqn(parts.reverse)
+  }
 }
 
 // Types
 
-abstract class AbstractType(name: ElementName, var namespace: Namespace, info: Option[String])
-  extends AbstractNameAndOptionInfoAware(name, info) with DecodeType
+private abstract class AbstractType(name: ElementName, var namespace: Namespace, info: Option[String])
+  extends AbstractNameAndOptionInfoAware(name, info) with DecodeType {
+  def fqn: Fqn = Fqn(namespace.fqn.parts :+ name)
+}
 
-abstract class AbstractTypeWithBaseType(name: ElementName, namespace: Namespace,
-                                        info: Option[String], var baseType: MaybeProxy[DecodeType])
+private abstract class AbstractTypeWithBaseType(name: ElementName, namespace: Namespace,
+                                                info: Option[String], var baseType: MaybeProxy[DecodeType])
   extends AbstractType(name, namespace, info)
 
-class PrimitiveTypeImpl(name: ElementName, namespace: Namespace, info: Option[String],
-                        val kind: TypeKind.Value, val bitLength: Long = 0)
+private class PrimitiveTypeImpl(name: ElementName, namespace: Namespace, info: Option[String],
+                                val kind: TypeKind.Value, val bitLength: Long = 0)
   extends AbstractType(name, namespace, info) with PrimitiveType
 
-class AliasTypeImpl(val name: ElementName, var namespace: Namespace, val baseType: MaybeProxy[DecodeType],
-                    info: Option[String])
-  extends AbstractOptionalInfoAware(info) with AliasType with HasBaseType {
+object PrimitiveType {
+  def apply(name: ElementName, namespace: Namespace, info: Option[String], kind: TypeKind.Value,
+            bitLength: Long = 0): PrimitiveType = new PrimitiveTypeImpl(name, namespace, info, kind, bitLength)
+}
+
+private class NativeTypeImpl(name: ElementName, ns: Namespace, info: Option[String]) extends AbstractType(name, ns, info) with NativeType
+
+object NativeType {
+  def apply(name: ElementName, ns: Namespace, info: Option[String]): NativeType = new NativeTypeImpl(name, ns, info)
+}
+
+private class AliasTypeImpl(name: ElementName, namespace: Namespace, val baseType: MaybeProxy[DecodeType],
+                            info: Option[String])
+  extends AbstractType(name, namespace, info) with AliasType with HasBaseType {
   def optionName = Some(name)
+}
+
+object AliasType {
+  def apply(name: ElementName, namespace: Namespace, baseType: MaybeProxy[DecodeType],
+            info: Option[String]): AliasType = new AliasTypeImpl(name, namespace, baseType, info)
 }
 
 private class SubTypeImpl(name: ElementName, namespace: Namespace, info: Option[String],
@@ -105,24 +140,46 @@ object SubType {
             baseType: MaybeProxy[DecodeType]): SubType = new SubTypeImpl(name, namespace, info, baseType)
 }
 
-class EnumConstantImpl(val name: ElementName, val value: String, info: Option[String])
+private class EnumConstantImpl(val name: ElementName, val value: String, info: Option[String])
   extends AbstractOptionalInfoAware(info) with EnumConstant
 
-class EnumTypeImpl(name: ElementName, namespace: Namespace,
-                   var extendsOrBaseType: Either[MaybeProxy[EnumType], MaybeProxy[DecodeType]],
-                   info: Option[String], var constants: Set[EnumConstant], var isFinal: Boolean)
+object EnumConstant {
+  def apply(name: ElementName, value: String, info: Option[String]): EnumConstant =
+    new EnumConstantImpl(name, value, info)
+}
+
+private class EnumTypeImpl(name: ElementName, namespace: Namespace,
+                           var extendsOrBaseType: Either[MaybeProxy[EnumType], MaybeProxy[DecodeType]],
+                           info: Option[String], var constants: Set[EnumConstant], var isFinal: Boolean)
   extends AbstractType(name, namespace, info) with EnumType {
   override def extendsType: Option[MaybeProxy[EnumType]] = extendsOrBaseType.left.toOption
   def baseTypeOption: Option[MaybeProxy[DecodeType]] = extendsOrBaseType.right.toOption
   override def baseType: MaybeProxy[DecodeType] = extendsOrBaseType.right.getOrElse(extendsType.get.obj.baseType)
 }
 
-class TypeUnitImpl(val t: MaybeProxy[DecodeType], val unit: Option[MaybeProxy[Measure]])
+object EnumType {
+  def apply(name: ElementName, namespace: Namespace,
+            extendsOrBaseType: Either[MaybeProxy[EnumType], MaybeProxy[DecodeType]],
+            info: Option[String], constants: Set[EnumConstant], isFinal: Boolean): EnumType =
+    new EnumTypeImpl(name, namespace, extendsOrBaseType, info, constants, isFinal)
+}
+
+private class TypeUnitImpl(val t: MaybeProxy[DecodeType], val unit: Option[MaybeProxy[DecodeUnit]])
   extends TypeUnit
 
-class StructFieldImpl(val name: ElementName, val typeUnit: TypeUnit, info: Option[String])
+object TypeUnit {
+  def apply(t: MaybeProxy[DecodeType], unit: Option[MaybeProxy[DecodeUnit]]): TypeUnit =
+    new TypeUnitImpl(t, unit)
+}
+
+private class StructFieldImpl(val name: ElementName, val typeUnit: TypeUnit, info: Option[String])
   extends AbstractOptionalInfoAware(info) with StructField {
   override def toString: String = s"${this.getClass.getSimpleName}{name = $name, typeUnit = $typeUnit, info = $info}"
+}
+
+object StructField {
+  def apply(name: ElementName, typeUnit: TypeUnit, info: Option[String]): StructField =
+    new StructFieldImpl(name, typeUnit, info)
 }
 
 private class StructTypeImpl(name: ElementName, namespace: Namespace, info: Option[String], var fields: Seq[StructField])
@@ -176,17 +233,33 @@ object GenericTypeSpecialized {
 }
 
 // Components
-class ParameterImpl(name: ElementName, info: Option[String], val paramType: MaybeProxy[DecodeType],
-                    val unit: Option[MaybeProxy[Measure]])
+private class ParameterImpl(name: ElementName, info: Option[String], val paramType: MaybeProxy[DecodeType],
+                            val unit: Option[MaybeProxy[DecodeUnit]])
   extends AbstractNameAndOptionalInfoAware(name, info) with Parameter
 
-class ComponentImpl(name: ElementName, namespace: Namespace, var id: Option[Int],
-                    var baseType: Option[MaybeProxy[StructType]], info: Option[String],
-                    var subComponents: immutable.Seq[ComponentRef],
-                    var commands: immutable.Seq[Command] = immutable.Seq.empty,
-                    var eventMessages: immutable.Seq[EventMessage] = immutable.Seq.empty,
-                    var statusMessages: immutable.Seq[StatusMessage] = immutable.Seq.empty)
+object Parameter {
+  def apply(name: ElementName, info: Option[String], paramType: MaybeProxy[DecodeType],
+            unit: Option[MaybeProxy[DecodeUnit]]): Parameter =
+    new ParameterImpl(name, info, paramType, unit)
+}
+
+object Component {
+  def apply(name: ElementName, namespace: Namespace, id: Option[Int], baseType: Option[MaybeProxy[StructType]],
+            info: Option[String], subComponents: immutable.Seq[ComponentRef],
+            commands: immutable.Seq[Command] = immutable.Seq.empty,
+            eventMessages: immutable.Seq[EventMessage] = immutable.Seq.empty,
+            statusMessages: immutable.Seq[StatusMessage] = immutable.Seq.empty): Component =
+    new ComponentImpl(name, namespace, id, baseType, info, subComponents, commands, eventMessages, statusMessages)
+}
+
+private class ComponentImpl(name: ElementName, namespace: Namespace, var id: Option[Int],
+                            var baseType: Option[MaybeProxy[StructType]], info: Option[String],
+                            var subComponents: immutable.Seq[ComponentRef],
+                            var commands: immutable.Seq[Command] = immutable.Seq.empty,
+                            var eventMessages: immutable.Seq[EventMessage] = immutable.Seq.empty,
+                            var statusMessages: immutable.Seq[StatusMessage] = immutable.Seq.empty)
   extends AbstractNameNamespaceOptionalInfoAware(name, namespace, info) with Component {
+  override def fqn: Fqn = Fqn.newFromFqn(namespace.fqn, name)
   override def resolve(registry: Registry): ResolvingResult = {
     val result = mutable.Buffer.empty[ResolvingResult]
     baseType.map { t =>

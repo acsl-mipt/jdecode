@@ -8,6 +8,9 @@ import com.intellij.psi.PsiElement;
 public interface DecodeImportElement extends PsiElement {
 
   @NotNull
-  List<DecodeElementNameRule> getElementNameRuleList();
+  DecodeElementNameRule getElementNameRule();
+
+  @Nullable
+  DecodeImportElementAs getImportElementAs();
 
 }

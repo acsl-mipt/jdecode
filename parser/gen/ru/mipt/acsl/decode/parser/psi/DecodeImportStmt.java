@@ -13,4 +13,7 @@ public interface DecodeImportStmt extends PsiElement {
   @NotNull
   List<DecodeImportElement> getImportElementList();
 
+  @Nullable
+  DecodeImportElementStar getImportElementStar();
+
 }

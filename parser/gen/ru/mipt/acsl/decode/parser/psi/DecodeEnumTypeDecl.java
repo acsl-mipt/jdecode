@@ -14,6 +14,9 @@ public interface DecodeEnumTypeDecl extends PsiElement {
   DecodeEnumTypeValues getEnumTypeValues();
 
   @Nullable
+  DecodeFinalEnum getFinalEnum();
+
+  @Nullable
   DecodeTypeApplication getTypeApplication();
 
 }

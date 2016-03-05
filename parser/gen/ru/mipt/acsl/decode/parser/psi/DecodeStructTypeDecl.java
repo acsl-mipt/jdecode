@@ -10,7 +10,4 @@ public interface DecodeStructTypeDecl extends PsiElement {
   @NotNull
   DecodeCommandArgs getCommandArgs();
 
-  @Nullable
-  DecodeInfoString getInfoString();
-
 }

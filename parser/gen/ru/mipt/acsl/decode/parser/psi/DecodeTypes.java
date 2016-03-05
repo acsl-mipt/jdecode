@@ -15,6 +15,7 @@ public interface DecodeTypes {
   IElementType COMMAND_DECL = new DecodeElementType("COMMAND_DECL");
   IElementType COMPONENT_DECL = new DecodeElementType("COMPONENT_DECL");
   IElementType COMPONENT_PARAMETERS_DECL = new DecodeElementType("COMPONENT_PARAMETERS_DECL");
+  IElementType DEFAULT_LANGUAGE = new DecodeElementType("DEFAULT_LANGUAGE");
   IElementType ELEMENT_ID = new DecodeElementType("ELEMENT_ID");
   IElementType ELEMENT_NAME_RULE = new DecodeElementType("ELEMENT_NAME_RULE");
   IElementType ENTITY_ID = new DecodeElementType("ENTITY_ID");
@@ -24,9 +25,14 @@ public interface DecodeTypes {
   IElementType EVENT_MESSAGE = new DecodeElementType("EVENT_MESSAGE");
   IElementType EVENT_MESSAGE_PARAMETERS_DECL = new DecodeElementType("EVENT_MESSAGE_PARAMETERS_DECL");
   IElementType EVENT_PARAMETER_DECL = new DecodeElementType("EVENT_PARAMETER_DECL");
+  IElementType FINAL_ENUM = new DecodeElementType("FINAL_ENUM");
   IElementType FLOAT_LITERAL = new DecodeElementType("FLOAT_LITERAL");
-  IElementType GENERIC_TYPE_APPLICATION = new DecodeElementType("GENERIC_TYPE_APPLICATION");
+  IElementType GENERIC_ARG = new DecodeElementType("GENERIC_ARG");
+  IElementType GENERIC_ARGS = new DecodeElementType("GENERIC_ARGS");
+  IElementType GENERIC_PARAMETERS = new DecodeElementType("GENERIC_PARAMETERS");
   IElementType IMPORT_ELEMENT = new DecodeElementType("IMPORT_ELEMENT");
+  IElementType IMPORT_ELEMENT_AS = new DecodeElementType("IMPORT_ELEMENT_AS");
+  IElementType IMPORT_ELEMENT_STAR = new DecodeElementType("IMPORT_ELEMENT_STAR");
   IElementType IMPORT_STMT = new DecodeElementType("IMPORT_STMT");
   IElementType INFO_STRING = new DecodeElementType("INFO_STRING");
   IElementType LANGUAGE_DECL = new DecodeElementType("LANGUAGE_DECL");
@@ -35,7 +41,9 @@ public interface DecodeTypes {
   IElementType LITERAL = new DecodeElementType("LITERAL");
   IElementType MESSAGE_DECL = new DecodeElementType("MESSAGE_DECL");
   IElementType NAMESPACE_DECL = new DecodeElementType("NAMESPACE_DECL");
+  IElementType NATIVE_TYPE_APPLICATION = new DecodeElementType("NATIVE_TYPE_APPLICATION");
   IElementType NATIVE_TYPE_DECL = new DecodeElementType("NATIVE_TYPE_DECL");
+  IElementType OPTIONAL = new DecodeElementType("OPTIONAL");
   IElementType PARAMETER_DECL = new DecodeElementType("PARAMETER_DECL");
   IElementType PARAMETER_ELEMENT = new DecodeElementType("PARAMETER_ELEMENT");
   IElementType PRIMITIVE_TYPE_APPLICATION = new DecodeElementType("PRIMITIVE_TYPE_APPLICATION");
@@ -141,6 +149,9 @@ public interface DecodeTypes {
       else if (type == COMPONENT_PARAMETERS_DECL) {
         return new DecodeComponentParametersDeclImpl(node);
       }
+      else if (type == DEFAULT_LANGUAGE) {
+        return new DecodeDefaultLanguageImpl(node);
+      }
       else if (type == ELEMENT_ID) {
         return new DecodeElementIdImpl(node);
       }
@@ -168,14 +179,29 @@ public interface DecodeTypes {
       else if (type == EVENT_PARAMETER_DECL) {
         return new DecodeEventParameterDeclImpl(node);
       }
+      else if (type == FINAL_ENUM) {
+        return new DecodeFinalEnumImpl(node);
+      }
       else if (type == FLOAT_LITERAL) {
         return new DecodeFloatLiteralImpl(node);
       }
-      else if (type == GENERIC_TYPE_APPLICATION) {
-        return new DecodeGenericTypeApplicationImpl(node);
+      else if (type == GENERIC_ARG) {
+        return new DecodeGenericArgImpl(node);
+      }
+      else if (type == GENERIC_ARGS) {
+        return new DecodeGenericArgsImpl(node);
+      }
+      else if (type == GENERIC_PARAMETERS) {
+        return new DecodeGenericParametersImpl(node);
       }
       else if (type == IMPORT_ELEMENT) {
         return new DecodeImportElementImpl(node);
+      }
+      else if (type == IMPORT_ELEMENT_AS) {
+        return new DecodeImportElementAsImpl(node);
+      }
+      else if (type == IMPORT_ELEMENT_STAR) {
+        return new DecodeImportElementStarImpl(node);
       }
       else if (type == IMPORT_STMT) {
         return new DecodeImportStmtImpl(node);
@@ -201,8 +227,14 @@ public interface DecodeTypes {
       else if (type == NAMESPACE_DECL) {
         return new DecodeNamespaceDeclImpl(node);
       }
+      else if (type == NATIVE_TYPE_APPLICATION) {
+        return new DecodeNativeTypeApplicationImpl(node);
+      }
       else if (type == NATIVE_TYPE_DECL) {
         return new DecodeNativeTypeDeclImpl(node);
+      }
+      else if (type == OPTIONAL) {
+        return new DecodeOptionalImpl(node);
       }
       else if (type == PARAMETER_DECL) {
         return new DecodeParameterDeclImpl(node);

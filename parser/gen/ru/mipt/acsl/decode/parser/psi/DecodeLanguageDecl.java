@@ -7,7 +7,13 @@ import com.intellij.psi.PsiElement;
 
 public interface DecodeLanguageDecl extends PsiElement {
 
+  @Nullable
+  DecodeDefaultLanguage getDefaultLanguage();
+
   @NotNull
   DecodeElementNameRule getElementNameRule();
+
+  @Nullable
+  DecodeInfoString getInfoString();
 
 }

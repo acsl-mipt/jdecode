@@ -2,9 +2,7 @@ package ru.mipt.acsl.decode.model.domain.impl
 
 import ru.mipt.acsl.decode.model.domain.aliases.{MessageParameterToken, ValidatingResult}
 import ru.mipt.acsl.decode.model.domain._
-import ru.mipt.acsl.decode.model.domain.impl.types.AbstractNameNamespaceOptionalInfoAware
-import ru.mipt.acsl.decode.model.domain.impl.types.AbstractOptionalInfoAware
-import ru.mipt.acsl.decode.model.domain.impl.types.{Namespace, NamespaceImpl}
+import ru.mipt.acsl.decode.model.domain.impl.types.{Fqn, Namespace, ArrayType => _, StructType => _, SubType => _, _}
 import ru.mipt.acsl.decode.model.domain.impl.proxy.{ExistingElementsProxyResolver, PrimitiveAndGenericTypesProxyResolver}
 import ru.mipt.acsl.decode.model.domain.proxy.aliases.ResolvingResult
 import ru.mipt.acsl.decode.model.domain.proxy.{DecodeProxyResolver, MaybeProxy, ProxyPath}
@@ -19,6 +17,10 @@ import scala.reflect._
 /**
   * @author Artem Shein
   */
+object DecodeConstants {
+  val SYSTEM_NAMESPACE_FQN: Fqn = Fqn.newFromSource("decode")
+}
+
 private case class ElementNameImpl(value: String) extends ElementName {
   override def asMangledString: String = value
 }
@@ -65,21 +67,40 @@ case object TokenOptionTypeWalker extends ((DecodeType, MessageParameterToken) =
   }
 }
 
-abstract class AbstractImmutableMessage(val component: Component, val name: ElementName, val id: Option[Int],
+private abstract class AbstractMessage(info: Option[String]) extends AbstractOptionalInfoAware(info) with TmMessage
+
+private abstract class AbstractImmutableMessage(val component: Component, val name: ElementName, val id: Option[Int],
                                         info: Option[String]) extends AbstractMessage(info) {
   def optionName = Some(name)
 }
 
-case class ComponentRefImpl(component: MaybeProxy[Component], alias: Option[String] = None)
+private class ComponentRefImpl(val component: MaybeProxy[Component], val alias: Option[String] = None)
   extends ComponentRef
 
-class StatusMessageImpl(component: Component, name: ElementName, id: Option[Int], info: Option[String],
-                        val parameters: Seq[MessageParameter], val priority: Option[Int] = None)
+object ComponentRef {
+  def apply(component: MaybeProxy[Component], alias: Option[String] = None): ComponentRef =
+    new ComponentRefImpl(component, alias)
+}
+
+private class StatusMessageImpl(component: Component, name: ElementName, id: Option[Int], info: Option[String],
+                                val parameters: Seq[MessageParameter], val priority: Option[Int] = None)
   extends AbstractImmutableMessage(component, name, id, info) with StatusMessage
 
-class EventMessageImpl(component: Component, name: ElementName, id: Option[Int], info: Option[String],
-                       val fields: Seq[Either[MessageParameter, Parameter]], val baseType: MaybeProxy[DecodeType])
+object StatusMessage {
+  def apply(component: Component, name: ElementName, id: Option[Int], info: Option[String],
+            parameters: Seq[MessageParameter], priority: Option[Int] = None): StatusMessage =
+    new StatusMessageImpl(component, name, id, info, parameters, priority)
+}
+
+private class EventMessageImpl(component: Component, name: ElementName, id: Option[Int], info: Option[String],
+                               val fields: Seq[Either[MessageParameter, Parameter]], val baseType: MaybeProxy[DecodeType])
   extends AbstractImmutableMessage(component, name, id, info) with EventMessage
+
+object EventMessage {
+  def apply(component: Component, name: ElementName, id: Option[Int], info: Option[String],
+            fields: Seq[Either[MessageParameter, Parameter]], baseType: MaybeProxy[DecodeType]): EventMessage =
+    new EventMessageImpl(component, name, id, info, fields, baseType)
+}
 
 private class RegistryImpl(val name: ElementName, resolvers: DecodeProxyResolver*) extends Registry {
   if (DecodeConstants.SYSTEM_NAMESPACE_FQN.size != 1)
@@ -93,6 +114,45 @@ private class RegistryImpl(val name: ElementName, resolvers: DecodeProxyResolver
     new ExistingElementsProxyResolver(),
     new PrimitiveAndGenericTypesProxyResolver())
 
+  override def component(fqn: String): Option[Component] = {
+    val dotPos = fqn.lastIndexOf('.')
+    val namespaceOptional = namespace(fqn.substring(0, dotPos))
+    if (namespaceOptional.isEmpty)
+    {
+      return None
+    }
+    val componentName = ElementName.newFromMangledName(fqn.substring(dotPos + 1, fqn.length()))
+    namespaceOptional.get.components.find(_.name == componentName)
+  }
+
+  override def namespace(fqn: String): Option[Namespace] = {
+    var currentNamespaces: Option[Seq[Namespace]] = Some(rootNamespaces)
+    var currentNamespace: Option[Namespace] = None
+    "\\.".r.split(fqn).foreach(nsName => {
+      if (currentNamespaces.isEmpty)
+      {
+        return None
+      }
+      val decodeName = ElementName.newFromMangledName(nsName)
+      currentNamespace = currentNamespaces.get.find(_.name == decodeName)
+      if (currentNamespace.isDefined)
+      {
+        currentNamespaces = Some(currentNamespace.get.subNamespaces)
+      }
+      else
+      {
+        currentNamespaces = None
+      }
+    })
+    currentNamespace
+  }
+
+  override def eventMessage(fqn: String): Option[EventMessage] = {
+    val dotPos = fqn.lastIndexOf('.')
+    val decodeName = ElementName.newFromMangledName(fqn.substring(dotPos + 1, fqn.length()))
+    component(fqn.substring(0, dotPos)).map(_.eventMessages.find(_.name == decodeName).orNull)
+  }
+
   override def resolveElement[T <: Referenceable](path: ProxyPath)(implicit ct: ClassTag[T]): (Option[T], ResolvingResult) = {
     for (resolver <- proxyResolvers) {
       val result = resolver.resolveElement(this, path)
@@ -105,6 +165,12 @@ private class RegistryImpl(val name: ElementName, resolvers: DecodeProxyResolver
         }
     }
     (None, Seq(Message(ErrorLevel, s"path $path can not be resolved")))
+  }
+
+  override def statusMessage(fqn: String): Option[StatusMessage] = {
+    val dotPos = fqn.lastIndexOf('.')
+    val decodeName = ElementName.newFromMangledName(fqn.substring(dotPos + 1, fqn.length()))
+    component(fqn.substring(0, dotPos)).map(_.statusMessages.find(_.name == decodeName).orNull)
   }
 
   def resolve(): ResolvingResult = resolve(this)
@@ -164,12 +230,32 @@ class MessageParameterRefWalker(var component: Component, var structField: Optio
   }
 }
 
-class CommandImpl(val name: ElementName, val id: Option[Int], info: Option[String],
-                  val parameters: immutable.Seq[Parameter],
-                  val returnType: Option[MaybeProxy[DecodeType]])
+private class CommandImpl(val name: ElementName, val id: Option[Int], info: Option[String],
+                          val parameters: immutable.Seq[Parameter], val returnType: Option[MaybeProxy[DecodeType]])
   extends AbstractOptionalInfoAware(info) with Command
 
-class LanguageImpl(name: ElementName, namespace: Namespace, val isDefault: Boolean, info: Option[String])
+object Command {
+  def apply(name: ElementName, id: Option[Int], info: Option[String],
+            parameters: immutable.Seq[Parameter], returnType: Option[MaybeProxy[DecodeType]]): Command =
+    new CommandImpl(name, id, info, parameters, returnType)
+}
+
+private class LanguageImpl(name: ElementName, namespace: Namespace, val isDefault: Boolean, info: Option[String])
   extends AbstractNameNamespaceOptionalInfoAware(name, namespace, info) with Language
 
-class MessageParameterImpl(val value: String, val info: Option[String] = None) extends MessageParameter
+object Language {
+  def apply(name: ElementName, namespace: Namespace, isDefault: Boolean, info: Option[String]): Language =
+    new LanguageImpl(name, namespace, isDefault, info)
+}
+
+private class MessageParameterImpl(val value: String, val info: Option[String] = None) extends MessageParameter {
+  def ref(component: Component): MessageParameterRef =
+    new MessageParameterRefWalker(component, None, tokens)
+
+  private def tokens: Seq[MessageParameterToken] = ParameterWalker(this).tokens
+}
+
+object MessageParameter {
+  def apply(value: String, info: Option[String] = None): MessageParameter =
+    new MessageParameterImpl(value, info)
+}
