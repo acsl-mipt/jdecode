@@ -1,8 +1,8 @@
 package ru.mipt.acsl.decode.parser
 
 
-import com.intellij.lang.{Language => _, _}
 import com.intellij.lang.impl.PsiBuilderFactoryImpl
+import com.intellij.lang.{Language => _, _}
 import com.intellij.mock.{MockApplicationEx, MockProjectEx}
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
@@ -17,11 +17,15 @@ import com.intellij.psi.impl.source.resolve.reference.{ReferenceProvidersRegistr
 import com.typesafe.scalalogging.LazyLogging
 import org.picocontainer.PicoContainer
 import org.picocontainer.defaults.AbstractComponentAdapter
-import ru.mipt.acsl.decode.model.domain.impl._
-import ru.mipt.acsl.decode.model.domain.impl.types._
 import ru.mipt.acsl.decode.model.domain._
+import ru.mipt.acsl.decode.model.domain.component.messages.{EventMessage, StatusMessage}
+import ru.mipt.acsl.decode.model.domain.component.{ComponentRef, Command, Component}
+import ru.mipt.acsl.decode.model.domain.impl._
 import ru.mipt.acsl.decode.model.domain.impl.proxy.MaybeProxy
+import ru.mipt.acsl.decode.model.domain.impl.types._
+import ru.mipt.acsl.decode.model.domain.naming.{ElementName, Fqn, Namespace}
 import ru.mipt.acsl.decode.model.domain.proxy._
+import ru.mipt.acsl.decode.model.domain.types.{TypeUnit, TypeKind, DecodeType, EnumType}
 import ru.mipt.acsl.decode.parser.psi.{DecodeUnit => PsiDecodeUnit, _}
 
 import scala.collection.immutable.Seq
@@ -31,6 +35,7 @@ import scala.reflect.ClassTag
 
 private sealed trait ImportPart {
   def alias: String
+
   def originalName: ElementName
 }
 
@@ -62,20 +67,21 @@ class DecodeAstTransformer {
         val body = p.getTypeDeclBody
         val name = elementName(p.getElementNameRule)
         val optionInfo = optionString(p.getInfoString)
-        ns.types = ns.types :+ Option(body.getEnumTypeDecl).map{ e =>
+        ns.types = ns.types :+ Option(body.getEnumTypeDecl).map { e =>
           EnumType(name, ns, Option(e.getElementNameRule)
             .map(n => Left(proxyForFqn[EnumType](Fqn(Seq(elementName(n))))))
             .getOrElse(Right(typeApplication(Option(e.getTypeApplication)).get)), optionInfo,
-            e.getEnumTypeValues.getEnumTypeValueList.map{ v => EnumConstant(elementName(v.getElementNameRule),
-              v.getLiteral.getText, optionString(v.getInfoString))}.to[immutable.Set], e.getFinalEnum != null)
-        }.orElse{
+            e.getEnumTypeValues.getEnumTypeValueList.map { v => EnumConstant(elementName(v.getElementNameRule),
+              v.getLiteral.getText, optionString(v.getInfoString))
+            }.to[immutable.Set], e.getFinalEnum != null)
+        }.orElse {
           Option(body.getNativeTypeDecl).map(n =>
             Option(p.getGenericArgs).map(args => GenericType(name, ns, optionInfo,
               args.getGenericArgList.map(arg => Option(arg.getElementNameRule).map(elementName))))
               .getOrElse(NativeType(name, ns, optionInfo)))
-        }.orElse{
+        }.orElse {
           Option(body.getTypeApplication).map(s => SubType(name, ns, optionInfo, typeApplication(Some(s)).get))
-        }.getOrElse{
+        }.getOrElse {
           StructType(name, ns, optionInfo, body.getStructTypeDecl.getCommandArgs.getCommandArgList.map(cmdArg =>
             StructField(elementName(cmdArg.getElementNameRule), typeUnit(cmdArg.getTypeUnitApplication),
               optionString(cmdArg.getInfoString))))
@@ -148,10 +154,10 @@ class DecodeAstTransformer {
   private def eventMessage(em: DecodeEventMessage, c: Component): EventMessage =
     EventMessage(c, elementName(em.getElementNameRule), id(Option(em.getEntityId)),
       optionString(em.getInfoString),
-      em.getEventMessageParametersDecl.getEventParameterDeclList.map{ p =>
+      em.getEventMessageParametersDecl.getEventParameterDeclList.map { p =>
         Option(p.getParameterElement)
           .map(mp => Left(MessageParameter(mp.getText, optionString(p.getInfoString))))
-          .getOrElse{
+          .getOrElse {
             val _var = p.getVarParameterElement
             Right(Parameter(elementName(_var.getElementNameRule), optionString(p.getInfoString),
               typeApplication(Some(_var.getTypeUnitApplication.getTypeApplication)).get,
@@ -162,7 +168,7 @@ class DecodeAstTransformer {
   private def command(c: DecodeCommandDecl): Command =
     Command(elementName(c.getElementNameRule), id(Option(c.getEntityId)),
       optionString(c.getInfoString), Option(c.getCommandArgs).map(_.getCommandArgList.toSeq).getOrElse(Seq.empty)
-        .map{ cmdArg =>
+        .map { cmdArg =>
           Parameter(elementName(cmdArg.getElementNameRule), optionString(cmdArg.getInfoString),
             typeApplication(Some(cmdArg.getTypeUnitApplication.getTypeApplication)).get,
             unit(Option(cmdArg.getTypeUnitApplication.getUnit)))
@@ -214,7 +220,7 @@ class DecodeAstTransformer {
 
   private def proxyForFqn[T <: Referenceable : ClassTag](fqn: Fqn): MaybeProxy[T] =
     if (fqn.size == 1 && imports.contains(fqn.last.asMangledString))
-      // todo: refactor out asInstanceOf
+    // todo: refactor out asInstanceOf
       imports.get(fqn.last.asMangledString).get.asInstanceOf[MaybeProxy[T]]
     else
       MaybeProxy.proxyDefaultNamespace[T](fqn, ns)
@@ -222,13 +228,13 @@ class DecodeAstTransformer {
   private def typeApplication(ota: Option[DecodeTypeApplication]): Option[MaybeProxy[DecodeType]] =
     ota match {
       case Some(ta) =>
-        val result = Option(ta.getArrayTypeApplication).map{ ata =>
+        val result = Option(ta.getArrayTypeApplication).map { ata =>
           val path = typeApplication(Some(ata.getTypeApplication)).get.proxy.path
           val fromTo = (Option(ata.getLengthFrom).map(_.getText), Option(ata.getLengthTo).map(_.getText))
           MaybeProxy.proxy[DecodeType](ProxyPath(path.ns, ArrayTypePath(path,
             ArraySize(fromTo._1.map(_.toLong).getOrElse(0l),
               fromTo._2.map(_.toLong).getOrElse(0l)))))
-        }.orElse(Option(ta.getPrimitiveTypeApplication).map{ pta =>
+        }.orElse(Option(ta.getPrimitiveTypeApplication).map { pta =>
           MaybeProxy.proxyForSystem[DecodeType](PrimitiveTypeName(
             TypeKind.typeKindByName(pta.getPrimitiveTypeKind.getText).get, pta.getNonNegativeNumber.getText.toInt))
         }).getOrElse {
@@ -239,8 +245,8 @@ class DecodeAstTransformer {
             // todo: remove asInstanceOf
             MaybeProxy.proxy[DecodeType](ProxyPath(path.ns,
               GenericTypeName(path.element.asInstanceOf[TypeName].typeName,
-              params.getTypeUnitApplicationList.map(p => typeApplication(Some(p.getTypeApplication))
-                .map(_.proxy.path)).to[immutable.Seq])))
+                params.getTypeUnitApplicationList.map(p => typeApplication(Some(p.getTypeApplication))
+                  .map(_.proxy.path)).to[immutable.Seq])))
           }.getOrElse(proxy)
         }
         Some(if (ta.getOptional != null) {

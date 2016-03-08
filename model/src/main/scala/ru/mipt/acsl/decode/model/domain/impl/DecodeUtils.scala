@@ -4,7 +4,8 @@ import java.net.{URI, URLDecoder, URLEncoder}
 
 import com.google.common.base.Charsets
 import ru.mipt.acsl.decode.model.domain._
-import ru.mipt.acsl.decode.model.domain.impl.types.{Fqn, Namespace, NamespaceImpl}
+import ru.mipt.acsl.decode.model.domain.impl.types.{Fqn, Namespace}
+import ru.mipt.acsl.decode.model.domain.naming.{ElementName, Fqn, Namespace}
 
 import scala.collection.immutable
 

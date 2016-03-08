@@ -1,18 +1,22 @@
 package ru.mipt.acsl.decode.model.domain.impl
 
-import ru.mipt.acsl.decode.model.domain.aliases.{MessageParameterToken, ValidatingResult}
 import ru.mipt.acsl.decode.model.domain._
-import ru.mipt.acsl.decode.model.domain.impl.types.{Fqn, Namespace, ArrayType => _, StructType => _, SubType => _, _}
+import ru.mipt.acsl.decode.model.domain.aliases.{MessageParameterToken, ValidatingResult}
+import ru.mipt.acsl.decode.model.domain.component.messages._
+import ru.mipt.acsl.decode.model.domain.component.{ComponentRef, Command, Component, Parameter}
 import ru.mipt.acsl.decode.model.domain.impl.proxy.{ExistingElementsProxyResolver, PrimitiveAndGenericTypesProxyResolver}
+import ru.mipt.acsl.decode.model.domain.impl.types.{ArrayType => _, Fqn, StructType => _, SubType => _, _}
+import ru.mipt.acsl.decode.model.domain.naming.{ElementName, Fqn, Namespace}
 import ru.mipt.acsl.decode.model.domain.proxy.aliases.ResolvingResult
 import ru.mipt.acsl.decode.model.domain.proxy.{DecodeProxyResolver, MaybeProxy, ProxyPath}
+import ru.mipt.acsl.decode.model.domain.types.StructField
+import ru.mipt.acsl.decode.model.domain.types._
 import ru.mipt.acsl.decode.modeling.ErrorLevel
 import ru.mipt.acsl.decode.modeling.impl.Message
 
+import scala.collection.immutable
 import scala.reflect.ClassTag
 import scala.util.{Failure, Success, Try}
-import scala.collection.immutable
-import scala.reflect._
 
 /**
   * @author Artem Shein

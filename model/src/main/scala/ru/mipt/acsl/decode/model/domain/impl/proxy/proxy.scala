@@ -2,8 +2,9 @@ package ru.mipt.acsl.decode.model.domain.impl.proxy
 
 import ru.mipt.acsl.decode.model.domain._
 import ru.mipt.acsl.decode.model.domain.impl.DecodeConstants
-import ru.mipt.acsl.decode.model.domain.proxy.aliases.ResolvingResult
+import ru.mipt.acsl.decode.model.domain.naming.{Fqn, Namespace}
 import ru.mipt.acsl.decode.model.domain.proxy._
+import ru.mipt.acsl.decode.model.domain.proxy.aliases.ResolvingResult
 
 import scala.reflect.ClassTag
 

@@ -1,13 +1,16 @@
 package ru.mipt.acsl.decode.model.domain.impl.types
 
-import ru.mipt.acsl.decode.model.domain.aliases.{ValidatingResult, MessageParameterToken}
 import ru.mipt.acsl.decode.model.domain._
+import ru.mipt.acsl.decode.model.domain.aliases.{MessageParameterToken, ValidatingResult}
+import ru.mipt.acsl.decode.model.domain.component.messages.{EventMessage, MessageParameter, StatusMessage}
+import ru.mipt.acsl.decode.model.domain.component.{ComponentRef, Command, Component, Parameter}
 import ru.mipt.acsl.decode.model.domain.impl.{ElementName, ParameterParser}
+import ru.mipt.acsl.decode.model.domain.naming.{ElementName, Fqn, Namespace}
 import ru.mipt.acsl.decode.model.domain.proxy.aliases.ResolvingResult
-import ru.mipt.acsl.decode.model.domain.proxy.{Result, MaybeProxy}
+import ru.mipt.acsl.decode.model.domain.proxy.{MaybeProxy, Result}
+import ru.mipt.acsl.decode.model.domain.types._
 
-import scala.collection.immutable
-import scala.collection.mutable
+import scala.collection.{immutable, mutable}
 
 /**
   * @author Artem Shein

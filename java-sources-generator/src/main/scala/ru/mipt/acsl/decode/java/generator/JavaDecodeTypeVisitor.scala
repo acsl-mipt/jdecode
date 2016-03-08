@@ -2,6 +2,7 @@ package ru.mipt.acsl.decode.java.generator
 
 import com.google.common.base.CaseFormat
 import ru.mipt.acsl.decode.model.domain._
+import ru.mipt.acsl.decode.model.domain.types._
 import ru.mipt.acsl.generator.java.ast.{JavaType, JavaTypeApplication}
 
 /**

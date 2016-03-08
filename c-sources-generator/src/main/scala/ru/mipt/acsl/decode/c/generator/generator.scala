@@ -7,15 +7,18 @@ import com.google.common.base.CaseFormat
 import com.typesafe.scalalogging.LazyLogging
 import resource._
 import ru.mipt.acsl.decode.model.domain._
+import ru.mipt.acsl.decode.model.domain.component.messages.{EventMessage, TmMessage, StatusMessage, MessageParameter}
+import ru.mipt.acsl.decode.model.domain.component.{Command, Component}
 import ru.mipt.acsl.decode.model.domain.impl.ElementName
 import ru.mipt.acsl.decode.model.domain.impl.types.Fqn
+import ru.mipt.acsl.decode.model.domain.naming.{Fqn, Namespace}
 import ru.mipt.acsl.decode.model.domain.proxy.MaybeProxy
+import ru.mipt.acsl.decode.model.domain.types._
 import ru.mipt.acsl.generation.Generator
 import ru.mipt.acsl.generator.c.ast._
 import ru.mipt.acsl.generator.c.ast.implicits._
 
 import scala.collection.{immutable, mutable}
-import scala.util.Random
 
 case class CGeneratorConfiguration(outputDir: io.File, registry: Registry, rootComponentFqn: String,
                                    namespaceAliases: Map[Fqn, Option[Fqn]] = Map.empty,
@@ -65,7 +68,9 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
       case t: GenericTypeSpecialized => t.genericType.obj match {
         case optional if optional.name.equals(ElementName.newFromMangledName("optional")) =>
           require(t.genericTypeArguments.size == 1)
-          val head = t.genericTypeArguments.head.getOrElse { sys.error("wtf") }
+          val head = t.genericTypeArguments.head.getOrElse {
+            sys.error("wtf")
+          }
           head.obj match {
             // TODO: implement or remove
             // case h if h.isBasedOnEnum => (Seq(t.cTypeDef(head.obj.cType)), Seq.empty)
@@ -272,7 +277,9 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
   }
 
   def mapIfSmall[A <: B, B <: CAstElement](el: A, t: DecodeType, f: A => B): B = if (t.isSmall) f(el) else el
+
   def mapIfNotSmall[A <: B, B <: CAstElement](el: A, t: DecodeType, f: A => B): B = if (t.isSmall) el else f(el)
+
   def dotOrArrow(t: DecodeType, expr: CExpression, exprRight: CExpression): CExpression = t.isSmall match {
     case true => expr.dot(exprRight)
     case _ => expr -> exprRight
@@ -361,14 +368,19 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
     private val berFqn = Fqn.newFromSource("decode.ber")
     private val orFqn = Fqn.newFromSource("decode.or")
     private val optionalFqn = Fqn.newFromSource("decode.optional")
+
     def isBerType(t: NativeType): Boolean = t.fqn.equals(berFqn)
+
     def isOrType(t: GenericType): Boolean = t.fqn.equals(orFqn)
+
     def isOptionalType(t: GenericType): Boolean = t.fqn.equals(optionalFqn)
 
     def byteSize: Int = t match {
       case t: PrimitiveType => (t.bitLength / 8).toInt
       case t: GenericTypeSpecialized => t.genericType.obj match {
-        case optional if isOptionalType(optional) => 1 + t.genericTypeArguments.head.getOrElse { sys.error("wtf") }.obj.byteSize
+        case optional if isOptionalType(optional) => 1 + t.genericTypeArguments.head.getOrElse {
+          sys.error("wtf")
+        }.obj.byteSize
         case or if isOrType(or) => 1 + t.genericTypeArguments.map(_.map(_.obj.byteSize).getOrElse(0)).max
         case _ => sys.error(s"not implemented for $t")
       }
@@ -412,7 +424,7 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
           l.map { lExpr => r.map { rExpr => CPlus(lExpr, rExpr) }.getOrElse(lExpr) }.orElse(r)
       }
       case t: ArrayType =>
-        t.baseType.obj.abstractMinSizeExpr.map{ rExpr => CPlus(berSizeOf, rExpr) }.orElse(Some(berSizeOf))
+        t.baseType.obj.abstractMinSizeExpr.map { rExpr => CPlus(berSizeOf, rExpr) }.orElse(Some(berSizeOf))
       case _ => sys.error(s"not implemented for $t")
     }
 
@@ -422,7 +434,7 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
           l.map { lExpr => r.map { rExpr => CPlus(lExpr, rExpr) }.getOrElse(lExpr) }.orElse(r)
       }
       case t: ArrayType =>
-        t.baseType.obj.abstractMinSizeExpr.map{ rExpr => CMul(src.dot(size.v), rExpr) }.orElse(None)
+        t.baseType.obj.abstractMinSizeExpr.map { rExpr => CMul(src.dot(size.v), rExpr) }.orElse(None)
       case _: SubType | _: AliasType | _: GenericTypeSpecialized => None // todo: yes you can
       case t: EnumType => t.baseType.obj.concreteMinSizeExpr(src)
       case _ => abstractMinSizeExpr
@@ -519,17 +531,21 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
       t.genericType.obj match {
         case or if isOrType(or) =>
           photonBerTypeName.methodName(typeDeserializeMethodName).call((dest -> tagVar).ref, reader.v)._try.line +:
-            Seq(CIndent, CSwitch(dest -> tagVar, t.genericTypeArguments.zipWithIndex.map{ case (omp, idx) =>
+            Seq(CIndent, CSwitch(dest -> tagVar, t.genericTypeArguments.zipWithIndex.map { case (omp, idx) =>
               CCase(CIntLiteral(idx), omp.map { mp =>
                 Seq(mp.obj.deserializeCallCode((dest -> ("_" + (idx + 1))._var).ref).line,
                   CIndent, CBreak, CSemicolon, CEol)
-              }.getOrElse { Seq(CStatementLine(CBreak, CSemicolon)) })
+              }.getOrElse {
+                Seq(CStatementLine(CBreak, CSemicolon))
+              })
             }, default = CStatements(CReturn(invalidValue))), CEol)
         case optional if isOptionalType(optional) =>
           photonBerTypeName.methodName(typeDeserializeMethodName).call(
             (dest -> flagVar).ref.cast(CTypeApplication(photonBerTypeName).ptr), reader.v)._try.line +:
             Seq(CIndent, CIf(dest -> flagVar, CEol +:
-              t.genericTypeArguments.head.getOrElse{ sys.error("wtf") }.obj.deserializeCode((dest -> valueVar).ref)))
+              t.genericTypeArguments.head.getOrElse {
+                sys.error("wtf")
+              }.obj.deserializeCode((dest -> valueVar).ref)))
         case _ => sys.error(s"not implemented $t")
       }
 
@@ -592,7 +608,9 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
       case s: GenericTypeSpecialized =>
         s.genericType.obj match {
           case optional if isOptionalType(optional) =>
-            Seq(s.genericTypeArguments.head.getOrElse{ sys.error("invalid optional types") }.obj)
+            Seq(s.genericTypeArguments.head.getOrElse {
+              sys.error("invalid optional types")
+            }.obj)
           case or if isOrType(or) =>
             s.genericTypeArguments.flatMap(_.map(p => Seq(p.obj)).getOrElse(Seq.empty))
         }
@@ -683,10 +701,10 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
         Seq(writer.param, messageId.param)),
         Seq(messageId.v.serializeBer._try.line, CIndent, CSwitch(messageId.v,
           casesForMap(component.allStatusMessagesById, { (message: TmMessage, c: Component) => message match {
-              case message: StatusMessage =>
-                Some(CStatements(CReturn(message.fullMethodName(rootComponent, c).call(writer.v))))
-              case _ => None
-            }
+            case message: StatusMessage =>
+              Some(CStatements(CReturn(message.fullMethodName(rootComponent, c).call(writer.v))))
+            case _ => None
+          }
           }),
           default = CStatements(CReturn(invalidMessageId))), CEol))
     }
@@ -750,7 +768,9 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
 
     def parameterMethodName(parameter: MessageParameter, rootComponent: Component): String =
       rootComponent.prefixedTypeName.methodName(parameter.ref(component).structField
-        .getOrElse { sys.error("not implemented") }.cStructFieldName(rootComponent, component))
+        .getOrElse {
+          sys.error("not implemented")
+        }.cStructFieldName(rootComponent, component))
 
     def allEventMessageMethods: Seq[CFuncImpl] = {
       allEventMessagesById.toSeq.sortBy(_._1).flatMap {
@@ -758,11 +778,11 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
           val eventVar = "event"._var
           Some(CFuncImpl(CFuncDef(eventMessage.fullMethodName(component, c), resultType,
             Seq(writer.param, CFuncParam("event", eventMessage.baseType.obj.cType)) ++ eventMessage.fields.flatMap {
-            case Right(e) =>
-              val t = e.paramType.obj
-              Seq(CFuncParam(e.cName, mapIfNotSmall(t.cType, t, (t: CType) => t.ptr.const)))
-            case _ => Seq.empty
-          }),
+              case Right(e) =>
+                val t = e.paramType.obj
+                Seq(CFuncParam(e.cName, mapIfNotSmall(t.cType, t, (t: CType) => t.ptr.const)))
+              case _ => Seq.empty
+            }),
             CAstElements(CIndent, CIf(CEq(CIntLiteral(0),
               component.isEventAllowedMethodName.call(CIntLiteral(id), CTypeCast(eventVar, berType))),
               CAstElements(CEol, CIndent, CReturn(eventIsDenied), CSemicolon, CEol)),
@@ -771,7 +791,9 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
                 case Left(p) =>
                   val v = p.varName._var
                   val parameterRef = p.ref(c)
-                  val structField = parameterRef.structField.getOrElse { sys.error("not implemented") }
+                  val structField = parameterRef.structField.getOrElse {
+                    sys.error("not implemented")
+                  }
                   val t = structField.typeUnit.t.obj
                   if (parameterRef.structField.isDefined) {
                     val t = parameterRef.t
@@ -857,10 +879,10 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
         CDefine(statusIdsDefineName + "_SIZE", statusMessagesSortedById.size.toString).eol ++
         CDefine(statusIdsDefineName, '{' + statusMessagesSortedById.map(_._1.toString).mkString(", ") + '}').eol ++
         CDefine(statusPrioritiesDefineName, "{" + statusMessagesSortedById.map(_._2._2.priority.getOrElse(0)).mkString(", ") + "}").eol ++
-      CDefine(statusMessageIdPrioritiesDefineName, "{\\\n" + statusMessagesSortedById.map {
-        case (id, ComponentStatusMessage(c, m)) => s"  {$id, ${m.priority.getOrElse(0)}}"
-        case _ => sys.error("assertion error")
-      }.mkString("\\\n") + "\\\n}").eol
+        CDefine(statusMessageIdPrioritiesDefineName, "{\\\n" + statusMessagesSortedById.map {
+          case (id, ComponentStatusMessage(c, m)) => s"  {$id, ${m.priority.getOrElse(0)}}"
+          case _ => sys.error("assertion error")
+        }.mkString("\\\n") + "\\\n}").eol
     }
 
     def parameterMethodImplDefs: Seq[CFuncDef] = {
@@ -906,7 +928,9 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
           (for ((v, t) <- vars.zip(command.parameters.map(_.paramType.obj))) yield v.refIfNotSmall(t)): _*)
         CFuncImpl(CFuncDef(componentTypeName.methodName(methodNamePart), resultType, parameters),
           varInits ++ cmdCReturnType.map(t => CStatements(CReturn(cmdReturnType
-            .getOrElse{ sys.error("not implemented") }.methodName(typeSerializeMethodName).call(funcCall, writer.v))))
+            .getOrElse {
+              sys.error("not implemented")
+            }.methodName(typeSerializeMethodName).call(funcCall, writer.v))))
             .getOrElse(CStatements(funcCall, CReturn(resultOk))))
       }
     }
@@ -1113,6 +1137,7 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
 
     def eol: CAstElements = els :+ CEol
   }
+
 }
 
 private case class TypedVar(name: String, t: CType) {
@@ -1226,7 +1251,7 @@ object CSourcesGenerator {
 
   private def allComponentsSetForComponent(component: Component,
                                            componentsSet: immutable.HashSet[Component] = immutable.HashSet.empty)
-      : immutable.HashSet[Component] = {
+  : immutable.HashSet[Component] = {
     componentsSet ++ Seq(component) ++ component.subComponents.flatMap(cr =>
       allComponentsSetForComponent(cr.component.obj, componentsSet))
   }

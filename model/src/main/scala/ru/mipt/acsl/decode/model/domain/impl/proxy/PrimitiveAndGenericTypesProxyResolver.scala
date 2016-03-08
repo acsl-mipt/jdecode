@@ -1,11 +1,14 @@
 package ru.mipt.acsl.decode.model.domain.impl.proxy
 
 import ru.mipt.acsl.decode.model.domain._
-import ru.mipt.acsl.decode.model.domain.impl.types.GenericTypeSpecializedImpl
+import ru.mipt.acsl.decode.model.domain.impl.types.GenericTypeSpecialized
+import ru.mipt.acsl.decode.model.domain.impl.types.PrimitiveType
+import ru.mipt.acsl.decode.model.domain.impl.types.{GenericTypeSpecialized, PrimitiveType}
 import ru.mipt.acsl.decode.model.domain.impl.{DecodeConstants, DecodeUtils, ElementName}
-import ru.mipt.acsl.decode.model.domain.impl.types.{GenericTypeSpecialized, PrimitiveType, PrimitiveTypeImpl}
+import ru.mipt.acsl.decode.model.domain.naming.ElementName
 import ru.mipt.acsl.decode.model.domain.proxy._
 import ru.mipt.acsl.decode.model.domain.proxy.aliases._
+import ru.mipt.acsl.decode.model.domain.types._
 
 import scala.collection.mutable
 

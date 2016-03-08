@@ -1,20 +1,20 @@
 package ru.mipt.acsl.decode.cpp.generator
 
 import java.io
-import java.io.{OutputStreamWriter, FileOutputStream}
+import java.io.{FileOutputStream, OutputStreamWriter}
 import java.security.MessageDigest
 
 import com.typesafe.scalalogging.LazyLogging
-import ru.mipt.acsl.decode.model.domain.TypeKind
-import ru.mipt.acsl.decode.model.domain._
+import resource._
+import ru.mipt.acsl.decode.model.domain.types._
+import ru.mipt.acsl.decode.model.domain.{_}
+import ru.mipt.acsl.decode.model.domain.component.{Command, Component}
+import ru.mipt.acsl.decode.model.domain.naming.{ElementName, Fqn, Namespace}
 import ru.mipt.acsl.decode.model.domain.proxy.MaybeProxy
 import ru.mipt.acsl.generation.Generator
 import ru.mipt.acsl.generator.cpp.ast._
 
-import resource._
-
-import scala.collection.mutable
-import scala.collection.immutable
+import scala.collection.{immutable, mutable}
 import scala.util.Random
 
 class CppGeneratorConfiguration(val outputDir: io.File, val registry: Registry, val rootComponentFqn: String,
