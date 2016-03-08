@@ -47,9 +47,9 @@ object JavaDecodeTypeVisitor {
     case t: ArrayType => new JavaTypeApplication(t.namespace.fqn.asMangledString + "." + JavaDecodeTypeVisitor.classNameFromArrayType(t),
       JavaDecodeTypeVisitor.getJavaTypeForDecodeType(t.baseType.obj, genericUse = true))
     case t: AliasType => getJavaTypeForDecodeType(t.baseType.obj, genericUse)
-    case t: HasOptionName => new JavaTypeApplication(t.namespace.fqn.asMangledString + "." + JavaDecodeTypeVisitor.classNameFromTypeName(
+    //case t: HasOptionName => new JavaTypeApplication(t.namespace.fqn.asMangledString + "." + JavaDecodeTypeVisitor.classNameFromTypeName(
       // FIXME: handle Option
-      t.optionName.get.asMangledString))
+    //  t.optionName.get.asMangledString))
     case _ => sys.error("not implemented")
   }
 }

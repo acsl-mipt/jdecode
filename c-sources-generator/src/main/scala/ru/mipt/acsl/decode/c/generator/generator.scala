@@ -7,12 +7,13 @@ import com.google.common.base.CaseFormat
 import com.typesafe.scalalogging.LazyLogging
 import resource._
 import ru.mipt.acsl.decode.model.domain._
-import ru.mipt.acsl.decode.model.domain.component.messages.{EventMessage, TmMessage, StatusMessage, MessageParameter}
+import ru.mipt.acsl.decode.model.domain.component.messages.{EventMessage, MessageParameter, StatusMessage, TmMessage}
 import ru.mipt.acsl.decode.model.domain.component.{Command, Component}
 import ru.mipt.acsl.decode.model.domain.impl.ElementName
 import ru.mipt.acsl.decode.model.domain.impl.types.Fqn
-import ru.mipt.acsl.decode.model.domain.naming.{Fqn, Namespace}
+import ru.mipt.acsl.decode.model.domain.naming.{Fqn, HasName, Namespace}
 import ru.mipt.acsl.decode.model.domain.proxy.MaybeProxy
+import ru.mipt.acsl.decode.model.domain.registry.Registry
 import ru.mipt.acsl.decode.model.domain.types._
 import ru.mipt.acsl.generation.Generator
 import ru.mipt.acsl.generator.c.ast._

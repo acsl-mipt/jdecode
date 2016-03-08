@@ -1,7 +1,5 @@
 package ru.mipt.acsl.decode.model.domain.types
 
-import ru.mipt.acsl.decode.model.domain.HasBaseType
-
 trait ArrayType extends DecodeType with HasBaseType {
   def size: ArraySize
 
@@ -12,7 +10,4 @@ trait ArrayType extends DecodeType with HasBaseType {
   }
 }
 
-trait ArraySize {
-  def min: Long
-  def max: Long
-}
+

@@ -2,9 +2,10 @@ package ru.mipt.acsl.decode.model.domain.types
 
 import ru.mipt.acsl.decode.model.domain._
 import ru.mipt.acsl.decode.model.domain.aliases.ValidatingResult
-import ru.mipt.acsl.decode.model.domain.naming.Fqn
+import ru.mipt.acsl.decode.model.domain.naming.{Fqn, HasName}
 import ru.mipt.acsl.decode.model.domain.proxy.Result
 import ru.mipt.acsl.decode.model.domain.proxy.aliases._
+import ru.mipt.acsl.decode.model.domain.registry.Registry
 
 import scala.collection.mutable
 

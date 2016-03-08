@@ -8,6 +8,7 @@ import ru.mipt.acsl.decode.model.domain.impl.{DecodeConstants, DecodeUtils, Elem
 import ru.mipt.acsl.decode.model.domain.naming.ElementName
 import ru.mipt.acsl.decode.model.domain.proxy._
 import ru.mipt.acsl.decode.model.domain.proxy.aliases._
+import ru.mipt.acsl.decode.model.domain.registry.Registry
 import ru.mipt.acsl.decode.model.domain.types._
 
 import scala.collection.mutable

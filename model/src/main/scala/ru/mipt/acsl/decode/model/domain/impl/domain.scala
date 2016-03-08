@@ -3,12 +3,13 @@ package ru.mipt.acsl.decode.model.domain.impl
 import ru.mipt.acsl.decode.model.domain._
 import ru.mipt.acsl.decode.model.domain.aliases.{MessageParameterToken, ValidatingResult}
 import ru.mipt.acsl.decode.model.domain.component.messages._
-import ru.mipt.acsl.decode.model.domain.component.{ComponentRef, Command, Component, Parameter}
+import ru.mipt.acsl.decode.model.domain.component.{Command, Component, ComponentRef, Parameter}
 import ru.mipt.acsl.decode.model.domain.impl.proxy.{ExistingElementsProxyResolver, PrimitiveAndGenericTypesProxyResolver}
-import ru.mipt.acsl.decode.model.domain.impl.types.{ArrayType => _, Fqn, StructType => _, SubType => _, _}
+import ru.mipt.acsl.decode.model.domain.impl.types.{Fqn, ArrayType => _, StructType => _, SubType => _, _}
 import ru.mipt.acsl.decode.model.domain.naming.{ElementName, Fqn, Namespace}
 import ru.mipt.acsl.decode.model.domain.proxy.aliases.ResolvingResult
 import ru.mipt.acsl.decode.model.domain.proxy.{DecodeProxyResolver, MaybeProxy, ProxyPath}
+import ru.mipt.acsl.decode.model.domain.registry.{Language, Registry}
 import ru.mipt.acsl.decode.model.domain.types.StructField
 import ru.mipt.acsl.decode.model.domain.types._
 import ru.mipt.acsl.decode.modeling.ErrorLevel

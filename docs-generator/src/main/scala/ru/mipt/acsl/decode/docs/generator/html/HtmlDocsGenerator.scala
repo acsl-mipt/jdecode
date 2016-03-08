@@ -7,9 +7,10 @@ import java.net.URLEncoder
 import com.google.common.base.Charsets
 import resource._
 import ru.mipt.acsl.decode.model.domain._
-import ru.mipt.acsl.decode.model.domain.component.{Parameter, Component}
+import ru.mipt.acsl.decode.model.domain.component.{Component, Parameter}
 import ru.mipt.acsl.decode.model.domain.component.messages.MessageParameter
-import ru.mipt.acsl.decode.model.domain.naming.{Namespace, Fqn}
+import ru.mipt.acsl.decode.model.domain.naming.{Fqn, Namespace}
+import ru.mipt.acsl.decode.model.domain.registry.Registry
 import ru.mipt.acsl.decode.model.domain.types._
 import ru.mipt.acsl.generation.Generator
 import ru.mipt.acsl.generator.html.ast._

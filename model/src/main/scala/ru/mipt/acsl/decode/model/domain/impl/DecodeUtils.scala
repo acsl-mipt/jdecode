@@ -3,9 +3,9 @@ package ru.mipt.acsl.decode.model.domain.impl
 import java.net.{URI, URLDecoder, URLEncoder}
 
 import com.google.common.base.Charsets
-import ru.mipt.acsl.decode.model.domain._
 import ru.mipt.acsl.decode.model.domain.impl.types.{Fqn, Namespace}
 import ru.mipt.acsl.decode.model.domain.naming.{ElementName, Fqn, Namespace}
+import ru.mipt.acsl.decode.model.domain.registry.Registry
 
 import scala.collection.immutable
 

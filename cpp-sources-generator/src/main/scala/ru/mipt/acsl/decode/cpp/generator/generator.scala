@@ -7,10 +7,11 @@ import java.security.MessageDigest
 import com.typesafe.scalalogging.LazyLogging
 import resource._
 import ru.mipt.acsl.decode.model.domain.types._
-import ru.mipt.acsl.decode.model.domain.{_}
+import ru.mipt.acsl.decode.model.domain._
 import ru.mipt.acsl.decode.model.domain.component.{Command, Component}
-import ru.mipt.acsl.decode.model.domain.naming.{ElementName, Fqn, Namespace}
+import ru.mipt.acsl.decode.model.domain.naming.{ElementName, Fqn, HasName, Namespace}
 import ru.mipt.acsl.decode.model.domain.proxy.MaybeProxy
+import ru.mipt.acsl.decode.model.domain.registry.Registry
 import ru.mipt.acsl.generation.Generator
 import ru.mipt.acsl.generator.cpp.ast._
 

@@ -1,6 +1,7 @@
 package ru.mipt.acsl.decode.model.domain.component
 
 import ru.mipt.acsl.decode.model.domain._
+import ru.mipt.acsl.decode.model.domain.naming.HasName
 import ru.mipt.acsl.decode.model.domain.proxy.MaybeProxy
 import ru.mipt.acsl.decode.model.domain.types.DecodeType
 

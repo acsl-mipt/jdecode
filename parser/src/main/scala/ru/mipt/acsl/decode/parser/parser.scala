@@ -19,13 +19,14 @@ import org.picocontainer.PicoContainer
 import org.picocontainer.defaults.AbstractComponentAdapter
 import ru.mipt.acsl.decode.model.domain._
 import ru.mipt.acsl.decode.model.domain.component.messages.{EventMessage, StatusMessage}
-import ru.mipt.acsl.decode.model.domain.component.{ComponentRef, Command, Component}
+import ru.mipt.acsl.decode.model.domain.component.{Command, Component, ComponentRef}
 import ru.mipt.acsl.decode.model.domain.impl._
 import ru.mipt.acsl.decode.model.domain.impl.proxy.MaybeProxy
 import ru.mipt.acsl.decode.model.domain.impl.types._
 import ru.mipt.acsl.decode.model.domain.naming.{ElementName, Fqn, Namespace}
 import ru.mipt.acsl.decode.model.domain.proxy._
-import ru.mipt.acsl.decode.model.domain.types.{TypeUnit, TypeKind, DecodeType, EnumType}
+import ru.mipt.acsl.decode.model.domain.registry.{DecodeUnit, Registry}
+import ru.mipt.acsl.decode.model.domain.types.{DecodeType, EnumType, TypeKind, TypeUnit}
 import ru.mipt.acsl.decode.parser.psi.{DecodeUnit => PsiDecodeUnit, _}
 
 import scala.collection.immutable.Seq

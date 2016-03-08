@@ -5,6 +5,7 @@ import ru.mipt.acsl.decode.model.domain.impl.DecodeUtils
 import ru.mipt.acsl.decode.model.domain.impl.types.ArrayType
 import ru.mipt.acsl.decode.model.domain.proxy._
 import ru.mipt.acsl.decode.model.domain.proxy.aliases._
+import ru.mipt.acsl.decode.model.domain.registry.Registry
 
 /**
   * Created by metadeus on 20.02.16.

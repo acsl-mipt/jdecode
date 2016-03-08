@@ -2,6 +2,7 @@ package ru.mipt.acsl.decode.model.domain.naming
 
 import ru.mipt.acsl.decode.model.domain._
 import ru.mipt.acsl.decode.model.domain.component.Component
+import ru.mipt.acsl.decode.model.domain.registry.{DecodeUnit, Language}
 import ru.mipt.acsl.decode.model.domain.types.DecodeType
 
 import scala.collection.immutable

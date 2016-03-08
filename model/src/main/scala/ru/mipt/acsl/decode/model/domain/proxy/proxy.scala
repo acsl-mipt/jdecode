@@ -3,7 +3,8 @@ package ru.mipt.acsl.decode.model.domain.proxy
 import ru.mipt.acsl.decode.model.domain._
 import ru.mipt.acsl.decode.model.domain.impl.ElementName
 import ru.mipt.acsl.decode.model.domain.naming.{ElementName, Fqn}
-import ru.mipt.acsl.decode.model.domain.types.{TypeKind, ArraySize}
+import ru.mipt.acsl.decode.model.domain.registry.Registry
+import ru.mipt.acsl.decode.model.domain.types.{ArraySize, TypeKind}
 import ru.mipt.acsl.decode.modeling.ErrorLevel
 import ru.mipt.acsl.decode.modeling.aliases.ResolvingMessage
 import ru.mipt.acsl.decode.modeling.impl.Message

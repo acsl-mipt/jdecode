@@ -1,6 +1,5 @@
 package ru.mipt.acsl.decode.model.domain.types
 
-import ru.mipt.acsl.decode.model.domain.{EnumConstant, HasBaseType}
 import ru.mipt.acsl.decode.model.domain.proxy.MaybeProxy
 
 trait EnumType extends DecodeType with HasBaseType {

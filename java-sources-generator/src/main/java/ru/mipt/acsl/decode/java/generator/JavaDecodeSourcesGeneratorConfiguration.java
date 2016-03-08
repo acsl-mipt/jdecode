@@ -2,7 +2,7 @@ package ru.mipt.acsl.decode.java.generator;
 
 import org.jetbrains.annotations.NotNull;
 import org.kohsuke.args4j.Argument;
-import ru.mipt.acsl.decode.model.domain.Registry;
+import ru.mipt.acsl.decode.model.domain.registry.Registry;
 
 import java.io.File;
 
