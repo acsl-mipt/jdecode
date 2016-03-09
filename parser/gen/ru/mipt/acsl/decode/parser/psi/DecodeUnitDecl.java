@@ -14,6 +14,6 @@ public interface DecodeUnitDecl extends PsiElement {
   DecodeInfoString getInfoString();
 
   @Nullable
-  DecodeStringValue getStringValue();
+  DecodeStringLiteral getStringLiteral();
 
 }

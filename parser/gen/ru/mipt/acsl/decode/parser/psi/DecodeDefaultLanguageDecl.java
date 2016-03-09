@@ -5,15 +5,9 @@ import java.util.List;
 import org.jetbrains.annotations.*;
 import com.intellij.psi.PsiElement;
 
-public interface DecodeLanguageDecl extends PsiElement {
-
-  @Nullable
-  DecodeDefaultLanguage getDefaultLanguage();
+public interface DecodeDefaultLanguageDecl extends PsiElement {
 
   @NotNull
   DecodeElementNameRule getElementNameRule();
-
-  @Nullable
-  DecodeInfoString getInfoString();
 
 }

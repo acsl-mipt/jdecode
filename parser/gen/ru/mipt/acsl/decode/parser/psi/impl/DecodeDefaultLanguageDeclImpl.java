@@ -11,33 +11,21 @@ import static ru.mipt.acsl.decode.parser.psi.DecodeTypes.*;
 import com.intellij.extapi.psi.ASTWrapperPsiElement;
 import ru.mipt.acsl.decode.parser.psi.*;
 
-public class DecodeLanguageDeclImpl extends ASTWrapperPsiElement implements DecodeLanguageDecl {
+public class DecodeDefaultLanguageDeclImpl extends ASTWrapperPsiElement implements DecodeDefaultLanguageDecl {
 
-  public DecodeLanguageDeclImpl(ASTNode node) {
+  public DecodeDefaultLanguageDeclImpl(ASTNode node) {
     super(node);
   }
 
   public void accept(@NotNull PsiElementVisitor visitor) {
-    if (visitor instanceof DecodeVisitor) ((DecodeVisitor)visitor).visitLanguageDecl(this);
+    if (visitor instanceof DecodeVisitor) ((DecodeVisitor)visitor).visitDefaultLanguageDecl(this);
     else super.accept(visitor);
-  }
-
-  @Override
-  @Nullable
-  public DecodeDefaultLanguage getDefaultLanguage() {
-    return findChildByClass(DecodeDefaultLanguage.class);
   }
 
   @Override
   @NotNull
   public DecodeElementNameRule getElementNameRule() {
     return findNotNullChildByClass(DecodeElementNameRule.class);
-  }
-
-  @Override
-  @Nullable
-  public DecodeInfoString getInfoString() {
-    return findChildByClass(DecodeInfoString.class);
   }
 
 }

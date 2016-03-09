@@ -5,6 +5,12 @@ import java.util.List;
 import org.jetbrains.annotations.*;
 import com.intellij.psi.PsiElement;
 
-public interface DecodeDefaultLanguage extends PsiElement {
+public interface DecodeStringLiteral extends PsiElement {
+
+  @Nullable
+  PsiElement getString();
+
+  @Nullable
+  PsiElement getStringUnaryQuotes();
 
 }

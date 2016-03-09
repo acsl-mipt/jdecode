@@ -36,8 +36,8 @@ public class DecodeUnitDeclImpl extends ASTWrapperPsiElement implements DecodeUn
 
   @Override
   @Nullable
-  public DecodeStringValue getStringValue() {
-    return findChildByClass(DecodeStringValue.class);
+  public DecodeStringLiteral getStringLiteral() {
+    return findChildByClass(DecodeStringLiteral.class);
   }
 
 }

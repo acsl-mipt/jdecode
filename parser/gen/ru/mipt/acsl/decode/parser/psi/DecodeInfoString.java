@@ -8,6 +8,6 @@ import com.intellij.psi.PsiElement;
 public interface DecodeInfoString extends PsiElement {
 
   @NotNull
-  DecodeStringValue getStringValue();
+  List<DecodeStringValue> getStringValueList();
 
 }

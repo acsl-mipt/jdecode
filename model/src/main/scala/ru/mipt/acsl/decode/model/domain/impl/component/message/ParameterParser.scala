@@ -1,4 +1,4 @@
-package ru.mipt.acsl.decode.model.domain.impl
+package ru.mipt.acsl.decode.model.domain.impl.component.message
 
 import org.parboiled2._
 

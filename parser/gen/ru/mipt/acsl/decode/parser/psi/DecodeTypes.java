@@ -15,7 +15,7 @@ public interface DecodeTypes {
   IElementType COMMAND_DECL = new DecodeElementType("COMMAND_DECL");
   IElementType COMPONENT_DECL = new DecodeElementType("COMPONENT_DECL");
   IElementType COMPONENT_PARAMETERS_DECL = new DecodeElementType("COMPONENT_PARAMETERS_DECL");
-  IElementType DEFAULT_LANGUAGE = new DecodeElementType("DEFAULT_LANGUAGE");
+  IElementType DEFAULT_LANGUAGE_DECL = new DecodeElementType("DEFAULT_LANGUAGE_DECL");
   IElementType ELEMENT_ID = new DecodeElementType("ELEMENT_ID");
   IElementType ELEMENT_NAME_RULE = new DecodeElementType("ELEMENT_NAME_RULE");
   IElementType ENTITY_ID = new DecodeElementType("ENTITY_ID");
@@ -35,7 +35,6 @@ public interface DecodeTypes {
   IElementType IMPORT_ELEMENT_STAR = new DecodeElementType("IMPORT_ELEMENT_STAR");
   IElementType IMPORT_STMT = new DecodeElementType("IMPORT_STMT");
   IElementType INFO_STRING = new DecodeElementType("INFO_STRING");
-  IElementType LANGUAGE_DECL = new DecodeElementType("LANGUAGE_DECL");
   IElementType LENGTH_FROM = new DecodeElementType("LENGTH_FROM");
   IElementType LENGTH_TO = new DecodeElementType("LENGTH_TO");
   IElementType LITERAL = new DecodeElementType("LITERAL");
@@ -50,6 +49,7 @@ public interface DecodeTypes {
   IElementType PRIMITIVE_TYPE_KIND = new DecodeElementType("PRIMITIVE_TYPE_KIND");
   IElementType STATUS_MESSAGE = new DecodeElementType("STATUS_MESSAGE");
   IElementType STATUS_MESSAGE_PARAMETERS_DECL = new DecodeElementType("STATUS_MESSAGE_PARAMETERS_DECL");
+  IElementType STRING_LITERAL = new DecodeElementType("STRING_LITERAL");
   IElementType STRING_VALUE = new DecodeElementType("STRING_VALUE");
   IElementType STRUCT_TYPE_DECL = new DecodeElementType("STRUCT_TYPE_DECL");
   IElementType SUBCOMPONENT_DECL = new DecodeElementType("SUBCOMPONENT_DECL");
@@ -149,8 +149,8 @@ public interface DecodeTypes {
       else if (type == COMPONENT_PARAMETERS_DECL) {
         return new DecodeComponentParametersDeclImpl(node);
       }
-      else if (type == DEFAULT_LANGUAGE) {
-        return new DecodeDefaultLanguageImpl(node);
+      else if (type == DEFAULT_LANGUAGE_DECL) {
+        return new DecodeDefaultLanguageDeclImpl(node);
       }
       else if (type == ELEMENT_ID) {
         return new DecodeElementIdImpl(node);
@@ -209,9 +209,6 @@ public interface DecodeTypes {
       else if (type == INFO_STRING) {
         return new DecodeInfoStringImpl(node);
       }
-      else if (type == LANGUAGE_DECL) {
-        return new DecodeLanguageDeclImpl(node);
-      }
       else if (type == LENGTH_FROM) {
         return new DecodeLengthFromImpl(node);
       }
@@ -253,6 +250,9 @@ public interface DecodeTypes {
       }
       else if (type == STATUS_MESSAGE_PARAMETERS_DECL) {
         return new DecodeStatusMessageParametersDeclImpl(node);
+      }
+      else if (type == STRING_LITERAL) {
+        return new DecodeStringLiteralImpl(node);
       }
       else if (type == STRING_VALUE) {
         return new DecodeStringValueImpl(node);

@@ -35,7 +35,7 @@ public class DecodeVisitor extends PsiElementVisitor {
     visitPsiElement(o);
   }
 
-  public void visitDefaultLanguage(@NotNull DecodeDefaultLanguage o) {
+  public void visitDefaultLanguageDecl(@NotNull DecodeDefaultLanguageDecl o) {
     visitPsiElement(o);
   }
 
@@ -115,10 +115,6 @@ public class DecodeVisitor extends PsiElementVisitor {
     visitPsiElement(o);
   }
 
-  public void visitLanguageDecl(@NotNull DecodeLanguageDecl o) {
-    visitPsiElement(o);
-  }
-
   public void visitLengthFrom(@NotNull DecodeLengthFrom o) {
     visitPsiElement(o);
   }
@@ -172,6 +168,10 @@ public class DecodeVisitor extends PsiElementVisitor {
   }
 
   public void visitStatusMessageParametersDecl(@NotNull DecodeStatusMessageParametersDecl o) {
+    visitPsiElement(o);
+  }
+
+  public void visitStringLiteral(@NotNull DecodeStringLiteral o) {
     visitPsiElement(o);
   }
 

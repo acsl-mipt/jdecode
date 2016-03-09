@@ -8,9 +8,9 @@ import com.intellij.psi.PsiElement;
 public interface DecodeStringValue extends PsiElement {
 
   @Nullable
-  PsiElement getString();
+  DecodeElementNameRule getElementNameRule();
 
-  @Nullable
-  PsiElement getStringUnaryQuotes();
+  @NotNull
+  DecodeStringLiteral getStringLiteral();
 
 }

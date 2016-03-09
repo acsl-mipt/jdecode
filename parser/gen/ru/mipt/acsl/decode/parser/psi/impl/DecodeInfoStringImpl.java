@@ -24,8 +24,8 @@ public class DecodeInfoStringImpl extends ASTWrapperPsiElement implements Decode
 
   @Override
   @NotNull
-  public DecodeStringValue getStringValue() {
-    return findNotNullChildByClass(DecodeStringValue.class);
+  public List<DecodeStringValue> getStringValueList() {
+    return PsiTreeUtil.getChildrenOfTypeAsList(this, DecodeStringValue.class);
   }
 
 }

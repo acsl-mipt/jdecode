@@ -24,14 +24,14 @@ public class DecodeStringValueImpl extends ASTWrapperPsiElement implements Decod
 
   @Override
   @Nullable
-  public PsiElement getString() {
-    return findChildByType(STRING);
+  public DecodeElementNameRule getElementNameRule() {
+    return findChildByClass(DecodeElementNameRule.class);
   }
 
   @Override
-  @Nullable
-  public PsiElement getStringUnaryQuotes() {
-    return findChildByType(STRING_UNARY_QUOTES);
+  @NotNull
+  public DecodeStringLiteral getStringLiteral() {
+    return findNotNullChildByClass(DecodeStringLiteral.class);
   }
 
 }
