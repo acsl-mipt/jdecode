@@ -18,14 +18,20 @@ import com.typesafe.scalalogging.LazyLogging
 import org.picocontainer.PicoContainer
 import org.picocontainer.defaults.AbstractComponentAdapter
 import ru.mipt.acsl.decode.model.domain._
+import ru.mipt.acsl.decode.model.domain.aliases.ElementInfo
 import ru.mipt.acsl.decode.model.domain.component.messages.{EventMessage, StatusMessage}
 import ru.mipt.acsl.decode.model.domain.component.{Command, Component, ComponentRef}
+import ru.mipt.acsl.decode.model.domain.expr.{FloatLiteral, IntLiteral}
 import ru.mipt.acsl.decode.model.domain.impl._
+import ru.mipt.acsl.decode.model.domain.impl.component.message.{EventMessage, MessageParameter, StatusMessage}
+import ru.mipt.acsl.decode.model.domain.impl.component.{Command, Component, ComponentRef}
+import ru.mipt.acsl.decode.model.domain.impl.naming.{ElementName, Fqn}
 import ru.mipt.acsl.decode.model.domain.impl.proxy.MaybeProxy
+import ru.mipt.acsl.decode.model.domain.impl.registry.{DecodeUnit, Language, Registry}
 import ru.mipt.acsl.decode.model.domain.impl.types._
 import ru.mipt.acsl.decode.model.domain.naming.{ElementName, Fqn, Namespace}
 import ru.mipt.acsl.decode.model.domain.proxy._
-import ru.mipt.acsl.decode.model.domain.registry.{DecodeUnit, Registry}
+import ru.mipt.acsl.decode.model.domain.registry.{DecodeUnit, Language, Registry}
 import ru.mipt.acsl.decode.model.domain.types.{DecodeType, EnumType, TypeKind, TypeUnit}
 import ru.mipt.acsl.decode.parser.psi.{DecodeUnit => PsiDecodeUnit, _}
 
@@ -56,36 +62,41 @@ class DecodeAstTransformer {
 
   private val imports = mutable.HashMap.empty[String, MaybeProxy[Referenceable]]
   private var ns: Namespace = _
+  private var defaultLanguage: Option[Language] = None
 
   def processFile(node: ASTNode): Namespace = {
     val children = node.getChildren(null)
     assert(children.nonEmpty)
     val nsDecl = children.head.getPsi(classOf[DecodeNamespaceDecl])
     ns = DecodeUtils.newNamespaceForFqn(fqn(nsDecl.getElementId),
-      info = optionString(nsDecl.getInfoString))
+      info = elementInfo(Option(nsDecl.getInfoString)))
     children.drop(1).foreach(_.getPsi match {
       case p: DecodeTypeDecl =>
         val body = p.getTypeDeclBody
         val name = elementName(p.getElementNameRule)
-        val optionInfo = optionString(p.getInfoString)
+        val _optionInfo = elementInfo(Option(p.getInfoString))
         ns.types = ns.types :+ Option(body.getEnumTypeDecl).map { e =>
           EnumType(name, ns, Option(e.getElementNameRule)
             .map(n => Left(proxyForFqn[EnumType](Fqn(Seq(elementName(n))))))
-            .getOrElse(Right(typeApplication(Option(e.getTypeApplication)).get)), optionInfo,
-            e.getEnumTypeValues.getEnumTypeValueList.map { v => EnumConstant(elementName(v.getElementNameRule),
-              v.getLiteral.getText, optionString(v.getInfoString))
+            .getOrElse(Right(typeApplication(Option(e.getTypeApplication)).get)), _optionInfo,
+            e.getEnumTypeValues.getEnumTypeValueList.map { v =>
+              val literal: DecodeLiteral = v.getLiteral
+              EnumConstant(elementName(v.getElementNameRule),
+              Option(literal.getFloatLiteral).map(l => FloatLiteral(l.getText.toFloat))
+                .getOrElse(IntLiteral(literal.getNonNegativeNumber.getText.toInt)),
+                elementInfo(Option(v.getInfoString)))
             }.to[immutable.Set], e.getFinalEnum != null)
         }.orElse {
           Option(body.getNativeTypeDecl).map(n =>
-            Option(p.getGenericArgs).map(args => GenericType(name, ns, optionInfo,
+            Option(p.getGenericArgs).map(args => GenericType(name, ns, _optionInfo,
               args.getGenericArgList.map(arg => Option(arg.getElementNameRule).map(elementName))))
-              .getOrElse(NativeType(name, ns, optionInfo)))
+              .getOrElse(NativeType(name, ns, _optionInfo)))
         }.orElse {
-          Option(body.getTypeApplication).map(s => SubType(name, ns, optionInfo, typeApplication(Some(s)).get))
+          Option(body.getTypeApplication).map(s => SubType(name, ns, _optionInfo, typeApplication(Some(s)).get))
         }.getOrElse {
-          StructType(name, ns, optionInfo, body.getStructTypeDecl.getCommandArgs.getCommandArgList.map(cmdArg =>
+          StructType(name, ns, _optionInfo, body.getStructTypeDecl.getCommandArgs.getCommandArgList.map(cmdArg =>
             StructField(elementName(cmdArg.getElementNameRule), typeUnit(cmdArg.getTypeUnitApplication),
-              optionString(cmdArg.getInfoString))))
+              elementInfo(Option(cmdArg.getInfoString)))))
         }
       case i: DecodeImportStmt =>
         val els = i.getImportElementList
@@ -108,23 +119,23 @@ class DecodeAstTransformer {
         }
       case u: DecodeUnitDecl =>
         ns.units = ns.units :+ DecodeUnit(elementName(u.getElementNameRule), ns,
-          optionString(u.getStringValue), optionString(u.getInfoString))
+          Option(u.getStringLiteral).map(string), elementInfo(Option(u.getInfoString)))
       case a: DecodeAliasDecl =>
         ns.types = ns.types :+ AliasType(elementName(a.getElementNameRule), ns,
-          typeApplication(Some(a.getTypeApplication)).get, optionString(a.getInfoString))
+          typeApplication(Some(a.getTypeApplication)).get, elementInfo(Option(a.getInfoString)))
       case c: DecodeComponentDecl =>
         val params = Option(c.getComponentParametersDecl).map { params =>
           val struct = StructType(makeNewSystemName(elementName(c.getElementNameRule)), ns,
-            optionString(params.getInfoString),
+            elementInfo(Option(params.getInfoString)),
             params.getCommandArgs.getCommandArgList.map { arg =>
               StructField(elementName(arg.getElementNameRule), typeUnit(arg.getTypeUnitApplication),
-                optionString(arg.getInfoString))
+                elementInfo(Option(arg.getInfoString)))
             })
           ns.types = ns.types :+ struct
           MaybeProxy.obj(struct)
         }
         val component: Component = Component(elementName(c.getElementNameRule), ns,
-          id(Option(c.getEntityId)), params, optionString(c.getInfoString),
+          id(Option(c.getEntityId)), params, elementInfo(Option(c.getInfoString)),
           c.getSubcomponentDeclList.map(sc => componentRef(Fqn(Seq(elementName(sc.getElementNameRule)))))
             .to[Seq],
           c.getCommandDeclList.map(c => command(c)).to[Seq])
@@ -133,9 +144,8 @@ class DecodeAstTransformer {
           .flatMap(m => Option(m.getEventMessage).map(em => eventMessage(em, component)))
         component.statusMessages ++= c.getMessageDeclList
           .flatMap(m => Option(m.getStatusMessage).map(sm => statusMessage(sm, component)))
-      case l: DecodeLanguageDecl =>
-        ns.languages = ns.languages :+ Language(elementName(l.getElementNameRule), ns, l.getDefaultLanguage != null,
-          optionString(l.getInfoString))
+      case l: DecodeDefaultLanguageDecl =>
+        defaultLanguage = Some(Language(elementName(l.getElementNameRule).asMangledString))
       case p: PsiWhiteSpace =>
       case p =>
         sys.error(s"not implemented for ${p.getClass}")
@@ -148,19 +158,19 @@ class DecodeAstTransformer {
 
   private def statusMessage(sm: DecodeStatusMessage, c: Component): StatusMessage =
     StatusMessage(c, elementName(sm.getElementNameRule), id(Option(sm.getEntityId)),
-      optionString(sm.getInfoString),
+      elementInfo(Option(sm.getInfoString)),
       sm.getStatusMessageParametersDecl.getParameterDeclList.map(p =>
-        MessageParameter(p.getParameterElement.getText, optionString(p.getInfoString))))
+        MessageParameter(p.getParameterElement.getText, elementInfo(Option(p.getInfoString)))))
 
   private def eventMessage(em: DecodeEventMessage, c: Component): EventMessage =
     EventMessage(c, elementName(em.getElementNameRule), id(Option(em.getEntityId)),
-      optionString(em.getInfoString),
+      elementInfo(Option(em.getInfoString)),
       em.getEventMessageParametersDecl.getEventParameterDeclList.map { p =>
         Option(p.getParameterElement)
-          .map(mp => Left(MessageParameter(mp.getText, optionString(p.getInfoString))))
+          .map(mp => Left(MessageParameter(mp.getText, elementInfo(Option(p.getInfoString)))))
           .getOrElse {
             val _var = p.getVarParameterElement
-            Right(Parameter(elementName(_var.getElementNameRule), optionString(p.getInfoString),
+            Right(Parameter(elementName(_var.getElementNameRule), elementInfo(Option(p.getInfoString)),
               typeApplication(Some(_var.getTypeUnitApplication.getTypeApplication)).get,
               unit(Option(_var.getTypeUnitApplication.getUnit))))
           }
@@ -168,9 +178,9 @@ class DecodeAstTransformer {
 
   private def command(c: DecodeCommandDecl): Command =
     Command(elementName(c.getElementNameRule), id(Option(c.getEntityId)),
-      optionString(c.getInfoString), Option(c.getCommandArgs).map(_.getCommandArgList.toSeq).getOrElse(Seq.empty)
+      elementInfo(Option(c.getInfoString)), Option(c.getCommandArgs).map(_.getCommandArgList.toSeq).getOrElse(Seq.empty)
         .map { cmdArg =>
-          Parameter(elementName(cmdArg.getElementNameRule), optionString(cmdArg.getInfoString),
+          Parameter(elementName(cmdArg.getElementNameRule), elementInfo(Option(cmdArg.getInfoString)),
             typeApplication(Some(cmdArg.getTypeUnitApplication.getTypeApplication)).get,
             unit(Option(cmdArg.getTypeUnitApplication.getUnit)))
         }.to[immutable.Seq], typeApplication(Option(c.getTypeUnitApplication).map(_.getTypeApplication)))
@@ -201,16 +211,23 @@ class DecodeAstTransformer {
   private def fqn(elementId: DecodeElementId): Fqn =
     Fqn(elementId.getElementNameRuleList.map(elementName))
 
-  private def optionString(infoStr: DecodeInfoString): Option[String] = infoStr match {
-    case i if i != null => optionString(i.getStringValue)
-    case _ => None
+  private def elementInfo(infoStr: Option[DecodeInfoString]): ElementInfo = infoStr match {
+    case Some(i) => i.getStringValueList.map(info).toMap
+    case _ => ElementInfo.empty
   }
 
-  private def optionString(str: DecodeStringValue): Option[String] = str match {
-    case s if s != null =>
-      val t = Option(s.getString).getOrElse(s.getStringUnaryQuotes).getText
-      Some(t.substring(1, t.length - 1))
-    case _ => None
+  private def info(s: DecodeStringValue): (Language, String) = {
+    Option(s.getElementNameRule) match {
+      case Some(l) => (Language(elementName(l).asMangledString),
+        string(s.getStringLiteral))
+      case _ => (defaultLanguage.getOrElse(sys.error("default language not set")),
+        string(s.getStringLiteral))
+    }
+  }
+
+  private def string(s: DecodeStringLiteral): String = {
+    val t = s.getText
+    t.substring(1, t.length - 1)
   }
 
   private def unit(u: Option[PsiDecodeUnit]): Option[MaybeProxy[DecodeUnit]] =

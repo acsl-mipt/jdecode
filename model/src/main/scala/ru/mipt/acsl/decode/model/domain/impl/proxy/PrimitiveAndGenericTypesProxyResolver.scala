@@ -1,10 +1,11 @@
 package ru.mipt.acsl.decode.model.domain.impl.proxy
 
 import ru.mipt.acsl.decode.model.domain._
+import ru.mipt.acsl.decode.model.domain.impl.naming.{ElementName, Fqn}
 import ru.mipt.acsl.decode.model.domain.impl.types.GenericTypeSpecialized
 import ru.mipt.acsl.decode.model.domain.impl.types.PrimitiveType
 import ru.mipt.acsl.decode.model.domain.impl.types.{GenericTypeSpecialized, PrimitiveType}
-import ru.mipt.acsl.decode.model.domain.impl.{DecodeConstants, DecodeUtils, ElementName}
+import ru.mipt.acsl.decode.model.domain.impl.{DecodeUtils, ElementInfo}
 import ru.mipt.acsl.decode.model.domain.naming.ElementName
 import ru.mipt.acsl.decode.model.domain.proxy._
 import ru.mipt.acsl.decode.model.domain.proxy.aliases._
@@ -21,10 +22,10 @@ class PrimitiveAndGenericTypesProxyResolver extends DecodeProxyResolver {
   private val genericTypeSpecializedByTypeNameMap: mutable.Map[ElementName, GenericTypeSpecialized] = mutable.HashMap.empty
 
   override def resolveElement(registry: Registry, path: ProxyPath): (Option[Referenceable], ResolvingResult) = {
-    assert(DecodeConstants.SYSTEM_NAMESPACE_FQN.size == 1, "not implemented")
+    assert(Fqn.SystemNamespace.size == 1, "not implemented")
     val nsFqn = path.ns
-    if (nsFqn.equals(DecodeConstants.SYSTEM_NAMESPACE_FQN)) {
-      val systemNamespaceOptional = DecodeUtils.getNamespaceByFqn(registry, DecodeConstants.SYSTEM_NAMESPACE_FQN)
+    if (nsFqn.equals(Fqn.SystemNamespace)) {
+      val systemNamespaceOptional = DecodeUtils.getNamespaceByFqn(registry, Fqn.SystemNamespace)
       assert(systemNamespaceOptional.isDefined, "system namespace not found")
       val systemNamespace = systemNamespaceOptional.get
       path.element match {
@@ -33,7 +34,7 @@ class PrimitiveAndGenericTypesProxyResolver extends DecodeProxyResolver {
           val primitiveType = primitiveTypeByTypeKindBitSize.getOrElseUpdate(path.mangledName,
             PrimitiveType(
               ElementName.newFromMangledName(s"${TypeKind.nameForTypeKind(e.typeKind)}:${e.bitSize}"),
-              systemNamespace, None, e.typeKind, e.bitSize))
+              systemNamespace, ElementInfo.empty, e.typeKind, e.bitSize))
           val primitiveTypeName = primitiveType.name
           if (!systemNamespace.types.exists(_.name.equals(primitiveTypeName)))
             systemNamespace.types = systemNamespace.types :+ primitiveType
@@ -48,7 +49,7 @@ class PrimitiveAndGenericTypesProxyResolver extends DecodeProxyResolver {
           val name = path.element.mangledName
           val specializedType = systemNamespace.types.find(_.name.equals(name))
             .map(_.asInstanceOf[GenericTypeSpecialized]).getOrElse({
-            val specializedType = GenericTypeSpecialized(name, genericType.namespace, None,
+            val specializedType = GenericTypeSpecialized(name, genericType.namespace, ElementInfo.empty,
               MaybeProxy.obj(genericType),
               e.genericArgumentPaths.map(_.map(arg => MaybeProxy.proxy[DecodeType](arg))))
             systemNamespace.types = systemNamespace.types :+ specializedType

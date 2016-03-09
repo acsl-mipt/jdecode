@@ -10,7 +10,7 @@ import scala.collection.immutable
 /**
   * Namespace trait
   */
-trait Namespace extends Referenceable with HasName with HasOptionInfo with Resolvable with Validatable {
+trait Namespace extends Referenceable with HasName with HasInfo with Resolvable with Validatable {
   /**
     * String representation of current namespace
     * @return String namespace
@@ -56,14 +56,6 @@ trait Namespace extends Referenceable with HasName with HasOptionInfo with Resol
   def components: immutable.Seq[Component]
 
   def components_=(components: immutable.Seq[Component])
-
-  /**
-    * Get languages
-    * @return Seq of [[Language]]
-    */
-  def languages: immutable.Seq[Language]
-
-  def languages_=(languages: immutable.Seq[Language])
 
   /**
     * Get fully qualified name

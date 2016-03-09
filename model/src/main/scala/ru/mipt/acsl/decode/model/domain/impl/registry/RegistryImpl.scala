@@ -1,13 +1,26 @@
 package ru.mipt.acsl.decode.model.domain.impl.registry
 
-import ru.mipt.acsl.decode.model.domain.impl.DecodeConstants
-import ru.mipt.acsl.decode.model.domain.impl.naming.ElementName
+import ru.mipt.acsl.decode.model.domain.Referenceable
+import ru.mipt.acsl.decode.model.domain.aliases.ValidatingResult
+import ru.mipt.acsl.decode.model.domain.component.Component
+import ru.mipt.acsl.decode.model.domain.component.messages.{EventMessage, StatusMessage}
+import ru.mipt.acsl.decode.model.domain.impl.naming.{ElementName, Fqn}
+import ru.mipt.acsl.decode.model.domain.impl.proxy.{ExistingElementsProxyResolver, PrimitiveAndGenericTypesProxyResolver}
+import ru.mipt.acsl.decode.model.domain.naming.{ElementName, Namespace}
+import ru.mipt.acsl.decode.model.domain.proxy.aliases.ResolvingResult
+import ru.mipt.acsl.decode.model.domain.proxy.{DecodeProxyResolver, ProxyPath}
+import ru.mipt.acsl.decode.model.domain.registry.Registry
+import ru.mipt.acsl.decode.modeling.ErrorLevel
+import ru.mipt.acsl.decode.modeling.impl.Message
+
+import scala.collection.immutable
+import scala.reflect.ClassTag
 
 /**
   * @author Artem Shein
   */
 private class RegistryImpl(val name: ElementName, resolvers: DecodeProxyResolver*) extends Registry {
-  if (DecodeConstants.SYSTEM_NAMESPACE_FQN.size != 1)
+  if (Fqn.SystemNamespace.size != 1)
     sys.error("not implemented")
 
   var rootNamespaces: immutable.Seq[Namespace] = immutable.Seq.empty
@@ -57,7 +70,8 @@ private class RegistryImpl(val name: ElementName, resolvers: DecodeProxyResolver
     component(fqn.substring(0, dotPos)).map(_.eventMessages.find(_.name == decodeName).orNull)
   }
 
-  override def resolveElement[T <: Referenceable](path: ProxyPath)(implicit ct: ClassTag[T]): (Option[T], ResolvingResult) = {
+  override def resolveElement[T <: Referenceable](path: ProxyPath)(implicit ct: ClassTag[T])
+  : (Option[T], ResolvingResult) = {
     for (resolver <- proxyResolvers) {
       val result = resolver.resolveElement(this, path)
       for (obj <- result._1)

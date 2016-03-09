@@ -1,6 +1,11 @@
 package ru.mipt.acsl.decode.model.domain.impl.component.message
 
-import ru.mipt.acsl.decode.model.domain.impl.TokenTypeWalker
+import ru.mipt.acsl.decode.model.domain.aliases.MessageParameterToken
+import ru.mipt.acsl.decode.model.domain.component.Component
+import ru.mipt.acsl.decode.model.domain.component.messages.MessageParameterRef
+import ru.mipt.acsl.decode.model.domain.types.{DecodeType, StructField}
+
+import scala.util.{Failure, Success, Try}
 
 /**
   * @author Artem Shein

@@ -2,12 +2,9 @@ package ru.mipt.acsl.decode.model.domain
 
 import ru.mipt.acsl.decode.model.domain.naming.{HasName, Namespace}
 import ru.mipt.acsl.decode.model.domain.proxy.aliases.ResolvingResult
-import ru.mipt.acsl.decode.model.domain.registry.Registry
+import ru.mipt.acsl.decode.model.domain.registry.{Language, Registry}
 
-package object aliases {
-  type MessageParameterToken = Either[String, Int]
-  type ValidatingResult = ResolvingResult
-}
+import scala.collection.immutable
 
 import ru.mipt.acsl.decode.model.domain.aliases._
 
@@ -19,8 +16,8 @@ trait Validatable {
   def validate(registry: Registry): ValidatingResult
 }
 
-trait HasOptionInfo {
-  def info: Option[String]
+trait HasInfo {
+  def info: immutable.Map[Language, String]
 }
 
 trait HasOptionId {
@@ -35,7 +32,7 @@ trait NamespaceAware {
   def namespace_=(namespace: Namespace)
 }
 
-trait NameAndOptionInfoAware extends HasOptionInfo with HasName
+trait HasNameAndInfo extends HasInfo with HasName
 
 trait DomainModelResolver {
   def resolve(registry: Registry): ResolvingResult

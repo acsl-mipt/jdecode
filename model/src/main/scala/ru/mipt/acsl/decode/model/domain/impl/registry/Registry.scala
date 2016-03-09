@@ -1,6 +1,6 @@
 package ru.mipt.acsl.decode.model.domain.impl.registry
 
-import ru.mipt.acsl.decode.model.domain.impl.RegistryImpl
+import ru.mipt.acsl.decode.model.domain.registry.Registry
 
 /**
   * @author Artem Shein

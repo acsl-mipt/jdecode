@@ -9,8 +9,9 @@ import resource._
 import ru.mipt.acsl.decode.model.domain._
 import ru.mipt.acsl.decode.model.domain.component.{Component, Parameter}
 import ru.mipt.acsl.decode.model.domain.component.messages.MessageParameter
+import ru.mipt.acsl.decode.model.domain.impl.registry.Language
 import ru.mipt.acsl.decode.model.domain.naming.{Fqn, Namespace}
-import ru.mipt.acsl.decode.model.domain.registry.Registry
+import ru.mipt.acsl.decode.model.domain.registry.{Language, Registry}
 import ru.mipt.acsl.decode.model.domain.types._
 import ru.mipt.acsl.generation.Generator
 import ru.mipt.acsl.generator.html.ast._
@@ -20,9 +21,13 @@ import ru.mipt.acsl.generator.html.ast.implicits._
 /**
   * @author Artem Shein
   */
-case class HtmlDocsGeneratorConfiguration(outputFile: io.File, registry: Registry, exclude: Set[Fqn] = Set.empty)
+case class HtmlDocsGeneratorConfiguration(outputFile: io.File, registry: Registry, exclude: Set[Fqn] = Set.empty,
+                                          language: String = "ru")
 
 class HtmlDocsGenerator(val config: HtmlDocsGeneratorConfiguration) extends Generator[HtmlDocsGeneratorConfiguration] {
+
+  private val lang: Language = Language(config.language)
+
   override def getConfiguration: HtmlDocsGeneratorConfiguration = config
 
   override def generate(): Unit = {
@@ -130,7 +135,7 @@ class HtmlDocsGenerator(val config: HtmlDocsGeneratorConfiguration) extends Gene
 
   def generateNamespace(namespace: Namespace): HtmlElements = {
     Seq(h3(id(htmlId(namespace)))("Пространство имен " + namespace.fqn.asMangledString)) ++
-      namespace.info.map(div(_)).toSeq ++
+      namespace.info.get(lang).map(div(_)).toSeq ++
       (if (namespace.subNamespaces.isEmpty)
         Seq.empty
       else
@@ -143,7 +148,7 @@ class HtmlDocsGenerator(val config: HtmlDocsGeneratorConfiguration) extends Gene
         Seq(table(_class("table table-bordered"))(style("width: auto"))(
           thead(tr(th("Имя типа"), th("Описание"), th("Вид типа"))),
           tbody(namespace.types.map(t =>
-            tr(td(id(htmlId(t)))(typeName(t)), td(unsafe(t.info.getOrElse(""))), typeKind(t))): _*)))) ++
+            tr(td(id(htmlId(t)))(typeName(t)), td(unsafe(t.info.getOrElse(lang, ""))), typeKind(t))): _*)))) ++
       Seq(hr)
   }
 
@@ -155,12 +160,11 @@ class HtmlDocsGenerator(val config: HtmlDocsGeneratorConfiguration) extends Gene
       table(_class("table"))(style("width: auto"))(
         thead(tr(th("Имя поля"), th("Тип"), th("Описание"))),
         tbody(s.fields.map(f => tr(td(f.name.asMangledString), td(typeNameWithLink(f.typeUnit.t.obj)),
-          td(f.info.getOrElse("")))): _*)))
+          td(f.info.getOrElse(lang, "")))): _*)))
     case e: EnumType => td("Перечисление" +
       e.extendsType.map(ext => " расширяющее " + typeName(ext.obj)).getOrElse(""),
       br, "Базовый тип: ", typeNameWithLink(e.baseType.obj), br, "Константы:",
-      // FIXME: not only int values
-      ul(e.allConstants.toSeq.sortBy(_.value.toInt).map(c => li(c.name.asMangledString + " = " + c.value)): _*))
+      ul(e.allConstants.toSeq.sortBy(_.value.toString).map(c => li(c.name.asMangledString + " = " + c.value)): _*))
     case p: PrimitiveType => td(p.bitLength + "-битный " + TypeKind.nameForTypeKind(p.kind))
     case n: NativeType => td("Системный встроенный тип")
     case g: GenericType => td("Обобщенный тип ")(g.name.asMangledString)('<' +
@@ -195,7 +199,7 @@ class HtmlDocsGenerator(val config: HtmlDocsGeneratorConfiguration) extends Gene
         Seq(p("Включает компоненты: ", unsafe(component.subComponents.map(cr =>
           a(href("#" + htmlId(cr.component.obj)))(cr.component.obj.name.asMangledString) +
             cr.alias.map(" под именем " + _).getOrElse("")).mkString(", ")), "."))) ++
-      component.info.map(div(_)).toSeq ++
+      component.info.get(lang).map(div(_)).toSeq ++
       component.baseType.map(bt => Seq(h4("Параметры"),
         table(_class("table table-bordered"))(style("width: auto"))(
           thead(tr(th("Имя параметра"), th("Тип параметра"), th("Единицы измерения"), th("Описание параметра"))),
@@ -204,13 +208,13 @@ class HtmlDocsGenerator(val config: HtmlDocsGeneratorConfiguration) extends Gene
               td(f.name.asMangledString),
               td(typeNameWithLink(f.typeUnit.t.obj)),
               td(f.typeUnit.unit.map(_.obj.name.asMangledString).getOrElse("")),
-              td(f.info.getOrElse("")))): _*))))
+              td(f.info.getOrElse(lang, "")))): _*))))
         .getOrElse(Seq.empty) ++
       (if (component.eventMessages.isEmpty)
         Seq.empty
       else
         Seq(h4("Событийные сообщения")) ++
-          component.eventMessages.flatMap(e => Seq(h5(e.name.asMangledString)) ++ Seq(e.info.map(div(_))).flatten ++
+          component.eventMessages.flatMap(e => Seq(h5(e.name.asMangledString)) ++ Seq(e.info.get(lang).map(div(_))).flatten ++
             Seq(table(_class("table table-bordered"))(style("width: auto"))(
               thead(tr(th("Параметр или переменная"), th("Тип параметра"), th("Описание параметра"))),
               tbody(e.fields.map{
@@ -221,7 +225,7 @@ class HtmlDocsGenerator(val config: HtmlDocsGeneratorConfiguration) extends Gene
         Seq.empty
       else
         Seq(h4("Статусные сообщения")) ++
-          component.statusMessages.flatMap(s => Seq(h5(s.name.asMangledString)) ++ Seq(s.info.map(div(_))).flatten ++
+          component.statusMessages.flatMap(s => Seq(h5(s.name.asMangledString)) ++ Seq(s.info.get(lang).map(div(_))).flatten ++
             Seq(table(_class("table table-bordered"))(style("width: auto"))(
               thead(tr(th("Параметр"), th("Тип параметра"), th("Описание параметра"))),
               tbody(s.parameters.map(trForMessageParameter(_, component)): _*))
@@ -233,7 +237,7 @@ class HtmlDocsGenerator(val config: HtmlDocsGeneratorConfiguration) extends Gene
           component.commands.flatMap{ c =>
             Seq(h4(c.name.asMangledString), p("Возвращаемое значение: ",
               c.returnType.map(rt => a(href("#" + htmlId(rt.obj)))(typeName(rt.obj))).getOrElse("нет"), ".")) ++
-              Seq(c.info.map(div(_))).flatten ++
+              Seq(c.info.get(lang).map(div(_))).flatten ++
               (if (c.parameters.isEmpty)
                 Seq.empty
               else
@@ -248,13 +252,13 @@ class HtmlDocsGenerator(val config: HtmlDocsGeneratorConfiguration) extends Gene
     tr(
       td("Параметр " + mp.value),
       td(typeNameWithLink(mp.ref(component).t)),
-      td(mp.info.getOrElse("")))
+      td(mp.info.getOrElse(lang, "")))
 
   def trForParameter(p: Parameter): HtmlTag =
     tr(
       td(p.name.asMangledString),
       td(typeNameWithLink(p.paramType.obj)),
-      td(p.info.getOrElse("")))
+      td(p.info.getOrElse(lang, "")))
 
   implicit class RichFile(val file: io.File) {
     def write(contents: HtmlAstElement): Unit = write(Seq(contents))

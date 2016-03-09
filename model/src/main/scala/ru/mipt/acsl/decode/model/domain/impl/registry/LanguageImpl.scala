@@ -1,7 +1,8 @@
 package ru.mipt.acsl.decode.model.domain.impl.registry
 
+import ru.mipt.acsl.decode.model.domain.registry.Language
+
 /**
   * @author Artem Shein
   */
-private class LanguageImpl(name: ElementName, namespace: Namespace, val isDefault: Boolean, info: Option[String])
-  extends AbstractNameNamespaceOptionalInfoAware(name, namespace, info) with Language
+private class LanguageImpl(val code: String) extends Language

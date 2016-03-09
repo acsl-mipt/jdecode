@@ -3,6 +3,4 @@ package ru.mipt.acsl.decode.model.domain.expr
 /**
   * @author Artem Shein
   */
-class FloatLiteral {
-
-}
+case class FloatLiteral(v: Float) extends ConstExpr

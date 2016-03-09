@@ -9,6 +9,7 @@ import resource._
 import ru.mipt.acsl.decode.model.domain.types._
 import ru.mipt.acsl.decode.model.domain._
 import ru.mipt.acsl.decode.model.domain.component.{Command, Component}
+import ru.mipt.acsl.decode.model.domain.expr.IntLiteral
 import ru.mipt.acsl.decode.model.domain.naming.{ElementName, Fqn, HasName, Namespace}
 import ru.mipt.acsl.decode.model.domain.proxy.MaybeProxy
 import ru.mipt.acsl.decode.model.domain.registry.Registry
@@ -230,7 +231,10 @@ class CppSourcesGenerator(val config: CppGeneratorConfiguration) extends Generat
       case t: NativeType => cTypeDefForName(t, CppVoidType.ptr())
       case t: SubType => cTypeDefForName(t, cTypeAppForTypeName(t.baseType.obj))
       case t: EnumType => cTypeDefForName(t,
-        CppEnumTypeDef(t.constants.map(c => CEnumTypeDefConst(c.name.asMangledString, c.value.toInt))))
+        CppEnumTypeDef(t.constants.map(c => CEnumTypeDefConst(c.name.asMangledString, c.value match {
+          case i: IntLiteral => i.v
+          case _ => sys.error("not implemented")
+        }))))
       case t: ArrayType => cTypeDefForName(t, CppVoidType.ptr())
       case t: StructType => cTypeDefForName(t, CppStructTypeDef(t.fields.map(f => CStructTypeDefField(f.name.asMangledString, cTypeAppForTypeName(f.typeUnit.t.obj)))))
       case t: AliasType =>

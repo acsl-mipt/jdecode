@@ -11,7 +11,7 @@ import scala.collection.immutable
 /**
   * The basic block of the system interface board.
   */
-trait Component extends HasOptionInfo with Fqned with Referenceable with HasOptionId with Resolvable with Validatable {
+trait Component extends HasInfo with Fqned with Referenceable with HasOptionId with Resolvable with Validatable {
   def statusMessages: immutable.Seq[StatusMessage]
 
   def statusMessages_=(messages: immutable.Seq[StatusMessage]): Unit

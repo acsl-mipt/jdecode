@@ -3,7 +3,8 @@ package ru.mipt.acsl.decode.model.domain.impl
 import java.net.{URI, URLDecoder, URLEncoder}
 
 import com.google.common.base.Charsets
-import ru.mipt.acsl.decode.model.domain.impl.types.{Fqn, Namespace}
+import ru.mipt.acsl.decode.model.domain.aliases.ElementInfo
+import ru.mipt.acsl.decode.model.domain.impl.naming.{ElementName, Fqn, Namespace}
 import ru.mipt.acsl.decode.model.domain.naming.{ElementName, Fqn, Namespace}
 import ru.mipt.acsl.decode.model.domain.registry.Registry
 
@@ -73,11 +74,11 @@ object DecodeUtils {
   }
 
   // TODO: refactoring -- use fold instead
-  def newNamespaceForFqn(fqn: Fqn, info: Option[String] = None): Namespace = {
+  def newNamespaceForFqn(fqn: Fqn, info: ElementInfo = ElementInfo.empty): Namespace = {
     var currentNamespace: Option[Namespace] = None
     val size = fqn.size
     for ((part, i) <- fqn.parts.zipWithIndex) {
-      val ns = Namespace(part, parent = currentNamespace, info = if (i == size - 1) info else None)
+      val ns = Namespace(part, parent = currentNamespace, info = if (i == size - 1) info else ElementInfo.empty)
       currentNamespace = Some(ns)
       for (parent <- ns.parent) {
         parent.subNamespaces = parent.subNamespaces :+ ns
@@ -115,7 +116,7 @@ object DecodeUtils {
   def processQuestionMarks(typeString: String): String = {
     if (typeString.endsWith("?"))
     {
-      DecodeConstants.SYSTEM_NAMESPACE_FQN.asMangledString + ".optional<" +
+      Fqn.SystemNamespace.asMangledString + ".optional<" +
         "\\,".r.split(typeString.substring(0, typeString.length() - 1))
           .map(DecodeUtils.processQuestionMarks).mkString(",") + ">"
     } else {

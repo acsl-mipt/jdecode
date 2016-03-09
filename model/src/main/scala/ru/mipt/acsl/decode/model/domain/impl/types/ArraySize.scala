@@ -1,5 +1,7 @@
 package ru.mipt.acsl.decode.model.domain.impl.types
 
+import ru.mipt.acsl.decode.model.domain.types.ArraySize
+
 /**
   * @author Artem Shein
   */

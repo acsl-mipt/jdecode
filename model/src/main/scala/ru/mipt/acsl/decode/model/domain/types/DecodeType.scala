@@ -9,7 +9,7 @@ import ru.mipt.acsl.decode.model.domain.registry.Registry
 
 import scala.collection.mutable
 
-trait DecodeType extends Referenceable with HasName with HasOptionInfo with NamespaceAware with Resolvable with Validatable {
+trait DecodeType extends Referenceable with HasName with HasInfo with NamespaceAware with Resolvable with Validatable {
 
   def fqn: Fqn
 

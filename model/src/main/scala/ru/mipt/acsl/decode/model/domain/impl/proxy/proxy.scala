@@ -1,7 +1,7 @@
 package ru.mipt.acsl.decode.model.domain.impl.proxy
 
 import ru.mipt.acsl.decode.model.domain._
-import ru.mipt.acsl.decode.model.domain.impl.DecodeConstants
+import ru.mipt.acsl.decode.model.domain.impl.naming.Fqn
 import ru.mipt.acsl.decode.model.domain.naming.{Fqn, Namespace}
 import ru.mipt.acsl.decode.model.domain.proxy._
 import ru.mipt.acsl.decode.model.domain.proxy.aliases.ResolvingResult
@@ -32,7 +32,7 @@ object MaybeProxy {
     proxy(ProxyPath(namespaceFqn, name))
 
   def proxyForSystem[T <: Referenceable : ClassTag](elementName: ProxyElementName): MaybeProxy[T] =
-    proxy(DecodeConstants.SYSTEM_NAMESPACE_FQN, elementName)
+    proxy(Fqn.SystemNamespace, elementName)
 
   def proxyDefaultNamespace[T <: Referenceable : ClassTag](elementFqn: Fqn, defaultNamespace: Namespace): MaybeProxy[T] =
     if (elementFqn.size > 1)

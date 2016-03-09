@@ -80,7 +80,7 @@
     ]
 }
 
-decodeFile ::= namespace_decl import_stmt* (component_decl | unit_decl | type_decl | alias_decl | language_decl)*
+decodeFile ::= namespace_decl import_stmt* (component_decl | unit_decl | type_decl | alias_decl | default_language_decl)*
 
 import_stmt ::= IMPORT element_id (DOT (LEFT_BRACE import_element (COMMA import_element)* COMMA? RIGHT_BRACE | import_element_star))?
 
@@ -154,13 +154,15 @@ parameter_decl ::= info_string? parameter_element
 parameter_element ::= element_id ((LEFT_BRACKET NON_NEGATIVE_NUMBER (DOTS NON_NEGATIVE_NUMBER)? RIGHT_BRACKET)+
     (DOT element_id (LEFT_BRACKET NON_NEGATIVE_NUMBER (DOTS NON_NEGATIVE_NUMBER)? RIGHT_BRACKET)?)*)?
 
-info_string ::= string_value
+info_string ::= string_value+
 
-string_value ::= STRING | STRING_UNARY_QUOTES
+string_literal ::= STRING | STRING_UNARY_QUOTES
+
+string_value ::= (element_name_rule SLASH)? string_literal
 
 subcomponent_decl ::= element_name_rule
 
-unit_decl ::= info_string? UNIT_TOKEN element_name_rule (DISPLAY string_value)? (PLACEMENT (BEFORE | AFTER))?
+unit_decl ::= info_string? UNIT_TOKEN element_name_rule (DISPLAY string_literal)? (PLACEMENT (BEFORE | AFTER))?
 
 generic_arg ::= element_name_rule?
 
@@ -190,6 +192,4 @@ literal ::= float_literal | NON_NEGATIVE_NUMBER | TRUE | FALSE
 
 float_literal ::= (PLUS | MINUS)? (NON_NEGATIVE_NUMBER DOT NON_NEGATIVE_NUMBER? | DOT NON_NEGATIVE_NUMBER) (("e" | "E") (PLUS | MINUS)? NON_NEGATIVE_NUMBER)?
 
-default_language ::= DEFAULT
-
-language_decl ::= info_string? LANGUAGE element_name_rule default_language?
+default_language_decl ::= LANGUAGE element_name_rule

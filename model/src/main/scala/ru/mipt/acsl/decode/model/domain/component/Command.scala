@@ -7,7 +7,7 @@ import ru.mipt.acsl.decode.model.domain.types.DecodeType
 
 import scala.collection.immutable
 
-trait Command extends HasOptionInfo with HasName with HasOptionId {
+trait Command extends HasInfo with HasName with HasOptionId {
   def returnType: Option[MaybeProxy[DecodeType]]
 
   def parameters: immutable.Seq[Parameter]

@@ -9,8 +9,8 @@ import resource._
 import ru.mipt.acsl.decode.model.domain._
 import ru.mipt.acsl.decode.model.domain.component.messages.{EventMessage, MessageParameter, StatusMessage, TmMessage}
 import ru.mipt.acsl.decode.model.domain.component.{Command, Component}
-import ru.mipt.acsl.decode.model.domain.impl.ElementName
-import ru.mipt.acsl.decode.model.domain.impl.types.Fqn
+import ru.mipt.acsl.decode.model.domain.expr.{ConstExpr, IntLiteral}
+import ru.mipt.acsl.decode.model.domain.impl.naming.{ElementName, Fqn}
 import ru.mipt.acsl.decode.model.domain.naming.{Fqn, HasName, Namespace}
 import ru.mipt.acsl.decode.model.domain.proxy.MaybeProxy
 import ru.mipt.acsl.decode.model.domain.registry.Registry
@@ -1037,6 +1037,13 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
     def cStructFieldName(structComponent: Component, component: Component): String =
       upperCamelCaseToLowerCamelCase((if (structComponent == component) "" else component.cName) +
         named.mangledCName.capitalize)
+  }
+
+  implicit class RichConstExpr(val c: ConstExpr) {
+    def toInt: Int = c match {
+      case i: IntLiteral => i.v
+      case _ => sys.error("not implemented")
+    }
   }
 
   implicit class RichString(val str: String) {
