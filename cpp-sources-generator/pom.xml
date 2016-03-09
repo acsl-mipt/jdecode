@@ -18,25 +18,8 @@
     <dependencies>
         <dependency>
             <groupId>ru.mipt.acsl.decode</groupId>
-            <artifactId>common</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>ru.mipt.acsl.decode</groupId>
             <artifactId>model</artifactId>
             <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.typesafe.scala-logging</groupId>
-            <artifactId>scala-logging_2.11</artifactId>
-            <version>3.1.0</version>
-            <exclusions>
-                <exclusion>
-                    <!-- make sure wrong scala version is not pulled in -->
-                    <groupId>org.scala-lang</groupId>
-                    <artifactId>scala-library</artifactId>
-                </exclusion>
-            </exclusions>
         </dependency>
     </dependencies>
 
