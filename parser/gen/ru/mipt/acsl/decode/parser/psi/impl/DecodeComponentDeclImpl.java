@@ -35,6 +35,12 @@ public class DecodeComponentDeclImpl extends ASTWrapperPsiElement implements Dec
   }
 
   @Override
+  @NotNull
+  public List<DecodeComponentRef> getComponentRefList() {
+    return PsiTreeUtil.getChildrenOfTypeAsList(this, DecodeComponentRef.class);
+  }
+
+  @Override
   @Nullable
   public DecodeElementInfo getElementInfo() {
     return findChildByClass(DecodeElementInfo.class);
@@ -56,12 +62,6 @@ public class DecodeComponentDeclImpl extends ASTWrapperPsiElement implements Dec
   @NotNull
   public List<DecodeMessageDecl> getMessageDeclList() {
     return PsiTreeUtil.getChildrenOfTypeAsList(this, DecodeMessageDecl.class);
-  }
-
-  @Override
-  @NotNull
-  public List<DecodeSubcomponentDecl> getSubcomponentDeclList() {
-    return PsiTreeUtil.getChildrenOfTypeAsList(this, DecodeSubcomponentDecl.class);
   }
 
 }

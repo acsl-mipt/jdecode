@@ -15,11 +15,19 @@ public class DecodeVisitor extends PsiElementVisitor {
     visitPsiElement(o);
   }
 
+  public void visitBoolLiteral(@NotNull DecodeBoolLiteral o) {
+    visitPsiElement(o);
+  }
+
   public void visitCommandArg(@NotNull DecodeCommandArg o) {
     visitPsiElement(o);
   }
 
   public void visitCommandArgs(@NotNull DecodeCommandArgs o) {
+    visitPsiElement(o);
+  }
+
+  public void visitCommandCall(@NotNull DecodeCommandCall o) {
     visitPsiElement(o);
   }
 
@@ -32,6 +40,10 @@ public class DecodeVisitor extends PsiElementVisitor {
   }
 
   public void visitComponentParametersDecl(@NotNull DecodeComponentParametersDecl o) {
+    visitPsiElement(o);
+  }
+
+  public void visitComponentRef(@NotNull DecodeComponentRef o) {
     visitPsiElement(o);
   }
 
@@ -76,6 +88,10 @@ public class DecodeVisitor extends PsiElementVisitor {
   }
 
   public void visitEventParameterDecl(@NotNull DecodeEventParameterDecl o) {
+    visitPsiElement(o);
+  }
+
+  public void visitExpr(@NotNull DecodeExpr o) {
     visitPsiElement(o);
   }
 
@@ -139,6 +155,10 @@ public class DecodeVisitor extends PsiElementVisitor {
     visitPsiElement(o);
   }
 
+  public void visitNumericLiteral(@NotNull DecodeNumericLiteral o) {
+    visitPsiElement(o);
+  }
+
   public void visitOptional(@NotNull DecodeOptional o) {
     visitPsiElement(o);
   }
@@ -148,6 +168,14 @@ public class DecodeVisitor extends PsiElementVisitor {
   }
 
   public void visitParameterElement(@NotNull DecodeParameterElement o) {
+    visitPsiElement(o);
+  }
+
+  public void visitRangeDecl(@NotNull DecodeRangeDecl o) {
+    visitPsiElement(o);
+  }
+
+  public void visitScriptDecl(@NotNull DecodeScriptDecl o) {
     visitPsiElement(o);
   }
 
@@ -175,10 +203,6 @@ public class DecodeVisitor extends PsiElementVisitor {
     visitPsiElement(o);
   }
 
-  public void visitSubcomponentDecl(@NotNull DecodeSubcomponentDecl o) {
-    visitPsiElement(o);
-  }
-
   public void visitTypeApplication(@NotNull DecodeTypeApplication o) {
     visitPsiElement(o);
   }
@@ -200,6 +224,10 @@ public class DecodeVisitor extends PsiElementVisitor {
   }
 
   public void visitUnitDecl(@NotNull DecodeUnitDecl o) {
+    visitPsiElement(o);
+  }
+
+  public void visitVarExpr(@NotNull DecodeVarExpr o) {
     visitPsiElement(o);
   }
 

@@ -5,19 +5,16 @@ import java.util.List;
 import org.jetbrains.annotations.*;
 import com.intellij.psi.PsiElement;
 
-public interface DecodeCommandDecl extends PsiElement {
+public interface DecodeScriptDecl extends PsiElement {
 
   @Nullable
   DecodeCommandArgs getCommandArgs();
 
-  @Nullable
-  DecodeElementInfo getElementInfo();
+  @NotNull
+  DecodeComponentRef getComponentRef();
 
   @NotNull
   DecodeElementNameRule getElementNameRule();
-
-  @Nullable
-  DecodeEntityId getEntityId();
 
   @NotNull
   List<DecodeExpr> getExprList();

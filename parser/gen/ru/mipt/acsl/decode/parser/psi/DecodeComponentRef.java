@@ -5,7 +5,7 @@ import java.util.List;
 import org.jetbrains.annotations.*;
 import com.intellij.psi.PsiElement;
 
-public interface DecodeSubcomponentDecl extends PsiElement {
+public interface DecodeComponentRef extends PsiElement {
 
   @NotNull
   DecodeElementNameRule getElementNameRule();
