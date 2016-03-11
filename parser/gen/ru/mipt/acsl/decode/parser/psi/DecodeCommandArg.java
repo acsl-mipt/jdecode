@@ -7,11 +7,11 @@ import com.intellij.psi.PsiElement;
 
 public interface DecodeCommandArg extends PsiElement {
 
+  @Nullable
+  DecodeElementInfo getElementInfo();
+
   @NotNull
   DecodeElementNameRule getElementNameRule();
-
-  @Nullable
-  DecodeInfoString getInfoString();
 
   @NotNull
   DecodeTypeUnitApplication getTypeUnitApplication();

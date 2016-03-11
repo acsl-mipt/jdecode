@@ -7,6 +7,9 @@ import com.intellij.psi.PsiElement;
 
 public interface DecodeEventMessage extends PsiElement {
 
+  @Nullable
+  DecodeElementInfo getElementInfo();
+
   @NotNull
   DecodeElementNameRule getElementNameRule();
 
@@ -15,9 +18,6 @@ public interface DecodeEventMessage extends PsiElement {
 
   @NotNull
   DecodeEventMessageParametersDecl getEventMessageParametersDecl();
-
-  @Nullable
-  DecodeInfoString getInfoString();
 
   @NotNull
   DecodeTypeApplication getTypeApplication();

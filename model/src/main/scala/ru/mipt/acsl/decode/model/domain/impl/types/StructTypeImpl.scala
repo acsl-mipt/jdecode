@@ -1,13 +1,13 @@
 package ru.mipt.acsl.decode.model.domain.impl.types
 
-import ru.mipt.acsl.decode.model.domain.aliases.ElementInfo
+import ru.mipt.acsl.decode.model.domain.aliases.LocalizedString
 import ru.mipt.acsl.decode.model.domain.naming.{ElementName, Namespace}
 import ru.mipt.acsl.decode.model.domain.types.{StructField, StructType}
 
 /**
   * @author Artem Shein
   */
-private class StructTypeImpl(name: ElementName, namespace: Namespace, info: ElementInfo,
+private class StructTypeImpl(name: ElementName, namespace: Namespace, info: LocalizedString,
                              var fields: Seq[StructField])
   extends AbstractType(name, namespace, info) with StructType {
   override def toString: String =

@@ -29,6 +29,12 @@ public class DecodeCommandDeclImpl extends ASTWrapperPsiElement implements Decod
   }
 
   @Override
+  @Nullable
+  public DecodeElementInfo getElementInfo() {
+    return findChildByClass(DecodeElementInfo.class);
+  }
+
+  @Override
   @NotNull
   public DecodeElementNameRule getElementNameRule() {
     return findNotNullChildByClass(DecodeElementNameRule.class);
@@ -38,12 +44,6 @@ public class DecodeCommandDeclImpl extends ASTWrapperPsiElement implements Decod
   @Nullable
   public DecodeEntityId getEntityId() {
     return findChildByClass(DecodeEntityId.class);
-  }
-
-  @Override
-  @Nullable
-  public DecodeInfoString getInfoString() {
-    return findChildByClass(DecodeInfoString.class);
   }
 
   @Override

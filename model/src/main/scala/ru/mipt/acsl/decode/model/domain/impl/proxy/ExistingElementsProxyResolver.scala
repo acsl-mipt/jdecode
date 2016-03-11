@@ -1,7 +1,7 @@
 package ru.mipt.acsl.decode.model.domain.impl.proxy
 
 import ru.mipt.acsl.decode.model.domain._
-import ru.mipt.acsl.decode.model.domain.impl.{DecodeUtils, ElementInfo}
+import ru.mipt.acsl.decode.model.domain.impl.{DecodeUtils, LocalizedString}
 import ru.mipt.acsl.decode.model.domain.impl.types.ArrayType
 import ru.mipt.acsl.decode.model.domain.proxy._
 import ru.mipt.acsl.decode.model.domain.proxy.aliases._
@@ -30,7 +30,7 @@ class ExistingElementsProxyResolver extends DecodeProxyResolver {
           case s if s.size == 1 =>
             (Some(s.head), Result.empty)
           case s if s.isEmpty =>
-            val arrayType = ArrayType(arrayTypeName, ns, ElementInfo.empty, MaybeProxy.proxy(e.baseTypePath), e.arraySize)
+            val arrayType = ArrayType(arrayTypeName, ns, LocalizedString.empty, MaybeProxy.proxy(e.baseTypePath), e.arraySize)
             ns.types = ns.types :+ arrayType
             val result = arrayType.baseType.resolve(registry)
             if (result.hasError)

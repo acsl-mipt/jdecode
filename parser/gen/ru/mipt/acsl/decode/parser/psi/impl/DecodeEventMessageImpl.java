@@ -23,6 +23,12 @@ public class DecodeEventMessageImpl extends ASTWrapperPsiElement implements Deco
   }
 
   @Override
+  @Nullable
+  public DecodeElementInfo getElementInfo() {
+    return findChildByClass(DecodeElementInfo.class);
+  }
+
+  @Override
   @NotNull
   public DecodeElementNameRule getElementNameRule() {
     return findNotNullChildByClass(DecodeElementNameRule.class);
@@ -38,12 +44,6 @@ public class DecodeEventMessageImpl extends ASTWrapperPsiElement implements Deco
   @NotNull
   public DecodeEventMessageParametersDecl getEventMessageParametersDecl() {
     return findNotNullChildByClass(DecodeEventMessageParametersDecl.class);
-  }
-
-  @Override
-  @Nullable
-  public DecodeInfoString getInfoString() {
-    return findChildByClass(DecodeInfoString.class);
   }
 
   @Override

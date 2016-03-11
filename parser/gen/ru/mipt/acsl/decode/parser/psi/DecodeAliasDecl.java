@@ -7,11 +7,11 @@ import com.intellij.psi.PsiElement;
 
 public interface DecodeAliasDecl extends PsiElement {
 
+  @Nullable
+  DecodeElementInfo getElementInfo();
+
   @NotNull
   DecodeElementNameRule getElementNameRule();
-
-  @Nullable
-  DecodeInfoString getInfoString();
 
   @NotNull
   DecodeTypeApplication getTypeApplication();

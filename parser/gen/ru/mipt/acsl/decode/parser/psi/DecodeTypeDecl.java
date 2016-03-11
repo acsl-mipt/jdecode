@@ -7,14 +7,14 @@ import com.intellij.psi.PsiElement;
 
 public interface DecodeTypeDecl extends PsiElement {
 
+  @Nullable
+  DecodeElementInfo getElementInfo();
+
   @NotNull
   DecodeElementNameRule getElementNameRule();
 
   @Nullable
   DecodeGenericArgs getGenericArgs();
-
-  @Nullable
-  DecodeInfoString getInfoString();
 
   @NotNull
   DecodeTypeDeclBody getTypeDeclBody();

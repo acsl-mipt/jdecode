@@ -13,14 +13,14 @@ public interface DecodeComponentDecl extends PsiElement {
   @Nullable
   DecodeComponentParametersDecl getComponentParametersDecl();
 
+  @Nullable
+  DecodeElementInfo getElementInfo();
+
   @NotNull
   DecodeElementNameRule getElementNameRule();
 
   @Nullable
   DecodeEntityId getEntityId();
-
-  @Nullable
-  DecodeInfoString getInfoString();
 
   @NotNull
   List<DecodeMessageDecl> getMessageDeclList();

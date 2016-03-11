@@ -11,6 +11,6 @@ public interface DecodeComponentParametersDecl extends PsiElement {
   DecodeCommandArgs getCommandArgs();
 
   @Nullable
-  DecodeInfoString getInfoString();
+  DecodeElementInfo getElementInfo();
 
 }

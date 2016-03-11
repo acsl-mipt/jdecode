@@ -30,20 +30,14 @@ public class DecodeTypeApplicationImpl extends ASTWrapperPsiElement implements D
 
   @Override
   @Nullable
-  public DecodeNativeTypeApplication getNativeTypeApplication() {
-    return findChildByClass(DecodeNativeTypeApplication.class);
-  }
-
-  @Override
-  @Nullable
   public DecodeOptional getOptional() {
     return findChildByClass(DecodeOptional.class);
   }
 
   @Override
   @Nullable
-  public DecodePrimitiveTypeApplication getPrimitiveTypeApplication() {
-    return findChildByClass(DecodePrimitiveTypeApplication.class);
+  public DecodeSimpleOrGenericTypeApplication getSimpleOrGenericTypeApplication() {
+    return findChildByClass(DecodeSimpleOrGenericTypeApplication.class);
   }
 
 }

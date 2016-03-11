@@ -3,7 +3,7 @@ package ru.mipt.acsl.decode.model.domain.impl
 import java.net.{URI, URLDecoder, URLEncoder}
 
 import com.google.common.base.Charsets
-import ru.mipt.acsl.decode.model.domain.aliases.ElementInfo
+import ru.mipt.acsl.decode.model.domain.aliases.LocalizedString
 import ru.mipt.acsl.decode.model.domain.impl.naming.{ElementName, Fqn, Namespace}
 import ru.mipt.acsl.decode.model.domain.naming.{ElementName, Fqn, Namespace}
 import ru.mipt.acsl.decode.model.domain.registry.Registry
@@ -74,11 +74,11 @@ object DecodeUtils {
   }
 
   // TODO: refactoring -- use fold instead
-  def newNamespaceForFqn(fqn: Fqn, info: ElementInfo = ElementInfo.empty): Namespace = {
+  def newNamespaceForFqn(fqn: Fqn, info: LocalizedString = LocalizedString.empty): Namespace = {
     var currentNamespace: Option[Namespace] = None
     val size = fqn.size
     for ((part, i) <- fqn.parts.zipWithIndex) {
-      val ns = Namespace(part, parent = currentNamespace, info = if (i == size - 1) info else ElementInfo.empty)
+      val ns = Namespace(part, parent = currentNamespace, info = if (i == size - 1) info else LocalizedString.empty)
       currentNamespace = Some(ns)
       for (parent <- ns.parent) {
         parent.subNamespaces = parent.subNamespaces :+ ns

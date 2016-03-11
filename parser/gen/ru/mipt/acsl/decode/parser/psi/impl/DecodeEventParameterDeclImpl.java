@@ -24,8 +24,8 @@ public class DecodeEventParameterDeclImpl extends ASTWrapperPsiElement implement
 
   @Override
   @Nullable
-  public DecodeInfoString getInfoString() {
-    return findChildByClass(DecodeInfoString.class);
+  public DecodeElementInfo getElementInfo() {
+    return findChildByClass(DecodeElementInfo.class);
   }
 
   @Override

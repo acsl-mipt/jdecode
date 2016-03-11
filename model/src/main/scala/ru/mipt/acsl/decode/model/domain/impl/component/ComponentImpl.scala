@@ -1,6 +1,6 @@
 package ru.mipt.acsl.decode.model.domain.impl.component
 
-import ru.mipt.acsl.decode.model.domain.aliases.{ElementInfo, ValidatingResult}
+import ru.mipt.acsl.decode.model.domain.aliases.{LocalizedString, ValidatingResult}
 import ru.mipt.acsl.decode.model.domain.component.messages.{EventMessage, StatusMessage}
 import ru.mipt.acsl.decode.model.domain.component.{Command, Component, ComponentRef}
 import ru.mipt.acsl.decode.model.domain.impl.naming.Fqn
@@ -17,7 +17,7 @@ import scala.collection.{immutable, mutable}
   * @author Artem Shein
   */
 private class ComponentImpl(name: ElementName, namespace: Namespace, var id: Option[Int],
-                            var baseType: Option[MaybeProxy[StructType]], info: ElementInfo,
+                            var baseType: Option[MaybeProxy[StructType]], info: LocalizedString,
                             var subComponents: immutable.Seq[ComponentRef],
                             var commands: immutable.Seq[Command] = immutable.Seq.empty,
                             var eventMessages: immutable.Seq[EventMessage] = immutable.Seq.empty,

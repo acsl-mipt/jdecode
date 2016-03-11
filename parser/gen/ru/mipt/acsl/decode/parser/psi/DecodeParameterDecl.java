@@ -8,7 +8,7 @@ import com.intellij.psi.PsiElement;
 public interface DecodeParameterDecl extends PsiElement {
 
   @Nullable
-  DecodeInfoString getInfoString();
+  DecodeElementInfo getElementInfo();
 
   @NotNull
   DecodeParameterElement getParameterElement();

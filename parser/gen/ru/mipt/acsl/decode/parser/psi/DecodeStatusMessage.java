@@ -7,14 +7,14 @@ import com.intellij.psi.PsiElement;
 
 public interface DecodeStatusMessage extends PsiElement {
 
+  @Nullable
+  DecodeElementInfo getElementInfo();
+
   @NotNull
   DecodeElementNameRule getElementNameRule();
 
   @Nullable
   DecodeEntityId getEntityId();
-
-  @Nullable
-  DecodeInfoString getInfoString();
 
   @NotNull
   DecodeStatusMessageParametersDecl getStatusMessageParametersDecl();

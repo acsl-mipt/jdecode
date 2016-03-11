@@ -44,10 +44,6 @@
         DOTS = ".."
         DOT = "."
         NON_NEGATIVE_NUMBER = "regexp:[0-9]+"
-        UINT = "uint"
-        INT = "int"
-        FLOAT = "float"
-        BOOL = "bool"
         ARRAY = "array"
         ENUM = "enum"
         PLACEMENT = "placement"
@@ -90,36 +86,34 @@ import_element_as ::= AS element_name_rule
 
 import_element ::= element_name_rule import_element_as?
 
-alias_decl ::= info_string? ALIAS element_name_rule type_application
+alias_decl ::= element_info? ALIAS element_name_rule type_application
 
-namespace_decl ::= info_string? NAMESPACE element_id
+namespace_decl ::= element_info? NAMESPACE element_id
 
 element_name_rule ::= ELEMENT_NAME_TOKEN | ESCAPED_NAME
 
-component_decl ::= info_string? COMPONENT element_name_rule entity_id? (WITH subcomponent_decl (COMMA subcomponent_decl)*)?
+component_decl ::= element_info? COMPONENT element_name_rule entity_id? (WITH subcomponent_decl (COMMA subcomponent_decl)*)?
     LEFT_BRACE component_parameters_decl? (command_decl|message_decl)* RIGHT_BRACE
 
-component_parameters_decl ::= info_string? PARAMETERS LEFT_PAREN command_args RIGHT_PAREN
+component_parameters_decl ::= element_info? PARAMETERS LEFT_PAREN command_args RIGHT_PAREN
 
-command_decl ::= info_string? COMMAND element_name_rule entity_id? LEFT_PAREN command_args? RIGHT_PAREN (ARROW type_unit_application)?
+command_decl ::= element_info? COMMAND element_name_rule entity_id? LEFT_PAREN command_args? RIGHT_PAREN (COLON type_unit_application)?
 
 command_args ::= command_arg (COMMA command_arg)* COMMA?
 
-command_arg ::= info_string? type_unit_application element_name_rule
+command_arg ::= element_info? element_name_rule COLON type_unit_application
 
 type_unit_application ::= type_application unit?
 
 optional ::= QUESTION
 
-type_application ::= (native_type_application | primitive_type_application | array_type_application) optional?
+type_application ::= (simple_or_generic_type_application | array_type_application) optional?
 
 generic_parameters ::= LT type_unit_application (COMMA type_unit_application?)* COMMA? GT
 
-native_type_application ::= element_id generic_parameters?
+simple_or_generic_type_application ::= element_id generic_parameters?
 
 unit ::= SLASH element_id SLASH
-
-primitive_type_application ::= primitive_type_kind COLON NON_NEGATIVE_NUMBER
 
 array_type_application ::= LEFT_BRACKET type_application (COMMA length_from (DOTS (length_to | STAR))?)? RIGHT_BRACKET
 
@@ -129,48 +123,40 @@ element_id ::= element_name_rule (DOT element_name_rule)*
 
 message_decl ::= status_message | event_message
 
-entity_id ::= ID COLON NON_NEGATIVE_NUMBER
+entity_id ::= ID EQ_SIGN NON_NEGATIVE_NUMBER
 
-status_message ::= info_string? STATUS element_name_rule entity_id? (PRIORITY COLON NON_NEGATIVE_NUMBER)? status_message_parameters_decl
+status_message ::= element_info? STATUS element_name_rule entity_id? (PRIORITY EQ_SIGN NON_NEGATIVE_NUMBER)? status_message_parameters_decl
 
 status_message_parameters_decl ::= LEFT_PAREN parameter_decl (COMMA parameter_decl)* COMMA? RIGHT_PAREN
 
 event_message_parameters_decl ::= LEFT_PAREN event_parameter_decl (COMMA event_parameter_decl)* COMMA? RIGHT_PAREN
 
-event_parameter_decl ::= info_string? (parameter_element | var_parameter_element)
+event_parameter_decl ::= element_info? (parameter_element | var_parameter_element)
 
 var_parameter_element ::= VAR type_unit_application element_name_rule
 
-//deep_all_parameters ::= STAR DOT STAR
+event_message ::= element_info? EVENT element_name_rule entity_id? type_application event_message_parameters_decl
 
-//all_parameters ::= STAR
-
-event_message ::= info_string? EVENT element_name_rule entity_id? type_application event_message_parameters_decl
-
-//dynamic_status_message ::= DYNAMIC STATUS message_parameters_decl
-
-parameter_decl ::= info_string? parameter_element
+parameter_decl ::= element_info? parameter_element
 
 parameter_element ::= element_id ((LEFT_BRACKET NON_NEGATIVE_NUMBER (DOTS NON_NEGATIVE_NUMBER)? RIGHT_BRACKET)+
     (DOT element_id (LEFT_BRACKET NON_NEGATIVE_NUMBER (DOTS NON_NEGATIVE_NUMBER)? RIGHT_BRACKET)?)*)?
 
-info_string ::= string_value+
+element_info ::= string_value+
 
 string_literal ::= STRING | STRING_UNARY_QUOTES
 
-string_value ::= (element_name_rule SLASH)? string_literal
+string_value ::= element_name_rule? string_literal
 
 subcomponent_decl ::= element_name_rule
 
-unit_decl ::= info_string? UNIT_TOKEN element_name_rule (DISPLAY string_literal)? (PLACEMENT (BEFORE | AFTER))?
+unit_decl ::= element_info? UNIT_TOKEN element_name_rule (DISPLAY string_value)* (PLACEMENT (BEFORE | AFTER))?
 
 generic_arg ::= element_name_rule?
 
 generic_args ::= LT generic_arg (COMMA generic_arg)* GT
 
-type_decl ::= info_string? TYPE_KEYWORD element_name_rule generic_args? type_decl_body
-
-primitive_type_kind ::= UINT | INT | FLOAT | BOOL
+type_decl ::= element_info? TYPE_KEYWORD element_name_rule generic_args? type_decl_body
 
 length_from ::= NON_NEGATIVE_NUMBER
 
@@ -186,7 +172,7 @@ enum_type_decl ::= final_enum? ENUM (EXTENDS element_name_rule | type_applicatio
 
 enum_type_values ::= enum_type_value (COMMA enum_type_value)* COMMA?
 
-enum_type_value ::= info_string? element_name_rule EQ_SIGN literal
+enum_type_value ::= element_info? element_name_rule EQ_SIGN literal
 
 literal ::= float_literal | NON_NEGATIVE_NUMBER | TRUE | FALSE
 

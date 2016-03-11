@@ -30,8 +30,8 @@ public class DecodeNamespaceDeclImpl extends ASTWrapperPsiElement implements Dec
 
   @Override
   @Nullable
-  public DecodeInfoString getInfoString() {
-    return findChildByClass(DecodeInfoString.class);
+  public DecodeElementInfo getElementInfo() {
+    return findChildByClass(DecodeElementInfo.class);
   }
 
 }

@@ -7,11 +7,11 @@ import com.intellij.psi.PsiElement;
 
 public interface DecodeEnumTypeValue extends PsiElement {
 
+  @Nullable
+  DecodeElementInfo getElementInfo();
+
   @NotNull
   DecodeElementNameRule getElementNameRule();
-
-  @Nullable
-  DecodeInfoString getInfoString();
 
   @NotNull
   DecodeLiteral getLiteral();

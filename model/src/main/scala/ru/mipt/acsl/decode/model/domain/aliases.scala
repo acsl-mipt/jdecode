@@ -8,5 +8,5 @@ import scala.collection.immutable
 package object aliases {
   type MessageParameterToken = Either[String, Int]
   type ValidatingResult = ResolvingResult
-  type ElementInfo = immutable.Map[Language, String]
+  type LocalizedString = immutable.Map[Language, String]
 }

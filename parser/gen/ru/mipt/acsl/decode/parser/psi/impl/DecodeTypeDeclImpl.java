@@ -23,6 +23,12 @@ public class DecodeTypeDeclImpl extends ASTWrapperPsiElement implements DecodeTy
   }
 
   @Override
+  @Nullable
+  public DecodeElementInfo getElementInfo() {
+    return findChildByClass(DecodeElementInfo.class);
+  }
+
+  @Override
   @NotNull
   public DecodeElementNameRule getElementNameRule() {
     return findNotNullChildByClass(DecodeElementNameRule.class);
@@ -32,12 +38,6 @@ public class DecodeTypeDeclImpl extends ASTWrapperPsiElement implements DecodeTy
   @Nullable
   public DecodeGenericArgs getGenericArgs() {
     return findChildByClass(DecodeGenericArgs.class);
-  }
-
-  @Override
-  @Nullable
-  public DecodeInfoString getInfoString() {
-    return findChildByClass(DecodeInfoString.class);
   }
 
   @Override

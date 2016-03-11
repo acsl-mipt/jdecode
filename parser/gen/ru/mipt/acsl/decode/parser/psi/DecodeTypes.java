@@ -17,6 +17,7 @@ public interface DecodeTypes {
   IElementType COMPONENT_PARAMETERS_DECL = new DecodeElementType("COMPONENT_PARAMETERS_DECL");
   IElementType DEFAULT_LANGUAGE_DECL = new DecodeElementType("DEFAULT_LANGUAGE_DECL");
   IElementType ELEMENT_ID = new DecodeElementType("ELEMENT_ID");
+  IElementType ELEMENT_INFO = new DecodeElementType("ELEMENT_INFO");
   IElementType ELEMENT_NAME_RULE = new DecodeElementType("ELEMENT_NAME_RULE");
   IElementType ENTITY_ID = new DecodeElementType("ENTITY_ID");
   IElementType ENUM_TYPE_DECL = new DecodeElementType("ENUM_TYPE_DECL");
@@ -34,19 +35,16 @@ public interface DecodeTypes {
   IElementType IMPORT_ELEMENT_AS = new DecodeElementType("IMPORT_ELEMENT_AS");
   IElementType IMPORT_ELEMENT_STAR = new DecodeElementType("IMPORT_ELEMENT_STAR");
   IElementType IMPORT_STMT = new DecodeElementType("IMPORT_STMT");
-  IElementType INFO_STRING = new DecodeElementType("INFO_STRING");
   IElementType LENGTH_FROM = new DecodeElementType("LENGTH_FROM");
   IElementType LENGTH_TO = new DecodeElementType("LENGTH_TO");
   IElementType LITERAL = new DecodeElementType("LITERAL");
   IElementType MESSAGE_DECL = new DecodeElementType("MESSAGE_DECL");
   IElementType NAMESPACE_DECL = new DecodeElementType("NAMESPACE_DECL");
-  IElementType NATIVE_TYPE_APPLICATION = new DecodeElementType("NATIVE_TYPE_APPLICATION");
   IElementType NATIVE_TYPE_DECL = new DecodeElementType("NATIVE_TYPE_DECL");
   IElementType OPTIONAL = new DecodeElementType("OPTIONAL");
   IElementType PARAMETER_DECL = new DecodeElementType("PARAMETER_DECL");
   IElementType PARAMETER_ELEMENT = new DecodeElementType("PARAMETER_ELEMENT");
-  IElementType PRIMITIVE_TYPE_APPLICATION = new DecodeElementType("PRIMITIVE_TYPE_APPLICATION");
-  IElementType PRIMITIVE_TYPE_KIND = new DecodeElementType("PRIMITIVE_TYPE_KIND");
+  IElementType SIMPLE_OR_GENERIC_TYPE_APPLICATION = new DecodeElementType("SIMPLE_OR_GENERIC_TYPE_APPLICATION");
   IElementType STATUS_MESSAGE = new DecodeElementType("STATUS_MESSAGE");
   IElementType STATUS_MESSAGE_PARAMETERS_DECL = new DecodeElementType("STATUS_MESSAGE_PARAMETERS_DECL");
   IElementType STRING_LITERAL = new DecodeElementType("STRING_LITERAL");
@@ -67,7 +65,6 @@ public interface DecodeTypes {
   IElementType ARROW = new DecodeTokenType("->");
   IElementType AS = new DecodeTokenType("as");
   IElementType BEFORE = new DecodeTokenType("before");
-  IElementType BOOL = new DecodeTokenType("bool");
   IElementType COLON = new DecodeTokenType(":");
   IElementType COMMA = new DecodeTokenType(",");
   IElementType COMMAND = new DecodeTokenType("command");
@@ -86,11 +83,9 @@ public interface DecodeTypes {
   IElementType EXTENDS = new DecodeTokenType("extends");
   IElementType FALSE = new DecodeTokenType("false");
   IElementType FINAL = new DecodeTokenType("final");
-  IElementType FLOAT = new DecodeTokenType("float");
   IElementType GT = new DecodeTokenType(">");
   IElementType ID = new DecodeTokenType("id");
   IElementType IMPORT = new DecodeTokenType("import");
-  IElementType INT = new DecodeTokenType("int");
   IElementType LANGUAGE = new DecodeTokenType("language");
   IElementType LEFT_BRACE = new DecodeTokenType("{");
   IElementType LEFT_BRACKET = new DecodeTokenType("[");
@@ -120,7 +115,6 @@ public interface DecodeTypes {
   IElementType SUBCOMPONENT = new DecodeTokenType("subcomponent");
   IElementType TRUE = new DecodeTokenType("true");
   IElementType TYPE_KEYWORD = new DecodeTokenType("type");
-  IElementType UINT = new DecodeTokenType("uint");
   IElementType UNIT_TOKEN = new DecodeTokenType("unit");
   IElementType VAR = new DecodeTokenType("var");
   IElementType WITH = new DecodeTokenType("with");
@@ -154,6 +148,9 @@ public interface DecodeTypes {
       }
       else if (type == ELEMENT_ID) {
         return new DecodeElementIdImpl(node);
+      }
+      else if (type == ELEMENT_INFO) {
+        return new DecodeElementInfoImpl(node);
       }
       else if (type == ELEMENT_NAME_RULE) {
         return new DecodeElementNameRuleImpl(node);
@@ -206,9 +203,6 @@ public interface DecodeTypes {
       else if (type == IMPORT_STMT) {
         return new DecodeImportStmtImpl(node);
       }
-      else if (type == INFO_STRING) {
-        return new DecodeInfoStringImpl(node);
-      }
       else if (type == LENGTH_FROM) {
         return new DecodeLengthFromImpl(node);
       }
@@ -224,9 +218,6 @@ public interface DecodeTypes {
       else if (type == NAMESPACE_DECL) {
         return new DecodeNamespaceDeclImpl(node);
       }
-      else if (type == NATIVE_TYPE_APPLICATION) {
-        return new DecodeNativeTypeApplicationImpl(node);
-      }
       else if (type == NATIVE_TYPE_DECL) {
         return new DecodeNativeTypeDeclImpl(node);
       }
@@ -239,11 +230,8 @@ public interface DecodeTypes {
       else if (type == PARAMETER_ELEMENT) {
         return new DecodeParameterElementImpl(node);
       }
-      else if (type == PRIMITIVE_TYPE_APPLICATION) {
-        return new DecodePrimitiveTypeApplicationImpl(node);
-      }
-      else if (type == PRIMITIVE_TYPE_KIND) {
-        return new DecodePrimitiveTypeKindImpl(node);
+      else if (type == SIMPLE_OR_GENERIC_TYPE_APPLICATION) {
+        return new DecodeSimpleOrGenericTypeApplicationImpl(node);
       }
       else if (type == STATUS_MESSAGE) {
         return new DecodeStatusMessageImpl(node);

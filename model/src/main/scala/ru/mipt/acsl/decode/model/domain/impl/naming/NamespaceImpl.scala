@@ -1,6 +1,6 @@
 package ru.mipt.acsl.decode.model.domain.impl.naming
 
-import ru.mipt.acsl.decode.model.domain.aliases.{ElementInfo, ValidatingResult}
+import ru.mipt.acsl.decode.model.domain.aliases.{LocalizedString, ValidatingResult}
 import ru.mipt.acsl.decode.model.domain.component.Component
 import ru.mipt.acsl.decode.model.domain.naming.{ElementName, Fqn, HasName, Namespace}
 import ru.mipt.acsl.decode.model.domain.proxy.aliases.ResolvingResult
@@ -12,7 +12,7 @@ import scala.collection.{immutable, mutable}
 /**
   * @author Artem Shein
   */
-private class NamespaceImpl(var name: ElementName, var info: ElementInfo, var parent: Option[Namespace],
+private class NamespaceImpl(var name: ElementName, var info: LocalizedString, var parent: Option[Namespace],
                             var types: immutable.Seq[DecodeType], var units: immutable.Seq[DecodeUnit],
                             var subNamespaces: immutable.Seq[Namespace], var components: immutable.Seq[Component])
   extends HasName with Namespace {

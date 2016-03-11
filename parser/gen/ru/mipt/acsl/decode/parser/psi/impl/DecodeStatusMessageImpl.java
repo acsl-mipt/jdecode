@@ -23,6 +23,12 @@ public class DecodeStatusMessageImpl extends ASTWrapperPsiElement implements Dec
   }
 
   @Override
+  @Nullable
+  public DecodeElementInfo getElementInfo() {
+    return findChildByClass(DecodeElementInfo.class);
+  }
+
+  @Override
   @NotNull
   public DecodeElementNameRule getElementNameRule() {
     return findNotNullChildByClass(DecodeElementNameRule.class);
@@ -32,12 +38,6 @@ public class DecodeStatusMessageImpl extends ASTWrapperPsiElement implements Dec
   @Nullable
   public DecodeEntityId getEntityId() {
     return findChildByClass(DecodeEntityId.class);
-  }
-
-  @Override
-  @Nullable
-  public DecodeInfoString getInfoString() {
-    return findChildByClass(DecodeInfoString.class);
   }
 
   @Override

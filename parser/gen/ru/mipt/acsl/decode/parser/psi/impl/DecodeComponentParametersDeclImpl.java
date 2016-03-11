@@ -30,8 +30,8 @@ public class DecodeComponentParametersDeclImpl extends ASTWrapperPsiElement impl
 
   @Override
   @Nullable
-  public DecodeInfoString getInfoString() {
-    return findChildByClass(DecodeInfoString.class);
+  public DecodeElementInfo getElementInfo() {
+    return findChildByClass(DecodeElementInfo.class);
   }
 
 }

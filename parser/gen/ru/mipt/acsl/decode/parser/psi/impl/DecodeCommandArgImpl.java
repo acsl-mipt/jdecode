@@ -23,15 +23,15 @@ public class DecodeCommandArgImpl extends ASTWrapperPsiElement implements Decode
   }
 
   @Override
-  @NotNull
-  public DecodeElementNameRule getElementNameRule() {
-    return findNotNullChildByClass(DecodeElementNameRule.class);
+  @Nullable
+  public DecodeElementInfo getElementInfo() {
+    return findChildByClass(DecodeElementInfo.class);
   }
 
   @Override
-  @Nullable
-  public DecodeInfoString getInfoString() {
-    return findChildByClass(DecodeInfoString.class);
+  @NotNull
+  public DecodeElementNameRule getElementNameRule() {
+    return findNotNullChildByClass(DecodeElementNameRule.class);
   }
 
   @Override

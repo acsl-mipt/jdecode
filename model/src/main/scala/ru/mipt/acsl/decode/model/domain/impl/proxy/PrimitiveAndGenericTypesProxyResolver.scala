@@ -5,7 +5,7 @@ import ru.mipt.acsl.decode.model.domain.impl.naming.{ElementName, Fqn}
 import ru.mipt.acsl.decode.model.domain.impl.types.GenericTypeSpecialized
 import ru.mipt.acsl.decode.model.domain.impl.types.PrimitiveType
 import ru.mipt.acsl.decode.model.domain.impl.types.{GenericTypeSpecialized, PrimitiveType}
-import ru.mipt.acsl.decode.model.domain.impl.{DecodeUtils, ElementInfo}
+import ru.mipt.acsl.decode.model.domain.impl.{DecodeUtils, LocalizedString}
 import ru.mipt.acsl.decode.model.domain.naming.ElementName
 import ru.mipt.acsl.decode.model.domain.proxy._
 import ru.mipt.acsl.decode.model.domain.proxy.aliases._
@@ -34,7 +34,7 @@ class PrimitiveAndGenericTypesProxyResolver extends DecodeProxyResolver {
           val primitiveType = primitiveTypeByTypeKindBitSize.getOrElseUpdate(path.mangledName,
             PrimitiveType(
               ElementName.newFromMangledName(s"${TypeKind.nameForTypeKind(e.typeKind)}:${e.bitSize}"),
-              systemNamespace, ElementInfo.empty, e.typeKind, e.bitSize))
+              systemNamespace, LocalizedString.empty, e.typeKind, e.bitSize))
           val primitiveTypeName = primitiveType.name
           if (!systemNamespace.types.exists(_.name.equals(primitiveTypeName)))
             systemNamespace.types = systemNamespace.types :+ primitiveType
@@ -49,7 +49,7 @@ class PrimitiveAndGenericTypesProxyResolver extends DecodeProxyResolver {
           val name = path.element.mangledName
           val specializedType = systemNamespace.types.find(_.name.equals(name))
             .map(_.asInstanceOf[GenericTypeSpecialized]).getOrElse({
-            val specializedType = GenericTypeSpecialized(name, genericType.namespace, ElementInfo.empty,
+            val specializedType = GenericTypeSpecialized(name, genericType.namespace, LocalizedString.empty,
               MaybeProxy.obj(genericType),
               e.genericArgumentPaths.map(_.map(arg => MaybeProxy.proxy[DecodeType](arg))))
             systemNamespace.types = systemNamespace.types :+ specializedType

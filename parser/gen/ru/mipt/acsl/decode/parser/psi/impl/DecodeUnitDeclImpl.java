@@ -23,21 +23,21 @@ public class DecodeUnitDeclImpl extends ASTWrapperPsiElement implements DecodeUn
   }
 
   @Override
+  @Nullable
+  public DecodeElementInfo getElementInfo() {
+    return findChildByClass(DecodeElementInfo.class);
+  }
+
+  @Override
   @NotNull
   public DecodeElementNameRule getElementNameRule() {
     return findNotNullChildByClass(DecodeElementNameRule.class);
   }
 
   @Override
-  @Nullable
-  public DecodeInfoString getInfoString() {
-    return findChildByClass(DecodeInfoString.class);
-  }
-
-  @Override
-  @Nullable
-  public DecodeStringLiteral getStringLiteral() {
-    return findChildByClass(DecodeStringLiteral.class);
+  @NotNull
+  public List<DecodeStringValue> getStringValueList() {
+    return PsiTreeUtil.getChildrenOfTypeAsList(this, DecodeStringValue.class);
   }
 
 }

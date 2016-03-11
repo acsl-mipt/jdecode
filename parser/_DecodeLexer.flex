@@ -57,10 +57,6 @@ NON_NEGATIVE_NUMBER=[0-9]+
   "alias"                    { return ALIAS; }
   ".."                       { return DOTS; }
   "."                        { return DOT; }
-  "uint"                     { return UINT; }
-  "int"                      { return INT; }
-  "float"                    { return FLOAT; }
-  "bool"                     { return BOOL; }
   "array"                    { return ARRAY; }
   "enum"                     { return ENUM; }
   "placement"                { return PLACEMENT; }
