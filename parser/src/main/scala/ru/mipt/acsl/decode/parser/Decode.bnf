@@ -133,7 +133,7 @@ event_message_parameters_decl ::= LEFT_PAREN event_parameter_decl (COMMA event_p
 
 event_parameter_decl ::= element_info? (parameter_element | var_parameter_element)
 
-var_parameter_element ::= VAR type_unit_application element_name_rule
+var_parameter_element ::= VAR element_name_rule COLON type_unit_application
 
 event_message ::= element_info? EVENT element_name_rule entity_id? type_application event_message_parameters_decl
 

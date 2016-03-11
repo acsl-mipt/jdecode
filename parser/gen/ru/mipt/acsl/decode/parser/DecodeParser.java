@@ -1830,15 +1830,16 @@ public class DecodeParser implements PsiParser, LightPsiParser {
   }
 
   /* ********************************************************** */
-  // VAR type_unit_application element_name_rule
+  // VAR element_name_rule COLON type_unit_application
   public static boolean var_parameter_element(PsiBuilder b, int l) {
     if (!recursion_guard_(b, l, "var_parameter_element")) return false;
     if (!nextTokenIs(b, VAR)) return false;
     boolean r;
     Marker m = enter_section_(b);
     r = consumeToken(b, VAR);
-    r = r && type_unit_application(b, l + 1);
     r = r && element_name_rule(b, l + 1);
+    r = r && consumeToken(b, COLON);
+    r = r && type_unit_application(b, l + 1);
     exit_section_(b, m, VAR_PARAMETER_ELEMENT, r);
     return r;
   }
