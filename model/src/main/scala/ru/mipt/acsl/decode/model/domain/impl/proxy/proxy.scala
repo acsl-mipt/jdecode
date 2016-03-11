@@ -24,21 +24,21 @@ object Proxy {
 }
 
 object MaybeProxy {
-  def proxy[T <: Referenceable : ClassTag](proxy: Proxy): MaybeProxy[T] = new MaybeProxy[T](Left(proxy))
+  def apply[T <: Referenceable : ClassTag](proxy: Proxy): MaybeProxy[T] = new MaybeProxy[T](Left(proxy))
 
-  def proxy[T <: Referenceable : ClassTag](path: ProxyPath): MaybeProxy[T] = proxy(impl.proxy.Proxy(path))
+  def apply[T <: Referenceable : ClassTag](path: ProxyPath): MaybeProxy[T] = apply(impl.proxy.Proxy(path))
 
-  def proxy[T <: Referenceable : ClassTag](namespaceFqn: Fqn, name: ProxyElementName): MaybeProxy[T] =
-    proxy(ProxyPath(namespaceFqn, name))
+  def apply[T <: Referenceable : ClassTag](namespaceFqn: Fqn, name: ProxyElementName): MaybeProxy[T] =
+    apply(ProxyPath(namespaceFqn, name))
+
+  def apply[T <: Referenceable : ClassTag](obj: T) = new MaybeProxy[T](Right(obj))
 
   def proxyForSystem[T <: Referenceable : ClassTag](elementName: ProxyElementName): MaybeProxy[T] =
-    proxy(Fqn.SystemNamespace, elementName)
+    apply(Fqn.SystemNamespace, elementName)
 
   def proxyDefaultNamespace[T <: Referenceable : ClassTag](elementFqn: Fqn, defaultNamespace: Namespace): MaybeProxy[T] =
     if (elementFqn.size > 1)
-      proxy(elementFqn.copyDropLast, TypeName(elementFqn.last))
+      apply(elementFqn.copyDropLast, TypeName(elementFqn.last))
     else
-      proxy(defaultNamespace.fqn, TypeName(elementFqn.last))
-
-  def obj[T <: Referenceable : ClassTag](obj: T) = new MaybeProxy[T](Right(obj))
+      apply(defaultNamespace.fqn, TypeName(elementFqn.last))
 }

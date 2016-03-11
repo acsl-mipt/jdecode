@@ -5,4 +5,4 @@ import ru.mipt.acsl.decode.model.domain.registry.Language
 /**
   * @author Artem Shein
   */
-private class LanguageImpl(val code: String) extends Language
+private case class LanguageImpl(code: String) extends Language

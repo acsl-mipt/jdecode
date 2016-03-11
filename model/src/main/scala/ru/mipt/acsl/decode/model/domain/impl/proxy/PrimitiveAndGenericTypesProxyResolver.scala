@@ -41,7 +41,7 @@ class PrimitiveAndGenericTypesProxyResolver extends DecodeProxyResolver {
           (Some(primitiveType), Result.empty)
         // Generic type
         case e: GenericTypeName =>
-          val maybeProxy = MaybeProxy.proxy[GenericType](ProxyPath(nsFqn, e.typeName))
+          val maybeProxy = MaybeProxy[GenericType](ProxyPath(nsFqn, e.typeName))
           val result = maybeProxy.resolve(registry)
           if (result.hasError)
             return (None, result)
@@ -50,8 +50,8 @@ class PrimitiveAndGenericTypesProxyResolver extends DecodeProxyResolver {
           val specializedType = systemNamespace.types.find(_.name.equals(name))
             .map(_.asInstanceOf[GenericTypeSpecialized]).getOrElse({
             val specializedType = GenericTypeSpecialized(name, genericType.namespace, LocalizedString.empty,
-              MaybeProxy.obj(genericType),
-              e.genericArgumentPaths.map(_.map(arg => MaybeProxy.proxy[DecodeType](arg))))
+              MaybeProxy(genericType),
+              e.genericArgumentPaths.map(_.map(arg => MaybeProxy[DecodeType](arg))))
             systemNamespace.types = systemNamespace.types :+ specializedType
             specializedType
           })

@@ -1,61 +1,31 @@
 package ru.mipt.acsl.decode.parser
 
-
-import com.intellij.lang.impl.PsiBuilderFactoryImpl
-import com.intellij.lang.{Language => _, _}
-import com.intellij.mock.{MockApplicationEx, MockProjectEx}
-import com.intellij.openapi.Disposable
-import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.extensions.Extensions
-import com.intellij.openapi.fileTypes.{FileTypeManager, FileTypeRegistry}
-import com.intellij.openapi.progress.ProgressManager
-import com.intellij.openapi.progress.impl.ProgressManagerImpl
-import com.intellij.openapi.util.{Disposer, Getter}
-import com.intellij.openapi.vfs.encoding.{EncodingManager, EncodingManagerImpl}
+import com.intellij.lang.ASTNode
 import com.intellij.psi.PsiWhiteSpace
-import com.intellij.psi.impl.source.resolve.reference.{ReferenceProvidersRegistry, ReferenceProvidersRegistryImpl}
-import com.typesafe.scalalogging.LazyLogging
-import org.picocontainer.PicoContainer
-import org.picocontainer.defaults.AbstractComponentAdapter
-import ru.mipt.acsl.decode.model.domain._
+import ru.mipt.acsl.decode.model.domain.Referenceable
 import ru.mipt.acsl.decode.model.domain.aliases.LocalizedString
-import ru.mipt.acsl.decode.model.domain.component.messages.{EventMessage, StatusMessage}
 import ru.mipt.acsl.decode.model.domain.component.{Command, Component, ComponentRef}
+import ru.mipt.acsl.decode.model.domain.component.messages.{EventMessage, StatusMessage}
 import ru.mipt.acsl.decode.model.domain.expr.{FloatLiteral, IntLiteral}
-import ru.mipt.acsl.decode.model.domain.impl._
-import ru.mipt.acsl.decode.model.domain.impl.component.message.{EventMessage, MessageParameter, StatusMessage}
+import ru.mipt.acsl.decode.model.domain.impl.{DecodeUtils, LocalizedString}
 import ru.mipt.acsl.decode.model.domain.impl.component.{Command, Component, ComponentRef}
+import ru.mipt.acsl.decode.model.domain.impl.component.message.{EventMessage, MessageParameter, StatusMessage}
 import ru.mipt.acsl.decode.model.domain.impl.naming.{ElementName, Fqn}
 import ru.mipt.acsl.decode.model.domain.impl.proxy.MaybeProxy
-import ru.mipt.acsl.decode.model.domain.impl.registry.{DecodeUnit, Language, Registry}
+import ru.mipt.acsl.decode.model.domain.impl.registry.{DecodeUnit, Language}
 import ru.mipt.acsl.decode.model.domain.impl.types._
 import ru.mipt.acsl.decode.model.domain.naming.{ElementName, Fqn, Namespace}
 import ru.mipt.acsl.decode.model.domain.proxy._
-import ru.mipt.acsl.decode.model.domain.registry.{DecodeUnit, Language, Registry}
-import ru.mipt.acsl.decode.model.domain.types.{DecodeType, EnumType, TypeKind, TypeUnit}
+import ru.mipt.acsl.decode.model.domain.registry.{DecodeUnit, Language}
+import ru.mipt.acsl.decode.model.domain.types.{EnumConstant, EnumType, StructType, TypeUnit, _}
 import ru.mipt.acsl.decode.parser.psi.{DecodeUnit => PsiDecodeUnit, _}
 
-import scala.collection.immutable.Seq
 import scala.collection.{immutable, mutable}
-import scala.io.Source
 import scala.reflect.ClassTag
 
-private sealed trait ImportPart {
-  def alias: String
-
-  def originalName: ElementName
-}
-
-private case class ImportPartName(originalName: ElementName) extends ImportPart {
-  def alias: String = originalName.asMangledString
-}
-
-private case class ImportPartNameAlias(originalName: ElementName, _alias: ElementName) extends ImportPart {
-  def alias: String = _alias.asMangledString
-}
-
-case class DecodeSourceProviderConfiguration(resourcePath: String)
-
+/**
+  * @author Artem Shein
+  */
 class DecodeAstTransformer {
 
   import scala.collection.JavaConversions._
@@ -72,37 +42,12 @@ class DecodeAstTransformer {
       info = elementInfo(Option(nsDecl.getElementInfo)))
     children.drop(1).foreach(_.getPsi match {
       case p: DecodeTypeDecl =>
-        val body = p.getTypeDeclBody
-        val name = elementName(p.getElementNameRule)
-        val _optionInfo = elementInfo(Option(p.getElementInfo))
-        ns.types = ns.types :+ Option(body.getEnumTypeDecl).map { e =>
-          EnumType(name, ns, Option(e.getElementNameRule)
-            .map(n => Left(proxyForFqn[EnumType](Fqn(Seq(elementName(n))))))
-            .getOrElse(Right(typeApplication(Option(e.getTypeApplication)).get)), _optionInfo,
-            e.getEnumTypeValues.getEnumTypeValueList.map { v =>
-              val literal: DecodeLiteral = v.getLiteral
-              EnumConstant(elementName(v.getElementNameRule),
-              Option(literal.getFloatLiteral).map(l => FloatLiteral(l.getText.toFloat))
-                .getOrElse(IntLiteral(literal.getNonNegativeNumber.getText.toInt)),
-                elementInfo(Option(v.getElementInfo)))
-            }.to[immutable.Set], e.getFinalEnum != null)
-        }.orElse {
-          Option(body.getNativeTypeDecl).map(n =>
-            Option(p.getGenericArgs).map(args => GenericType(name, ns, _optionInfo,
-              args.getGenericArgList.map(arg => Option(arg.getElementNameRule).map(elementName))))
-              .getOrElse(NativeType(name, ns, _optionInfo)))
-        }.orElse {
-          Option(body.getTypeApplication).map(s => SubType(name, ns, _optionInfo, typeApplication(Some(s)).get))
-        }.getOrElse {
-          StructType(name, ns, _optionInfo, body.getStructTypeDecl.getCommandArgs.getCommandArgList.map(cmdArg =>
-            StructField(elementName(cmdArg.getElementNameRule), typeUnit(cmdArg.getTypeUnitApplication),
-              elementInfo(Option(cmdArg.getElementInfo)))))
-        }
+        ns.types = ns.types :+ newType(p)
       case i: DecodeImportStmt =>
         val els = i.getImportElementList
         val iFqn: Fqn = fqn(i.getElementId)
         if (els.isEmpty) {
-          imports.put(iFqn.last.asMangledString, MaybeProxy.proxy(iFqn.copyDropLast, TypeName(iFqn.last)))
+          imports.put(iFqn.last.asMangledString, MaybeProxy(iFqn.copyDropLast, TypeName(iFqn.last)))
         } else if (i.getImportElementStar != null) {
           sys.error("not implemented")
         } else {
@@ -115,7 +60,7 @@ class DecodeAstTransformer {
           }.foreach(p =>
             assert(imports.put(
               ElementName.newFromSourceName(p.alias).asMangledString,
-              MaybeProxy.proxy(iFqn, TypeName(p.originalName))).isEmpty))
+              MaybeProxy(iFqn, TypeName(p.originalName))).isEmpty))
         }
       case u: DecodeUnitDecl =>
         ns.units = ns.units :+ DecodeUnit(elementName(u.getElementNameRule), ns,
@@ -132,13 +77,12 @@ class DecodeAstTransformer {
                 elementInfo(Option(arg.getElementInfo)))
             })
           ns.types = ns.types :+ struct
-          MaybeProxy.obj(struct)
+          MaybeProxy(struct)
         }
         val component: Component = Component(elementName(c.getElementNameRule), ns,
           id(Option(c.getEntityId)), params, elementInfo(Option(c.getElementInfo)),
-          c.getSubcomponentDeclList.map(sc => componentRef(Fqn(Seq(elementName(sc.getElementNameRule)))))
-            .to[Seq],
-          c.getCommandDeclList.map(c => command(c)).to[Seq])
+          c.getSubcomponentDeclList.map(sc => componentRef(Fqn(Seq(elementName(sc.getElementNameRule))))).to[immutable.Seq],
+          c.getCommandDeclList.map(c => command(c)).to[immutable.Seq])
         ns.components = ns.components :+ component
         component.eventMessages ++= c.getMessageDeclList
           .flatMap(m => Option(m.getEventMessage).map(em => eventMessage(em, component)))
@@ -151,6 +95,39 @@ class DecodeAstTransformer {
         sys.error(s"not implemented for ${p.getClass}")
     })
     ns.rootNamespace
+  }
+
+  private def newType(p: DecodeTypeDecl): DecodeType = {
+    val body = p.getTypeDeclBody
+    val name = elementName(p.getElementNameRule)
+    val _info = elementInfo(Option(p.getElementInfo))
+    Option(body.getEnumTypeDecl).map(e => newEnumType(e, name, _info)).orElse {
+      Option(body.getNativeTypeDecl).map(n =>
+        Option(p.getGenericArgs).map(args => GenericType(name, ns, _info,
+          args.getGenericArgList.map(arg => Option(arg.getElementNameRule).map(elementName))))
+          .getOrElse(NativeType(name, ns, _info)))
+    }.orElse {
+      Option(body.getTypeApplication).map(s => SubType(name, ns, _info, typeApplication(Some(s)).get))
+    }.getOrElse(newStructType(name, _info, body))
+  }
+
+  private def newEnumType(e: DecodeEnumTypeDecl, name: ElementName, _info: LocalizedString): EnumType =
+    EnumType(name, ns, Option(e.getElementNameRule)
+      .map(n => Left(proxyForFqn[EnumType](Fqn(Seq(elementName(n))))))
+      .getOrElse(Right(typeApplication(Option(e.getTypeApplication)).get)), _info,
+      e.getEnumTypeValues.getEnumTypeValueList.map(v => newEnumConstant(v)).to[immutable.Set], e.getFinalEnum != null)
+
+  private def newStructType(name: ElementName, _info: LocalizedString, body: DecodeTypeDeclBody): StructType =
+    StructType(name, ns, _info, body.getStructTypeDecl.getCommandArgs.getCommandArgList.map(cmdArg =>
+      StructField(elementName(cmdArg.getElementNameRule), typeUnit(cmdArg.getTypeUnitApplication),
+        elementInfo(Option(cmdArg.getElementInfo)))))
+
+  private def newEnumConstant(v: DecodeEnumTypeValue): EnumConstant = {
+    val literal: DecodeLiteral = v.getLiteral
+    EnumConstant(elementName(v.getElementNameRule),
+      Option(literal.getFloatLiteral).map(l => FloatLiteral(l.getText.toFloat))
+        .getOrElse(IntLiteral(literal.getNonNegativeNumber.getText.toInt)),
+      elementInfo(Option(v.getElementInfo)))
   }
 
   private def id(entityId: Option[DecodeEntityId]): Option[Int] =
@@ -249,7 +226,7 @@ class DecodeAstTransformer {
         val result = Option(ta.getArrayTypeApplication).map { ata =>
           val path = typeApplication(Some(ata.getTypeApplication)).get.proxy.path
           val fromTo = (Option(ata.getLengthFrom).map(_.getText), Option(ata.getLengthTo).map(_.getText))
-          MaybeProxy.proxy[DecodeType](ProxyPath(path.ns, ArrayTypePath(path,
+          MaybeProxy[DecodeType](ProxyPath(path.ns, ArrayTypePath(path,
             ArraySize(fromTo._1.map(_.toLong).getOrElse(0l),
               fromTo._2.map(_.toLong).getOrElse(0l)))))
         }.getOrElse {
@@ -258,7 +235,7 @@ class DecodeAstTransformer {
           Option(nta.getGenericParameters).map { params =>
             val path = proxy.proxy.path
             // todo: remove asInstanceOf
-            MaybeProxy.proxy[DecodeType](ProxyPath(path.ns,
+            MaybeProxy[DecodeType](ProxyPath(path.ns,
               GenericTypeName(path.element.asInstanceOf[TypeName].typeName,
                 params.getTypeUnitApplicationList.map(p => typeApplication(Some(p.getTypeApplication))
                   .map(_.proxy.path)).to[immutable.Seq])))
@@ -272,67 +249,4 @@ class DecodeAstTransformer {
         })
       case _ => None
     }
-}
-
-class DecodeSourceProvider extends LazyLogging {
-
-  private object ParserBoilerplate {
-
-    Extensions.registerAreaClass("IDEA_PROJECT", null)
-
-    private val disposable = new Disposable {
-      override def dispose(): Unit = sys.error("must not dispose?")
-    }
-
-    private def application: MockApplicationEx = ApplicationManager.getApplication.asInstanceOf[MockApplicationEx]
-
-    private def initApplication(): Unit = {
-      ApplicationManager.setApplication(new MockApplicationEx(disposable),
-        new Getter[FileTypeRegistry]() {
-          override def get: FileTypeRegistry = FileTypeManager.getInstance
-        }, disposable)
-      application.registerService(classOf[EncodingManager], classOf[EncodingManagerImpl])
-    }
-
-    private val project: MockProjectEx = new MockProjectEx(disposable)
-
-    private def registerApplicationService[T](cls: Class[T], obj: T): Unit = {
-      application.registerService(cls, obj)
-      Disposer.register(project, new Disposable() {
-        override def dispose(): Unit = application.getPicoContainer.unregisterComponent(cls.getName)
-      })
-    }
-
-    def init(): Unit = {
-      initApplication()
-      application.getPicoContainer.registerComponent(new AbstractComponentAdapter(classOf[ProgressManager].getName, classOf[Object]) {
-        override def getComponentInstance(container: PicoContainer): ProgressManager = new ProgressManagerImpl()
-
-        override def verify(container: PicoContainer): Unit = {}
-      })
-      registerApplicationService(classOf[PsiBuilderFactory], new PsiBuilderFactoryImpl())
-      registerApplicationService(classOf[DefaultASTFactory], new DefaultASTFactoryImpl())
-      registerApplicationService(classOf[ReferenceProvidersRegistry], new ReferenceProvidersRegistryImpl())
-      LanguageParserDefinitions.INSTANCE.addExplicitExtension(DecodeLanguage.INSTANCE, new DecodeParserDefinition)
-    }
-  }
-
-  ParserBoilerplate.init()
-
-  def provide(config: DecodeSourceProviderConfiguration): Registry = {
-    val resourcePath = config.resourcePath
-    val registry = Registry()
-    val resourcesAsStream = getClass.getResourceAsStream(resourcePath)
-    require(resourcesAsStream != null, resourcePath)
-    registry.rootNamespaces ++= DecodeUtils.mergeRootNamespaces(Source.fromInputStream(resourcesAsStream).getLines().
-      filter(_.endsWith(".decode")).map { name =>
-      val resource = resourcePath + "/" + name
-      logger.debug(s"Parsing $resource...")
-      val parserDefinition = new DecodeParserDefinition()
-      new DecodeAstTransformer().processFile(new DecodeParser().parse(DecodeParserDefinition.file, new PsiBuilderFactoryImpl().createBuilder(parserDefinition,
-        parserDefinition.createLexer(null),
-        Source.fromInputStream(getClass.getResourceAsStream(resource)).mkString)))
-    }.toTraversable)
-    registry
-  }
 }
