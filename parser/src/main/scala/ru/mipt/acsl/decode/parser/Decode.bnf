@@ -176,7 +176,7 @@ length_from ::= NON_NEGATIVE_NUMBER
 
 length_to ::= NON_NEGATIVE_NUMBER
 
-range_decl ::= RANGE numeric_literal DOT DOT numeric_literal
+range_decl ::= RANGE numeric_literal DOTS numeric_literal
 
 type_decl_body ::= type_application range_decl? | enum_type_decl | struct_type_decl | native_type_decl
 
@@ -196,6 +196,6 @@ bool_literal ::= TRUE | FALSE
 
 literal ::= numeric_literal | bool_literal
 
-float_literal ::= (PLUS | MINUS)? (NON_NEGATIVE_NUMBER DOT NON_NEGATIVE_NUMBER? | DOT NON_NEGATIVE_NUMBER) (("e" | "E") (PLUS | MINUS)? NON_NEGATIVE_NUMBER)?
+float_literal ::= (PLUS | MINUS)? NON_NEGATIVE_NUMBER DOT NON_NEGATIVE_NUMBER (("e" | "E") (PLUS | MINUS)? NON_NEGATIVE_NUMBER)?
 
 default_language_decl ::= LANGUAGE element_name_rule

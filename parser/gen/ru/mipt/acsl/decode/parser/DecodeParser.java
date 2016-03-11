@@ -1038,14 +1038,14 @@ public class DecodeParser implements PsiParser, LightPsiParser {
   }
 
   /* ********************************************************** */
-  // (PLUS | MINUS)? (NON_NEGATIVE_NUMBER DOT NON_NEGATIVE_NUMBER? | DOT NON_NEGATIVE_NUMBER) (("e" | "E") (PLUS | MINUS)? NON_NEGATIVE_NUMBER)?
+  // (PLUS | MINUS)? NON_NEGATIVE_NUMBER DOT NON_NEGATIVE_NUMBER (("e" | "E") (PLUS | MINUS)? NON_NEGATIVE_NUMBER)?
   public static boolean float_literal(PsiBuilder b, int l) {
     if (!recursion_guard_(b, l, "float_literal")) return false;
     boolean r;
     Marker m = enter_section_(b, l, _NONE_, "<float literal>");
     r = float_literal_0(b, l + 1);
-    r = r && float_literal_1(b, l + 1);
-    r = r && float_literal_2(b, l + 1);
+    r = r && consumeTokens(b, 0, NON_NEGATIVE_NUMBER, DOT, NON_NEGATIVE_NUMBER);
+    r = r && float_literal_4(b, l + 1);
     exit_section_(b, l, m, FLOAT_LITERAL, r, false, null);
     return r;
   }
@@ -1068,57 +1068,28 @@ public class DecodeParser implements PsiParser, LightPsiParser {
     return r;
   }
 
-  // NON_NEGATIVE_NUMBER DOT NON_NEGATIVE_NUMBER? | DOT NON_NEGATIVE_NUMBER
-  private static boolean float_literal_1(PsiBuilder b, int l) {
-    if (!recursion_guard_(b, l, "float_literal_1")) return false;
-    boolean r;
-    Marker m = enter_section_(b);
-    r = float_literal_1_0(b, l + 1);
-    if (!r) r = parseTokens(b, 0, DOT, NON_NEGATIVE_NUMBER);
-    exit_section_(b, m, null, r);
-    return r;
-  }
-
-  // NON_NEGATIVE_NUMBER DOT NON_NEGATIVE_NUMBER?
-  private static boolean float_literal_1_0(PsiBuilder b, int l) {
-    if (!recursion_guard_(b, l, "float_literal_1_0")) return false;
-    boolean r;
-    Marker m = enter_section_(b);
-    r = consumeTokens(b, 0, NON_NEGATIVE_NUMBER, DOT);
-    r = r && float_literal_1_0_2(b, l + 1);
-    exit_section_(b, m, null, r);
-    return r;
-  }
-
-  // NON_NEGATIVE_NUMBER?
-  private static boolean float_literal_1_0_2(PsiBuilder b, int l) {
-    if (!recursion_guard_(b, l, "float_literal_1_0_2")) return false;
-    consumeToken(b, NON_NEGATIVE_NUMBER);
-    return true;
-  }
-
   // (("e" | "E") (PLUS | MINUS)? NON_NEGATIVE_NUMBER)?
-  private static boolean float_literal_2(PsiBuilder b, int l) {
-    if (!recursion_guard_(b, l, "float_literal_2")) return false;
-    float_literal_2_0(b, l + 1);
+  private static boolean float_literal_4(PsiBuilder b, int l) {
+    if (!recursion_guard_(b, l, "float_literal_4")) return false;
+    float_literal_4_0(b, l + 1);
     return true;
   }
 
   // ("e" | "E") (PLUS | MINUS)? NON_NEGATIVE_NUMBER
-  private static boolean float_literal_2_0(PsiBuilder b, int l) {
-    if (!recursion_guard_(b, l, "float_literal_2_0")) return false;
+  private static boolean float_literal_4_0(PsiBuilder b, int l) {
+    if (!recursion_guard_(b, l, "float_literal_4_0")) return false;
     boolean r;
     Marker m = enter_section_(b);
-    r = float_literal_2_0_0(b, l + 1);
-    r = r && float_literal_2_0_1(b, l + 1);
+    r = float_literal_4_0_0(b, l + 1);
+    r = r && float_literal_4_0_1(b, l + 1);
     r = r && consumeToken(b, NON_NEGATIVE_NUMBER);
     exit_section_(b, m, null, r);
     return r;
   }
 
   // "e" | "E"
-  private static boolean float_literal_2_0_0(PsiBuilder b, int l) {
-    if (!recursion_guard_(b, l, "float_literal_2_0_0")) return false;
+  private static boolean float_literal_4_0_0(PsiBuilder b, int l) {
+    if (!recursion_guard_(b, l, "float_literal_4_0_0")) return false;
     boolean r;
     Marker m = enter_section_(b);
     r = consumeToken(b, "e");
@@ -1128,15 +1099,15 @@ public class DecodeParser implements PsiParser, LightPsiParser {
   }
 
   // (PLUS | MINUS)?
-  private static boolean float_literal_2_0_1(PsiBuilder b, int l) {
-    if (!recursion_guard_(b, l, "float_literal_2_0_1")) return false;
-    float_literal_2_0_1_0(b, l + 1);
+  private static boolean float_literal_4_0_1(PsiBuilder b, int l) {
+    if (!recursion_guard_(b, l, "float_literal_4_0_1")) return false;
+    float_literal_4_0_1_0(b, l + 1);
     return true;
   }
 
   // PLUS | MINUS
-  private static boolean float_literal_2_0_1_0(PsiBuilder b, int l) {
-    if (!recursion_guard_(b, l, "float_literal_2_0_1_0")) return false;
+  private static boolean float_literal_4_0_1_0(PsiBuilder b, int l) {
+    if (!recursion_guard_(b, l, "float_literal_4_0_1_0")) return false;
     boolean r;
     Marker m = enter_section_(b);
     r = consumeToken(b, PLUS);
@@ -1641,7 +1612,7 @@ public class DecodeParser implements PsiParser, LightPsiParser {
   }
 
   /* ********************************************************** */
-  // RANGE numeric_literal DOT DOT numeric_literal
+  // RANGE numeric_literal DOTS numeric_literal
   public static boolean range_decl(PsiBuilder b, int l) {
     if (!recursion_guard_(b, l, "range_decl")) return false;
     if (!nextTokenIs(b, RANGE)) return false;
@@ -1649,7 +1620,7 @@ public class DecodeParser implements PsiParser, LightPsiParser {
     Marker m = enter_section_(b);
     r = consumeToken(b, RANGE);
     r = r && numeric_literal(b, l + 1);
-    r = r && consumeTokens(b, 0, DOT, DOT);
+    r = r && consumeToken(b, DOTS);
     r = r && numeric_literal(b, l + 1);
     exit_section_(b, m, RANGE_DECL, r);
     return r;
