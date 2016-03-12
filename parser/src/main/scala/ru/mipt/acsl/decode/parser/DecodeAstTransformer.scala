@@ -90,6 +90,8 @@ class DecodeAstTransformer {
           .flatMap(m => Option(m.getStatusMessage).map(sm => statusMessage(sm, component)))
       case l: DecodeDefaultLanguageDecl =>
         defaultLanguage = Some(Language(elementName(l.getElementNameRule).asMangledString))
+      case s: DecodeScriptDecl =>
+        sys.error("not implemented")
       case p: PsiWhiteSpace =>
       case p =>
         sys.error(s"not implemented for ${p.getClass}")
