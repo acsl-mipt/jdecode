@@ -10,7 +10,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.psi._
 import com.intellij.psi.tree.IFileElementType
 import com.intellij.psi.tree.TokenSet
-import ru.mipt.acsl.decode.parser.psi.DecodeTypes
+import ru.mipt.acsl.decode.parser.psi.{DecodeExpr, DecodeTypes}
 
 /**
  * @author Artem Shein
@@ -41,5 +41,8 @@ class DecodeParserDefinition extends ParserDefinition {
     override def createFile(viewProvider: FileViewProvider): PsiFile = new DecodeFile(viewProvider)
 
     override def spaceExistanceTypeBetweenTokens(astNode: ASTNode, astNode1: ASTNode): SpaceRequirements =
-        SpaceRequirements.MAY
+        if (astNode.getPsi.isInstanceOf[DecodeExpr] && astNode1.getPsi.isInstanceOf[DecodeExpr])
+            SpaceRequirements.MUST_LINE_BREAK
+        else
+            SpaceRequirements.MAY
 }

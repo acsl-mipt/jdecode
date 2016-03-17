@@ -36,6 +36,12 @@ public class DecodeTypeDeclBodyImpl extends ASTWrapperPsiElement implements Deco
 
   @Override
   @Nullable
+  public DecodeRangeDecl getRangeDecl() {
+    return findChildByClass(DecodeRangeDecl.class);
+  }
+
+  @Override
+  @Nullable
   public DecodeStructTypeDecl getStructTypeDecl() {
     return findChildByClass(DecodeStructTypeDecl.class);
   }

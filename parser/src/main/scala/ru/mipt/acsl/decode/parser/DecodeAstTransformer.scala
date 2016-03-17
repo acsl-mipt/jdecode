@@ -78,7 +78,7 @@ class DecodeAstTransformer {
         }
         val component: Component = Component(elementName(c.getElementNameRule), ns,
           id(Option(c.getEntityId)), params, elementInfo(Option(c.getElementInfo)),
-          c.getSubcomponentDeclList.map(sc => componentRef(Fqn(Seq(elementName(sc.getElementNameRule))))).to[immutable.Seq],
+          c.getComponentRefList.map(sc => componentRef(Fqn(Seq(elementName(sc.getElementNameRule))))).to[immutable.Seq],
           c.getCommandDeclList.map(c => command(c)).to[immutable.Seq])
         ns.components = ns.components :+ component
         component.eventMessages ++= c.getMessageDeclList
@@ -87,6 +87,8 @@ class DecodeAstTransformer {
           .flatMap(m => Option(m.getStatusMessage).map(statusMessage(_, component)))
       case l: DecodeDefaultLanguageDecl =>
         defaultLanguage = Some(Language(elementName(l.getElementNameRule).asMangledString))
+      case s: DecodeScriptDecl =>
+        sys.error("not implemented")
       case p: PsiWhiteSpace =>
       case p =>
         sys.error(s"not implemented for ${p.getClass}")
@@ -120,10 +122,11 @@ class DecodeAstTransformer {
         elementInfo(Option(cmdArg.getElementInfo)))).to[immutable.Seq])
 
   private def newEnumConstant(v: DecodeEnumTypeValue): EnumConstant = {
-    val literal: DecodeLiteral = v.getLiteral
+    val literal = v.getLiteral
+    val numericLiteral = literal.getNumericLiteral
     EnumConstant(elementName(v.getElementNameRule),
-      Option(literal.getFloatLiteral).map(l => FloatLiteral(l.getText.toFloat))
-        .getOrElse(IntLiteral(literal.getNonNegativeNumber.getText.toInt)),
+      Option(numericLiteral.getFloatLiteral).map(l => FloatLiteral(l.getText.toFloat))
+        .getOrElse(IntLiteral(numericLiteral.getNonNegativeNumber.getText.toInt)),
       elementInfo(Option(v.getElementInfo)))
   }
 

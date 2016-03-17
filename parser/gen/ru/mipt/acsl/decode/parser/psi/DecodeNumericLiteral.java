@@ -5,12 +5,12 @@ import java.util.List;
 import org.jetbrains.annotations.*;
 import com.intellij.psi.PsiElement;
 
-public interface DecodeLiteral extends PsiElement {
+public interface DecodeNumericLiteral extends PsiElement {
 
   @Nullable
-  DecodeBoolLiteral getBoolLiteral();
+  DecodeFloatLiteral getFloatLiteral();
 
   @Nullable
-  DecodeNumericLiteral getNumericLiteral();
+  PsiElement getNonNegativeNumber();
 
 }

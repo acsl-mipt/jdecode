@@ -14,6 +14,9 @@ public interface DecodeTypeDeclBody extends PsiElement {
   DecodeNativeTypeDecl getNativeTypeDecl();
 
   @Nullable
+  DecodeRangeDecl getRangeDecl();
+
+  @Nullable
   DecodeStructTypeDecl getStructTypeDecl();
 
   @Nullable

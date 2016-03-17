@@ -11,27 +11,15 @@ import static ru.mipt.acsl.decode.parser.psi.DecodeTypes.*;
 import com.intellij.extapi.psi.ASTWrapperPsiElement;
 import ru.mipt.acsl.decode.parser.psi.*;
 
-public class DecodeLiteralImpl extends ASTWrapperPsiElement implements DecodeLiteral {
+public class DecodeBoolLiteralImpl extends ASTWrapperPsiElement implements DecodeBoolLiteral {
 
-  public DecodeLiteralImpl(ASTNode node) {
+  public DecodeBoolLiteralImpl(ASTNode node) {
     super(node);
   }
 
   public void accept(@NotNull PsiElementVisitor visitor) {
-    if (visitor instanceof DecodeVisitor) ((DecodeVisitor)visitor).visitLiteral(this);
+    if (visitor instanceof DecodeVisitor) ((DecodeVisitor)visitor).visitBoolLiteral(this);
     else super.accept(visitor);
-  }
-
-  @Override
-  @Nullable
-  public DecodeBoolLiteral getBoolLiteral() {
-    return findChildByClass(DecodeBoolLiteral.class);
-  }
-
-  @Override
-  @Nullable
-  public DecodeNumericLiteral getNumericLiteral() {
-    return findChildByClass(DecodeNumericLiteral.class);
   }
 
 }
