@@ -27,7 +27,6 @@
             <version>2.1.0</version>
             <exclusions>
                 <exclusion>
-                    <!-- make sure wrong scala version is not pulled in -->
                     <groupId>org.scala-lang</groupId>
                     <artifactId>scala-library</artifactId>
                 </exclusion>

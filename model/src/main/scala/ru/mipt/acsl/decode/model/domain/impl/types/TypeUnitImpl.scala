@@ -1,11 +1,10 @@
 package ru.mipt.acsl.decode.model.domain.impl.types
 
-import ru.mipt.acsl.decode.model.domain.proxy.MaybeProxy
-import ru.mipt.acsl.decode.model.domain.registry.DecodeUnit
-import ru.mipt.acsl.decode.model.domain.types.{DecodeType, TypeUnit}
+import ru.mipt.acsl.decode.model.domain.impl.proxy.MaybeProxy
+import ru.mipt.acsl.decode.model.domain.impl.registry.DecodeUnit
 
 /**
   * @author Artem Shein
   */
-private class TypeUnitImpl(val t: MaybeProxy[DecodeType], val unit: Option[MaybeProxy[DecodeUnit]])
+private class TypeUnitImpl(val typeProxy: MaybeProxy[DecodeType], val unitProxy: Option[MaybeProxy[DecodeUnit]])
   extends TypeUnit

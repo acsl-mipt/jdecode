@@ -6,18 +6,18 @@ import java.net.URLEncoder
 
 import com.google.common.base.Charsets
 import resource._
-import ru.mipt.acsl.decode.model.domain._
-import ru.mipt.acsl.decode.model.domain.component.{Component, Parameter}
-import ru.mipt.acsl.decode.model.domain.component.messages.MessageParameter
-import ru.mipt.acsl.decode.model.domain.impl.registry.Language
-import ru.mipt.acsl.decode.model.domain.naming.{Fqn, Namespace}
-import ru.mipt.acsl.decode.model.domain.registry.{Language, Registry}
-import ru.mipt.acsl.decode.model.domain.types._
+import ru.mipt.acsl.decode.model.domain.impl.component.Component
+import ru.mipt.acsl.decode.model.domain.impl.naming.Namespace
+import ru.mipt.acsl.decode.model.domain.impl.registry.{Language, Registry}
+import ru.mipt.acsl.decode.model.domain.impl.types.{AliasType, ArrayType, DecodeType, EnumType, GenericType, GenericTypeSpecialized, NativeType, Parameter, PrimitiveType, StructType, SubType, TypeKind}
+import ru.mipt.acsl.decode.model.domain.pure.Language
+import ru.mipt.acsl.decode.model.domain.pure.component.messages.MessageParameter
+import ru.mipt.acsl.decode.model.domain.pure.naming.Fqn
 import ru.mipt.acsl.generation.Generator
 import ru.mipt.acsl.generator.html.ast._
-import ru.mipt.acsl.generator.html.ast.tags._
 import ru.mipt.acsl.generator.html.ast.implicits._
-
+import ru.mipt.acsl.generator.html.ast.tags._
+import ru.mipt.acsl.decode.model.domain.impl.component.message._
 /**
   * @author Artem Shein
   */
@@ -153,26 +153,26 @@ class HtmlDocsGenerator(val config: HtmlDocsGeneratorConfiguration) extends Gene
   }
 
   def typeKind(t: DecodeType): HtmlElement = t match {
-    case a: ArrayType => td("Массив " + typeName(a.baseType.obj) + " элементов")
-    case a: AliasType => td("Псевдоним для ", typeNameWithLink(a.baseType.obj))
-    case s: SubType => td("Расширение типа ", typeNameWithLink(s.baseType.obj))
+    case a: ArrayType => td("Массив " + typeName(a.baseType) + " элементов")
+    case a: AliasType => td("Псевдоним для ", typeNameWithLink(a.baseType))
+    case s: SubType => td("Расширение типа ", typeNameWithLink(s.baseType))
     case s: StructType => td("Структура", br, "Поля:",
       table(_class("table"))(style("width: auto"))(
         thead(tr(th("Имя поля"), th("Тип"), th("Описание"))),
-        tbody(s.fields.map(f => tr(td(f.name.asMangledString), td(typeNameWithLink(f.typeUnit.t.obj)),
+        tbody(s.fields.map(f => tr(td(f.name.asMangledString), td(typeNameWithLink(f.typeUnit.t)),
           td(f.info.getOrElse(lang, "")))): _*)))
     case e: EnumType => td("Перечисление" +
-      e.extendsType.map(ext => " расширяющее " + typeName(ext.obj)).getOrElse(""),
-      br, "Базовый тип: ", typeNameWithLink(e.baseType.obj), br, "Константы:",
+      e.extendsType.map(ext => " расширяющее " + typeName(ext)).getOrElse(""),
+      br, "Базовый тип: ", typeNameWithLink(e.baseType), br, "Константы:",
       ul(e.allConstants.toSeq.sortBy(_.value.toString).map(c => li(c.name.asMangledString + " = " + c.value)): _*))
     case p: PrimitiveType => td(p.bitLength + "-битный " + TypeKind.nameForTypeKind(p.kind))
     case n: NativeType => td("Системный встроенный тип")
     case g: GenericType => td("Обобщенный тип ")(g.name.asMangledString)('<' +
       g.typeParameters.map(_.map(_.asMangledString).getOrElse("")).mkString(", ") + '>')
     case s: GenericTypeSpecialized =>
-      td("Специализированный обобщенный тип ", typeNameWithLink(s.genericType.obj), "<",
+      td("Специализированный обобщенный тип ", typeNameWithLink(s.genericType), "<",
         unsafe(s.genericTypeArguments.map(
-          _.map(mt => typeNameWithLink(mt.obj).toString).getOrElse("void")).mkString(", ")), ">")
+          _.map(mt => typeNameWithLink(mt).toString).getOrElse("void")).mkString(", ")), ">")
   }
 
   def htmlId(ns: Namespace): String = "n" + URLEncoder.encode(ns.fqn.asMangledString, Charsets.UTF_8.name)
@@ -183,9 +183,9 @@ class HtmlDocsGenerator(val config: HtmlDocsGeneratorConfiguration) extends Gene
     a(href("#" + htmlId(t)))(typeName(t))
 
   def typeName(t: DecodeType): String = t match {
-    case a: ArrayType => "[" + typeName(a.baseType.obj) + "]"
-    case t: GenericTypeSpecialized => typeName(t.genericType.obj) + "<" + t.genericTypeArguments.map {
-      case Some(at) => typeName(at.obj)
+    case a: ArrayType => "[" + typeName(a.baseType) + "]"
+    case t: GenericTypeSpecialized => typeName(t.genericType) + "<" + t.genericTypeArguments.map {
+      case Some(at) => typeName(at)
       case _ => "void"
     } .mkString(", ")+ ">"
     case _ => t.name.asMangledString
@@ -197,17 +197,17 @@ class HtmlDocsGenerator(val config: HtmlDocsGeneratorConfiguration) extends Gene
         Seq.empty
       else
         Seq(p("Включает компоненты: ", unsafe(component.subComponents.map(cr =>
-          a(href("#" + htmlId(cr.component.obj)))(cr.component.obj.name.asMangledString) +
+          a(href("#" + htmlId(cr.component)))(cr.component.name.asMangledString) +
             cr.alias.map(" под именем " + _).getOrElse("")).mkString(", ")), "."))) ++
       component.info.get(lang).map(div(_)).toSeq ++
       component.baseType.map(bt => Seq(h4("Параметры"),
         table(_class("table table-bordered"))(style("width: auto"))(
           thead(tr(th("Имя параметра"), th("Тип параметра"), th("Единицы измерения"), th("Описание параметра"))),
-          tbody(bt.obj.fields.map(f =>
+          tbody(bt.fields.map(f =>
             tr(
               td(f.name.asMangledString),
-              td(typeNameWithLink(f.typeUnit.t.obj)),
-              td(f.typeUnit.unit.map(_.obj.name.asMangledString).getOrElse("")),
+              td(typeNameWithLink(f.typeUnit.t)),
+              td(f.typeUnit.unit.map(_.name.asMangledString).getOrElse("")),
               td(f.info.getOrElse(lang, "")))): _*))))
         .getOrElse(Seq.empty) ++
       (if (component.eventMessages.isEmpty)
@@ -236,7 +236,7 @@ class HtmlDocsGenerator(val config: HtmlDocsGeneratorConfiguration) extends Gene
         Seq(h4("Команды")) ++
           component.commands.flatMap{ c =>
             Seq(h4(c.name.asMangledString), p("Возвращаемое значение: ",
-              c.returnType.map(rt => a(href("#" + htmlId(rt.obj)))(typeName(rt.obj))).getOrElse("нет"), ".")) ++
+              c.returnType.map(rt => a(href("#" + htmlId(rt)))(typeName(rt))).getOrElse("нет"), ".")) ++
               Seq(c.info.get(lang).map(div(_))).flatten ++
               (if (c.parameters.isEmpty)
                 Seq.empty
@@ -257,7 +257,7 @@ class HtmlDocsGenerator(val config: HtmlDocsGeneratorConfiguration) extends Gene
   def trForParameter(p: Parameter): HtmlTag =
     tr(
       td(p.name.asMangledString),
-      td(typeNameWithLink(p.paramType.obj)),
+      td(typeNameWithLink(p.paramType)),
       td(p.info.getOrElse(lang, "")))
 
   implicit class RichFile(val file: io.File) {

@@ -1,8 +1,7 @@
 package ru.mipt.acsl.decode.java.generator
 
 import com.google.common.base.CaseFormat
-import ru.mipt.acsl.decode.model.domain._
-import ru.mipt.acsl.decode.model.domain.types._
+import ru.mipt.acsl.decode.model.domain.impl.types.{AliasType, ArrayType, DecodeType, PrimitiveType, TypeKind}
 import ru.mipt.acsl.generator.java.ast.{JavaType, JavaTypeApplication}
 
 /**
@@ -45,8 +44,8 @@ object JavaDecodeTypeVisitor {
       case _ => sys.error("invalid bit length")
     }
     case t: ArrayType => new JavaTypeApplication(t.namespace.fqn.asMangledString + "." + JavaDecodeTypeVisitor.classNameFromArrayType(t),
-      JavaDecodeTypeVisitor.getJavaTypeForDecodeType(t.baseType.obj, genericUse = true))
-    case t: AliasType => getJavaTypeForDecodeType(t.baseType.obj, genericUse)
+      JavaDecodeTypeVisitor.getJavaTypeForDecodeType(t.baseType, genericUse = true))
+    case t: AliasType => getJavaTypeForDecodeType(t.baseType, genericUse)
     //case t: HasOptionName => new JavaTypeApplication(t.namespace.fqn.asMangledString + "." + JavaDecodeTypeVisitor.classNameFromTypeName(
       // FIXME: handle Option
     //  t.optionName.get.asMangledString))

@@ -15,6 +15,7 @@
     <modules>
         <module>common</module>
         <module>model</module>
+        <module>sqlite-persistence</module>
         <module>parser</module>
         <module>java-sources-generator</module>
         <module>c-sources-generator</module>

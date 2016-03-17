@@ -6,13 +6,13 @@ import java.security.MessageDigest
 
 import com.typesafe.scalalogging.LazyLogging
 import resource._
-import ru.mipt.acsl.decode.model.domain.types._
-import ru.mipt.acsl.decode.model.domain._
-import ru.mipt.acsl.decode.model.domain.component.{Command, Component}
-import ru.mipt.acsl.decode.model.domain.expr.IntLiteral
-import ru.mipt.acsl.decode.model.domain.naming.{ElementName, Fqn, HasName, Namespace}
-import ru.mipt.acsl.decode.model.domain.proxy.MaybeProxy
-import ru.mipt.acsl.decode.model.domain.registry.Registry
+import ru.mipt.acsl.decode.model.domain.impl.component.{Command, Component}
+import ru.mipt.acsl.decode.model.domain.impl.naming.Namespace
+import ru.mipt.acsl.decode.model.domain.impl.proxy.MaybeProxy
+import ru.mipt.acsl.decode.model.domain.impl.registry.Registry
+import ru.mipt.acsl.decode.model.domain.impl.types.{AliasType, ArrayType, DecodeType, EnumType, GenericTypeSpecialized, HasBaseType, NativeType, PrimitiveType, StructType, SubType, TypeKind}
+import ru.mipt.acsl.decode.model.domain.pure.expr.IntLiteral
+import ru.mipt.acsl.decode.model.domain.pure.naming.{ElementName, Fqn, HasName}
 import ru.mipt.acsl.generation.Generator
 import ru.mipt.acsl.generator.cpp.ast._
 
@@ -53,7 +53,7 @@ class CppSourcesGenerator(val config: CppGeneratorConfiguration) extends Generat
       assert(componentIdByComponent.put(component, component.id.get).isEmpty)
       assert(componentByComponentId.put(component.id.get, component).isEmpty)
     }
-    component.subComponents.foreach {cr => enumerateComponentsFrom(cr.component.obj)}
+    component.subComponents.foreach {cr => enumerateComponentsFrom(cr.component)}
     if (component.id.isEmpty) {
       while (componentByComponentId.contains(nextComponentId))
         nextComponentId += 1
@@ -77,9 +77,8 @@ class CppSourcesGenerator(val config: CppGeneratorConfiguration) extends Generat
 
   private def dirForNs(ns: Namespace): io.File = new io.File(config.outputDir, dirPathForNs(ns))
 
-  private def relPathForType(t: DecodeType) = {
+  private def relPathForType(t: DecodeType) =
     dirPathForNs(t.namespace) + io.File.separator + fileNameFor(t) + ".h"
-  }
 
   def ensureDirForNsExists(ns: Namespace): io.File = {
     val dir = dirForNs(ns)
@@ -131,7 +130,7 @@ class CppSourcesGenerator(val config: CppGeneratorConfiguration) extends Generat
 
   private def fileNameFor(t: DecodeType): String = t match {
     case t: ArrayType =>
-      val baseTypeFileName: String = fileNameFor(t.baseType.obj)
+      val baseTypeFileName: String = fileNameFor(t.baseType)
       val min = t.size.min
       val max = t.size.max
       baseTypeFileName + "_arr" + ((t.isFixedSize, min, max) match {
@@ -142,8 +141,8 @@ class CppSourcesGenerator(val config: CppGeneratorConfiguration) extends Generat
         case (false, _, _) => s"_min_max_${min}_$max"
       })
     case t: GenericTypeSpecialized =>
-      fileNameFor(t.genericType.obj) + "_" +
-        t.genericTypeArguments.map(tp => if (tp.isDefined) fileNameFor(tp.get.obj) else "void").mkString("_")
+      fileNameFor(t.genericType) + "_" +
+        t.genericTypeArguments.map(tp => if (tp.isDefined) fileNameFor(tp.get) else "void").mkString("_")
     case t: HasName => t.name.asMangledString
     case _ => sys.error("not implemented")
   }
@@ -152,7 +151,7 @@ class CppSourcesGenerator(val config: CppGeneratorConfiguration) extends Generat
     t match {
       case t: PrimitiveType => primitiveTypeToCTypeApplication(t).name
       case t: ArrayType =>
-        val baseCType: String = cppTypeNameFor(t.baseType.obj)
+        val baseCType: String = cppTypeNameFor(t.baseType)
         val min = t.size.min
         val max = t.size.max
         "DECODE_ARRAY_TYPE_" + ((t.isFixedSize, min, max) match {
@@ -163,8 +162,8 @@ class CppSourcesGenerator(val config: CppGeneratorConfiguration) extends Generat
           case (false, _, _) => s"MIN_MAX_NAME($baseCType, $min, $max)"
         })
       case t: GenericTypeSpecialized =>
-        cppTypeNameFor(t.genericType.obj) + "_" +
-        t.genericTypeArguments.map(tp => if (tp.isDefined) cppTypeNameFor(tp.get.obj) else "void").mkString("_")
+        cppTypeNameFor(t.genericType) + "_" +
+        t.genericTypeArguments.map(tp => if (tp.isDefined) cppTypeNameFor(tp.get) else "void").mkString("_")
       case t: HasName => t.name.asMangledString
       case _ => sys.error("not implemented")
     }
@@ -229,17 +228,19 @@ class CppSourcesGenerator(val config: CppGeneratorConfiguration) extends Generat
     innerNs += (t match {
       case t: PrimitiveType => cTypeDefForName(t, cTypeAppForTypeName(t))
       case t: NativeType => cTypeDefForName(t, CppVoidType.ptr())
-      case t: SubType => cTypeDefForName(t, cTypeAppForTypeName(t.baseType.obj))
+      case t: SubType => cTypeDefForName(t, cTypeAppForTypeName(t.baseType))
       case t: EnumType => cTypeDefForName(t,
         CppEnumTypeDef(t.constants.map(c => CEnumTypeDefConst(c.name.asMangledString, c.value match {
-          case i: IntLiteral => i.v
+          case i: IntLiteral => i.value
           case _ => sys.error("not implemented")
         }))))
       case t: ArrayType => cTypeDefForName(t, CppVoidType.ptr())
-      case t: StructType => cTypeDefForName(t, CppStructTypeDef(t.fields.map(f => CStructTypeDefField(f.name.asMangledString, cTypeAppForTypeName(f.typeUnit.t.obj)))))
+      case t: StructType =>
+        cTypeDefForName(t, CppStructTypeDef(t.fields.map(f =>
+          CStructTypeDefField(f.name.asMangledString, cTypeAppForTypeName(f.typeUnit.t)))))
       case t: AliasType =>
         val newName: String = cppTypeNameFor(t)
-        val oldName: String = cppTypeNameFor(t.baseType.obj)
+        val oldName: String = cppTypeNameFor(t.baseType)
         if (newName equals oldName) Comment("omitted due name clash") else CppDefine(newName, oldName)
       case _ => sys.error("not implemented")
     })
@@ -273,13 +274,13 @@ class CppSourcesGenerator(val config: CppGeneratorConfiguration) extends Generat
   }
 
   def collectNsForComponent(comp: Component, nsSet: mutable.HashSet[Namespace]) {
-    comp.subComponents.foreach(cr => collectNsForComponent(cr.component.obj, nsSet))
+    comp.subComponents.foreach(cr => collectNsForComponent(cr.component, nsSet))
     collectNsForTypes(comp, nsSet)
   }
 
   def collectComponentsForComponent(comp: Component, compSet: mutable.HashSet[Component]): Unit = {
     compSet += comp
-    comp.subComponents.foreach(cr => collectComponentsForComponent(cr.component.obj, compSet))
+    comp.subComponents.foreach(cr => collectComponentsForComponent(cr.component, compSet))
   }
 
   private def generateRootComponent(comp: Component) {
@@ -306,7 +307,7 @@ class CppSourcesGenerator(val config: CppGeneratorConfiguration) extends Generat
 
   private def importStatementsForComponent(comp: Component): immutable.Seq[CppAstElement] = {
     val imports: mutable.Buffer[CppAstElement] = comp.subComponents.flatMap { cr =>
-      Seq(CppInclude(includePathForComponent(cr.component.obj)), Eol)
+      Seq(CppInclude(includePathForComponent(cr.component)), Eol)
     }.to[mutable.Buffer]
     if (imports.nonEmpty)
       imports += Eol
@@ -319,11 +320,9 @@ class CppSourcesGenerator(val config: CppGeneratorConfiguration) extends Generat
 
   private def typesForComponent(comp: Component, typesSet: mutable.Set[DecodeType] = mutable.HashSet.empty) = {
     typesSet ++= comp.commands.flatMap { cmd =>
-      cmd.returnType.map { rt =>
-        Seq(rt.obj)
-      }.getOrElse(Seq.empty) ++ cmd.parameters.map(_.paramType.obj)
+      cmd.returnType.map(Seq(_)).getOrElse(Seq.empty) ++ cmd.parameters.map(_.paramType)
     }
-    typesSet ++= comp.baseType.map(_.obj.fields.map(_.typeUnit.t.obj)).getOrElse(Seq.empty)
+    typesSet ++= comp.baseType.map(_.fields.map(_.typeUnit.t)).getOrElse(Seq.empty)
     typesSet
   }
 
@@ -360,8 +359,8 @@ class CppSourcesGenerator(val config: CppGeneratorConfiguration) extends Generat
     val imports = importStatementsForComponent(comp)
     val methods = comp.commands.flatMap{cmd =>
       val methodName = methodNameForDecodeName(cmd.name)
-      val returnType = cmd.returnType.map { rt => cppTypeForDecodeType(rt.obj) }.getOrElse(voidType)
-      val parameters = cmd.parameters.map { p => Parameter(p.name.asMangledString, cppTypeForDecodeType(p.paramType.obj)) }
+      val returnType = cmd.returnType.map { rt => cppTypeForDecodeType(rt) }.getOrElse(voidType)
+      val parameters = cmd.parameters.map { p => Parameter(p.name.asMangledString, cppTypeForDecodeType(p.paramType)) }
       Seq(
         ClassMethodDef(methodName, returnType, parameters.to[mutable.Buffer], virtual = true, _abstract = true),
         ClassMethodDef(methodName, returnType, mutable.Buffer(readerParameter, writerParameter),
@@ -376,14 +375,14 @@ class CppSourcesGenerator(val config: CppGeneratorConfiguration) extends Generat
       (comp.statusMessages ++ comp.eventMessages).map{msg =>
         ClassMethodDef("write" + msg.name.asMangledString.capitalize, voidType, mutable.Buffer(writerParameter))
       } ++
-      comp.baseType.map(_.obj.fields.map { f =>
-          ClassMethodDef(methodNameForDecodeName(f.name), cppTypeForDecodeType(f.typeUnit.t.obj))
+      comp.baseType.map(_.fields.map { f =>
+          ClassMethodDef(methodNameForDecodeName(f.name), cppTypeForDecodeType(f.typeUnit.t))
         }).getOrElse(Seq.empty) ++
       readingAndExecutingCommandsMethods()
     val idField = ClassFieldDef("ID", stdSizeTType, static = true)
     val guidField = ClassFieldDef("GUID", stdStringType, static = true)
     val fields = Seq(idField, guidField)
-    val classDef = ClassDef(className, methods, comp.subComponents.map { cr => classNameForComponent(cr.component.obj) }, fields)
+    val classDef = ClassDef(className, methods, comp.subComponents.map(cr => classNameForComponent(cr.component)), fields)
     val nsClassPrefix = s"$cppNs::$className::"
     val guidFieldInit = ClassFieldInit(s"$nsClassPrefix${guidField.name}", guidField,
       CppStringLiteral(comp.fqn.asMangledString))
@@ -416,7 +415,7 @@ class CppSourcesGenerator(val config: CppGeneratorConfiguration) extends Generat
 
   private def subComponentsFor(comp: Component, set: mutable.Set[Component] = mutable.HashSet.empty): mutable.Set[Component] = {
     comp.subComponents.foreach { ref =>
-      val c: Component = ref.component.obj
+      val c: Component = ref.component
       set += c
       subComponentsFor(c, set)
     }

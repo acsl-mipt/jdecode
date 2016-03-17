@@ -1,18 +1,21 @@
 package ru.mipt.acsl.decode.model.domain.impl.types
 
-import ru.mipt.acsl.decode.model.domain.aliases.LocalizedString
-import ru.mipt.acsl.decode.model.domain.naming.{ElementName, Namespace}
-import ru.mipt.acsl.decode.model.domain.proxy.MaybeProxy
-import ru.mipt.acsl.decode.model.domain.types.{DecodeType, EnumConstant, EnumType}
+import ru.mipt.acsl.decode.model.domain.impl.naming.Namespace
+import ru.mipt.acsl.decode.model.domain.impl.proxy.MaybeProxy
+import ru.mipt.acsl.decode.model.domain.pure.LocalizedString
+import ru.mipt.acsl.decode.model.domain.pure.naming.ElementName
+import ru.mipt.acsl.decode.model.domain.pure.types.EnumConstant
 
 /**
   * @author Artem Shein
   */
 private class EnumTypeImpl(name: ElementName, namespace: Namespace,
-                           var extendsOrBaseType: Either[MaybeProxy[EnumType], MaybeProxy[DecodeType]],
+                           var extendsOrBaseTypeProxy: Either[MaybeProxy[EnumType], MaybeProxy[DecodeType]],
                            info: LocalizedString, var constants: Set[EnumConstant], var isFinal: Boolean)
   extends AbstractType(name, namespace, info) with EnumType {
-  override def extendsType: Option[MaybeProxy[EnumType]] = extendsOrBaseType.left.toOption
-  def baseTypeOption: Option[MaybeProxy[DecodeType]] = extendsOrBaseType.right.toOption
-  override def baseType: MaybeProxy[DecodeType] = extendsOrBaseType.right.getOrElse(extendsType.get.obj.baseType)
+  def extendsTypeProxy: Option[MaybeProxy[EnumType]] = extendsOrBaseTypeProxy.left.toOption
+  override def extendsType: Option[EnumType] = extendsTypeProxy.map(_.obj)
+  def baseTypeOption: Option[MaybeProxy[DecodeType]] = extendsOrBaseTypeProxy.right.toOption
+  override def baseTypeProxy: MaybeProxy[DecodeType] =
+    extendsOrBaseTypeProxy.right.getOrElse(extendsType.get.baseTypeProxy)
 }

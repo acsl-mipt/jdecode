@@ -1,14 +1,11 @@
 package ru.mipt.acsl.decode.model.domain.impl.types
 
-import ru.mipt.acsl.decode.model.domain.aliases.LocalizedString
-import ru.mipt.acsl.decode.model.domain.impl.naming.Fqn
-import ru.mipt.acsl.decode.model.domain.naming.{ElementName, Fqn, Namespace}
-import ru.mipt.acsl.decode.model.domain.types.DecodeType
+import ru.mipt.acsl.decode.model.domain.impl.naming.Namespace
+import ru.mipt.acsl.decode.model.domain.pure.LocalizedString
+import ru.mipt.acsl.decode.model.domain.pure.naming.ElementName
 
 /**
   * @author Artem Shein
   */
-private abstract class AbstractType(name: ElementName, var namespace: Namespace, info: LocalizedString)
-  extends AbstractHasNameAndInfo(name, info) with DecodeType {
-  def fqn: Fqn = Fqn(namespace.fqn.parts :+ name)
-}
+abstract class AbstractType(name: ElementName, namespace: Namespace, info: LocalizedString)
+  extends AbstractNameNamespaceInfoAware(name, namespace, info) with DecodeType

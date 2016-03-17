@@ -2,26 +2,24 @@ package ru.mipt.acsl.decode.parser
 
 import com.intellij.lang.ASTNode
 import com.intellij.psi.PsiWhiteSpace
-import ru.mipt.acsl.decode.model.domain.Referenceable
-import ru.mipt.acsl.decode.model.domain.aliases.LocalizedString
-import ru.mipt.acsl.decode.model.domain.component.{Command, Component, ComponentRef}
-import ru.mipt.acsl.decode.model.domain.component.messages.{EventMessage, StatusMessage}
-import ru.mipt.acsl.decode.model.domain.expr.{FloatLiteral, IntLiteral}
-import ru.mipt.acsl.decode.model.domain.impl.{DecodeUtils, LocalizedString}
-import ru.mipt.acsl.decode.model.domain.impl.component.{Command, Component, ComponentRef}
+import ru.mipt.acsl.decode.model.domain.impl.LocalizedString
 import ru.mipt.acsl.decode.model.domain.impl.component.message.{EventMessage, MessageParameter, StatusMessage}
-import ru.mipt.acsl.decode.model.domain.impl.naming.{ElementName, Fqn}
+import ru.mipt.acsl.decode.model.domain.impl.component.{Command, Component, ComponentRef}
+import ru.mipt.acsl.decode.model.domain.impl.expr.{FloatLiteral, IntLiteral}
+import ru.mipt.acsl.decode.model.domain.impl.naming.{ElementName, Fqn, Namespace}
 import ru.mipt.acsl.decode.model.domain.impl.proxy.MaybeProxy
 import ru.mipt.acsl.decode.model.domain.impl.registry.{DecodeUnit, Language}
 import ru.mipt.acsl.decode.model.domain.impl.types._
-import ru.mipt.acsl.decode.model.domain.naming.{ElementName, Fqn, Namespace}
-import ru.mipt.acsl.decode.model.domain.proxy._
-import ru.mipt.acsl.decode.model.domain.registry.{DecodeUnit, Language}
-import ru.mipt.acsl.decode.model.domain.types.{EnumConstant, EnumType, StructType, TypeUnit, _}
+import ru.mipt.acsl.decode.model.domain.pure.component.messages.StatusMessage
+import ru.mipt.acsl.decode.model.domain.pure.naming.{ElementName, Fqn}
+import ru.mipt.acsl.decode.model.domain.pure.types.EnumConstant
+import ru.mipt.acsl.decode.model.domain.pure.{Language, LocalizedString, Referenceable}
 import ru.mipt.acsl.decode.parser.psi.{DecodeUnit => PsiDecodeUnit, _}
 
 import scala.collection.{immutable, mutable}
 import scala.reflect.ClassTag
+import ru.mipt.acsl.decode.model.domain.impl.naming._
+import ru.mipt.acsl.decode.model.domain.impl.proxy.path.{ArrayTypePath, GenericTypeName, ProxyPath, TypeName}
 
 /**
   * @author Artem Shein
@@ -38,8 +36,7 @@ class DecodeAstTransformer {
     val children = node.getChildren(null)
     assert(children.nonEmpty)
     val nsDecl = children.head.getPsi(classOf[DecodeNamespaceDecl])
-    ns = DecodeUtils.newNamespaceForFqn(fqn(nsDecl.getElementId),
-      info = elementInfo(Option(nsDecl.getElementInfo)))
+    ns = fqn(nsDecl.getElementId).newNamespaceForFqn(elementInfo(Option(nsDecl.getElementInfo)))
     children.drop(1).foreach(_.getPsi match {
       case p: DecodeTypeDecl =>
         ns.types = ns.types :+ newType(p)
@@ -75,7 +72,7 @@ class DecodeAstTransformer {
             params.getCommandArgs.getCommandArgList.map { arg =>
               StructField(elementName(arg.getElementNameRule), typeUnit(arg.getTypeUnitApplication),
                 elementInfo(Option(arg.getElementInfo)))
-            })
+            }.to[immutable.Seq])
           ns.types = ns.types :+ struct
           MaybeProxy(struct)
         }
@@ -85,9 +82,9 @@ class DecodeAstTransformer {
           c.getCommandDeclList.map(c => command(c)).to[immutable.Seq])
         ns.components = ns.components :+ component
         component.eventMessages ++= c.getMessageDeclList
-          .flatMap(m => Option(m.getEventMessage).map(em => eventMessage(em, component)))
+          .flatMap(m => Option(m.getEventMessage).map(eventMessage(_, component)))
         component.statusMessages ++= c.getMessageDeclList
-          .flatMap(m => Option(m.getStatusMessage).map(sm => statusMessage(sm, component)))
+          .flatMap(m => Option(m.getStatusMessage).map(statusMessage(_, component)))
       case l: DecodeDefaultLanguageDecl =>
         defaultLanguage = Some(Language(elementName(l.getElementNameRule).asMangledString))
       case p: PsiWhiteSpace =>
@@ -120,7 +117,7 @@ class DecodeAstTransformer {
   private def newStructType(name: ElementName, _info: LocalizedString, body: DecodeTypeDeclBody): StructType =
     StructType(name, ns, _info, body.getStructTypeDecl.getCommandArgs.getCommandArgList.map(cmdArg =>
       StructField(elementName(cmdArg.getElementNameRule), typeUnit(cmdArg.getTypeUnitApplication),
-        elementInfo(Option(cmdArg.getElementInfo)))))
+        elementInfo(Option(cmdArg.getElementInfo)))).to[immutable.Seq])
 
   private def newEnumConstant(v: DecodeEnumTypeValue): EnumConstant = {
     val literal: DecodeLiteral = v.getLiteral
