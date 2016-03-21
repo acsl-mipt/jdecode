@@ -894,7 +894,7 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
           command.returnType.map(_.cMethodReturnType).getOrElse(voidType),
           command.parameters.map(p => {
             val t = p.paramType
-            CFuncParam(p.cName, mapIfNotSmall(t.cType, t, (ct: CType) => ct.ptr))
+            CFuncParam(p.cName, mapIfNotSmall(t.cType, t, (ct: CType) => ct.ptr.const))
           }) ++ command.returnType.map(_.cMethodReturnParameters).getOrElse(Seq.empty))
       }
     }
