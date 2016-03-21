@@ -7,9 +7,10 @@ import java.net.URLEncoder
 import com.google.common.base.Charsets
 import resource._
 import ru.mipt.acsl.decode.model.domain.impl.component.Component
+import ru.mipt.acsl.decode.model.domain.impl.component.message._
 import ru.mipt.acsl.decode.model.domain.impl.naming.Namespace
 import ru.mipt.acsl.decode.model.domain.impl.registry.{Language, Registry}
-import ru.mipt.acsl.decode.model.domain.impl.types.{AliasType, ArrayType, DecodeType, EnumType, GenericType, GenericTypeSpecialized, NativeType, Parameter, PrimitiveType, StructType, SubType, TypeKind}
+import ru.mipt.acsl.decode.model.domain.impl.types.{AliasType, ArrayType, DecodeType, EnumType, GenericType, GenericTypeSpecialized, NativeType, Parameter, PrimitiveTypeInfo, StructType, SubType, TypeKind}
 import ru.mipt.acsl.decode.model.domain.pure.Language
 import ru.mipt.acsl.decode.model.domain.pure.component.messages.MessageParameter
 import ru.mipt.acsl.decode.model.domain.pure.naming.Fqn
@@ -17,7 +18,6 @@ import ru.mipt.acsl.generation.Generator
 import ru.mipt.acsl.generator.html.ast._
 import ru.mipt.acsl.generator.html.ast.implicits._
 import ru.mipt.acsl.generator.html.ast.tags._
-import ru.mipt.acsl.decode.model.domain.impl.component.message._
 /**
   * @author Artem Shein
   */
@@ -165,8 +165,10 @@ class HtmlDocsGenerator(val config: HtmlDocsGeneratorConfiguration) extends Gene
       e.extendsType.map(ext => " расширяющее " + typeName(ext)).getOrElse(""),
       br, "Базовый тип: ", typeNameWithLink(e.baseType), br, "Константы:",
       ul(e.allConstants.toSeq.sortBy(_.value.toString).map(c => li(c.name.asMangledString + " = " + c.value)): _*))
-    case p: PrimitiveType => td(p.bitLength + "-битный " + TypeKind.nameForTypeKind(p.kind))
-    case n: NativeType => td("Системный встроенный тип")
+    case n: NativeType =>
+      val p = PrimitiveTypeInfo.typeInfoByFqn.get(n.fqn)
+      td(p.map(pi => pi.bitLength + "-битный " + TypeKind.nameForTypeKind(pi.kind))
+        .getOrElse("Системный встроенный тип"))
     case g: GenericType => td("Обобщенный тип ")(g.name.asMangledString)('<' +
       g.typeParameters.map(_.map(_.asMangledString).getOrElse("")).mkString(", ") + '>')
     case s: GenericTypeSpecialized =>

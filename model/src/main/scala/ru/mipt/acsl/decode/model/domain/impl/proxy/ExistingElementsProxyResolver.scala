@@ -32,7 +32,7 @@ class ExistingElementsProxyResolver extends DecodeProxyResolver {
           case s if s.isEmpty =>
             val arrayType = ArrayType(arrayTypeName, ns, LocalizedString.empty, MaybeProxy(e.baseTypePath), e.arraySize)
             ns.types = ns.types :+ arrayType
-            val result = registry.resolve(arrayType.baseType)
+            val result = arrayType.baseTypeProxy.resolve(registry)
             if (result.hasError)
               (None, result)
             else

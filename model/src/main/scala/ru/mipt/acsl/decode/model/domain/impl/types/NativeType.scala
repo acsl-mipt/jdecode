@@ -8,7 +8,9 @@ import ru.mipt.acsl.decode.model.domain.pure.naming.ElementName
 /**
   * @author Artem Shein
   */
-trait NativeType extends pure.types.NativeType with DecodeType
+trait NativeType extends pure.types.NativeType with DecodeType {
+  override def toString: String = "NativeType" + super.toString
+}
 
 object NativeType {
   def apply(name: ElementName, ns: Namespace, info: LocalizedString): NativeType = new NativeTypeImpl(name, ns, info)

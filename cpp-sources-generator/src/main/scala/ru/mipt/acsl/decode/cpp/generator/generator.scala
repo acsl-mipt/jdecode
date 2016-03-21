@@ -10,7 +10,7 @@ import ru.mipt.acsl.decode.model.domain.impl.component.{Command, Component}
 import ru.mipt.acsl.decode.model.domain.impl.naming.Namespace
 import ru.mipt.acsl.decode.model.domain.impl.proxy.MaybeProxy
 import ru.mipt.acsl.decode.model.domain.impl.registry.Registry
-import ru.mipt.acsl.decode.model.domain.impl.types.{AliasType, ArrayType, DecodeType, EnumType, GenericTypeSpecialized, HasBaseType, NativeType, PrimitiveType, StructType, SubType, TypeKind}
+import ru.mipt.acsl.decode.model.domain.impl.types.{AliasType, ArrayType, DecodeType, EnumType, GenericTypeSpecialized, HasBaseType, NativeType, PrimitiveTypeInfo, StructType, SubType, TypeKind}
 import ru.mipt.acsl.decode.model.domain.pure.expr.IntLiteral
 import ru.mipt.acsl.decode.model.domain.pure.naming.{ElementName, Fqn, HasName}
 import ru.mipt.acsl.generation.Generator
@@ -149,7 +149,7 @@ class CppSourcesGenerator(val config: CppGeneratorConfiguration) extends Generat
 
   private def cppTypeNameFor(t: DecodeType): String = {
     t match {
-      case t: PrimitiveType => primitiveTypeToCTypeApplication(t).name
+      case t: NativeType => primitiveTypeToCTypeApplication(t).name
       case t: ArrayType =>
         val baseCType: String = cppTypeNameFor(t.baseType)
         val min = t.size.min
@@ -182,9 +182,10 @@ class CppSourcesGenerator(val config: CppGeneratorConfiguration) extends Generat
     }
   }
 
-  private def primitiveTypeToCTypeApplication(primitiveType: PrimitiveType): CppTypeApplication = {
+  private def primitiveTypeToCTypeApplication(t: NativeType): CppTypeApplication = {
     import TypeKind._
-    (primitiveType.kind, primitiveType.bitLength) match {
+    val p = PrimitiveTypeInfo.typeInfoByFqn(t.fqn)
+    (p.kind, p.bitLength) match {
       case (Bool, 8) => CppTypeApplication("b8")
       case (Bool, 16) => CppTypeApplication("b16")
       case (Bool, 32) => CppTypeApplication("b32")
@@ -221,13 +222,14 @@ class CppSourcesGenerator(val config: CppGeneratorConfiguration) extends Generat
   }
 
   private def generateType(t: DecodeType, nsDir: io.File) {
-    if (t.isInstanceOf[PrimitiveType])
+    if (t.isInstanceOf[NativeType])
       return
     val tFile = new io.File(nsDir, fileNameFor(t) + ".h")
     val (outerNs, innerNs) = cppNsOuterInnerFor(t.namespace)
     innerNs += (t match {
-      case t: PrimitiveType => cTypeDefForName(t, cTypeAppForTypeName(t))
-      case t: NativeType => cTypeDefForName(t, CppVoidType.ptr())
+      case t: NativeType =>
+        val p = PrimitiveTypeInfo.typeInfoByFqn.get(t.fqn)
+        p.map(_ => cTypeDefForName(t, cTypeAppForTypeName(t))).getOrElse(cTypeDefForName(t, CppVoidType.ptr()))
       case t: SubType => cTypeDefForName(t, cTypeAppForTypeName(t.baseType))
       case t: EnumType => cTypeDefForName(t,
         CppEnumTypeDef(t.constants.map(c => CEnumTypeDefConst(c.name.asMangledString, c.value match {

@@ -11,6 +11,6 @@ import scala.collection.immutable
 case class GenericTypeName(typeName: ElementName, genericArgumentPaths: immutable.Seq[Option[ProxyPath]])
   extends ProxyElementName {
   override def mangledName: ElementName = ElementName.newFromMangledName(typeName.asMangledString +
-    genericArgumentPaths.map(_.map(_.mangledName)
-      .getOrElse(ElementName.newFromMangledName("void"))).mkString("<", ",", ">"))
+    genericArgumentPaths.map(_.map(_.mangledName.asMangledString)
+      .getOrElse("void")).mkString("<", ",", ">"))
 }

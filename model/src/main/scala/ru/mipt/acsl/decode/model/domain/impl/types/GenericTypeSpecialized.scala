@@ -4,7 +4,7 @@ import ru.mipt.acsl.decode.model.domain.impl.naming.Namespace
 import ru.mipt.acsl.decode.model.domain.impl.proxy.MaybeProxy
 import ru.mipt.acsl.decode.model.domain.pure
 import ru.mipt.acsl.decode.model.domain.pure.LocalizedString
-import ru.mipt.acsl.decode.model.domain.pure.naming.ElementName
+import ru.mipt.acsl.decode.model.domain.pure.naming.{ElementName, HasName}
 
 /**
   * @author Artem Shein
@@ -14,6 +14,7 @@ trait GenericTypeSpecialized extends pure.types.GenericTypeSpecialized with Deco
   override def genericType: GenericType = genericTypeProxy.obj
   def genericTypeArgumentsProxy: Seq[Option[MaybeProxy[DecodeType]]]
   override def genericTypeArguments: Seq[Option[DecodeType]] = genericTypeArgumentsProxy.map(_.map(_.obj))
+  override def toString: String = "GenericTypeSpecialized" + super.toString
 }
 
 object GenericTypeSpecialized {

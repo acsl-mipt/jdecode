@@ -10,7 +10,7 @@ import ru.mipt.acsl.decode.model.domain.pure.types.SubTypeRange
 /**
   * @author Artem Shein
   */
-trait SubType extends pure.types.SubType with DecodeType {
+trait SubType extends pure.types.SubType with DecodeType with HasBaseType {
   def baseTypeProxy: MaybeProxy[DecodeType]
   override def baseType: DecodeType = baseTypeProxy.obj
 }

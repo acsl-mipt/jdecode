@@ -12,6 +12,11 @@ package object types {
     def fqn: Fqn = Fqn(t.namespace.fqn.parts :+ t.name)
   }
 
+  implicit class NativeTypeJelper(val t: NativeType) {
+    def isPrimitive: Boolean = PrimitiveTypeInfo.typeInfoByFqn.get(t.fqn).nonEmpty
+    def primitiveTypeInfo: PrimitiveTypeInfo = PrimitiveTypeInfo.typeInfoByFqn(t.fqn)
+  }
+
   implicit class EnumTypeHelper(val t: EnumType) {
     def allConstants: Set[EnumConstant] = t.constants ++ t.extendsType.map(_.allConstants).getOrElse(Set.empty)
   }

@@ -8,7 +8,9 @@ import ru.mipt.acsl.decode.model.domain.pure.naming.ElementName
 /**
   * @author Artem Shein
   */
-trait GenericType extends pure.types.GenericType with DecodeType
+trait GenericType extends pure.types.GenericType with DecodeType {
+  override def toString: String = "GenericType" + super.toString
+}
 
 object GenericType {
   def apply(name: ElementName, ns: Namespace, info: LocalizedString,

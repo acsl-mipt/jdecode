@@ -6,4 +6,6 @@ import ru.mipt.acsl.decode.model.domain.pure.naming.HasName
 /**
   * @author Artem Shein
   */
-trait DecodeType extends Referenceable with HasName with HasInfo with NamespaceAware
+trait DecodeType extends Referenceable with HasName with HasInfo with NamespaceAware {
+  override def toString: String = s"{name: ${name.asMangledString}, info: $info}"
+}

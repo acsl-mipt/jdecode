@@ -3,7 +3,7 @@ package ru.mipt.acsl.decode.model.domain.impl
 import ru.mipt.acsl.decode.model.domain.impl.component.Component
 import ru.mipt.acsl.decode.model.domain.impl.component.message.EventMessage
 import ru.mipt.acsl.decode.model.domain.impl.proxy.{ResolvingResult, Result}
-import ru.mipt.acsl.decode.model.domain.impl.types.{DecodeType, EnumType, GenericTypeSpecialized, HasBaseType, PrimitiveType, StructType}
+import ru.mipt.acsl.decode.model.domain.impl.types.{DecodeType, EnumType, GenericTypeSpecialized, HasBaseType, StructType}
 import ru.mipt.acsl.decode.model.domain.pure.ValidatingResult
 import ru.mipt.acsl.decode.model.domain.pure.component.messages.StatusMessage
 import ru.mipt.acsl.decode.model.domain.pure.naming.Fqn
@@ -103,17 +103,17 @@ package object registry {
       }
 
       c.commands.foreach { cmd =>
-        cmd.returnType.foreach(rt => result += resolve(rt))
+        cmd.returnTypeProxy.foreach(rt => result += rt.resolve(r))
         cmd.parameters.foreach { arg =>
-          result += resolve(arg.paramType)
+          result += arg.paramTypeProxy.resolve(r)
           arg.unitProxy.map(u => result += u.resolve(r))
         }
       }
 
       c.eventMessages.foreach { e =>
-        result += resolve(e.baseType)
+        result += e.baseTypeProxy.resolve(r)
         e.fields.foreach {
-          case Right(p) => result += resolve(p.paramType)
+          case Right(p) => result += p.paramTypeProxy.resolve(r)
           case _ =>
         }
       }
@@ -161,12 +161,12 @@ package object registry {
       val resolvingResultList = mutable.Buffer.empty[ResolvingResult]
       t match {
         case t: EnumType =>
-          resolvingResultList += (t.extendsOrBaseType match {
-            case Left(extendsType) => resolve(extendsType)
-            case Right(baseType) => resolve(baseType)
+          resolvingResultList += (t.extendsOrBaseTypeProxy match {
+            case Left(extendsTypeProxy) => extendsTypeProxy.resolve(r)
+            case Right(baseTypeProxy) => baseTypeProxy.resolve(r)
           })
         case t: HasBaseType =>
-          resolvingResultList += resolve(t.baseType)
+          resolvingResultList += t.baseTypeProxy.resolve(r)
         case t: StructType =>
           t.fields.foreach { f =>
             val typeUnit = f.typeUnit
