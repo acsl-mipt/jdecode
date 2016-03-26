@@ -21,6 +21,11 @@
             <artifactId>model</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>com.lihaoyi</groupId>
+            <artifactId>scalatags_${scala.binary.version}</artifactId>
+            <version>0.5.4</version>
+        </dependency>
     </dependencies>
 
 </project>

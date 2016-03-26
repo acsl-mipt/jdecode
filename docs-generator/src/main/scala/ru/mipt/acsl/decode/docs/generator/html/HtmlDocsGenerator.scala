@@ -15,9 +15,10 @@ import ru.mipt.acsl.decode.model.domain.pure.Language
 import ru.mipt.acsl.decode.model.domain.pure.component.messages.MessageParameter
 import ru.mipt.acsl.decode.model.domain.pure.naming.Fqn
 import ru.mipt.acsl.generation.Generator
-import ru.mipt.acsl.generator.html.ast._
-import ru.mipt.acsl.generator.html.ast.implicits._
-import ru.mipt.acsl.generator.html.ast.tags._
+
+import scalatags.Text.all._
+import scalatags.Text.tags2.{title => titleTag}
+
 /**
   * @author Artem Shein
   */
@@ -37,13 +38,13 @@ class HtmlDocsGenerator(val config: HtmlDocsGeneratorConfiguration) extends Gene
     config.outputFile.write(
       html(
         head(
-          meta(httpEquiv = "content-type", content = "text/html; charset=UTF-8"),
-          meta(charset = "utf-8"),
-          title("Описание компонентов"),
-          link(rel("stylesheet"))(href("https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css")),
-          script(src("https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js")),
-          script(src("https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js")),
-          unsafe(
+          meta(httpEquiv := "content-type", content := "text/html; charset=UTF-8"),
+          meta(charset := "utf-8"),
+          titleTag("Описание компонентов"),
+          link(rel := "stylesheet", href := "https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css"),
+          script(src := "https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"),
+          script(src := "https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"),
+          raw(
             """
               |<style type="text/css">
               |        .ln { color: rgb(0,0,0); font-weight: normal; font-style: normal; }
@@ -123,66 +124,68 @@ class HtmlDocsGenerator(val config: HtmlDocsGeneratorConfiguration) extends Gene
             """.stripMargin)
         ),
         body(
-          div(_class("container"))(
+          div(cls := "container")(
             Seq(h1("Описание компонентов"), h2("Оглавление"), ol(
               li("Описание компонентов", ol(allComponents.map(c =>
-                li(a(href("#" + htmlId(c)))(c.name.asMangledString))): _*)),
+                li(a(href := "#" + htmlId(c))(c.name.asMangledString))))),
               li("Описание пространств имен и типов", ol(allNamespaces.map(ns =>
-                li(a(href("#" + htmlId(ns)))(ns.fqn.asMangledString))): _*))), hr) ++
-            Seq(h2("Описание компонентов")) ++ allComponents.flatMap(generateComponent) ++
-            Seq(h2("Описание пространств имен и типов")) ++ allNamespaces.flatMap(generateNamespace): _*))))
+                li(a(href := "#" + htmlId(ns))(ns.fqn.asMangledString)))))), hr) ++
+            Seq(h2("Описание компонентов")) ++
+              allComponents.flatMap(generateComponent) ++
+            Seq(h2("Описание пространств имен и типов")) ++
+            allNamespaces.flatMap(generateNamespace)))))
   }
 
-  def generateNamespace(namespace: Namespace): HtmlElements = {
-    Seq(h3(id(htmlId(namespace)))("Пространство имен " + namespace.fqn.asMangledString)) ++
+  def generateNamespace(namespace: Namespace): Seq[Tag] = {
+    Seq(h3(id := htmlId(namespace))("Пространство имен " + namespace.fqn.asMangledString)) ++
       namespace.info.get(lang).map(div(_)).toSeq ++
       (if (namespace.subNamespaces.isEmpty)
         Seq.empty
       else
-        Seq(p("Внутренние пространства имен: ")(unsafe(namespace.subNamespaces.map(ns =>
-          a(href("#" + htmlId(ns)))(ns.name.asMangledString)).mkString(", ") + ".")))) ++
+        Seq(p("Внутренние пространства имен: ")(raw(namespace.subNamespaces.map(ns =>
+          a(href := "#" + htmlId(ns))(ns.name.asMangledString)).mkString(", ") + ".")))) ++
       (if (namespace.types.isEmpty)
         Seq.empty
       else
         Seq(h4("Типы")) ++
-        Seq(table(_class("table table-bordered"))(style("width: auto"))(
+        Seq(table(cls := "table table-bordered")(style := "width: auto")(
           thead(tr(th("Имя типа"), th("Описание"), th("Вид типа"))),
           tbody(namespace.types.map(t =>
-            tr(td(id(htmlId(t)))(typeName(t)), td(unsafe(t.info.getOrElse(lang, ""))), typeKind(t))): _*)))) ++
+            tr(td(id := htmlId(t))(typeName(t)), td(raw(t.info.getOrElse(lang, ""))), typeKind(t))): _*)))) ++
       Seq(hr)
   }
 
-  def typeKind(t: DecodeType): HtmlElement = t match {
+  def typeKind(t: DecodeType): Tag = t match {
     case a: ArrayType => td("Массив " + typeName(a.baseType) + " элементов")
     case a: AliasType => td("Псевдоним для ", typeNameWithLink(a.baseType))
     case s: SubType => td("Расширение типа ", typeNameWithLink(s.baseType))
     case s: StructType => td("Структура", br, "Поля:",
-      table(_class("table"))(style("width: auto"))(
+      table(cls := "table", style := "width: auto")(
         thead(tr(th("Имя поля"), th("Тип"), th("Описание"))),
         tbody(s.fields.map(f => tr(td(f.name.asMangledString), td(typeNameWithLink(f.typeUnit.t)),
-          td(f.info.getOrElse(lang, "")))): _*)))
+          td(StringFrag(f.info.getOrElse(lang, ""))))): _*)))
     case e: EnumType => td("Перечисление" +
       e.extendsType.map(ext => " расширяющее " + typeName(ext)).getOrElse(""),
       br, "Базовый тип: ", typeNameWithLink(e.baseType), br, "Константы:",
       ul(e.allConstants.toSeq.sortBy(_.value.toString).map(c => li(c.name.asMangledString + " = " + c.value)): _*))
     case n: NativeType =>
       val p = PrimitiveTypeInfo.typeInfoByFqn.get(n.fqn)
-      td(p.map(pi => pi.bitLength + "-битный " + TypeKind.nameForTypeKind(pi.kind))
-        .getOrElse("Системный встроенный тип"))
+      td(StringFrag(p.map(pi => pi.bitLength + "-битный " + TypeKind.nameForTypeKind(pi.kind))
+        .getOrElse("Системный встроенный тип")))
     case g: GenericType => td("Обобщенный тип ")(g.name.asMangledString)('<' +
       g.typeParameters.map(_.map(_.asMangledString).getOrElse("")).mkString(", ") + '>')
     case s: GenericTypeSpecialized =>
       td("Специализированный обобщенный тип ", typeNameWithLink(s.genericType), "<",
-        unsafe(s.genericTypeArguments.map(
+        raw(s.genericTypeArguments.map(
           _.map(mt => typeNameWithLink(mt).toString).getOrElse("void")).mkString(", ")), ">")
   }
 
   def htmlId(ns: Namespace): String = "n" + URLEncoder.encode(ns.fqn.asMangledString, Charsets.UTF_8.name)
   def htmlId(c: Component): String = "c" + URLEncoder.encode(c.fqn.asMangledString, Charsets.UTF_8.name)
-  def htmlId(t: DecodeType): String =  "t" + URLEncoder.encode(typeName(t), Charsets.UTF_8.name)
+  def htmlId(t: DecodeType): String =  "t" + typeName(t)
 
-  def typeNameWithLink(t: DecodeType): HtmlElement =
-    a(href("#" + htmlId(t)))(typeName(t))
+  def typeNameWithLink(t: DecodeType): Tag =
+    a(href := "#" + htmlId(t))(typeName(t))
 
   def typeName(t: DecodeType): String = t match {
     case a: ArrayType => "[" + typeName(a.baseType) + "]"
@@ -193,42 +196,42 @@ class HtmlDocsGenerator(val config: HtmlDocsGeneratorConfiguration) extends Gene
     case _ => t.name.asMangledString
   }
 
-  def generateComponent(component: Component): HtmlElements = {
-    Seq(h3(id(htmlId(component)))("Компонент " + component.name.asMangledString)) ++
+  def generateComponent(component: Component): Seq[Tag] = {
+    Seq(h3(id := htmlId(component))("Компонент " + component.name.asMangledString)) ++
       (if (component.subComponents.isEmpty)
         Seq.empty
       else
-        Seq(p("Включает компоненты: ", unsafe(component.subComponents.map(cr =>
-          a(href("#" + htmlId(cr.component)))(cr.component.name.asMangledString) +
+        Seq(p("Включает компоненты: ", raw(component.subComponents.map(cr =>
+          a(href := "#" + htmlId(cr.component))(cr.component.name.asMangledString) +
             cr.alias.map(" под именем " + _).getOrElse("")).mkString(", ")), "."))) ++
       component.info.get(lang).map(div(_)).toSeq ++
       component.baseType.map(bt => Seq(h4("Параметры"),
-        table(_class("table table-bordered"))(style("width: auto"))(
+        table(cls := "table table-bordered", style := "width: auto")(
           thead(tr(th("Имя параметра"), th("Тип параметра"), th("Единицы измерения"), th("Описание параметра"))),
           tbody(bt.fields.map(f =>
             tr(
               td(f.name.asMangledString),
               td(typeNameWithLink(f.typeUnit.t)),
-              td(f.typeUnit.unit.map(_.name.asMangledString).getOrElse("")),
-              td(f.info.getOrElse(lang, "")))): _*))))
+              td(StringFrag(f.typeUnit.unit.map(_.name.asMangledString).getOrElse(""))),
+              td(StringFrag(f.info.getOrElse(lang, ""))))): _*))))
         .getOrElse(Seq.empty) ++
       (if (component.eventMessages.isEmpty)
         Seq.empty
       else
         Seq(h4("Событийные сообщения")) ++
           component.eventMessages.flatMap(e => Seq(h5(e.name.asMangledString)) ++ Seq(e.info.get(lang).map(div(_))).flatten ++
-            Seq(table(_class("table table-bordered"))(style("width: auto"))(
+            Seq(table(cls := "table table-bordered", style := "width: auto")(
               thead(tr(th("Параметр или переменная"), th("Тип параметра"), th("Описание параметра"))),
               tbody(e.fields.map{
                 case Left(mp) => trForMessageParameter(mp, component)
-                case Right(param) => trForParameter(param)
+                case Right(parameter) => trForParameter(parameter)
               }: _*))))) ++
       (if (component.statusMessages.isEmpty)
         Seq.empty
       else
         Seq(h4("Статусные сообщения")) ++
           component.statusMessages.flatMap(s => Seq(h5(s.name.asMangledString)) ++ Seq(s.info.get(lang).map(div(_))).flatten ++
-            Seq(table(_class("table table-bordered"))(style("width: auto"))(
+            Seq(table(cls := "table table-bordered", style := "width: auto")(
               thead(tr(th("Параметр"), th("Тип параметра"), th("Описание параметра"))),
               tbody(s.parameters.map(trForMessageParameter(_, component)): _*))
           ))) ++
@@ -238,35 +241,37 @@ class HtmlDocsGenerator(val config: HtmlDocsGeneratorConfiguration) extends Gene
         Seq(h4("Команды")) ++
           component.commands.flatMap{ c =>
             Seq(h4(c.name.asMangledString), p("Возвращаемое значение: ",
-              c.returnType.map(rt => a(href("#" + htmlId(rt)))(typeName(rt))).getOrElse("нет"), ".")) ++
+              c.returnType.map(rt => a(href := "#" + htmlId(rt))(typeName(rt))).getOrElse("нет"), ".")) ++
               Seq(c.info.get(lang).map(div(_))).flatten ++
               (if (c.parameters.isEmpty)
                 Seq.empty
               else
-                Seq(table(_class("table table-bordered"))(style("width: auto"))(
+                Seq(table(cls := "table table-bordered", style := "width: auto")(
                   thead(tr(th("Параметр команды"), th("Тип параметра"), th("Описание параметра"))),
                   tbody(c.parameters.map(trForParameter): _*))))
           }) ++
     Seq(hr)
   }
 
-  def trForMessageParameter(mp: MessageParameter, component: Component): HtmlTag =
+  def trForMessageParameter(mp: MessageParameter, component: Component): Tag =
     tr(
       td("Параметр " + mp.value),
       td(typeNameWithLink(mp.ref(component).t)),
-      td(mp.info.getOrElse(lang, "")))
+      td(StringFrag(mp.info.getOrElse(lang, ""))))
 
-  def trForParameter(p: Parameter): HtmlTag =
+  def trForParameter(p: Parameter): Tag =
     tr(
       td(p.name.asMangledString),
       td(typeNameWithLink(p.paramType)),
-      td(p.info.getOrElse(lang, "")))
+      td(StringFrag(p.info.getOrElse(lang, ""))))
 
   implicit class RichFile(val file: io.File) {
-    def write(contents: HtmlAstElement): Unit = write(Seq(contents))
-    def write(contents: HtmlAstElements) {
+    def write(contents: Tag): Unit = write(Seq(contents))
+    def write(contents: Seq[Tag]) {
       for (stream <- managed(new OutputStreamWriter(new FileOutputStream(file)))) {
-        contents.generate(HtmlGenState(stream))
+        val sb = new StringBuilder
+        contents.foreach(_.writeTo(sb))
+        stream.write(sb.toString())
       }
     }
   }
