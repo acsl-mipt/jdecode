@@ -1,0 +1,44 @@
+ru"Модуль поддержки динамической маршрутизации пакетов"
+namespace ru.mipt.acsl.routing
+
+import decode.ber
+
+language ru
+
+"Адрес абонента"
+type address ber
+
+"Запись таблицы маршрутизации"
+type route struct
+(
+  "Адрес назначения"
+  destination_address: address,
+  "Следующий узел в пути"
+  next_hop: address,
+)
+
+type router_error enum ber (OK = 0, MAXIMUM_ROUTES_REACHED = 1, NO_SUCH_ADDRESS = 2, CANNOUT_ROUTE = 3)
+
+"Компонент реализующий возможность динамической маршрутизации и управления таблицей маршрутизации с НКУ"
+component Router
+{
+  parameters
+  (
+    "Таблица маршрутизации по устройствам"
+    routes: [route],
+    "Таблица маршрутизации по группам"
+    groupRoutes: [route],
+  )
+
+  "Установить правило маршрутизации для абонента"
+  command setRoute("Адрес абонента" address: address, "Следующий узел в пути" next_hop: address): router_error
+
+  "Удалить все правила для абонента"
+  command delRoute("Адрес абонента" address: address): router_error
+
+  "Установить правило маршрутизации для абонента"
+  command setGroupRoute("Адрес группы" groupAddress: address, "Следующий узел в пути" next_hop: address): router_error
+
+  "Удалить все правила для группы"
+  command delGroupRoute("Адрес группы" groupAddress: address): router_error
+}

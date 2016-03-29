@@ -316,7 +316,7 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
 
   private def tryCall(methodName: String, exprs: CExpression*): CFuncCall = methodName.call(exprs: _*)._try
 
-  implicit class RichArrayType(val t: ArrayType) {
+  implicit class ArrayTypeHelper(val t: ArrayType) {
 
     def serializeCodeForArrayElements(src: CExpression): CAstElements = {
       val baseType = t.baseType
