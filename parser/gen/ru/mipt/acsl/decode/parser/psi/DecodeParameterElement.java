@@ -10,4 +10,7 @@ public interface DecodeParameterElement extends PsiElement {
   @NotNull
   List<DecodeElementId> getElementIdList();
 
+  @NotNull
+  List<DecodeRangeDecl> getRangeDeclList();
+
 }

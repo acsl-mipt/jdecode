@@ -40,8 +40,8 @@ public class DecodeTypeDeclBodyImpl extends ASTWrapperPsiElement implements Deco
 
   @Override
   @Nullable
-  public DecodeRangeDecl getRangeDecl() {
-    return findChildByClass(DecodeRangeDecl.class);
+  public DecodeNumericRangeDecl getNumericRangeDecl() {
+    return findChildByClass(DecodeNumericRangeDecl.class);
   }
 
   @Override

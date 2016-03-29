@@ -134,8 +134,14 @@ public class DecodeParser implements PsiParser, LightPsiParser {
     else if (t == NATIVE_TYPE_DECL) {
       r = native_type_decl(b, 0);
     }
+    else if (t == NON_NEGATIVE_INTEGER_LITERAL) {
+      r = non_negative_integer_literal(b, 0);
+    }
     else if (t == NUMERIC_LITERAL) {
       r = numeric_literal(b, 0);
+    }
+    else if (t == NUMERIC_RANGE_DECL) {
+      r = numeric_range_decl(b, 0);
     }
     else if (t == OPTIONAL) {
       r = optional(b, 0);
@@ -148,6 +154,9 @@ public class DecodeParser implements PsiParser, LightPsiParser {
     }
     else if (t == RANGE_DECL) {
       r = range_decl(b, 0);
+    }
+    else if (t == RANGE_UPPER_BOUND_DECL) {
+      r = range_upper_bound_decl(b, 0);
     }
     else if (t == SCRIPT_DECL) {
       r = script_decl(b, 0);
@@ -1430,13 +1439,38 @@ public class DecodeParser implements PsiParser, LightPsiParser {
   }
 
   /* ********************************************************** */
-  // float_literal | NON_NEGATIVE_NUMBER
+  // NON_NEGATIVE_NUMBER
+  public static boolean non_negative_integer_literal(PsiBuilder b, int l) {
+    if (!recursion_guard_(b, l, "non_negative_integer_literal")) return false;
+    if (!nextTokenIs(b, NON_NEGATIVE_NUMBER)) return false;
+    boolean r;
+    Marker m = enter_section_(b);
+    r = consumeToken(b, NON_NEGATIVE_NUMBER);
+    exit_section_(b, m, NON_NEGATIVE_INTEGER_LITERAL, r);
+    return r;
+  }
+
+  /* ********************************************************** */
+  // float_literal | non_negative_integer_literal
   public static boolean numeric_literal(PsiBuilder b, int l) {
     if (!recursion_guard_(b, l, "numeric_literal")) return false;
     boolean r;
     Marker m = enter_section_(b, l, _NONE_, NUMERIC_LITERAL, "<numeric literal>");
     r = float_literal(b, l + 1);
-    if (!r) r = consumeToken(b, NON_NEGATIVE_NUMBER);
+    if (!r) r = non_negative_integer_literal(b, l + 1);
+    exit_section_(b, l, m, r, false, null);
+    return r;
+  }
+
+  /* ********************************************************** */
+  // numeric_literal DOTS numeric_literal
+  public static boolean numeric_range_decl(PsiBuilder b, int l) {
+    if (!recursion_guard_(b, l, "numeric_range_decl")) return false;
+    boolean r;
+    Marker m = enter_section_(b, l, _NONE_, NUMERIC_RANGE_DECL, "<numeric range decl>");
+    r = numeric_literal(b, l + 1);
+    r = r && consumeToken(b, DOTS);
+    r = r && numeric_literal(b, l + 1);
     exit_section_(b, l, m, r, false, null);
     return r;
   }
@@ -1474,7 +1508,7 @@ public class DecodeParser implements PsiParser, LightPsiParser {
 
   /* ********************************************************** */
   // element_id ((LEFT_BRACKET NON_NEGATIVE_NUMBER (DOTS NON_NEGATIVE_NUMBER)? RIGHT_BRACKET)+
-  //     (DOT element_id (LEFT_BRACKET NON_NEGATIVE_NUMBER (DOTS NON_NEGATIVE_NUMBER)? RIGHT_BRACKET)?)*)?
+  //     (DOT element_id range_decl?)*)?
   public static boolean parameter_element(PsiBuilder b, int l) {
     if (!recursion_guard_(b, l, "parameter_element")) return false;
     if (!nextTokenIs(b, "<parameter element>", ELEMENT_NAME_TOKEN, ESCAPED_NAME)) return false;
@@ -1487,7 +1521,7 @@ public class DecodeParser implements PsiParser, LightPsiParser {
   }
 
   // ((LEFT_BRACKET NON_NEGATIVE_NUMBER (DOTS NON_NEGATIVE_NUMBER)? RIGHT_BRACKET)+
-  //     (DOT element_id (LEFT_BRACKET NON_NEGATIVE_NUMBER (DOTS NON_NEGATIVE_NUMBER)? RIGHT_BRACKET)?)*)?
+  //     (DOT element_id range_decl?)*)?
   private static boolean parameter_element_1(PsiBuilder b, int l) {
     if (!recursion_guard_(b, l, "parameter_element_1")) return false;
     parameter_element_1_0(b, l + 1);
@@ -1495,7 +1529,7 @@ public class DecodeParser implements PsiParser, LightPsiParser {
   }
 
   // (LEFT_BRACKET NON_NEGATIVE_NUMBER (DOTS NON_NEGATIVE_NUMBER)? RIGHT_BRACKET)+
-  //     (DOT element_id (LEFT_BRACKET NON_NEGATIVE_NUMBER (DOTS NON_NEGATIVE_NUMBER)? RIGHT_BRACKET)?)*
+  //     (DOT element_id range_decl?)*
   private static boolean parameter_element_1_0(PsiBuilder b, int l) {
     if (!recursion_guard_(b, l, "parameter_element_1_0")) return false;
     boolean r;
@@ -1551,7 +1585,7 @@ public class DecodeParser implements PsiParser, LightPsiParser {
     return r;
   }
 
-  // (DOT element_id (LEFT_BRACKET NON_NEGATIVE_NUMBER (DOTS NON_NEGATIVE_NUMBER)? RIGHT_BRACKET)?)*
+  // (DOT element_id range_decl?)*
   private static boolean parameter_element_1_0_1(PsiBuilder b, int l) {
     if (!recursion_guard_(b, l, "parameter_element_1_0_1")) return false;
     int c = current_position_(b);
@@ -1563,7 +1597,7 @@ public class DecodeParser implements PsiParser, LightPsiParser {
     return true;
   }
 
-  // DOT element_id (LEFT_BRACKET NON_NEGATIVE_NUMBER (DOTS NON_NEGATIVE_NUMBER)? RIGHT_BRACKET)?
+  // DOT element_id range_decl?
   private static boolean parameter_element_1_0_1_0(PsiBuilder b, int l) {
     if (!recursion_guard_(b, l, "parameter_element_1_0_1_0")) return false;
     boolean r;
@@ -1575,54 +1609,77 @@ public class DecodeParser implements PsiParser, LightPsiParser {
     return r;
   }
 
-  // (LEFT_BRACKET NON_NEGATIVE_NUMBER (DOTS NON_NEGATIVE_NUMBER)? RIGHT_BRACKET)?
+  // range_decl?
   private static boolean parameter_element_1_0_1_0_2(PsiBuilder b, int l) {
     if (!recursion_guard_(b, l, "parameter_element_1_0_1_0_2")) return false;
-    parameter_element_1_0_1_0_2_0(b, l + 1);
+    range_decl(b, l + 1);
     return true;
   }
 
-  // LEFT_BRACKET NON_NEGATIVE_NUMBER (DOTS NON_NEGATIVE_NUMBER)? RIGHT_BRACKET
-  private static boolean parameter_element_1_0_1_0_2_0(PsiBuilder b, int l) {
-    if (!recursion_guard_(b, l, "parameter_element_1_0_1_0_2_0")) return false;
+  /* ********************************************************** */
+  // LEFT_BRACKET (non_negative_integer_literal (DOTS range_upper_bound_decl)? | STAR) RIGHT_BRACKET
+  public static boolean range_decl(PsiBuilder b, int l) {
+    if (!recursion_guard_(b, l, "range_decl")) return false;
+    if (!nextTokenIs(b, LEFT_BRACKET)) return false;
     boolean r;
     Marker m = enter_section_(b);
-    r = consumeTokens(b, 0, LEFT_BRACKET, NON_NEGATIVE_NUMBER);
-    r = r && parameter_element_1_0_1_0_2_0_2(b, l + 1);
+    r = consumeToken(b, LEFT_BRACKET);
+    r = r && range_decl_1(b, l + 1);
     r = r && consumeToken(b, RIGHT_BRACKET);
+    exit_section_(b, m, RANGE_DECL, r);
+    return r;
+  }
+
+  // non_negative_integer_literal (DOTS range_upper_bound_decl)? | STAR
+  private static boolean range_decl_1(PsiBuilder b, int l) {
+    if (!recursion_guard_(b, l, "range_decl_1")) return false;
+    boolean r;
+    Marker m = enter_section_(b);
+    r = range_decl_1_0(b, l + 1);
+    if (!r) r = consumeToken(b, STAR);
     exit_section_(b, m, null, r);
     return r;
   }
 
-  // (DOTS NON_NEGATIVE_NUMBER)?
-  private static boolean parameter_element_1_0_1_0_2_0_2(PsiBuilder b, int l) {
-    if (!recursion_guard_(b, l, "parameter_element_1_0_1_0_2_0_2")) return false;
-    parameter_element_1_0_1_0_2_0_2_0(b, l + 1);
+  // non_negative_integer_literal (DOTS range_upper_bound_decl)?
+  private static boolean range_decl_1_0(PsiBuilder b, int l) {
+    if (!recursion_guard_(b, l, "range_decl_1_0")) return false;
+    boolean r;
+    Marker m = enter_section_(b);
+    r = non_negative_integer_literal(b, l + 1);
+    r = r && range_decl_1_0_1(b, l + 1);
+    exit_section_(b, m, null, r);
+    return r;
+  }
+
+  // (DOTS range_upper_bound_decl)?
+  private static boolean range_decl_1_0_1(PsiBuilder b, int l) {
+    if (!recursion_guard_(b, l, "range_decl_1_0_1")) return false;
+    range_decl_1_0_1_0(b, l + 1);
     return true;
   }
 
-  // DOTS NON_NEGATIVE_NUMBER
-  private static boolean parameter_element_1_0_1_0_2_0_2_0(PsiBuilder b, int l) {
-    if (!recursion_guard_(b, l, "parameter_element_1_0_1_0_2_0_2_0")) return false;
+  // DOTS range_upper_bound_decl
+  private static boolean range_decl_1_0_1_0(PsiBuilder b, int l) {
+    if (!recursion_guard_(b, l, "range_decl_1_0_1_0")) return false;
     boolean r;
     Marker m = enter_section_(b);
-    r = consumeTokens(b, 0, DOTS, NON_NEGATIVE_NUMBER);
+    r = consumeToken(b, DOTS);
+    r = r && range_upper_bound_decl(b, l + 1);
     exit_section_(b, m, null, r);
     return r;
   }
 
   /* ********************************************************** */
-  // RANGE numeric_literal DOTS numeric_literal
-  public static boolean range_decl(PsiBuilder b, int l) {
-    if (!recursion_guard_(b, l, "range_decl")) return false;
-    if (!nextTokenIs(b, RANGE)) return false;
+  // non_negative_integer_literal | STAR
+  public static boolean range_upper_bound_decl(PsiBuilder b, int l) {
+    if (!recursion_guard_(b, l, "range_upper_bound_decl")) return false;
+    if (!nextTokenIs(b, "<range upper bound decl>", NON_NEGATIVE_NUMBER, STAR)) return false;
     boolean r;
-    Marker m = enter_section_(b);
-    r = consumeToken(b, RANGE);
-    r = r && numeric_literal(b, l + 1);
-    r = r && consumeToken(b, DOTS);
-    r = r && numeric_literal(b, l + 1);
-    exit_section_(b, m, RANGE_DECL, r);
+    Marker m = enter_section_(b, l, _NONE_, RANGE_UPPER_BOUND_DECL, "<range upper bound decl>");
+    r = non_negative_integer_literal(b, l + 1);
+    if (!r) r = consumeToken(b, STAR);
+    exit_section_(b, l, m, r, false, null);
     return r;
   }
 
@@ -1905,7 +1962,7 @@ public class DecodeParser implements PsiParser, LightPsiParser {
   }
 
   /* ********************************************************** */
-  // type_application range_decl? | enum_type_decl | struct_type_decl | native_type_decl
+  // type_application (RANGE numeric_range_decl)? | enum_type_decl | struct_type_decl | native_type_decl
   public static boolean type_decl_body(PsiBuilder b, int l) {
     if (!recursion_guard_(b, l, "type_decl_body")) return false;
     boolean r;
@@ -1918,7 +1975,7 @@ public class DecodeParser implements PsiParser, LightPsiParser {
     return r;
   }
 
-  // type_application range_decl?
+  // type_application (RANGE numeric_range_decl)?
   private static boolean type_decl_body_0(PsiBuilder b, int l) {
     if (!recursion_guard_(b, l, "type_decl_body_0")) return false;
     boolean r;
@@ -1929,11 +1986,22 @@ public class DecodeParser implements PsiParser, LightPsiParser {
     return r;
   }
 
-  // range_decl?
+  // (RANGE numeric_range_decl)?
   private static boolean type_decl_body_0_1(PsiBuilder b, int l) {
     if (!recursion_guard_(b, l, "type_decl_body_0_1")) return false;
-    range_decl(b, l + 1);
+    type_decl_body_0_1_0(b, l + 1);
     return true;
+  }
+
+  // RANGE numeric_range_decl
+  private static boolean type_decl_body_0_1_0(PsiBuilder b, int l) {
+    if (!recursion_guard_(b, l, "type_decl_body_0_1_0")) return false;
+    boolean r;
+    Marker m = enter_section_(b);
+    r = consumeToken(b, RANGE);
+    r = r && numeric_range_decl(b, l + 1);
+    exit_section_(b, m, null, r);
+    return r;
   }
 
   /* ********************************************************** */

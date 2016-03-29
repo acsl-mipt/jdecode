@@ -32,4 +32,10 @@ public class DecodeParameterElementImpl extends ASTWrapperPsiElement implements 
     return PsiTreeUtil.getChildrenOfTypeAsList(this, DecodeElementId.class);
   }
 
+  @Override
+  @NotNull
+  public List<DecodeRangeDecl> getRangeDeclList() {
+    return PsiTreeUtil.getChildrenOfTypeAsList(this, DecodeRangeDecl.class);
+  }
+
 }

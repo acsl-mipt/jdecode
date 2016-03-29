@@ -126,7 +126,7 @@ class DecodeAstTransformer {
     val numericLiteral = literal.getNumericLiteral
     EnumConstant(elementName(v.getElementNameRule),
       Option(numericLiteral.getFloatLiteral).map(l => FloatLiteral(l.getText.toFloat))
-        .getOrElse(IntLiteral(numericLiteral.getNonNegativeNumber.getText.toInt)),
+        .getOrElse(IntLiteral(numericLiteral.getNonNegativeIntegerLiteral.getText.toInt)),
       elementInfo(Option(v.getElementInfo)))
   }
 

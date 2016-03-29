@@ -45,11 +45,14 @@ public interface DecodeTypes {
   IElementType MESSAGE_DECL = new DecodeElementType("MESSAGE_DECL");
   IElementType NAMESPACE_DECL = new DecodeElementType("NAMESPACE_DECL");
   IElementType NATIVE_TYPE_DECL = new DecodeElementType("NATIVE_TYPE_DECL");
+  IElementType NON_NEGATIVE_INTEGER_LITERAL = new DecodeElementType("NON_NEGATIVE_INTEGER_LITERAL");
   IElementType NUMERIC_LITERAL = new DecodeElementType("NUMERIC_LITERAL");
+  IElementType NUMERIC_RANGE_DECL = new DecodeElementType("NUMERIC_RANGE_DECL");
   IElementType OPTIONAL = new DecodeElementType("OPTIONAL");
   IElementType PARAMETER_DECL = new DecodeElementType("PARAMETER_DECL");
   IElementType PARAMETER_ELEMENT = new DecodeElementType("PARAMETER_ELEMENT");
   IElementType RANGE_DECL = new DecodeElementType("RANGE_DECL");
+  IElementType RANGE_UPPER_BOUND_DECL = new DecodeElementType("RANGE_UPPER_BOUND_DECL");
   IElementType SCRIPT_DECL = new DecodeElementType("SCRIPT_DECL");
   IElementType SIMPLE_OR_GENERIC_TYPE_APPLICATION = new DecodeElementType("SIMPLE_OR_GENERIC_TYPE_APPLICATION");
   IElementType STATUS_MESSAGE = new DecodeElementType("STATUS_MESSAGE");
@@ -243,8 +246,14 @@ public interface DecodeTypes {
       else if (type == NATIVE_TYPE_DECL) {
         return new DecodeNativeTypeDeclImpl(node);
       }
+      else if (type == NON_NEGATIVE_INTEGER_LITERAL) {
+        return new DecodeNonNegativeIntegerLiteralImpl(node);
+      }
       else if (type == NUMERIC_LITERAL) {
         return new DecodeNumericLiteralImpl(node);
+      }
+      else if (type == NUMERIC_RANGE_DECL) {
+        return new DecodeNumericRangeDeclImpl(node);
       }
       else if (type == OPTIONAL) {
         return new DecodeOptionalImpl(node);
@@ -257,6 +266,9 @@ public interface DecodeTypes {
       }
       else if (type == RANGE_DECL) {
         return new DecodeRangeDeclImpl(node);
+      }
+      else if (type == RANGE_UPPER_BOUND_DECL) {
+        return new DecodeRangeUpperBoundDeclImpl(node);
       }
       else if (type == SCRIPT_DECL) {
         return new DecodeScriptDeclImpl(node);

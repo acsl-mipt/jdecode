@@ -11,6 +11,6 @@ public interface DecodeNumericLiteral extends PsiElement {
   DecodeFloatLiteral getFloatLiteral();
 
   @Nullable
-  PsiElement getNonNegativeNumber();
+  DecodeNonNegativeIntegerLiteral getNonNegativeIntegerLiteral();
 
 }

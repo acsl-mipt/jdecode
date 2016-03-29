@@ -153,8 +153,12 @@ event_message ::= element_info? EVENT element_name_rule entity_id? type_applicat
 
 parameter_decl ::= element_info? parameter_element
 
+range_upper_bound_decl ::= non_negative_integer_literal | STAR
+
+range_decl ::= LEFT_BRACKET (non_negative_integer_literal (DOTS range_upper_bound_decl)? | STAR) RIGHT_BRACKET
+
 parameter_element ::= element_id ((LEFT_BRACKET NON_NEGATIVE_NUMBER (DOTS NON_NEGATIVE_NUMBER)? RIGHT_BRACKET)+
-    (DOT element_id (LEFT_BRACKET NON_NEGATIVE_NUMBER (DOTS NON_NEGATIVE_NUMBER)? RIGHT_BRACKET)?)*)?
+    (DOT element_id range_decl?)*)?
 
 element_info ::= string_value+
 
@@ -176,9 +180,9 @@ length_from ::= NON_NEGATIVE_NUMBER
 
 length_to ::= NON_NEGATIVE_NUMBER
 
-range_decl ::= RANGE numeric_literal DOTS numeric_literal
+numeric_range_decl ::= numeric_literal DOTS numeric_literal
 
-type_decl_body ::= type_application range_decl? | enum_type_decl | struct_type_decl | native_type_decl
+type_decl_body ::= type_application (RANGE numeric_range_decl)? | enum_type_decl | struct_type_decl | native_type_decl
 
 native_type_decl ::= NATIVE
 
@@ -190,7 +194,9 @@ enum_type_values ::= enum_type_value (COMMA enum_type_value)* COMMA?
 
 enum_type_value ::= element_info? element_name_rule EQ_SIGN literal
 
-numeric_literal ::= float_literal | NON_NEGATIVE_NUMBER
+non_negative_integer_literal ::= NON_NEGATIVE_NUMBER
+
+numeric_literal ::= float_literal | non_negative_integer_literal
 
 bool_literal ::= TRUE | FALSE
 

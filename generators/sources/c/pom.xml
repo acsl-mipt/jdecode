@@ -4,11 +4,11 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <artifactId>c-sources-generator</artifactId>
-    <version>0.4.4</version>
+    <version>0.4.5</version>
     <parent>
         <groupId>ru.mipt.acsl.decode</groupId>
         <artifactId>decode</artifactId>
-        <version>0.4.4</version>
+        <version>0.4.5</version>
         <relativePath>../../../</relativePath>
     </parent>
 
