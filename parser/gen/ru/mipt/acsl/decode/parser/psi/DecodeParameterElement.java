@@ -8,7 +8,7 @@ import com.intellij.psi.PsiElement;
 public interface DecodeParameterElement extends PsiElement {
 
   @NotNull
-  List<DecodeElementId> getElementIdList();
+  List<DecodeElementNameRule> getElementNameRuleList();
 
   @NotNull
   List<DecodeRangeDecl> getRangeDeclList();
