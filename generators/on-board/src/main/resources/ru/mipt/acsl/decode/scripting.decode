@@ -1,0 +1,92 @@
+ru"Модуль управления бортовыми скриптами (циклограммами)"
+namespace ru.mipt.acsl.scripting
+
+import decode.{ber, b8, u8}
+import ru.mipt.acsl.foundation.{s, guid, error_code}
+
+language ru
+
+'Идентификатор скрипта'
+type script_id guid
+
+'Информация о скрипте'
+type script_info struct
+(
+  scriptId: script_id,
+  'Байткод скрипта'
+  scriptCode: [u8],
+)
+
+'Дата и время'
+type date_time ber
+'Период времени'
+type period    ber
+
+'Запланированный запуск скрипта'
+type script_run_timing struct
+(
+  'Идентификатор запланированного запуска'
+  ^id: guid,
+  'Запуск запланирован'
+  isActive: b8,
+  scriptId: script_id,
+  'Время запуска'
+  runOn: date_time,
+  'Периодический скрипт'
+  isRepeated: b8,
+  'Период повторения'
+  repeatPeriod: period /s/,
+  'Повторение ограничено'
+  isRepeatingLimitedByDate: b8,
+  'Дата и время окончания повторения запусков скрипта'
+  repeatUntil: date_time,
+)
+
+type ^script struct
+(
+  ^info: script_info,
+  runTiming: script_run_timing,
+)
+
+type scripting_error enum ber
+(
+  OK = 0,
+  MAXIMUM_SCRIPTS_REACHED = 1,
+  NOT_ENOUGH_SPACE_FOR_SCRIPT = 2,
+  NO_SUCH_SCRIPT = 3,
+  CONFLICTING_SCRIPT_IDS = 4,
+)
+
+'Управление бортовыми скриптами (циклограммами)'
+component Scripting
+{
+  parameters
+  (
+    'Идентификаторы бортовых скриптов'
+    scripts: [^script],
+  )
+
+  'Загрузить скрипт'
+  command uploadScript(^script: script_info): scripting_error
+
+  'Удалить скрипт'
+  command deleteScript(scriptId: script_id): scripting_error
+
+  'Запустить скрипт незамедлительно'
+  command runScriptNow(scriptId: script_id): scripting_error
+
+  'Запланировать запуск скрипта'
+  command scheduleScriptRun(scriptRunTiming: script_run_timing): scripting_error
+
+  'Активировать запланированный запуск скрипта'
+  command enableScriptRunTiming(scriptRunTimingId: guid): scripting_error
+
+  'Деактивировать запланированный запуск скрипта'
+  command disableScriptRunTiming(scriptRunTimingId: guid): scripting_error
+
+  'Перечень загруженных скриптов'
+  status availableScripts
+  (
+    scripts,
+  )
+}

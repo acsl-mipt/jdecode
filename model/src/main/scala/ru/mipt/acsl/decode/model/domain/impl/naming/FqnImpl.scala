@@ -1,6 +1,6 @@
 package ru.mipt.acsl.decode.model.domain.impl.naming
 
-import ru.mipt.acsl.decode.model.domain.naming.{ElementName, Fqn}
+import ru.mipt.acsl.decode.model.domain.pure.naming.{ElementName, Fqn}
 
 /**
   * @author Artem Shein

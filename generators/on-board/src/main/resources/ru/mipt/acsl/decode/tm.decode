@@ -1,0 +1,67 @@
+ru"Модуль управления выдачей ТМ-информации"
+namespace ru.mipt.acsl.tm
+
+import decode.{ber, u8}
+
+language ru
+
+'Циклический массив'
+type ring_buf struct
+(
+  'Данные циклического массива'
+  data: [u8],
+  'Смещение начала цкилического массива'
+  startOffset: ber,
+  'Смещение конца циклического массива'
+  endOffset: ber,
+)
+
+'Номер компонента и номер сообщения'
+type comp_msg struct
+(
+  'Номер компонента'
+  componentNum: ber,
+  'Номер сообщения в компоненте'
+  messageNum: ber,
+)
+
+'Информация о событии'
+type event_info struct
+(
+  componentMessage: comp_msg,
+  'Номер события'
+  eventNum: ber,
+)
+
+type tm_cmd_error enum ber (OK = 0, INVALID_ARGUMENT = 1, INVALID_STATE = 2, INVALID_MESSAGE_NUM = 3)
+
+'Управление формированием и выдачей ТМ-информации'
+component Tm
+{
+  parameters
+  (
+    'число разрешенных для выдачи сообщений'
+    allowedMessages: ber,
+  )
+
+  'Выдать статусное сообщение во внеочередную выдачу'
+  command sendStatusMessage(componentMessage: comp_msg): tm_cmd_error
+
+  'Установить запрос на выдачу в соответствии с приоритетом'
+  command setMessageRequest(componentMessage: comp_msg, 'Приоритет' ^priority: ber): tm_cmd_error
+
+  'Снять запрос на выдачу в соответствии с приоритетом'
+  command clearMessageRequest(componentMessage: comp_msg): tm_cmd_error
+
+  'Запретить формирование ТМ-сообщения'
+  command denyMessage(componentMessage: comp_msg): tm_cmd_error
+
+  'Снять запрет на формирование ТМ-сообщения'
+  command allowMessage(componentMessage: comp_msg): tm_cmd_error
+
+  'Установить запрет на формирование и выдачу события'
+  command denyEvent(eventInfo: event_info): tm_cmd_error
+
+  'Снять запрет на формирование и выдачу события'
+  command allowEvent(eventInfo: event_info): tm_cmd_error
+}

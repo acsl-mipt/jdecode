@@ -1,16 +1,24 @@
 package ru.mipt.acsl.decode.model.domain.impl.types
 
-import ru.mipt.acsl.decode.model.domain.aliases.LocalizedString
-import ru.mipt.acsl.decode.model.domain.naming.{ElementName, Namespace}
-import ru.mipt.acsl.decode.model.domain.proxy.MaybeProxy
-import ru.mipt.acsl.decode.model.domain.types.{DecodeType, EnumConstant, EnumType}
+import ru.mipt.acsl.decode.model.domain.impl.naming.Namespace
+import ru.mipt.acsl.decode.model.domain.impl.proxy.MaybeProxy
+import ru.mipt.acsl.decode.model.domain.pure
+import ru.mipt.acsl.decode.model.domain.pure.LocalizedString
+import ru.mipt.acsl.decode.model.domain.pure.naming.ElementName
+import ru.mipt.acsl.decode.model.domain.pure.types.EnumConstant
 
 /**
   * @author Artem Shein
   */
+trait EnumType extends BaseTypedType with pure.types.EnumType {
+  override def extendsType: Option[EnumType] = extendsOrBaseType.left.toOption
+  def extendsOrBaseTypeProxy: Either[MaybeProxy[EnumType], MaybeProxy[DecodeType]]
+  def extendsOrBaseType: Either[EnumType, DecodeType] = extendsOrBaseTypeProxy.fold(l => Left(l.obj), r => Right(r.obj))
+}
+
 object EnumType {
   def apply(name: ElementName, namespace: Namespace,
-            extendsOrBaseType: Either[MaybeProxy[EnumType], MaybeProxy[DecodeType]],
+            extendsOrBaseTypeProxy: Either[MaybeProxy[EnumType], MaybeProxy[DecodeType]],
             info: LocalizedString, constants: Set[EnumConstant], isFinal: Boolean): EnumType =
-    new EnumTypeImpl(name, namespace, extendsOrBaseType, info, constants, isFinal)
+    new EnumTypeImpl(name, namespace, extendsOrBaseTypeProxy, info, constants, isFinal)
 }

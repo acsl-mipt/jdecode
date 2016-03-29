@@ -86,6 +86,9 @@ NON_NEGATIVE_NUMBER=[0-9]+
   "native"                   { return NATIVE; }
   "final"                    { return FINAL; }
   "extends"                  { return EXTENDS; }
+  "script"                   { return SCRIPT; }
+  "range"                    { return RANGE; }
+  "for"                      { return FOR; }
 
   {ESCAPED_NAME}             { return ESCAPED_NAME; }
   {ELEMENT_NAME_TOKEN}       { return ELEMENT_NAME_TOKEN; }

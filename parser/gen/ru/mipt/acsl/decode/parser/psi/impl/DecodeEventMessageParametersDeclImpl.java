@@ -17,8 +17,12 @@ public class DecodeEventMessageParametersDeclImpl extends ASTWrapperPsiElement i
     super(node);
   }
 
+  public void accept(@NotNull DecodeVisitor visitor) {
+    visitor.visitEventMessageParametersDecl(this);
+  }
+
   public void accept(@NotNull PsiElementVisitor visitor) {
-    if (visitor instanceof DecodeVisitor) ((DecodeVisitor)visitor).visitEventMessageParametersDecl(this);
+    if (visitor instanceof DecodeVisitor) accept((DecodeVisitor)visitor);
     else super.accept(visitor);
   }
 

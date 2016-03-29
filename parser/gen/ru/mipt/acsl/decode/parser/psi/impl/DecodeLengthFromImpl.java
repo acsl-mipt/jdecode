@@ -17,8 +17,12 @@ public class DecodeLengthFromImpl extends ASTWrapperPsiElement implements Decode
     super(node);
   }
 
+  public void accept(@NotNull DecodeVisitor visitor) {
+    visitor.visitLengthFrom(this);
+  }
+
   public void accept(@NotNull PsiElementVisitor visitor) {
-    if (visitor instanceof DecodeVisitor) ((DecodeVisitor)visitor).visitLengthFrom(this);
+    if (visitor instanceof DecodeVisitor) accept((DecodeVisitor)visitor);
     else super.accept(visitor);
   }
 

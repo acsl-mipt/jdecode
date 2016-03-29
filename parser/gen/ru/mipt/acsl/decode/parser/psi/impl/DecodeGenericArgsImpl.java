@@ -17,8 +17,12 @@ public class DecodeGenericArgsImpl extends ASTWrapperPsiElement implements Decod
     super(node);
   }
 
+  public void accept(@NotNull DecodeVisitor visitor) {
+    visitor.visitGenericArgs(this);
+  }
+
   public void accept(@NotNull PsiElementVisitor visitor) {
-    if (visitor instanceof DecodeVisitor) ((DecodeVisitor)visitor).visitGenericArgs(this);
+    if (visitor instanceof DecodeVisitor) accept((DecodeVisitor)visitor);
     else super.accept(visitor);
   }
 

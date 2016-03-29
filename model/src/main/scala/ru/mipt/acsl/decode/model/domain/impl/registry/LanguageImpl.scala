@@ -1,6 +1,6 @@
 package ru.mipt.acsl.decode.model.domain.impl.registry
 
-import ru.mipt.acsl.decode.model.domain.registry.Language
+import ru.mipt.acsl.decode.model.domain.pure.Language
 
 /**
   * @author Artem Shein

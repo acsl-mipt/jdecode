@@ -1,14 +1,17 @@
 package ru.mipt.acsl.decode.model.domain.impl.types
 
-import ru.mipt.acsl.decode.model.domain.aliases.LocalizedString
-import ru.mipt.acsl.decode.model.domain.naming.{ElementName, Namespace}
-import ru.mipt.acsl.decode.model.domain.proxy.MaybeProxy
-import ru.mipt.acsl.decode.model.domain.types.{AliasType, DecodeType}
+import ru.mipt.acsl.decode.model.domain.impl.naming.Namespace
+import ru.mipt.acsl.decode.model.domain.impl.proxy.MaybeProxy
+import ru.mipt.acsl.decode.model.domain.pure
+import ru.mipt.acsl.decode.model.domain.pure.LocalizedString
+import ru.mipt.acsl.decode.model.domain.pure.naming.ElementName
 
 /**
   * @author Artem Shein
   */
+trait AliasType extends BaseTypedType with pure.types.AliasType
+
 object AliasType {
-  def apply(name: ElementName, namespace: Namespace, baseType: MaybeProxy[DecodeType],
-            info: LocalizedString): AliasType = new AliasTypeImpl(name, namespace, baseType, info)
+  def apply(name: ElementName, namespace: Namespace, baseTypeProxy: MaybeProxy[DecodeType],
+            info: LocalizedString): AliasType = new AliasTypeImpl(name, namespace, info, baseTypeProxy)
 }

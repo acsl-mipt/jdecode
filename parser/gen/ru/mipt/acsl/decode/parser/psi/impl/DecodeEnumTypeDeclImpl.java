@@ -17,8 +17,12 @@ public class DecodeEnumTypeDeclImpl extends ASTWrapperPsiElement implements Deco
     super(node);
   }
 
+  public void accept(@NotNull DecodeVisitor visitor) {
+    visitor.visitEnumTypeDecl(this);
+  }
+
   public void accept(@NotNull PsiElementVisitor visitor) {
-    if (visitor instanceof DecodeVisitor) ((DecodeVisitor)visitor).visitEnumTypeDecl(this);
+    if (visitor instanceof DecodeVisitor) accept((DecodeVisitor)visitor);
     else super.accept(visitor);
   }
 

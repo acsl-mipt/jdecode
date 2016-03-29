@@ -17,21 +17,25 @@ public class DecodeLiteralImpl extends ASTWrapperPsiElement implements DecodeLit
     super(node);
   }
 
+  public void accept(@NotNull DecodeVisitor visitor) {
+    visitor.visitLiteral(this);
+  }
+
   public void accept(@NotNull PsiElementVisitor visitor) {
-    if (visitor instanceof DecodeVisitor) ((DecodeVisitor)visitor).visitLiteral(this);
+    if (visitor instanceof DecodeVisitor) accept((DecodeVisitor)visitor);
     else super.accept(visitor);
   }
 
   @Override
   @Nullable
-  public DecodeFloatLiteral getFloatLiteral() {
-    return findChildByClass(DecodeFloatLiteral.class);
+  public DecodeBoolLiteral getBoolLiteral() {
+    return findChildByClass(DecodeBoolLiteral.class);
   }
 
   @Override
   @Nullable
-  public PsiElement getNonNegativeNumber() {
-    return findChildByType(NON_NEGATIVE_NUMBER);
+  public DecodeNumericLiteral getNumericLiteral() {
+    return findChildByClass(DecodeNumericLiteral.class);
   }
 
 }

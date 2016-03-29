@@ -1,0 +1,59 @@
+ru"Модуль динамической идентификации устройств"
+namespace ru.mipt.acsl.identification
+
+import decode.ber
+
+import ru.mipt.acsl.foundation.guid
+
+language ru
+
+"Пара номер компонента и его уникальный идентификатор"
+type component_number_guid_pair
+struct
+(
+  'Номер компонента в пределах устройства'
+  number: ber,
+  'Уникальный идентификатор компонента'
+  guid: guid,
+)
+
+"Идентификатор устройства и его корневого компонента"
+type short_id
+struct
+(
+  'Уникальный идентификатор устройства'
+  deviceGuid: guid,
+  'Уникальный идентификатор компонента устройства'
+  rootComponentGuid: guid,
+)
+
+"Идентификатор устройства и всех его компонентов"
+type full_id struct
+(
+    shortId: short_id,
+    'Идентификаторы всех компонентов устройства'
+    deviceComponentGuidPairs: [component_number_guid_pair, 1..*],
+)
+
+'Компонент идентификации устройства и всех его компонентов'
+component Identification id = 0
+{
+  parameters
+  (
+    fullId: full_id,
+  )
+
+  'Запросить идентификатор устройства и идентификатор компонента устройства'
+  command requestShortId(): short_id
+
+  'Запросить идентификатор устройства, компонента устройства и всех его подкомпонентов'
+  command requestFullId(): full_id
+
+  'Запросить идентификатор компонента по номеру'
+  command requestComponentGuid(componentNumber: ber): guid
+
+  status fullId id = 0 priority = 10
+  (
+    fullId
+  )
+}

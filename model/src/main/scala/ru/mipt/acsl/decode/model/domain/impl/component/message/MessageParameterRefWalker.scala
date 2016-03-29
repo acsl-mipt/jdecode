@@ -1,11 +1,10 @@
 package ru.mipt.acsl.decode.model.domain.impl.component.message
 
-import ru.mipt.acsl.decode.model.domain.aliases.MessageParameterToken
-import ru.mipt.acsl.decode.model.domain.component.Component
-import ru.mipt.acsl.decode.model.domain.component.messages.MessageParameterRef
-import ru.mipt.acsl.decode.model.domain.types.{DecodeType, StructField}
+import ru.mipt.acsl.decode.model.domain.pure.MessageParameterToken
 
 import scala.util.{Failure, Success, Try}
+import ru.mipt.acsl.decode.model.domain.impl.component._
+import ru.mipt.acsl.decode.model.domain.impl.types.{DecodeType, StructField}
 
 /**
   * @author Artem Shein
@@ -18,21 +17,21 @@ class MessageParameterRefWalker(var component: Component, var structField: Optio
     walkOne()
 
   override def t: DecodeType = if (structField.isEmpty)
-    component.baseType.get.obj
+    component.baseType.get
   else if (subTokens.isEmpty)
-    structField.get.typeUnit.t.obj
+    structField.get.typeUnit.t
   else
-    subTokens.foldLeft(structField.get.typeUnit.t.obj)(TokenTypeWalker)
+    subTokens.foldLeft(structField.get.typeUnit.t)(TokenTypeWalker)
 
   private def findSubComponent(tokenString: String): Option[Try[Unit]] =
     component.subComponents.find(tokenString == _.aliasOrMangledName).map { subComponent =>
-      component = subComponent.component.obj
+      component = subComponent.component
       structField = None
       Success()
     }
 
   private def findBaseTypeField(tokenString: String): Option[Try[Unit]] =
-    component.baseType.flatMap(_.obj.fields.find(tokenString == _.name.asMangledString).map { f =>
+    component.baseType.flatMap(_.fields.find(tokenString == _.name.asMangledString).map { f =>
       structField = Some(f)
       Success()
     })

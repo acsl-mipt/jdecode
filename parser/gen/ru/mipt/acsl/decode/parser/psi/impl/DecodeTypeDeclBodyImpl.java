@@ -17,8 +17,12 @@ public class DecodeTypeDeclBodyImpl extends ASTWrapperPsiElement implements Deco
     super(node);
   }
 
+  public void accept(@NotNull DecodeVisitor visitor) {
+    visitor.visitTypeDeclBody(this);
+  }
+
   public void accept(@NotNull PsiElementVisitor visitor) {
-    if (visitor instanceof DecodeVisitor) ((DecodeVisitor)visitor).visitTypeDeclBody(this);
+    if (visitor instanceof DecodeVisitor) accept((DecodeVisitor)visitor);
     else super.accept(visitor);
   }
 
@@ -32,6 +36,12 @@ public class DecodeTypeDeclBodyImpl extends ASTWrapperPsiElement implements Deco
   @Nullable
   public DecodeNativeTypeDecl getNativeTypeDecl() {
     return findChildByClass(DecodeNativeTypeDecl.class);
+  }
+
+  @Override
+  @Nullable
+  public DecodeRangeDecl getRangeDecl() {
+    return findChildByClass(DecodeRangeDecl.class);
   }
 
   @Override

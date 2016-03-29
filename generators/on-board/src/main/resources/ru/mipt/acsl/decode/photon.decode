@@ -1,0 +1,15 @@
+namespace ru.mipt.acsl.photon
+
+import ru.mipt.acsl.routing.Router
+import ru.mipt.acsl.scripting.Scripting
+import ru.mipt.acsl.segmentation.{SegmentSender, SegmentReceiver}
+import ru.mipt.acsl.identification.Identification
+import ru.mipt.acsl.tm.Tm
+import ru.mipt.acsl.fs.Files
+
+language ru
+
+"Основной компонент устройства"
+component Main with Identification, Router, Scripting, SegmentSender, SegmentReceiver, Tm, Files
+{
+}

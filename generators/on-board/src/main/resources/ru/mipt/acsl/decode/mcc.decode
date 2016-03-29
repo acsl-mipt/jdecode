@@ -1,0 +1,228 @@
+namespace ru.mipt.acsl.mcc
+
+import decode.{ber, b8, u8, u16, u32, f32, f64}
+import ru.mipt.acsl.foundation.{per, grad, m, mps}
+
+language ru
+
+'Управление аппаратом'
+component Device
+{
+  parameters
+  (
+    'Уровень заряда батареи'
+    batteryLevel: u8 /per/,
+    'Уровень радио-сигнала'
+    signalLevel: u8 /per/,
+    'CRC дерева конфигурации'
+    crc: u16,
+    'Вид аппарата'
+    kind: u8,
+  )
+
+  status all
+  (
+    batteryLevel,
+    signalLevel,
+    crc,
+    kind,
+  )
+}
+
+'Режимы'
+component Mode
+{
+  parameters
+  (
+    'Текущий режим'
+    name: u8,
+  )
+
+  'Все параметры'
+  status all
+  (
+    name,
+  )
+}
+
+'Текущее состояние полёта'
+component Navigation with Motion, Mode, DogPoint, Route, Routes
+{
+  'Включить'
+  command start()
+  'Включить двигатель'
+  command startEngine()
+  'Взлететь'
+  command takeOff()
+  'Перейти в режим свободного полета'
+  command freeFlying()
+  'Лететь по маршруту'
+  command flyRoute()
+  'Ждать'
+  command wait()
+  'Возвратиться'
+  command return()
+  'Приземлиться'
+  command land()
+  'Выключить двигатель'
+  command stopEngine()
+  'Выключить'
+  command stop()
+  'Отменить посадку'
+  command cancelLanding()
+}
+
+type route_point
+struct
+(
+  'Широта'   latitude: f32 /grad/,
+  'Долгота'  longitude: f32 /grad/,
+  'Высота'   altitude: f32 /m/,
+  'Скорость' speed: f32 /mps/,
+  'Флаги'    flags: u32,
+)
+
+type route_points [route_point, 0..64]
+
+type route
+struct
+(
+  'Имя маршрута'        name:   u16,
+  'Круговой ли маршрут' isRing: b8,
+  'Точки маршрута'      points: route_points,
+)
+
+type routes [route, 0..10]
+
+type routes_info
+struct
+(
+  'Следующая точка активного маршрута' nextPoint: u16,
+  'Маршруты'                           routes: routes,
+  'Активный маршрут'                   activeRoute: route,
+)
+
+'Управление маршрутом полёта'
+component Route
+{
+  parameters
+  (
+    routesInfo: routes_info,
+  )
+
+  "Очистить маршрут"
+  command clearRoute()
+
+  'Начать формирование маршрута'
+  command beginRoute
+  (
+    "Номер маршрута"           name: u16,
+    "Количество путевых точек" waypointsCount: u8,
+    "Кольцевой маршрут"        isRing: b8,
+  )
+
+  'Задать путевую точку'
+  command setRoutePoint
+  (
+    "Номер путевой точки (начиная с нуля)" number:    u16,
+    "Широта"                               latitude:  f32 /m/,
+    'Долгота'                              longitude: f32 /m/,
+    'Высота'                               altitude:  f32 /m/,
+    'Скорость'                             speed:     f32 /mps/,
+    'Флаги'                                flags:     u32,
+  )
+
+  'Закончить формирование маршрута'
+  command endRoute()
+
+  command setCurrentRoute
+  (
+    'Изменить маршрут полёта' kind: u16,
+  )
+
+  command setActivePoint
+  (
+    'Индекс точки, начиная с нуля' index: u16,
+  )
+
+  status all
+  (
+    routesInfo,
+  )
+}
+
+'Компонент управления маршрутами'
+component Routes
+{
+  parameters
+  (
+    routesInfo: routes_info,
+  )
+
+  'Удалить маршрут по имени'
+  command deleteRoute('Имя' name: u16)
+
+  'Добавить маршрут в конец массива'
+  command appendRoute('Данные маршрута' route: route)
+
+  'Обновить маршрут по имени'
+  command updateRoute('Имя' name: u16, 'Данные маршрута' route: route)
+
+  status all
+  (
+    routesInfo,
+  )
+}
+
+'Характеристики движения'
+component Motion
+{
+  parameters
+  (
+    'Широта'                         latitude:  f64 /grad/,
+    'Долгота'                        longitude: f64 /grad/,
+    'Высота'                         altitude:  f64 /m/,
+    'Точность определения положения' accuracy:  f64 /m/,
+    'Скорость'                       speed:     f64 /mps/,
+    'Тангаж'                         pitch:     f64 /grad/,
+    'Рыскание'                       heading:   f64 /grad/,
+    'Крен'                           roll:      f64 /grad/,
+    'Газ'                            throttle:  u8  /per/,
+  )
+
+  status all
+  (
+    latitude,
+    longitude,
+    altitude,
+    accuracy,
+    speed,
+    pitch,
+    heading,
+    roll,
+    throttle,
+  )
+}
+
+'Поводковая точка'
+component DogPoint
+{
+  parameters
+  (
+    'Широта'  latitude:  f64 /grad/,
+    'Долгота' longitude: f64 /grad/,
+    'Высота'  altitude:  f64 /m/,
+  )
+
+  status all
+  (
+    latitude,
+    longitude,
+    altitude,
+  )
+}
+
+'Летающий аппарат'
+component FlyingDevice with Navigation
+{
+}

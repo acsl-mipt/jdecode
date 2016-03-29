@@ -17,8 +17,12 @@ public class DecodeCommandDeclImpl extends ASTWrapperPsiElement implements Decod
     super(node);
   }
 
+  public void accept(@NotNull DecodeVisitor visitor) {
+    visitor.visitCommandDecl(this);
+  }
+
   public void accept(@NotNull PsiElementVisitor visitor) {
-    if (visitor instanceof DecodeVisitor) ((DecodeVisitor)visitor).visitCommandDecl(this);
+    if (visitor instanceof DecodeVisitor) accept((DecodeVisitor)visitor);
     else super.accept(visitor);
   }
 
@@ -44,6 +48,12 @@ public class DecodeCommandDeclImpl extends ASTWrapperPsiElement implements Decod
   @Nullable
   public DecodeEntityId getEntityId() {
     return findChildByClass(DecodeEntityId.class);
+  }
+
+  @Override
+  @NotNull
+  public List<DecodeExpr> getExprList() {
+    return PsiTreeUtil.getChildrenOfTypeAsList(this, DecodeExpr.class);
   }
 
   @Override

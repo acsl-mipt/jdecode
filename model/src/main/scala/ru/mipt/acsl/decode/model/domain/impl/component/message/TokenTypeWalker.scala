@@ -1,7 +1,7 @@
 package ru.mipt.acsl.decode.model.domain.impl.component.message
 
-import ru.mipt.acsl.decode.model.domain.aliases.MessageParameterToken
-import ru.mipt.acsl.decode.model.domain.types.DecodeType
+import ru.mipt.acsl.decode.model.domain.impl.types.DecodeType
+import ru.mipt.acsl.decode.model.domain.pure.MessageParameterToken
 
 /**
   * @author Artem Shein

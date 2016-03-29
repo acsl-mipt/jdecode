@@ -16,6 +16,7 @@
         NAMESPACE = "namespace"
         COMPONENT = "component"
         COMMAND = "command"
+        //SPACE = "regexp:[\ \r\n\t\v]+"
         ESCAPED_NAME = "regexp:\^[a-zA-Z_][a-zA-Z0-9_]*"
         ELEMENT_NAME_TOKEN = "regexp:[a-zA-Z_][a-zA-Z0-9_]*"
         COMMENT = "regexp:#[^\r\n]*"
@@ -72,10 +73,23 @@
         NATIVE = "native"
         FINAL = "final"
         EXTENDS = "extends"
+        SCRIPT = "script"
+        RANGE = "range"
+        FOR = "for"
     ]
 }
 
-decodeFile ::= namespace_decl import_stmt* (component_decl | unit_decl | type_decl | alias_decl | default_language_decl)*
+decodeFile ::= namespace_decl import_stmt* (component_decl | unit_decl | type_decl | alias_decl
+    | default_language_decl | script_decl)*
+
+script_decl ::= SCRIPT element_name_rule FOR component_ref LEFT_PAREN command_args? RIGHT_PAREN
+    (COLON type_unit_application)? EQ_SIGN LEFT_BRACE expr* RIGHT_BRACE
+
+expr ::= command_call | literal | var_expr
+
+var_expr ::= element_name_rule
+
+command_call ::= element_id LEFT_PAREN (expr (COMMA expr)*)? RIGHT_PAREN
 
 import_stmt ::= IMPORT element_id (DOT (LEFT_BRACE import_element (COMMA import_element)* COMMA? RIGHT_BRACE | import_element_star))?
 
@@ -91,12 +105,13 @@ namespace_decl ::= element_info? NAMESPACE element_id
 
 element_name_rule ::= ELEMENT_NAME_TOKEN | ESCAPED_NAME
 
-component_decl ::= element_info? COMPONENT element_name_rule entity_id? (WITH subcomponent_decl (COMMA subcomponent_decl)*)?
+component_decl ::= element_info? COMPONENT element_name_rule entity_id? (WITH component_ref (COMMA component_ref)*)?
     LEFT_BRACE component_parameters_decl? (command_decl|message_decl)* RIGHT_BRACE
 
 component_parameters_decl ::= element_info? PARAMETERS LEFT_PAREN command_args RIGHT_PAREN
 
-command_decl ::= element_info? COMMAND element_name_rule entity_id? LEFT_PAREN command_args? RIGHT_PAREN (COLON type_unit_application)?
+command_decl ::= element_info? COMMAND element_name_rule entity_id? LEFT_PAREN command_args? RIGHT_PAREN
+    (COLON type_unit_application)? (EQ_SIGN LEFT_BRACE expr* RIGHT_BRACE)?
 
 command_args ::= command_arg (COMMA command_arg)* COMMA?
 
@@ -147,7 +162,7 @@ string_literal ::= STRING | STRING_UNARY_QUOTES
 
 string_value ::= element_name_rule? string_literal
 
-subcomponent_decl ::= element_name_rule
+component_ref ::= element_name_rule
 
 unit_decl ::= element_info? UNIT_TOKEN element_name_rule (DISPLAY string_value)* (PLACEMENT (BEFORE | AFTER))?
 
@@ -161,9 +176,9 @@ length_from ::= NON_NEGATIVE_NUMBER
 
 length_to ::= NON_NEGATIVE_NUMBER
 
-range ::= RANGE numeric_literal DOT DOT numeric_literal
+range_decl ::= RANGE numeric_literal DOTS numeric_literal
 
-type_decl_body ::= type_application range? | enum_type_decl | struct_type_decl | native_type_decl
+type_decl_body ::= type_application range_decl? | enum_type_decl | struct_type_decl | native_type_decl
 
 native_type_decl ::= NATIVE
 
@@ -181,6 +196,6 @@ bool_literal ::= TRUE | FALSE
 
 literal ::= numeric_literal | bool_literal
 
-float_literal ::= (PLUS | MINUS)? (NON_NEGATIVE_NUMBER DOT NON_NEGATIVE_NUMBER? | DOT NON_NEGATIVE_NUMBER) (("e" | "E") (PLUS | MINUS)? NON_NEGATIVE_NUMBER)?
+float_literal ::= (PLUS | MINUS)? NON_NEGATIVE_NUMBER DOT NON_NEGATIVE_NUMBER (("e" | "E") (PLUS | MINUS)? NON_NEGATIVE_NUMBER)?
 
 default_language_decl ::= LANGUAGE element_name_rule

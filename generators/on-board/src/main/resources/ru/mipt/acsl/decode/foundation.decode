@@ -1,0 +1,39 @@
+ru"Модуль базовых типов и компонентов"
+namespace ru.mipt.acsl.foundation
+
+import decode.{ber, u8}
+
+language ru
+
+'Процент'
+en'Percent'
+unit per  display '%'
+
+'Градус'
+en'Gradian'
+unit grad display '°'
+
+'Метр'
+en'Meter'
+unit m
+  display 'м'
+  display en'm'
+
+'Метры в секунду'
+en'Meter per second'
+unit mps
+  display 'м/с'
+  display en'm/s'
+
+'Секунда'
+en'Second'
+unit s
+  display 'с'
+  display en's'
+
+"Глобально-уникальный идентификатор"
+type guid   ber
+
+type string [u8]
+
+type error_code enum ber (OK = 0)

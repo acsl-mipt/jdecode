@@ -1,7 +1,6 @@
 package ru.mipt.acsl.decode.model.domain.impl
 
-import ru.mipt.acsl.decode.model.domain.aliases.LocalizedString
-import ru.mipt.acsl.decode.model.domain.registry.Language
+import ru.mipt.acsl.decode.model.domain.pure.{Language, LocalizedString}
 
 import scala.collection.immutable
 

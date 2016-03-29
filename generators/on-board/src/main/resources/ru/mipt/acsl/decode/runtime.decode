@@ -1,0 +1,63 @@
+ru'Системное пространство имен языка Decode.'
+namespace decode
+
+language ru
+
+'Пустой тип представляющий отсутствующее значение.'
+type void native
+
+'Данные в формате BER, позволяет кодировать значение от 0 до 2<sup>128</sup>.
+Старший бит первого байта кодирует вид формата: если он равен 0, то оставшиеся 7 бит кодируют
+непосредственно значение, если он равен 1, то оставшиеся 7 бит кодируют длину значения в байтах + 1,
+а затем идет непосредственно само значение.'
+type ber native
+
+'Обощенный тип перечисления с тегом.'
+type or<L, R> native
+
+'Обобщенный тип опционального значения.'
+type optional<T> native
+
+'32-битное вещественное число с плавающей точкой'
+en'32-bit floating point'
+type f32 native
+
+'64-битное вещественное число с плавающей точкой'
+en'64-bit floating point'
+type f64 native
+
+'8-битное беззнаковое целое число'
+en'8-bit unsigned integer'
+type u8  native
+
+'8-битное знаковое целое число'
+en'8-bit signed integer'
+type i8  native
+
+'16-битное беззнаковое целое число'
+en'16-bit unsigned integer'
+type u16 native
+
+'16-битное знаковое целое число'
+en'16-bit signed integer'
+type i16 native
+
+'32-битное беззнаковое целое число'
+en'32-bit unsigned integer'
+type u32 native
+
+'32-битное знаковое целое число'
+en'32-bit signed integer'
+type i32 native
+
+'64-битное беззнаковое целое число'
+en'64-bit unsigned integer'
+type u64 native
+
+'64-битное знаковое целое число'
+en'64-bit signed integer'
+type i64 native
+
+'8-битное булево значение'
+en'8-bit boolean'
+type b8  native

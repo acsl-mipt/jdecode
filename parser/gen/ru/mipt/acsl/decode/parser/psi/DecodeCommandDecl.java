@@ -19,6 +19,9 @@ public interface DecodeCommandDecl extends PsiElement {
   @Nullable
   DecodeEntityId getEntityId();
 
+  @NotNull
+  List<DecodeExpr> getExprList();
+
   @Nullable
   DecodeTypeUnitApplication getTypeUnitApplication();
 

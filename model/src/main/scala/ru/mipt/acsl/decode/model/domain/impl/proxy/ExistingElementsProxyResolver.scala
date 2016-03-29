@@ -1,18 +1,18 @@
 package ru.mipt.acsl.decode.model.domain.impl.proxy
 
-import ru.mipt.acsl.decode.model.domain._
-import ru.mipt.acsl.decode.model.domain.impl.{DecodeUtils, LocalizedString}
+import ru.mipt.acsl.decode.model.domain.impl.LocalizedString
 import ru.mipt.acsl.decode.model.domain.impl.types.ArrayType
-import ru.mipt.acsl.decode.model.domain.proxy._
-import ru.mipt.acsl.decode.model.domain.proxy.aliases._
-import ru.mipt.acsl.decode.model.domain.registry.Registry
+import ru.mipt.acsl.decode.model.domain.impl.proxy.path.{ArrayTypePath, ProxyPath, TypeName}
+import ru.mipt.acsl.decode.model.domain.pure.Referenceable
+
+import ru.mipt.acsl.decode.model.domain.impl.registry._
 
 /**
   * Created by metadeus on 20.02.16.
   */
 class ExistingElementsProxyResolver extends DecodeProxyResolver {
   override def resolveElement(registry: Registry, path: ProxyPath): (Option[Referenceable], ResolvingResult) = {
-    val nsOption = DecodeUtils.getNamespaceByFqn(registry, path.ns)
+    val nsOption = registry.findNamespace(path.ns)
     if (nsOption.isEmpty)
       return (None, Result.error(s"namespace not found ${path.ns.asMangledString}"))
     val ns = nsOption.get
@@ -32,7 +32,7 @@ class ExistingElementsProxyResolver extends DecodeProxyResolver {
           case s if s.isEmpty =>
             val arrayType = ArrayType(arrayTypeName, ns, LocalizedString.empty, MaybeProxy(e.baseTypePath), e.arraySize)
             ns.types = ns.types :+ arrayType
-            val result = arrayType.baseType.resolve(registry)
+            val result = arrayType.baseTypeProxy.resolve(registry)
             if (result.hasError)
               (None, result)
             else

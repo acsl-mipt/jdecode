@@ -15,10 +15,9 @@ import com.intellij.psi.impl.source.resolve.reference.{ReferenceProvidersRegistr
 import com.typesafe.scalalogging.LazyLogging
 import org.picocontainer.PicoContainer
 import org.picocontainer.defaults.AbstractComponentAdapter
-import ru.mipt.acsl.decode.model.domain.impl.DecodeUtils
 import ru.mipt.acsl.decode.model.domain.impl.registry.Registry
-import ru.mipt.acsl.decode.model.domain.registry.Registry
 
+import scala.collection.immutable
 import scala.io.Source
 
 /**
@@ -69,20 +68,24 @@ class DecodeSourceProvider extends LazyLogging {
 
   ParserBoilerplate.init()
 
+  def resourceNames(config: DecodeSourceProviderConfiguration): Seq[String] = {
+    val resourcePath = config.resourcePath
+    val resourcesAsStream = getClass.getResourceAsStream(resourcePath)
+    require(resourcesAsStream != null, resourcePath)
+    Source.fromInputStream(resourcesAsStream).getLines().filter(_.endsWith(".decode")).toSeq
+  }
+
   def provide(config: DecodeSourceProviderConfiguration): Registry = {
     val resourcePath = config.resourcePath
     val registry = Registry()
-    val resourcesAsStream = getClass.getResourceAsStream(resourcePath)
-    require(resourcesAsStream != null, resourcePath)
-    registry.rootNamespaces ++= DecodeUtils.mergeRootNamespaces(Source.fromInputStream(resourcesAsStream).getLines().
-      filter(_.endsWith(".decode")).map { name =>
+    registry.rootNamespaces ++= resourceNames(config).map { name =>
       val resource = resourcePath + "/" + name
       logger.debug(s"Parsing $resource...")
       val parserDefinition = new DecodeParserDefinition()
       new DecodeAstTransformer().processFile(new DecodeParser().parse(DecodeParserDefinition.file, new PsiBuilderFactoryImpl().createBuilder(parserDefinition,
         parserDefinition.createLexer(null),
         Source.fromInputStream(getClass.getResourceAsStream(resource)).mkString)))
-    }.toTraversable)
+    }.to[immutable.Seq].mergeRoot
     registry
   }
 }

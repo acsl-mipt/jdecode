@@ -8,9 +8,9 @@ import com.intellij.psi.PsiElement;
 public interface DecodeLiteral extends PsiElement {
 
   @Nullable
-  DecodeFloatLiteral getFloatLiteral();
+  DecodeBoolLiteral getBoolLiteral();
 
   @Nullable
-  PsiElement getNonNegativeNumber();
+  DecodeNumericLiteral getNumericLiteral();
 
 }

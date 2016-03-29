@@ -1,0 +1,19 @@
+package ru.mipt.acsl.decode.model.domain.impl.proxy.path
+
+import ru.mipt.acsl.decode.model.domain.impl.naming.ElementName
+import ru.mipt.acsl.decode.model.domain.pure.naming.{ElementName, Fqn}
+
+/**
+  * @author Artem Shein
+  */
+class ProxyPath(val ns: Fqn, val element: ProxyElementName) {
+  def mangledName: ElementName = ElementName.newFromMangledName(s"${ns.asMangledString}.${element.mangledName.asMangledString}")
+
+  override def toString: String = s"ProxyPath{${ns.asMangledString}.$element}"
+}
+
+object ProxyPath {
+  def apply(nsFqn: Fqn, name: ElementName): ProxyPath = new ProxyPath(nsFqn, TypeName(name))
+
+  def apply(nsFqn: Fqn, element: ProxyElementName): ProxyPath = new ProxyPath(nsFqn, element)
+}
