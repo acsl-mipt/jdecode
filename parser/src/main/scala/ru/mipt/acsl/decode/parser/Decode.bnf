@@ -1,6 +1,5 @@
 {
     parserClass = "ru.mipt.acsl.decode.parser.DecodeParser"
-    parserUtilClass="ru.mipt.acsl.decode.parser.DecodeParserUtil"
 
     extends = "com.intellij.extapi.psi.ASTWrapperPsiElement"
 
@@ -162,7 +161,9 @@ length_from ::= NON_NEGATIVE_NUMBER
 
 length_to ::= NON_NEGATIVE_NUMBER
 
-type_decl_body ::= type_application | enum_type_decl | struct_type_decl | native_type_decl
+range ::= RANGE numeric_literal DOT DOT numeric_literal
+
+type_decl_body ::= type_application range? | enum_type_decl | struct_type_decl | native_type_decl
 
 native_type_decl ::= NATIVE
 
@@ -174,7 +175,11 @@ enum_type_values ::= enum_type_value (COMMA enum_type_value)* COMMA?
 
 enum_type_value ::= element_info? element_name_rule EQ_SIGN literal
 
-literal ::= float_literal | NON_NEGATIVE_NUMBER | TRUE | FALSE
+numeric_literal ::= float_literal | NON_NEGATIVE_NUMBER
+
+bool_literal ::= TRUE | FALSE
+
+literal ::= numeric_literal | bool_literal
 
 float_literal ::= (PLUS | MINUS)? (NON_NEGATIVE_NUMBER DOT NON_NEGATIVE_NUMBER? | DOT NON_NEGATIVE_NUMBER) (("e" | "E") (PLUS | MINUS)? NON_NEGATIVE_NUMBER)?
 
