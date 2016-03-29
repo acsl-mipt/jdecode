@@ -51,6 +51,7 @@ public interface DecodeTypes {
   IElementType OPTIONAL = new DecodeElementType("OPTIONAL");
   IElementType PARAMETER_DECL = new DecodeElementType("PARAMETER_DECL");
   IElementType PARAMETER_ELEMENT = new DecodeElementType("PARAMETER_ELEMENT");
+  IElementType PARAMETER_PATH_ELEMENT = new DecodeElementType("PARAMETER_PATH_ELEMENT");
   IElementType RANGE_DECL = new DecodeElementType("RANGE_DECL");
   IElementType RANGE_UPPER_BOUND_DECL = new DecodeElementType("RANGE_UPPER_BOUND_DECL");
   IElementType SCRIPT_DECL = new DecodeElementType("SCRIPT_DECL");
@@ -263,6 +264,9 @@ public interface DecodeTypes {
       }
       else if (type == PARAMETER_ELEMENT) {
         return new DecodeParameterElementImpl(node);
+      }
+      else if (type == PARAMETER_PATH_ELEMENT) {
+        return new DecodeParameterPathElementImpl(node);
       }
       else if (type == RANGE_DECL) {
         return new DecodeRangeDeclImpl(node);

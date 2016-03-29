@@ -152,6 +152,9 @@ public class DecodeParser implements PsiParser, LightPsiParser {
     else if (t == PARAMETER_ELEMENT) {
       r = parameter_element(b, 0);
     }
+    else if (t == PARAMETER_PATH_ELEMENT) {
+      r = parameter_path_element(b, 0);
+    }
     else if (t == RANGE_DECL) {
       r = range_decl(b, 0);
     }
@@ -1507,7 +1510,7 @@ public class DecodeParser implements PsiParser, LightPsiParser {
   }
 
   /* ********************************************************** */
-  // element_name_rule (range_decl | DOT element_name_rule)*
+  // element_name_rule parameter_path_element*
   public static boolean parameter_element(PsiBuilder b, int l) {
     if (!recursion_guard_(b, l, "parameter_element")) return false;
     if (!nextTokenIs(b, "<parameter element>", ELEMENT_NAME_TOKEN, ESCAPED_NAME)) return false;
@@ -1519,32 +1522,34 @@ public class DecodeParser implements PsiParser, LightPsiParser {
     return r;
   }
 
-  // (range_decl | DOT element_name_rule)*
+  // parameter_path_element*
   private static boolean parameter_element_1(PsiBuilder b, int l) {
     if (!recursion_guard_(b, l, "parameter_element_1")) return false;
     int c = current_position_(b);
     while (true) {
-      if (!parameter_element_1_0(b, l + 1)) break;
+      if (!parameter_path_element(b, l + 1)) break;
       if (!empty_element_parsed_guard_(b, "parameter_element_1", c)) break;
       c = current_position_(b);
     }
     return true;
   }
 
+  /* ********************************************************** */
   // range_decl | DOT element_name_rule
-  private static boolean parameter_element_1_0(PsiBuilder b, int l) {
-    if (!recursion_guard_(b, l, "parameter_element_1_0")) return false;
+  public static boolean parameter_path_element(PsiBuilder b, int l) {
+    if (!recursion_guard_(b, l, "parameter_path_element")) return false;
+    if (!nextTokenIs(b, "<parameter path element>", DOT, LEFT_BRACKET)) return false;
     boolean r;
-    Marker m = enter_section_(b);
+    Marker m = enter_section_(b, l, _NONE_, PARAMETER_PATH_ELEMENT, "<parameter path element>");
     r = range_decl(b, l + 1);
-    if (!r) r = parameter_element_1_0_1(b, l + 1);
-    exit_section_(b, m, null, r);
+    if (!r) r = parameter_path_element_1(b, l + 1);
+    exit_section_(b, l, m, r, false, null);
     return r;
   }
 
   // DOT element_name_rule
-  private static boolean parameter_element_1_0_1(PsiBuilder b, int l) {
-    if (!recursion_guard_(b, l, "parameter_element_1_0_1")) return false;
+  private static boolean parameter_path_element_1(PsiBuilder b, int l) {
+    if (!recursion_guard_(b, l, "parameter_path_element_1")) return false;
     boolean r;
     Marker m = enter_section_(b);
     r = consumeToken(b, DOT);

@@ -28,14 +28,14 @@ public class DecodeParameterElementImpl extends ASTWrapperPsiElement implements 
 
   @Override
   @NotNull
-  public List<DecodeElementNameRule> getElementNameRuleList() {
-    return PsiTreeUtil.getChildrenOfTypeAsList(this, DecodeElementNameRule.class);
+  public DecodeElementNameRule getElementNameRule() {
+    return findNotNullChildByClass(DecodeElementNameRule.class);
   }
 
   @Override
   @NotNull
-  public List<DecodeRangeDecl> getRangeDeclList() {
-    return PsiTreeUtil.getChildrenOfTypeAsList(this, DecodeRangeDecl.class);
+  public List<DecodeParameterPathElement> getParameterPathElementList() {
+    return PsiTreeUtil.getChildrenOfTypeAsList(this, DecodeParameterPathElement.class);
   }
 
 }

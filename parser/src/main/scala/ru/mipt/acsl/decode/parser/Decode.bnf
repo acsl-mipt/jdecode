@@ -157,7 +157,9 @@ range_upper_bound_decl ::= non_negative_integer_literal | STAR
 
 range_decl ::= LEFT_BRACKET (non_negative_integer_literal (DOTS range_upper_bound_decl)? | STAR) RIGHT_BRACKET
 
-parameter_element ::= element_name_rule (range_decl | DOT element_name_rule)*
+parameter_path_element ::= range_decl | DOT element_name_rule
+
+parameter_element ::= element_name_rule parameter_path_element*
 
 element_info ::= string_value+
 

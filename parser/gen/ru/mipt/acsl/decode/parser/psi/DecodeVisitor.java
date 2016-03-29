@@ -179,6 +179,10 @@ public class DecodeVisitor extends PsiElementVisitor {
     visitPsiElement(o);
   }
 
+  public void visitParameterPathElement(@NotNull DecodeParameterPathElement o) {
+    visitPsiElement(o);
+  }
+
   public void visitRangeDecl(@NotNull DecodeRangeDecl o) {
     visitPsiElement(o);
   }
