@@ -10,4 +10,7 @@ import ru.mipt.acsl.decode.model.domain.pure.naming.Fqn
   */
 case class CGeneratorConfiguration(outputDir: File, registry: Registry, rootComponentFqn: String,
                                    namespaceAliases: Map[Fqn, Option[Fqn]] = Map.empty,
-                                   prologueEpiloguePath: Option[String] = None, isSingleton: Boolean = false)
+                                   sources: Seq[GeneratorSource] = Seq.empty,
+                                   prologue: FileGeneratorConfiguration = FileGeneratorConfiguration(),
+                                   epilogue: FileGeneratorConfiguration = FileGeneratorConfiguration(),
+                                   isSingleton: Boolean = false)

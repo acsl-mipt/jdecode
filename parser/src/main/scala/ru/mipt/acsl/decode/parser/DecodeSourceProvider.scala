@@ -68,13 +68,17 @@ class DecodeSourceProvider extends LazyLogging {
 
   ParserBoilerplate.init()
 
+  def resourceNames(config: DecodeSourceProviderConfiguration): Seq[String] = {
+    val resourcePath = config.resourcePath
+    val resourcesAsStream = getClass.getResourceAsStream(resourcePath)
+    require(resourcesAsStream != null, resourcePath)
+    Source.fromInputStream(resourcesAsStream).getLines().filter(_.endsWith(".decode")).toSeq
+  }
+
   def provide(config: DecodeSourceProviderConfiguration): Registry = {
     val resourcePath = config.resourcePath
     val registry = Registry()
-    val resourcesAsStream = getClass.getResourceAsStream(resourcePath)
-    require(resourcesAsStream != null, resourcePath)
-    registry.rootNamespaces ++= Source.fromInputStream(resourcesAsStream).getLines().
-      filter(_.endsWith(".decode")).map { name =>
+    registry.rootNamespaces ++= resourceNames(config).map { name =>
       val resource = resourcePath + "/" + name
       logger.debug(s"Parsing $resource...")
       val parserDefinition = new DecodeParserDefinition()

@@ -19,6 +19,7 @@ import ru.mipt.acsl.generator.c.ast._
 import ru.mipt.acsl.generator.c.ast.implicits._
 
 import scala.collection.{immutable, mutable}
+import scala.io.Source
 
 class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[CGeneratorConfiguration] with LazyLogging {
 
@@ -124,6 +125,8 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
 
   private def generateRootComponent(comp: Component) {
     logger.debug(s"Generating component ${comp.name.asMangledString}")
+    provideSources()
+    generatePrologueEpilogue()
     config.isSingleton match {
       case true =>
         generateSingleton(comp)
@@ -133,6 +136,27 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
         comp.collectNamespaces(nsSet)
         nsSet.foreach(generateNs)
         allComponentsSetForComponent(comp).foreach(generateComponent)
+    }
+  }
+
+  private def provideSources(): Unit = {
+    if (config.sources.isEmpty)
+      return
+    val dir = new File(config.outputDir, "decode/")
+    dir.mkdirs()
+    config.sources.foreach(s => new File(dir, new File(s.name).getName).write(s.source))
+  }
+
+  private def generatePrologueEpilogue(): Unit = {
+    generateFile(config.prologue.isActive, prologuePath, config.prologue.contents)
+    generateFile(config.epilogue.isActive, epiloguePath, config.epilogue.contents)
+  }
+
+  private def generateFile(isActive: Boolean, filePath: String, contents: Option[String]): Unit = {
+    if (isActive) for (c <- contents) {
+      val f = new io.File(config.outputDir, filePath)
+      f.getParentFile.mkdirs()
+      f.write(c)
     }
   }
 
@@ -164,7 +188,7 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
 
     val methods = component.allMethods ++ component.allSubComponentsMethods
 
-    hFile.write((CEol +: appendPrologEpilog((typeIncludes(component) ++
+    hFile.write((CEol +: appendPrologueEpilogue((typeIncludes(component) ++
       "USER command implementation functions, MUST BE implemented".comment ++
       component.commandMethodImplDefs.flatMap(m => Seq(CEol, m)).eol ++
       "USER parameter implementation functions, MUST BE implemented".comment ++
@@ -198,7 +222,7 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
 
     val externedCFile = (forwardFuncTableDecl.eol.eol ++ componentTypeForwardDecl.eol.eol ++
       Seq(componentType) ++ CSemicolon.eol ++ methods.flatMap(m => m.definition.eol)).externC
-    hFile.writeIfNotEmptyWithComment((CEol +: appendPrologEpilog(imports ++ externedCFile))
+    hFile.writeIfNotEmptyWithComment((CEol +: appendPrologueEpilogue(imports ++ externedCFile))
       .protectDoubleInclude(dirPathForNs(component.namespace) + hFileName),
       s"Component ${component.name.asMangledString} interface")
     cFile.writeIfNotEmptyWithComment(CInclude(includePathForComponent(component)).eol.eol ++
@@ -246,10 +270,19 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
   private def includePathForComponent(comp: Component): String =
     includePathForNsFileName(comp.namespace, comp.prefixedTypeName + headerExt)
 
-  private def appendPrologEpilog(file: CAstElements): CAstElements = {
-    val prefix = config.prologueEpiloguePath.map(_ + io.File.separator).getOrElse("")
-    CInclude(prefix + "photon_prologue.h").eol.eol ++ file ++ Seq(CEol) ++
-      CInclude(prefix + "photon_epilogue.h").eol.eol
+  private def prologuePath: String = config.prologue.path.getOrElse("photon_prologue.h")
+  private def epiloguePath: String = config.epilogue.path.getOrElse("photon_epilogue.h")
+
+  private def appendPrologueEpilogue(file: CAstElements): CAstElements = {
+    (if (config.prologue.isActive)
+      CInclude(prologuePath).eol.eol
+    else
+      CAstElements()) ++
+      file ++
+      (if (config.epilogue.isActive)
+        Seq(CEol) ++ CInclude(epiloguePath).eol.eol
+      else
+        CAstElements())
   }
 
   private def generateTypeSeparateFiles(t: DecodeType, nsDir: io.File): Unit = if (!t.isNative) {
@@ -259,7 +292,7 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
     val (hFile, cFile) = (new io.File(nsDir, hFileName), new io.File(nsDir, cFileName))
     val (h, c) = generateType(t, nsDir)
     if (h.nonEmpty)
-      hFile.writeIfNotEmptyWithComment((CEol +: appendPrologEpilog(h).eol).protectDoubleInclude(relPathForType(t)),
+      hFile.writeIfNotEmptyWithComment((CEol +: appendPrologueEpilogue(h).eol).protectDoubleInclude(relPathForType(t)),
         "Type header")
     else
       logger.debug(s"Omitting type ${t.name.asMangledString}")
@@ -1183,10 +1216,18 @@ object CSourcesGenerator {
     def const: CConstType = CConstType(ct)
   }
 
-  implicit class RichFile(val file: io.File) {
+  implicit class FileHelper(val file: io.File) {
     def write(contents: CAstElements) {
-      for (typeHeaderStream <- managed(new OutputStreamWriter(new FileOutputStream(file)))) {
-        contents.generate(CGenState(typeHeaderStream))
+      for (os <- managed(new OutputStreamWriter(new FileOutputStream(file)))) {
+        contents.generate(CGenState(os))
+      }
+    }
+
+    def write(source: Source): Unit = write(source.mkString)
+
+    def write(contents: String): Unit = {
+      for (os <- managed(new OutputStreamWriter(new FileOutputStream(file)))) {
+        os.write(contents)
       }
     }
 
