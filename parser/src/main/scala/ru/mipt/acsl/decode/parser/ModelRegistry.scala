@@ -10,11 +10,14 @@ import ru.mipt.acsl.decode.modeling.ErrorLevel
 object ModelRegistry extends LazyLogging {
 
   val provider = new DecodeSourceProvider()
-  val config = new DecodeSourceProviderConfiguration("/ru/mipt/acsl/decode")
+  val config = new DecodeSourceProviderConfiguration("ru/mipt/acsl/decode")
 
-  val registry: Registry = provider.provide(config)
+  def registry(clsLoader: ClassLoader = getClass.getClassLoader): Registry = {
+    val registry = provider.provide(config, clsLoader)
+    val resolvingResult = registry.resolve()
+    if (resolvingResult.exists(_.level == ErrorLevel))
+      resolvingResult.foreach(msg => logger.error(msg.text))
+    registry
+  }
 
-  private val resolvingResult = registry.resolve()
-  if (resolvingResult.exists(_.level == ErrorLevel))
-    resolvingResult.foreach(msg => logger.error(msg.text))
 }

@@ -22,7 +22,7 @@ import scala.util.Random
 class CppGeneratorConfiguration(val outputDir: io.File, val registry: Registry, val rootComponentFqn: String,
                                 val namespaceAlias: Map[Fqn, Fqn] = Map(), val usePragmaOnce: Boolean = true)
 
-object CppSourcesGenerator {
+object CppSourceGenerator {
   private val voidType = CppTypeApplication("void")
   private val stdSizeTType = CppTypeApplication("std::size_t")
   private val stdStringType = CppTypeApplication("std::string")
@@ -40,9 +40,9 @@ object CppSourcesGenerator {
 
 }
 
-class CppSourcesGenerator(val config: CppGeneratorConfiguration) extends Generator[CppGeneratorConfiguration] with LazyLogging {
+class CppSourceGenerator(val config: CppGeneratorConfiguration) extends Generator[CppGeneratorConfiguration] with LazyLogging {
 
-  import CppSourcesGenerator._
+  import CppSourceGenerator._
 
   private var nextComponentId = 0
   private val componentByComponentId = mutable.HashMap.empty[Int, Component]

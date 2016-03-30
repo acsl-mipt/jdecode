@@ -1,5 +1,8 @@
 package ru.mipt.acsl.decode.parser
 
+import java.net.URL
+import java.util
+
 import com.intellij.lang.impl.PsiBuilderFactoryImpl
 import com.intellij.lang.{DefaultASTFactory, DefaultASTFactoryImpl, LanguageParserDefinitions, PsiBuilderFactory}
 import com.intellij.mock.{MockApplicationEx, MockProjectEx}
@@ -15,10 +18,9 @@ import com.intellij.psi.impl.source.resolve.reference.{ReferenceProvidersRegistr
 import com.typesafe.scalalogging.LazyLogging
 import org.picocontainer.PicoContainer
 import org.picocontainer.defaults.AbstractComponentAdapter
-import org.scalactic.Requirements._
 import ru.mipt.acsl.decode.model.domain.impl.registry.Registry
 
-import scala.collection.immutable
+import scala.collection.{immutable, mutable}
 import scala.io.Source
 
 /**
@@ -69,24 +71,27 @@ class DecodeSourceProvider extends LazyLogging {
 
   ParserBoilerplate.init()
 
-  def resourceNames(config: DecodeSourceProviderConfiguration): Seq[String] = {
+  def resourceNames(config: DecodeSourceProviderConfiguration, clsLoader: ClassLoader = getClass.getClassLoader): Seq[String] = {
     val resourcePath = config.resourcePath
-    val resourcesAsStream = getClass.getResourceAsStream(resourcePath)
-    require(resourcesAsStream != null, resourcePath)
-    val result: Seq[String] = Source.fromInputStream(resourcesAsStream).getLines().filter(_.endsWith(".decode")).toSeq
-    require(result.nonEmpty)
-    result.foreach(println)
-    result
+    val resources = clsLoader.getResources(resourcePath)
+    val decodeFiles = mutable.Buffer.empty[String]
+    while (resources.hasMoreElements) {
+      val resUrl = resources.nextElement()
+      decodeFiles ++= Source.fromInputStream(resUrl.openStream())
+        .getLines().filter(_.endsWith(".decode"))
+    }
+    decodeFiles
   }
 
-  def provide(config: DecodeSourceProviderConfiguration): Registry = {
+  def provide(config: DecodeSourceProviderConfiguration, clsLoader: ClassLoader = getClass.getClassLoader): Registry = {
     val resourcePath = config.resourcePath
     val registry = Registry()
-    registry.rootNamespaces ++= resourceNames(config).map { name =>
-      val resource = resourcePath + "/" + name
+    registry.rootNamespaces ++= resourceNames(config, clsLoader).map { name =>
+      val resource = "/" + resourcePath + "/" + name
       logger.debug(s"Parsing $resource...")
       val parserDefinition = new DecodeParserDefinition()
-      new DecodeAstTransformer().processFile(new DecodeParser().parse(DecodeParserDefinition.file, new PsiBuilderFactoryImpl().createBuilder(parserDefinition,
+      new DecodeAstTransformer().processFile(new DecodeParser().parse(DecodeParserDefinition.file,
+        new PsiBuilderFactoryImpl().createBuilder(parserDefinition,
         parserDefinition.createLexer(null),
         Source.fromInputStream(getClass.getResourceAsStream(resource)).mkString)))
     }.to[immutable.Seq].mergeRoot

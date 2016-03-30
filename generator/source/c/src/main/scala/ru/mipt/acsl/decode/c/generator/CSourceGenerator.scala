@@ -21,9 +21,9 @@ import ru.mipt.acsl.generator.c.ast.implicits._
 import scala.collection.{immutable, mutable}
 import scala.io.Source
 
-class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[CGeneratorConfiguration] with LazyLogging {
+class CSourceGenerator(val config: CGeneratorConfiguration) extends Generator[CGeneratorConfiguration] with LazyLogging {
 
-  import CSourcesGenerator._
+  import CSourceGenerator._
 
   override def getConfiguration: CGeneratorConfiguration = config
 
@@ -1173,7 +1173,7 @@ class CSourcesGenerator(val config: CGeneratorConfiguration) extends Generator[C
 
 }
 
-object CSourcesGenerator {
+object CSourceGenerator {
 
   class WithComponent[T](val component: Component, val _2: T)
 

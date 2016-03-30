@@ -3,7 +3,7 @@ package ru.mipt.acsl.geotarget
 import java.io.File
 
 import com.typesafe.scalalogging.LazyLogging
-import ru.mipt.acsl.decode.c.generator.{CGeneratorConfiguration, CSourcesGenerator, FileGeneratorConfiguration, GeneratorSource}
+import ru.mipt.acsl.decode.c.generator.{CGeneratorConfiguration, CSourceGenerator$, FileGeneratorConfiguration, GeneratorSource}
 import ru.mipt.acsl.decode.model.domain.impl.naming.Fqn
 import ru.mipt.acsl.decode.model.domain.pure.naming.Fqn
 import ru.mipt.acsl.decode.parser.ModelRegistry
@@ -14,13 +14,13 @@ import scala.io.Source
 /**
   * @author Artem Shein
   */
-object OnBoardCSourcesGenerator extends LazyLogging {
+object OnBoardCSourceGenerator extends LazyLogging {
 
   def fqn(str: String): Fqn = Fqn.newFromSource(str)
 
   def main(args : Array[String]) = {
     val config = new CGeneratorConfiguration(new File("gen/"),
-      ModelRegistry.registry,
+      ModelRegistry.registry(getClass.getClassLoader),
       "ru.mipt.acsl.photon.Main",
       HashMap(
         fqn("decode") -> Some(fqn("photon.decode")),
@@ -34,7 +34,7 @@ object OnBoardCSourcesGenerator extends LazyLogging {
         fqn("ru.mipt.acsl.segmentation") -> Some(fqn("photon.segmentation")),
         fqn("ru.mipt.acsl.tm") -> Some(fqn("photon.tm"))),
       sources = ModelRegistry.provider.resourceNames(ModelRegistry.config).map(r =>
-        GeneratorSource(r, Source.fromInputStream(getClass.getResourceAsStream(
+        GeneratorSource(r, Source.fromInputStream(getClass.getResourceAsStream("/" +
           ModelRegistry.config.resourcePath + "/" + r)))),
       isSingleton = true,
       prologue = FileGeneratorConfiguration(isActive = true, path = Some("photon/prologue.h"),
@@ -62,6 +62,6 @@ object OnBoardCSourcesGenerator extends LazyLogging {
             |#endif
           """.stripMargin)))
     logger.debug(s"Generating on-board sources to ${config.outputDir.getAbsolutePath}...")
-    new CSourcesGenerator(config).generate()
+    new CSourceGenerator(config).generate()
   }
 }
