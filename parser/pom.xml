@@ -35,7 +35,6 @@
             <scope>system</scope>
             <systemPath>${project.basedir}/lib/light-psi-all.jar</systemPath>
         </dependency>
-
     </dependencies>
 
     <build>

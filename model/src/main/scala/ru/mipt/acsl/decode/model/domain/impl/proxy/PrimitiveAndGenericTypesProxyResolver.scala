@@ -14,7 +14,6 @@ import scala.collection.mutable
   * Created by metadeus on 20.02.16.
   */
 class PrimitiveAndGenericTypesProxyResolver extends DecodeProxyResolver {
-  private val genericTypeSpecializedByTypeNameMap: mutable.Map[ElementName, GenericTypeSpecialized] = mutable.HashMap.empty
 
   override def resolveElement(registry: Registry, path: ProxyPath): (Option[Referenceable], ResolvingResult) = {
     assert(Fqn.SystemNamespace.size == 1, "not implemented")

@@ -1,5 +1,6 @@
 {
     parserClass = "ru.mipt.acsl.decode.parser.DecodeParser"
+  parserUtilClass="ru.mipt.acsl.decode.parser.DecodeParserUtil"
 
     extends = "com.intellij.extapi.psi.ASTWrapperPsiElement"
 

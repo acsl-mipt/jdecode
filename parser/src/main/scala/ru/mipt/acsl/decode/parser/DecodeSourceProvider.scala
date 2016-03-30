@@ -15,6 +15,7 @@ import com.intellij.psi.impl.source.resolve.reference.{ReferenceProvidersRegistr
 import com.typesafe.scalalogging.LazyLogging
 import org.picocontainer.PicoContainer
 import org.picocontainer.defaults.AbstractComponentAdapter
+import org.scalactic.Requirements._
 import ru.mipt.acsl.decode.model.domain.impl.registry.Registry
 
 import scala.collection.immutable
@@ -72,7 +73,10 @@ class DecodeSourceProvider extends LazyLogging {
     val resourcePath = config.resourcePath
     val resourcesAsStream = getClass.getResourceAsStream(resourcePath)
     require(resourcesAsStream != null, resourcePath)
-    Source.fromInputStream(resourcesAsStream).getLines().filter(_.endsWith(".decode")).toSeq
+    val result: Seq[String] = Source.fromInputStream(resourcesAsStream).getLines().filter(_.endsWith(".decode")).toSeq
+    require(result.nonEmpty)
+    result.foreach(println)
+    result
   }
 
   def provide(config: DecodeSourceProviderConfiguration): Registry = {

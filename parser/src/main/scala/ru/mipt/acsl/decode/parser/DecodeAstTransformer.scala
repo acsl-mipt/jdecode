@@ -3,14 +3,14 @@ package ru.mipt.acsl.decode.parser
 import com.intellij.lang.ASTNode
 import com.intellij.psi.PsiWhiteSpace
 import ru.mipt.acsl.decode.model.domain.impl.LocalizedString
-import ru.mipt.acsl.decode.model.domain.impl.component.message.{EventMessage, MessageParameter, StatusMessage}
+import ru.mipt.acsl.decode.model.domain.impl.component.message.{ElementRange, EventMessage, MessageParameter, StatusMessage}
 import ru.mipt.acsl.decode.model.domain.impl.component.{Command, Component, ComponentRef}
 import ru.mipt.acsl.decode.model.domain.impl.expr.{FloatLiteral, IntLiteral}
 import ru.mipt.acsl.decode.model.domain.impl.naming.{ElementName, Fqn, Namespace}
 import ru.mipt.acsl.decode.model.domain.impl.proxy.MaybeProxy
 import ru.mipt.acsl.decode.model.domain.impl.registry.{DecodeUnit, Language}
 import ru.mipt.acsl.decode.model.domain.impl.types._
-import ru.mipt.acsl.decode.model.domain.pure.component.messages.StatusMessage
+import ru.mipt.acsl.decode.model.domain.pure.component.messages.{MessageParameterPath, MessageParameterPathElement, StatusMessage}
 import ru.mipt.acsl.decode.model.domain.pure.naming.{ElementName, Fqn}
 import ru.mipt.acsl.decode.model.domain.pure.types.EnumConstant
 import ru.mipt.acsl.decode.model.domain.pure.{Language, LocalizedString, Referenceable}
@@ -137,14 +137,26 @@ class DecodeAstTransformer {
     StatusMessage(c, elementName(sm.getElementNameRule), id(Option(sm.getEntityId)),
       elementInfo(Option(sm.getElementInfo)),
       sm.getStatusMessageParametersDecl.getParameterDeclList.map(p =>
-        MessageParameter(p.getParameterElement.getText, elementInfo(Option(p.getElementInfo)))))
+        MessageParameter(parameterPath(p.getParameterElement), elementInfo(Option(p.getElementInfo)))))
+
+  private def parameterPath(el: DecodeParameterElement): MessageParameterPath =
+    Left(elementName(el.getElementNameRule)) +:
+      el.getParameterPathElementList.map(parameterPathElement).to[immutable.Seq]
+
+  private def parameterPathElement(el: DecodeParameterPathElement): MessageParameterPathElement = {
+    val rangeDecl = el.getRangeDecl
+    Option(el.getElementNameRule).map(e => Left(elementName(e)))
+      .getOrElse(Right(ElementRange(
+        Option(rangeDecl.getNonNegativeIntegerLiteral).map(_.getText.toLong).getOrElse(0),
+        Option(rangeDecl.getRangeUpperBoundDecl).map(_.getText.toLong))))
+  }
 
   private def eventMessage(em: DecodeEventMessage, c: Component): EventMessage =
     EventMessage(c, elementName(em.getElementNameRule), id(Option(em.getEntityId)),
       elementInfo(Option(em.getElementInfo)),
       em.getEventMessageParametersDecl.getEventParameterDeclList.map { p =>
         Option(p.getParameterElement)
-          .map(mp => Left(MessageParameter(mp.getText, elementInfo(Option(p.getElementInfo)))))
+          .map(mp => Left(MessageParameter(parameterPath(mp), elementInfo(Option(p.getElementInfo)))))
           .getOrElse {
             val _var = p.getVarParameterElement
             Right(Parameter(elementName(_var.getElementNameRule), elementInfo(Option(p.getElementInfo)),

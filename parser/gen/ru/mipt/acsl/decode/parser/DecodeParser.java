@@ -4,7 +4,7 @@ package ru.mipt.acsl.decode.parser;
 import com.intellij.lang.PsiBuilder;
 import com.intellij.lang.PsiBuilder.Marker;
 import static ru.mipt.acsl.decode.parser.psi.DecodeTypes.*;
-import static com.intellij.lang.parser.GeneratedParserUtilBase.*;
+import static ru.mipt.acsl.decode.parser.DecodeParserUtil.*;
 import com.intellij.psi.tree.IElementType;
 import com.intellij.lang.ASTNode;
 import com.intellij.psi.tree.TokenSet;

@@ -17,12 +17,13 @@
         <module>model</module>
         <module>sqlite-persistence</module>
         <module>parser</module>
-        <module>generators/on-board</module>
-        <module>generators/docs</module>
-        <module>generators/sources/java</module>
-        <module>generators/sources/c</module>
-        <module>generators/sources/cpp</module>
-        <module>generators/sources/mavlink</module>
+        <module>generator/on-board</module>
+        <module>generator/doc</module>
+        <module>generator/source/java</module>
+        <module>generator/source/c</module>
+        <module>generator/source/cpp</module>
+        <module>generator/source/mavlink</module>
+        <module>test/parser</module>
     </modules>
 
     <properties>
@@ -115,6 +116,17 @@
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
             <version>1.1.2</version>
+        </dependency>
+        <dependency>
+            <groupId>org.scalactic</groupId>
+            <artifactId>scalactic_${scala.binary.version}</artifactId>
+            <version>3.0.0-M15</version>
+        </dependency>
+        <dependency>
+            <groupId>org.scalatest</groupId>
+            <artifactId>scalatest_${scala.binary.version}</artifactId>
+            <version>3.0.0-M15</version>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 
