@@ -2,7 +2,7 @@ package ru.mipt.acsl.decode.model.domain.impl.component.message
 
 import ru.mipt.acsl.decode.model.domain.impl.types.AbstractHasInfo
 import ru.mipt.acsl.decode.model.domain.pure.LocalizedString
-import ru.mipt.acsl.decode.model.domain.pure.component.messages.TmMessage
+import ru.mipt.acsl.decode.model.domain.pure.component.message.TmMessage
 
 /**
   * @author Artem Shein

@@ -1,4 +1,4 @@
-package ru.mipt.acsl.decode.model.domain.pure.component.messages
+package ru.mipt.acsl.decode.model.domain.pure.component.message
 
 import scala.collection.immutable
 

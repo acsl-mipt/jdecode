@@ -1,0 +1,25 @@
+namespace test
+
+import decode.{u8, ber}
+
+type bottom_struct struct (uVar: [u8], uFixed: [u8, 1..3])
+
+type sub_struct struct (bottom: [bottom_struct], bb: [sub_struct, 4..10])
+
+type top_struct struct (sub: [sub_struct, 5..20], c: [[ber, 4..6], 8..16])
+
+component TestComp
+{
+
+    parameters
+    (
+        param1: top_struct
+    )
+
+    status allParams
+    (
+        param1.sub[4..7].bottom[*].uVar,
+        param1.sub[0].bottom[0..1].uFixed[1..2],
+        param1.c[0..3][2..3]
+    )
+}

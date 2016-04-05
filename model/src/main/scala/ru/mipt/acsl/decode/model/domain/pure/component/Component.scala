@@ -1,6 +1,6 @@
 package ru.mipt.acsl.decode.model.domain.pure.component
 
-import ru.mipt.acsl.decode.model.domain.pure.component.messages.{EventMessage, StatusMessage}
+import ru.mipt.acsl.decode.model.domain.pure.component.message.{EventMessage, StatusMessage}
 import ru.mipt.acsl.decode.model.domain.pure.types.StructType
 import ru.mipt.acsl.decode.model.domain.pure.{HasInfo, HasOptionId, NamespaceAware, Referenceable}
 

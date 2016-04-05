@@ -56,4 +56,9 @@ component Identification id = 0
   (
     fullId
   )
+
+  status deviceComponentNumbers
+  (
+    fullId.deviceComponentGuidPairs[*].number
+  )
 }

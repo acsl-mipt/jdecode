@@ -6,7 +6,7 @@ import ru.mipt.acsl.decode.model.domain.impl.proxy.MaybeProxy
 import ru.mipt.acsl.decode.model.domain.impl.types.StructType
 import ru.mipt.acsl.decode.model.domain.pure
 import ru.mipt.acsl.decode.model.domain.pure.LocalizedString
-import ru.mipt.acsl.decode.model.domain.pure.component.messages.StatusMessage
+import ru.mipt.acsl.decode.model.domain.pure.component.message.StatusMessage
 import ru.mipt.acsl.decode.model.domain.pure.naming.ElementName
 
 import scala.collection.immutable

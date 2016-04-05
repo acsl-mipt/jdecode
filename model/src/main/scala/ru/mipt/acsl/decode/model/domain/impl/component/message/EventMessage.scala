@@ -11,15 +11,15 @@ import ru.mipt.acsl.decode.model.domain.pure.LocalizedString
 /**
   * @author Artem Shein
   */
-trait EventMessage extends pure.component.messages.EventMessage with HasBaseType {
+trait EventMessage extends pure.component.message.EventMessage with HasBaseType {
   def baseTypeProxy: MaybeProxy[DecodeType]
   override def baseType: DecodeType = baseTypeProxy.obj
-  override def fields: Seq[Either[pure.component.messages.MessageParameter, Parameter]]
+  override def fields: Seq[Either[pure.component.message.MessageParameter, Parameter]]
 }
 
 object EventMessage {
   def apply(component: Component, name: ElementName, id: Option[Int], info: LocalizedString,
-            fields: Seq[Either[pure.component.messages.MessageParameter, Parameter]],
+            fields: Seq[Either[pure.component.message.MessageParameter, Parameter]],
             baseTypeProxy: MaybeProxy[DecodeType]): EventMessage =
     new EventMessageImpl(component, name, id, info, fields, baseTypeProxy)
 }

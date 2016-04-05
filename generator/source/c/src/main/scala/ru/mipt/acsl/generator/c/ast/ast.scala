@@ -1,6 +1,7 @@
 package ru.mipt.acsl.generator.c.ast
 
 import ru.mipt.acsl.generation.Generatable
+import ru.mipt.acsl.generator.c.ast.implicits.CAstElements
 
 import scala.collection.immutable
 
@@ -11,8 +12,9 @@ import scala.collection.immutable
 trait CAstElement extends Generatable[CGenState]
 
 object CAstElements {
-  def apply(elements: CAstElement*) = immutable.Seq(elements: _*)
-  def apply() = immutable.Seq.empty[CAstElement]
+  def apply(elements: CAstElement*): CAstElements = Seq(elements: _*)
+  def apply(): CAstElements = Seq.empty
+  def empty: CAstElements = Seq.empty
 }
 
 package object implicits {
@@ -114,7 +116,7 @@ trait CType extends CExpression {
 
 abstract class CNamedType(val name: String) extends CType
 
-case class CArrayType(val subType: CType, val length: Long, _name: String) extends CNamedType(_name) {
+case class CArrayType(subType: CType, length: Long, _name: String) extends CNamedType(_name) {
   override def generate(s: CGenState): Unit = {
     subType.generate(s)
     s.append(" ").append(name).append("[").append(length.toString).append("]")

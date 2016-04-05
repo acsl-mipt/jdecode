@@ -12,7 +12,7 @@ import ru.mipt.acsl.decode.model.domain.impl.naming.Namespace
 import ru.mipt.acsl.decode.model.domain.impl.registry.{Language, Registry}
 import ru.mipt.acsl.decode.model.domain.impl.types.{AliasType, ArrayType, DecodeType, EnumType, GenericType, GenericTypeSpecialized, NativeType, Parameter, PrimitiveTypeInfo, StructType, SubType, TypeKind}
 import ru.mipt.acsl.decode.model.domain.pure.Language
-import ru.mipt.acsl.decode.model.domain.pure.component.messages.MessageParameter
+import ru.mipt.acsl.decode.model.domain.pure.component.message.MessageParameter
 import ru.mipt.acsl.decode.model.domain.pure.naming.Fqn
 import ru.mipt.acsl.generation.Generator
 
@@ -256,7 +256,7 @@ class HtmlDocGenerator(val config: HtmlDocGeneratorConfiguration) extends Genera
   def trForMessageParameter(mp: MessageParameter, component: Component): Tag =
     tr(
       td("Параметр " + mp.path),
-      td(typeNameWithLink(mp.ref(component).t)),
+      td(typeNameWithLink(mp.ref(component).resultType)),
       td(StringFrag(mp.info.getOrElse(lang, ""))))
 
   def trForParameter(p: Parameter): Tag =

@@ -2,7 +2,7 @@ package ru.mipt.acsl.decode.model.domain.impl.component.message
 
 import ru.mipt.acsl.decode.model.domain.impl.component.Component
 import ru.mipt.acsl.decode.model.domain.pure.LocalizedString
-import ru.mipt.acsl.decode.model.domain.pure.component.messages.{MessageParameter, StatusMessage}
+import ru.mipt.acsl.decode.model.domain.pure.component.message.{MessageParameter, StatusMessage}
 import ru.mipt.acsl.decode.model.domain.pure.naming.ElementName
 
 /**

@@ -13,7 +13,11 @@ class ProxyPath(val ns: Fqn, val element: ProxyElementName) {
 }
 
 object ProxyPath {
+
+  def apply(fqn: Fqn): ProxyPath = apply(fqn.copyDropLast, fqn.last)
+
   def apply(nsFqn: Fqn, name: ElementName): ProxyPath = new ProxyPath(nsFqn, TypeName(name))
 
   def apply(nsFqn: Fqn, element: ProxyElementName): ProxyPath = new ProxyPath(nsFqn, element)
+
 }

@@ -23,7 +23,6 @@
         <module>generator/source/c</module>
         <module>generator/source/cpp</module>
         <module>generator/source/mavlink</module>
-        <module>test/parser</module>
     </modules>
 
     <properties>

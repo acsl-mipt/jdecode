@@ -5,7 +5,7 @@ import ru.mipt.acsl.decode.model.domain.impl.component.message.EventMessage
 import ru.mipt.acsl.decode.model.domain.impl.proxy.{ResolvingResult, Result}
 import ru.mipt.acsl.decode.model.domain.impl.types.{DecodeType, EnumType, GenericTypeSpecialized, HasBaseType, StructType}
 import ru.mipt.acsl.decode.model.domain.pure.ValidatingResult
-import ru.mipt.acsl.decode.model.domain.pure.component.messages.StatusMessage
+import ru.mipt.acsl.decode.model.domain.pure.component.message.StatusMessage
 import ru.mipt.acsl.decode.model.domain.pure.naming.Fqn
 import ru.mipt.acsl.decode.model.domain.pure.types.NativeType
 

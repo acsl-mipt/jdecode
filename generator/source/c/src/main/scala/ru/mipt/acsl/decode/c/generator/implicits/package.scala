@@ -1,0 +1,96 @@
+package ru.mipt.acsl.decode.c.generator
+
+import java.io
+import java.io.File
+
+import com.google.common.base.CaseFormat
+import ru.mipt.acsl.decode.model.domain.impl.component.{Command, Component}
+import ru.mipt.acsl.decode.model.domain.impl.naming.Fqn
+import ru.mipt.acsl.decode.model.domain.impl.types.{DecodeType, NativeType}
+import ru.mipt.acsl.decode.model.domain.pure.component.message.{MessageParameter, TmMessage}
+import ru.mipt.acsl.decode.model.domain.pure.expr.{ConstExpr, IntLiteral}
+import ru.mipt.acsl.decode.model.domain.pure.naming.HasName
+import ru.mipt.acsl.generator.c.ast.implicits._
+import ru.mipt.acsl.generator.c.ast.{CConstType, CType, CAstElements => _, _}
+import ru.mipt.acsl.decode.c.generator.CSourceGenerator._
+
+package object implicits {
+
+  implicit def hasName2HasNameHelper(hasName: HasName): HasNameHelper = HasNameHelper(hasName)
+  implicit def string2StringHelper(str: String): StringHelper = StringHelper(str)
+  implicit def cExpression2CExpressionHelper(cExpr: CExpression): CExpressionHelper = CExpressionHelper(cExpr)
+  implicit def decodeType2DecodeTypeHelper(decodeType: DecodeType): DecodeTypeHelper = DecodeTypeHelper(decodeType)
+  implicit def component2ComponentHlper(component: Component): ComponentHelper = ComponentHelper(component)
+  implicit def file2FileHelper(file: File): FileHelper = FileHelper(file)
+
+  implicit class TmMessageHelper(message: TmMessage) {
+    def fullMethodName(rootComponent: Component, component: Component): String =
+      rootComponent.prefixedTypeName.methodName("Write" + message.methodNamePart(rootComponent, component).capitalize)
+  }
+
+  implicit class CVarHelper(v: CVar) {
+    def define(t: CType, init: Option[CExpression] = None, static: Boolean = false) = CVarDef(v.name, t, init, static)
+  }
+
+  implicit class NativeTypeHelper(n: NativeType) {
+
+    private val berFqn = Fqn.newFromSource("decode.ber")
+
+    def isBerType: Boolean = n.fqn.equals(berFqn)
+  }
+
+  implicit class MessageParameterVarHelper(val mp: MessageParameter) {
+
+    def varName: String = CaseFormat.LOWER_UNDERSCORE.to(CaseFormat.LOWER_CAMEL,
+      mp.path.toString.replaceAll("[\\.\\[\\]]", "_").replaceAll("__", "_"))
+
+  }
+
+  implicit class AstElementHelper(val el: CAstElement) {
+
+    def line: CStatementLine = CStatementLine(el)
+
+    def eol: CAstElements = Seq(el, CEol)
+
+  }
+
+  implicit class CTypeHelper(val ct: CType) {
+    def const: CConstType = CConstType(ct)
+  }
+
+  implicit class CommandHelper(val command: Command) {
+
+    def cFuncParameterTypes(component: Component): Seq[CType] = {
+      component.ptrType +: command.parameters.map(p => {
+        val t = p.paramType
+        mapIfNotSmall(t.cType, t, (ct: CType) => ct.ptr)
+      })
+    }
+
+  }
+
+  implicit class ConstExprHelper(val c: ConstExpr) {
+
+    def toInt: Int = c match {
+      case i: IntLiteral => i.value
+      case _ => sys.error("not implemented")
+    }
+
+  }
+
+  implicit class CAstElementsHelper(val els: CAstElements) {
+
+    def protectDoubleInclude(filePath: String): CAstElements = {
+      val uniqueName = "__" + filePath.split(io.File.separatorChar).map(p =>
+        p.upperCamel2UpperUnderscore.replaceAll("\\.", "_")).mkString("_") + "__"
+      "DO NOT EDIT! FILE IS AUTO GENERATED".comment.eol ++ Seq(CIfNDef(uniqueName), CEol, CDefine(uniqueName)) ++ els :+ CEndIf
+    }
+
+    def externC: CAstElements =
+      Seq(CIfDef(cppDefine), CEol, CPlainText("extern \"C\" {"), CEol, CEndIf, CEol, CEol) ++ els ++
+        Seq(CEol, CEol, CIfDef(cppDefine), CEol, CPlainText("}"), CEol, CEndIf)
+
+    def eol: CAstElements = els :+ CEol
+  }
+
+}

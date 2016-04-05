@@ -2,7 +2,7 @@ package ru.mipt.acsl.decode.model.domain.impl
 
 import ru.mipt.acsl.decode.model.domain._
 import ru.mipt.acsl.decode.model.domain.pure.naming.Fqn
-import ru.mipt.acsl.decode.model.domain.pure.types.EnumConstant
+import ru.mipt.acsl.decode.model.domain.pure.types.{ArraySize, EnumConstant}
 
 package object types {
 
@@ -22,11 +22,22 @@ package object types {
   }
 
   implicit class ArrayTypeHelper(val t: ArrayType) {
-    def isFixedSize: Boolean = {
-      val thisSize: pure.types.ArraySize = t.size
-      val maxLength: Long = thisSize.max
-      thisSize.min == maxLength && maxLength != 0
+
+    def isFixedSize: Boolean = t.size.isFixed
+
+  }
+
+  implicit class ArraySizeHelper(val s: pure.types.ArraySize) {
+
+    def isFixed: Boolean = {
+      val max = s.max
+      s.min == max && max != 0
     }
+
+    def isLimited: Boolean = s.max != 0
+
+    def isAny: Boolean = s.min == 0 && s.max == 0
+
   }
 
 }

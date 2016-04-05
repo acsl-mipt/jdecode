@@ -3,7 +3,7 @@ package ru.mipt.acsl.decode.model.domain.impl.component.message
 import ru.mipt.acsl.decode.model.domain.impl.component.Component
 import ru.mipt.acsl.decode.model.domain.impl.proxy.MaybeProxy
 import ru.mipt.acsl.decode.model.domain.impl.types.{DecodeType, Parameter}
-import ru.mipt.acsl.decode.model.domain.pure.component.messages.MessageParameter
+import ru.mipt.acsl.decode.model.domain.pure.component.message.MessageParameter
 import ru.mipt.acsl.decode.model.domain.pure.naming.ElementName
 import ru.mipt.acsl.decode.model.domain.pure.LocalizedString
 

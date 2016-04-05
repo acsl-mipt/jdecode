@@ -3,14 +3,14 @@ package ru.mipt.acsl.decode.parser
 import com.intellij.lang.ASTNode
 import com.intellij.psi.PsiWhiteSpace
 import ru.mipt.acsl.decode.model.domain.impl.LocalizedString
-import ru.mipt.acsl.decode.model.domain.impl.component.message.{ElementRange, EventMessage, MessageParameter, StatusMessage}
+import ru.mipt.acsl.decode.model.domain.impl.component.message.{ArrayRange, EventMessage, MessageParameter, StatusMessage}
 import ru.mipt.acsl.decode.model.domain.impl.component.{Command, Component, ComponentRef}
 import ru.mipt.acsl.decode.model.domain.impl.expr.{FloatLiteral, IntLiteral}
 import ru.mipt.acsl.decode.model.domain.impl.naming.{ElementName, Fqn, Namespace}
 import ru.mipt.acsl.decode.model.domain.impl.proxy.MaybeProxy
 import ru.mipt.acsl.decode.model.domain.impl.registry.{DecodeUnit, Language}
 import ru.mipt.acsl.decode.model.domain.impl.types._
-import ru.mipt.acsl.decode.model.domain.pure.component.messages.{MessageParameterPath, MessageParameterPathElement, StatusMessage}
+import ru.mipt.acsl.decode.model.domain.pure.component.message.{MessageParameterPath, MessageParameterPathElement, StatusMessage}
 import ru.mipt.acsl.decode.model.domain.pure.naming.{ElementName, Fqn}
 import ru.mipt.acsl.decode.model.domain.pure.types.EnumConstant
 import ru.mipt.acsl.decode.model.domain.pure.{Language, LocalizedString, Referenceable}
@@ -33,8 +33,10 @@ class DecodeAstTransformer {
   private var defaultLanguage: Option[Language] = None
 
   def processFile(node: ASTNode): Namespace = {
-    val children = node.getChildren(null)
+    var children = node.getChildren(null)
     assert(children.nonEmpty)
+    while (children.head.getPsi.isInstanceOf[PsiWhiteSpace])
+      children = children.tail
     val nsDecl = children.head.getPsi(classOf[DecodeNamespaceDecl])
     ns = fqn(nsDecl.getElementId).newNamespaceForFqn(elementInfo(Option(nsDecl.getElementInfo)))
     children.drop(1).foreach(_.getPsi match {
@@ -146,7 +148,7 @@ class DecodeAstTransformer {
   private def parameterPathElement(el: DecodeParameterPathElement): MessageParameterPathElement = {
     val rangeDecl = el.getRangeDecl
     Option(el.getElementNameRule).map(e => Left(elementName(e)))
-      .getOrElse(Right(ElementRange(
+      .getOrElse(Right(ArrayRange(
         Option(rangeDecl.getNonNegativeIntegerLiteral).map(_.getText.toLong).getOrElse(0),
         Option(rangeDecl.getRangeUpperBoundDecl).map(_.getText.toLong))))
   }
@@ -238,9 +240,10 @@ class DecodeAstTransformer {
         val result = Option(ta.getArrayTypeApplication).map { ata =>
           val path = typeApplication(Some(ata.getTypeApplication)).get.proxy.path
           val fromTo = (Option(ata.getLengthFrom).map(_.getText), Option(ata.getLengthTo).map(_.getText))
+          val min = fromTo._1.map(_.toLong).getOrElse(0l)
+          val max = fromTo._2.map(_.toLong).getOrElse(min)
           MaybeProxy[DecodeType](ProxyPath(path.ns, ArrayTypePath(path,
-            ArraySize(fromTo._1.map(_.toLong).getOrElse(0l),
-              fromTo._2.map(_.toLong).getOrElse(0l)))))
+            ArraySize(min, max))))
         }.getOrElse {
           val nta = ta.getSimpleOrGenericTypeApplication
           val proxy = proxyForFqn[DecodeType](fqn(nta.getElementId))

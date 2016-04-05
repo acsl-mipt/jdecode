@@ -3,7 +3,7 @@ package ru.mipt.acsl.decode.model.domain.impl.component.message
 import scala.util.{Failure, Success, Try}
 import ru.mipt.acsl.decode.model.domain.impl.component._
 import ru.mipt.acsl.decode.model.domain.impl.types.{DecodeType, StructField}
-import ru.mipt.acsl.decode.model.domain.pure.component.messages._
+import ru.mipt.acsl.decode.model.domain.pure.component.message._
 import ru.mipt.acsl.decode.model.domain.pure.naming.ElementName
 
 /**
@@ -18,8 +18,11 @@ class MessageParameterRefWalker(var component: Component, var structField: Optio
 
   override def t: DecodeType = if (structField.isEmpty)
     component.baseType.get
-  else if (path.isEmpty)
-    structField.get.typeUnit.t
+  else
+    TypeMessageParameterPathWalker(structField.get.typeUnit.t, path.head).t
+
+  override def resultType: DecodeType = if (structField.isEmpty)
+    component.baseType.get
   else
     path.foldLeft(structField.get.typeUnit.t)(TypeMessageParameterPathWalker)
 

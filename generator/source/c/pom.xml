@@ -9,7 +9,7 @@
         <groupId>ru.mipt.acsl.decode</groupId>
         <artifactId>decode</artifactId>
         <version>0.4.7</version>
-        <relativePath>../../../</relativePath>
+        <relativePath>../../..</relativePath>
     </parent>
 
     <name>Decode C sources generator</name>

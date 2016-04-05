@@ -41,4 +41,9 @@ component Router
 
   "Удалить все правила для группы"
   command delGroupRoute("Адрес группы" groupAddress: address): router_error
+
+  status nextHops
+  (
+    routes[*].next_hop
+  )
 }

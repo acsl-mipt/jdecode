@@ -6,7 +6,7 @@ import ru.mipt.acsl.generator.c.ast.{CFuncParam, CStructTypeDefField, CType, CVa
   * @author Artem Shein
   */
 private case class TypedVar(name: String, t: CType) {
-  val v = CVar(name)
-  val param = CFuncParam(name, t)
-  val field = CStructTypeDefField(name, t)
+  val v: CVar = CVar(name)
+  val param: CFuncParam = CFuncParam(name, t)
+  val field: CStructTypeDefField = CStructTypeDefField(name, t)
 }
