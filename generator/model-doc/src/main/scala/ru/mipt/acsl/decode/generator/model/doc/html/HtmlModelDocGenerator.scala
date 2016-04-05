@@ -1,11 +1,10 @@
-package ru.mipt.acsl.decode.doc.generator.html
+package ru.mipt.acsl.decode.generator.model.doc.html
 
 import java.io
 import java.io.{FileOutputStream, OutputStreamWriter}
 import java.net.URLEncoder
 
 import com.google.common.base.Charsets
-import resource._
 import ru.mipt.acsl.decode.model.domain.impl.component.Component
 import ru.mipt.acsl.decode.model.domain.impl.component.message._
 import ru.mipt.acsl.decode.model.domain.impl.naming.Namespace
@@ -14,7 +13,6 @@ import ru.mipt.acsl.decode.model.domain.impl.types.{AliasType, ArrayType, Decode
 import ru.mipt.acsl.decode.model.domain.pure.Language
 import ru.mipt.acsl.decode.model.domain.pure.component.message.MessageParameter
 import ru.mipt.acsl.decode.model.domain.pure.naming.Fqn
-import ru.mipt.acsl.generation.Generator
 
 import scalatags.Text.all._
 import scalatags.Text.tags2.{title => titleTag}
@@ -22,16 +20,14 @@ import scalatags.Text.tags2.{title => titleTag}
 /**
   * @author Artem Shein
   */
-case class HtmlDocGeneratorConfiguration(outputFile: io.File, registry: Registry, exclude: Set[Fqn] = Set.empty,
-                                         language: String = "ru")
+case class HtmlModelDocGeneratorConfiguration(outputFile: io.File, registry: Registry, exclude: Set[Fqn] = Set.empty,
+                                              language: String = "ru")
 
-class HtmlDocGenerator(val config: HtmlDocGeneratorConfiguration) extends Generator[HtmlDocGeneratorConfiguration] {
+class HtmlModelDocGenerator(val config: HtmlModelDocGeneratorConfiguration) {
 
   private val lang: Language = Language(config.language)
 
-  override def getConfiguration: HtmlDocGeneratorConfiguration = config
-
-  override def generate(): Unit = {
+  def generate(): Unit = {
     val allComponents = config.registry.allComponents.filterNot(c =>
       config.exclude.contains(c.fqn) || config.exclude.contains(c.namespace.fqn))
     val allNamespaces = config.registry.allNamespaces.filterNot(ns => config.exclude.contains(ns.fqn))
@@ -268,10 +264,13 @@ class HtmlDocGenerator(val config: HtmlDocGeneratorConfiguration) extends Genera
   implicit class RichFile(val file: io.File) {
     def write(contents: Tag): Unit = write(Seq(contents))
     def write(contents: Seq[Tag]) {
-      for (stream <- managed(new OutputStreamWriter(new FileOutputStream(file)))) {
+      val stream = new OutputStreamWriter(new FileOutputStream(file))
+      try {
         val sb = new StringBuilder
         contents.foreach(_.writeTo(sb))
         stream.write(sb.toString())
+      } finally {
+        stream.close()
       }
     }
   }

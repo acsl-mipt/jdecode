@@ -1,15 +1,16 @@
 package ru.mipt.acsl.generator.c.ast
 
-import ru.mipt.acsl.generation.Generatable
 import ru.mipt.acsl.generator.c.ast.implicits.CAstElements
-
-import scala.collection.immutable
 
 /**
   * @author Artem Shein
   */
 
-trait CAstElement extends Generatable[CGenState]
+trait CAstElement {
+
+  def generate(s: CGenState): Unit
+
+}
 
 object CAstElements {
   def apply(elements: CAstElement*): CAstElements = Seq(elements: _*)
@@ -306,8 +307,10 @@ case class CStructTypeDef(fields: Traversable[CStructTypeDefField], name: Option
   }
 }
 
-case class CFuncParam(name: String, t: CType) extends Generatable[CGenState] {
-  override def generate(s: CGenState): Unit = Helpers.generate(s, t, name)
+case class CFuncParam(name: String, t: CType) {
+
+  def generate(s: CGenState): Unit = Helpers.generate(s, t, name)
+
 }
 
 private object Helpers {

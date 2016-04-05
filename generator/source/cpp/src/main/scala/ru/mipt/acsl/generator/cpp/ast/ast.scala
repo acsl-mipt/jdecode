@@ -1,8 +1,6 @@
 package ru.mipt.acsl.generator.cpp.ast
 
-import ru.mipt.acsl.generation.Generatable
 
-import scala.collection.generic.Growable
 import scala.collection.mutable
 import scala.collection.immutable
 
@@ -10,17 +8,21 @@ import scala.collection.immutable
   * @author Artem Shein
   */
 
-trait CppAstElement extends Generatable[CppGeneratorState]
+trait CppAstElement {
+  def generate(s: CppGeneratorState): Unit
+}
 
 trait CppStatement extends CppAstElement
 
 trait CppExpression extends CppAstElement
 
 case class ExprStatement(expr: CppExpression) extends CppStatement {
+
   override def generate(s: CppGeneratorState): Unit = {
     expr.generate(s)
     s.append(";")
   }
+
 }
 
 object CppStatement {
@@ -28,9 +30,10 @@ object CppStatement {
 }
 
 class Comment(val text: String) extends CppAstElement {
-  override def generate(s: CppGeneratorState): Unit = {
+
+  def generate(s: CppGeneratorState): Unit =
     s.append("/* ").append(text).append(" */")
-  }
+
 }
 
 object Comment {
@@ -38,17 +41,21 @@ object Comment {
 }
 
 object Eol extends CppAstElement {
-  override def generate(s: CppGeneratorState): Unit = s.eol()
+
+  def generate(s: CppGeneratorState): Unit = s.eol()
+
 }
 
 trait CppMacroAstElement extends CppAstElement
 
 class CppDefine(val name: String, val value: Option[String]) extends CppMacroAstElement {
-  override def generate(s: CppGeneratorState): Unit = {
+
+  def generate(s: CppGeneratorState): Unit = {
     s.append("#define ").append(name)
     value.foreach(s.append(" ").append)
     s.eol()
   }
+
 }
 
 object CppDefine {
@@ -58,9 +65,11 @@ object CppDefine {
 }
 
 class CppPragma(val value: String) extends CppMacroAstElement {
-  override def generate(s: CppGeneratorState): Unit = {
+
+  def generate(s: CppGeneratorState): Unit = {
     s.append("#pragma ").append(value).eol()
   }
+
 }
 
 object CppPragma {
@@ -72,12 +81,14 @@ object CppIfNDef {
 
   class Impl(val name: String, elements: immutable.Seq[CppAstElement]) extends CppAstElements(elements)
   with CppMacroAstElement {
+
     override def generate(s: CppGeneratorState): Unit = {
       s.append("#ifndef ").append(name).eol()
       elements.foreach(stmt => {
         stmt.generate(s); s.eol()
       })
     }
+
   }
 
   def apply(name: String, statements: Seq[CppAstElement]): Type = new Impl(name, statements.to[immutable.Seq])
@@ -214,19 +225,23 @@ object RefType {
   }
 }
 
-class Parameter(val name: String, val t: CppType) extends Generatable[CppGeneratorState] {
-  override def generate(s: CppGeneratorState): Unit = {
+class Parameter(val name: String, val t: CppType) {
+
+  def generate(s: CppGeneratorState): Unit = {
     t.generate(s)
     s.append(s" $name")
   }
+
 }
 
 object Parameter {
   def apply(name: String, t: CppType) = new Parameter(name, t)
 }
 
-sealed abstract class Visibility(val name: String) extends Generatable[CppGeneratorState] {
-  override def generate(s: CppGeneratorState): Unit = s.append(name)
+sealed abstract class Visibility(val name: String) {
+
+  def generate(s: CppGeneratorState): Unit = s.append(name)
+
 }
 
 case object Public extends Visibility("public")
@@ -237,14 +252,14 @@ case object Protected extends Visibility("protected")
 
 case class ClassMethodDef(name: String, returnType: CppType, params: mutable.Buffer[Parameter] = mutable.Buffer.empty,
                      static: Boolean = false, visibility: Visibility = Public,
-                     implementation: CppStatements = CppStatements(), virtual: Boolean = false, _abstract: Boolean = false)
-  extends Generatable[CppGeneratorState] {
+                     implementation: CppStatements = CppStatements(), virtual: Boolean = false,
+                          _abstract: Boolean = false) {
 
   assert(!static || !virtual)
   assert(!_abstract || virtual)
   assert(implementation.isEmpty || !virtual)
 
-  override def generate(s: CppGeneratorState): Unit = {
+  def generate(s: CppGeneratorState): Unit = {
     if (static)
       s.append("static ")
     if (virtual)
@@ -260,16 +275,17 @@ case class ClassMethodDef(name: String, returnType: CppType, params: mutable.Buf
       s.append(";")
     }
   }
+
 }
 
-class ClassFieldDef(val name: String, val t: CppType, val static: Boolean = false, val visibility: Visibility = Public) extends Generatable[CppGeneratorState] {
+class ClassFieldDef(val name: String, val t: CppType, val static: Boolean = false, val visibility: Visibility = Public) {
   def generateWithoutSemicolon(s: CppGeneratorState): Unit = {
     if (static)
       s.append("static ")
     t.generate(s)
     s.append(" ").append(name)
   }
-  override def generate(s: CppGeneratorState): Unit = {
+  def generate(s: CppGeneratorState): Unit = {
     generateWithoutSemicolon(s)
     s.append(";")
   }

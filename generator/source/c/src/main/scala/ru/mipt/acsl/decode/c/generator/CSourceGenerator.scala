@@ -11,19 +11,16 @@ import ru.mipt.acsl.decode.model.domain.impl.naming.{ElementName, Namespace}
 import ru.mipt.acsl.decode.model.domain.impl.types.{AliasType, ArrayType, DecodeType, EnumType, GenericType, GenericTypeSpecialized, NativeType, PrimitiveTypeInfo, StructType, SubType, TypeKind}
 import ru.mipt.acsl.decode.model.domain.pure.component.message.{EventMessage => _}
 import ru.mipt.acsl.decode.model.domain.pure.naming.HasName
-import ru.mipt.acsl.generation.Generator
 import ru.mipt.acsl.generator.c.ast._
 import ru.mipt.acsl.generator.c.ast.implicits._
 
 import scala.collection.{immutable, mutable}
 
-class CSourceGenerator(val config: CGeneratorConfiguration) extends Generator[CGeneratorConfiguration] with LazyLogging {
+class CSourceGenerator(val config: CGeneratorConfiguration) extends LazyLogging {
 
   import CSourceGenerator._
 
-  override def getConfiguration: CGeneratorConfiguration = config
-
-  override def generate(): Unit = {
+  def generate(): Unit = {
     val component = config.registry.component(config.rootComponentFqn).getOrElse(
       sys.error(s"component not found ${config.rootComponentFqn}"))
     component.generateRoot()

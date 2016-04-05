@@ -10,11 +10,9 @@ import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.jdom2.*;
 import org.jdom2.input.SAXBuilder;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
-import ru.mipt.acsl.generation.Generatable;
-import ru.mipt.acsl.generation.GenerationException;
-import ru.mipt.acsl.generation.Generator;
 
 import java.io.*;
 import java.util.*;
@@ -25,7 +23,7 @@ import java.util.stream.Collectors;
 /**
  * @author Artem Shein
  */
-public class MavlinkDecodeSourceGenerator implements Generator<MavlinkDecodeSourceGeneratorConfiguration>
+public class MavlinkDecodeSourceGenerator
 {
     public static final String COMMAND_LONG = "COMMAND_LONG";
     public static final String MAV_CMD = "MAV_CMD";
@@ -167,15 +165,8 @@ public class MavlinkDecodeSourceGenerator implements Generator<MavlinkDecodeSour
         }
         catch (JDOMException | IOException e)
         {
-            throw new GenerationException(e);
+            throw new RuntimeException(e);
         }
-    }
-
-    @NotNull
-    @Override
-    public MavlinkDecodeSourceGeneratorConfiguration getConfiguration()
-    {
-        return config;
     }
 
     @NotNull
@@ -220,7 +211,7 @@ public class MavlinkDecodeSourceGenerator implements Generator<MavlinkDecodeSour
                 }
                 catch (IOException e)
                 {
-                    throw new GenerationException(e);
+                    throw new RuntimeException(e);
                 }
             });
             appendable.append(")");
@@ -228,7 +219,7 @@ public class MavlinkDecodeSourceGenerator implements Generator<MavlinkDecodeSour
         }
         catch (IOException e)
         {
-            throw new GenerationException(e);
+            throw new RuntimeException(e);
         }
     }
 
@@ -263,7 +254,7 @@ public class MavlinkDecodeSourceGenerator implements Generator<MavlinkDecodeSour
 
                     break;
                 default:
-                    throw new GenerationException(String.format("Unexpected tag '%s'", element.getName()));
+                    throw new RuntimeException(String.format("Unexpected tag '%s'", element.getName()));
             }
         }
     }
@@ -271,12 +262,12 @@ public class MavlinkDecodeSourceGenerator implements Generator<MavlinkDecodeSour
     private MavEnum processEnum(@NotNull Element element)
     {
         return new MavEnum(element.getAttribute("name").getValue(),
-                Optional.ofNullable(element.getChild("description")).map(Element::getText),
+                Optional.ofNullable(element.getChild("description")).map(Element::getText).orElse(null),
                 element.getChildren("entry").stream()
                         .map(e -> new MavEnumConstant(e.getAttribute("name").getValue(),
                                 Optional.ofNullable(e.getAttribute("value")).map(Attribute::getValue)
-                                        .map(Integer::parseInt),
-                                Optional.ofNullable(e.getChild("description")).map(Element::getText),
+                                        .map(Integer::parseInt).orElse(null),
+                                Optional.ofNullable(e.getChild("description")).map(Element::getText).orElse(null),
                                 e.getChildren("param").stream().map(p -> new MavEnumCostantParam(
                                         Integer.parseInt(p.getAttribute("index").getValue()), p.getText()))
                                         .collect(Collectors.toList()))).collect(
@@ -297,7 +288,7 @@ public class MavlinkDecodeSourceGenerator implements Generator<MavlinkDecodeSour
         }
         catch (IOException e)
         {
-            throw new GenerationException(e);
+            throw new RuntimeException(e);
         }
     }
 
@@ -337,16 +328,16 @@ public class MavlinkDecodeSourceGenerator implements Generator<MavlinkDecodeSour
                     concreteEnums.put(type, anEnum.get());
                 }
                 fields.add(new StructField(type, fieldNameFormatted, Optional.ofNullable(fieldDescription).map(
-                        MavlinkDecodeSourceGenerator::escapeUnaryQuotesString),
-                        anEnum));
+                        MavlinkDecodeSourceGenerator::escapeUnaryQuotesString).orElse(null),
+                        anEnum.orElse(null)));
             }
 
             return new Message(name, escapeIfKeyword(CaseFormat.UPPER_UNDERSCORE.to(CaseFormat.LOWER_UNDERSCORE, name)),
-                    id, Optional.ofNullable(description).map(d -> escapeUnaryQuotesString(d.getText())), fields);
+                    id, Optional.ofNullable(description).map(d -> escapeUnaryQuotesString(d.getText())).orElse(null), fields);
         }
         catch (DataConversionException e)
         {
-            throw new GenerationException(e);
+            throw new RuntimeException(e);
         }
     }
 
@@ -380,12 +371,12 @@ public class MavlinkDecodeSourceGenerator implements Generator<MavlinkDecodeSour
         appendable.append("\n");
     }
 
-    private static class Message implements Generatable<Appendable>
+    private static class Message
     {
         @NotNull
         private final String typeName;
-        @NotNull
-        private final Optional<String> description;
+        @Nullable
+        private final String description;
 
         @NotNull
         public List<StructField> getFields()
@@ -399,7 +390,7 @@ public class MavlinkDecodeSourceGenerator implements Generator<MavlinkDecodeSour
         @NotNull
         private String name;
 
-        public Message(@NotNull String name, @NotNull String typeName, int id, @NotNull Optional<String> description,
+        public Message(@NotNull String name, @NotNull String typeName, int id, @Nullable String description,
                        @NotNull List<StructField> fields)
         {
             this.name = name;
@@ -445,17 +436,14 @@ public class MavlinkDecodeSourceGenerator implements Generator<MavlinkDecodeSour
             return id;
         }
 
-        @Override
         public void generate(@NotNull Appendable appendable)
         {
             try
             {
                 eol(appendable);
                 appendable.append("type ").append(typeName).append(" struct");
-                if (description.isPresent())
-                {
-                    appendable.append(" info '").append(description.get()).append("'");
-                }
+                if (description != null)
+                    appendable.append(" info '").append(description).append("'");
                 appendable.append("(");
                 eol(appendable);
 
@@ -469,7 +457,7 @@ public class MavlinkDecodeSourceGenerator implements Generator<MavlinkDecodeSour
             }
             catch (IOException e)
             {
-                throw new GenerationException(e);
+                throw new RuntimeException(e);
             }
         }
 
@@ -479,18 +467,19 @@ public class MavlinkDecodeSourceGenerator implements Generator<MavlinkDecodeSour
             return typeName;
         }
 
+        @NotNull
         public String getName()
         {
             return name;
         }
     }
 
-    private static class StructField implements Generatable<Appendable>
+    private static class StructField
     {
         @NotNull
         public Optional<String> getDescription()
         {
-            return description;
+            return Optional.ofNullable(description);
         }
 
         @NotNull
@@ -504,13 +493,13 @@ public class MavlinkDecodeSourceGenerator implements Generator<MavlinkDecodeSour
         private final String type;
         @NotNull
         private final String name;
-        @NotNull
-        private final Optional<String> description;
-        @NotNull
-        private final Optional<String> anEnum;
+        @Nullable
+        private final String description;
+        @Nullable
+        private final String anEnum;
 
-        public StructField(@NotNull String type, @NotNull String name, @NotNull Optional<String> description,
-                           @NotNull Optional<String> anEnum)
+        public StructField(@NotNull String type, @NotNull String name, @Nullable String description,
+                           @Nullable String anEnum)
         {
             this.type = type;
             this.name = name;
@@ -518,7 +507,6 @@ public class MavlinkDecodeSourceGenerator implements Generator<MavlinkDecodeSour
             this.anEnum = anEnum;
         }
 
-        @Override
         public void generate(@NotNull Appendable appendable)
         {
             try
@@ -528,23 +516,21 @@ public class MavlinkDecodeSourceGenerator implements Generator<MavlinkDecodeSour
                         .append(StringUtils.repeat(" ", Math.max(20 - typeName.length(), 1)))
                         .append(name)
                         .append(StringUtils.repeat(" ", Math.max(20 - name.length(), 1)));
-                if (description.isPresent())
-                {
-                    appendable.append("info '").append(description.get()).append("'");
-                }
+                if (description != null)
+                    appendable.append("info '").append(description).append("'");
                 appendable.append(",");
                 eol(appendable);
             }
             catch (IOException e)
             {
-                throw new GenerationException(e);
+                throw new RuntimeException(e);
             }
         }
 
         @NotNull
         public String getTypeName()
         {
-            return anEnum.isPresent() ? makeTypeNameForEnum(type, anEnum.get()) : type;
+            return anEnum != null ? makeTypeNameForEnum(type, anEnum) : type;
         }
 
         @NotNull
@@ -556,8 +542,8 @@ public class MavlinkDecodeSourceGenerator implements Generator<MavlinkDecodeSour
 
     private static class MavEnum
     {
-        @NotNull
-        private final Optional<String> info;
+        @Nullable
+        private final String info;
         @NotNull
         private final List<MavEnumConstant> constants;
         @NotNull
@@ -566,7 +552,7 @@ public class MavlinkDecodeSourceGenerator implements Generator<MavlinkDecodeSour
         @NotNull
         public Optional<String> getInfo()
         {
-            return info;
+            return Optional.ofNullable(info);
         }
 
         @NotNull
@@ -575,7 +561,7 @@ public class MavlinkDecodeSourceGenerator implements Generator<MavlinkDecodeSour
             return constants;
         }
 
-        public MavEnum(@NotNull String name, @NotNull Optional<String> description,
+        public MavEnum(@NotNull String name, @Nullable String description,
                        @NotNull List<MavEnumConstant> constants)
         {
             this.name = name;
@@ -599,10 +585,10 @@ public class MavlinkDecodeSourceGenerator implements Generator<MavlinkDecodeSour
     {
         @NotNull
         private final List<MavEnumCostantParam> params;
-        @NotNull
-        private final Optional<String> info;
-        @NotNull
-        private final Optional<Integer> value;
+        @Nullable
+        private final String info;
+        @Nullable
+        private final Integer value;
         @NotNull
         private final String name;
 
@@ -615,13 +601,13 @@ public class MavlinkDecodeSourceGenerator implements Generator<MavlinkDecodeSour
         @NotNull
         public Optional<String> getInfo()
         {
-            return info;
+            return Optional.ofNullable(info);
         }
 
         @NotNull
         public Optional<Integer> getValue()
         {
-            return value;
+            return Optional.ofNullable(value);
         }
 
         @NotNull
@@ -630,8 +616,8 @@ public class MavlinkDecodeSourceGenerator implements Generator<MavlinkDecodeSour
             return name;
         }
 
-        public MavEnumConstant(@NotNull String name, @NotNull Optional<Integer> value,
-                               @NotNull Optional<String> description,
+        public MavEnumConstant(@NotNull String name, @Nullable Integer value,
+                               @Nullable String description,
                                @NotNull List<MavEnumCostantParam> params)
         {
             this.name = name;

@@ -13,12 +13,12 @@
     <description>Decode build</description>
 
     <modules>
-        <module>common</module>
         <module>model</module>
         <module>sqlite-persistence</module>
         <module>parser</module>
         <module>generator/on-board</module>
         <module>generator/doc</module>
+        <module>generator/model-doc</module>
         <module>generator/source/java</module>
         <module>generator/source/c</module>
         <module>generator/source/cpp</module>
@@ -115,6 +115,16 @@
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
             <version>1.1.2</version>
+        </dependency>
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+            <version>19.0</version>
+        </dependency>
+        <dependency>
+            <groupId>com.typesafe.scala-logging</groupId>
+            <artifactId>scala-logging_${scala.binary.version}</artifactId>
+            <version>3.1.0</version>
         </dependency>
         <dependency>
             <groupId>org.scalactic</groupId>

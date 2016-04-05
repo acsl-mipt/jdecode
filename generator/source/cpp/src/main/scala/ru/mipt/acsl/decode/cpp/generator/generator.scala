@@ -5,7 +5,6 @@ import java.io.{FileOutputStream, OutputStreamWriter}
 import java.security.MessageDigest
 
 import com.typesafe.scalalogging.LazyLogging
-import resource._
 import ru.mipt.acsl.decode.model.domain.impl.component.{Command, Component}
 import ru.mipt.acsl.decode.model.domain.impl.naming.Namespace
 import ru.mipt.acsl.decode.model.domain.impl.proxy.MaybeProxy
@@ -13,7 +12,6 @@ import ru.mipt.acsl.decode.model.domain.impl.registry.Registry
 import ru.mipt.acsl.decode.model.domain.impl.types.{AliasType, ArrayType, DecodeType, EnumType, GenericTypeSpecialized, HasBaseType, NativeType, PrimitiveTypeInfo, StructType, SubType, TypeKind}
 import ru.mipt.acsl.decode.model.domain.pure.expr.IntLiteral
 import ru.mipt.acsl.decode.model.domain.pure.naming.{ElementName, Fqn, HasName}
-import ru.mipt.acsl.generation.Generator
 import ru.mipt.acsl.generator.cpp.ast._
 
 import scala.collection.{immutable, mutable}
@@ -40,7 +38,7 @@ object CppSourceGenerator {
 
 }
 
-class CppSourceGenerator(val config: CppGeneratorConfiguration) extends Generator[CppGeneratorConfiguration] with LazyLogging {
+class CppSourceGenerator(val config: CppGeneratorConfiguration) extends LazyLogging {
 
   import CppSourceGenerator._
 
@@ -63,7 +61,7 @@ class CppSourceGenerator(val config: CppGeneratorConfiguration) extends Generato
     }
   }
 
-  override def generate() {
+  def generate() {
     val component: Component = config.registry.component(config.rootComponentFqn).get
     enumerateComponentsFrom(component)
     generateRootComponent(component)
@@ -88,8 +86,11 @@ class CppSourceGenerator(val config: CppGeneratorConfiguration) extends Generato
   }
 
   def writeFile(file: io.File, cppFile: CppFile.Type) {
-    for (typeHeaderStream <- managed(new OutputStreamWriter(new FileOutputStream(file)))) {
+    val typeHeaderStream = new OutputStreamWriter(new FileOutputStream(file))
+    try {
       cppFile.generate(CppGeneratorState(typeHeaderStream))
+    } finally {
+      typeHeaderStream.close()
     }
   }
 
@@ -423,6 +424,4 @@ class CppSourceGenerator(val config: CppGeneratorConfiguration) extends Generato
     }
     set
   }
-
-  override def getConfiguration: CppGeneratorConfiguration = config
 }
