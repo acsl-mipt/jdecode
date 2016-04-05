@@ -4,6 +4,7 @@ namespace ru.mipt.acsl.fs
 import decode.{ber, or, u8, b8}
 
 import ru.mipt.acsl.foundation.string
+import ru.mipt.acsl.foundation.error_code
 
 language ru
 
@@ -28,11 +29,11 @@ type node_info struct
   attrs: ber,
 )
 
-type file_upload_error enum ber (ALREADY_EXISTS = 1, CANT_WRITE = 2, MODE_ERROR = 3, TOO_BIG = 4)
-type file_delete_error enum ber (NOT_FOUND = 1, CANT_DELETE = 2)
-type file_download_error enum ber (NOT_FOUND = 1, CANT_READ = 2, NOT_FILE = 3, EOF = 4)
-type file_list_error enum ber (NOT_FOUND = 1, CANT_READ = 2, NOT_DIR = 3)
-type file_create_dir_error enum ber (NOT_FOUND = 1, CANT_WRITE = 2)
+type file_upload_error enum extends error_code (ALREADY_EXISTS = 1, CANT_WRITE = 2, MODE_ERROR = 3, TOO_BIG = 4)
+type file_delete_error enum extends error_code (NOT_FOUND = 1, CANT_DELETE = 2)
+type file_download_error enum extends error_code (NOT_FOUND = 1, CANT_READ = 2, NOT_FILE = 3, EOF = 4)
+type file_list_error enum extends error_code (NOT_FOUND = 1, CANT_READ = 2, NOT_DIR = 3)
+type file_create_dir_error enum extends error_code (NOT_FOUND = 1, CANT_WRITE = 2)
 type files_mode enum ber (BASE = 0, UPLOADING_FILE = 1, DOWNLOADING_FILE = 2, DOWNLOADING_FILE_LIST = 3)
 
 type files_event enum ber (MODE_CHANGED = 1)
@@ -47,13 +48,13 @@ component Files
   )
 
   'Начать загрузку файла'
-  command startFileUpload('Информация о загружаемом файле' fileInfo: file_info): file_upload_error?
+  command startFileUpload('Информация о загружаемом файле' fileInfo: file_info): file_upload_error
 
   'Загрузить файл'
-  command uploadFilePart('Часть данных файла' fileContentsPart: [u8]): file_upload_error?
+  command uploadFilePart('Часть данных файла' fileContentsPart: [u8]): file_upload_error
 
   'Закончить загрузку файла'
-  command stopFileUpload(): file_upload_error?
+  command stopFileUpload(): file_upload_error
 
   'Начать скачивание файла'
   command startFileDownload('Путь до файла' path: string): or<file_info, file_download_error>
@@ -62,7 +63,7 @@ component Files
   command downloadFilePart('Максимальный размер части данных файла' byteSize: ber): or<[u8], file_download_error>
 
   'Закончить скачивание файла'
-  command stopFileDownload(): file_download_error?
+  command stopFileDownload(): file_download_error
 
   'Начать скачивание списка узлов каталога'
   command startRequestFileList(): or<ber, file_list_error>
@@ -71,13 +72,13 @@ component Files
   command requestFileListPart('Максимальное количество узлов в ответе' nodeSize: ber): or<[node_info], file_list_error>
 
   'Закончить скачивание списка узлов каталога'
-  command stopRequestFileList(): file_list_error?
+  command stopRequestFileList(): file_list_error
 
   'Удалить файл или каталог'
-  command deleteNode('Путь до узла' path: string): file_delete_error?
+  command deleteNode('Путь до узла' path: string): file_delete_error
 
   'Запросить создание каталога'
-  command createDir('Путь к каталогу' path: string): file_create_dir_error?
+  command createDir('Путь к каталогу' path: string): file_create_dir_error
 
   status activeMode(activeMode)
 
