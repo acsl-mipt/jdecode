@@ -198,11 +198,13 @@ private[generator] case class ComponentHelper(component: Component) {
       }, default = CStatements(CReturn(invalidComponentId))), CEol))
   }
 
-  def allMethods: Seq[CFuncImpl] = component.allCommandsMethods ++
+  def allMethods: Seq[MethodInfo] = component.allCommandsMethods ++
     component.allStatusMessageMethods ++ component.allEventMessageMethods ++
-    Seq(component.executeCommandMethod, component.readExecuteCommandMethod, component.writeStatusMessageMethod,
-      component.executeCommandForComponentMethod) ++
-    component.allSubComponents.map(_.executeCommandForComponentMethod(component))
+    Seq(MethodInfo(component.executeCommandMethod, component),
+      MethodInfo(component.readExecuteCommandMethod, component, isPublic = true),
+      MethodInfo(component.writeStatusMessageMethod, component, isPublic = true),
+      MethodInfo(component.executeCommandForComponentMethod, component)) ++
+    component.allSubComponents.map(c => MethodInfo(c.executeCommandForComponentMethod(component), c))
 
   def parameterMethodName(parameter: MessageParameter, rootComponent: Component): String =
     rootComponent.prefixedTypeName.methodName(parameter.ref(component).structField
@@ -210,7 +212,7 @@ private[generator] case class ComponentHelper(component: Component) {
         sys.error("not implemented")
       }.cStructFieldName(rootComponent, component))
 
-  def allEventMessageMethods: Seq[CFuncImpl] = {
+  def allEventMessageMethods: Seq[MethodInfo] = {
     allEventMessagesById.toSeq.sortBy(_._1).flatMap {
       case (id, ComponentEventMessage(c, eventMessage)) =>
         val eventVar = "event"._var
@@ -222,7 +224,7 @@ private[generator] case class ComponentHelper(component: Component) {
           case _ => Seq.empty
         }
         val methodName = eventMessage.fullImplMethodName(component, c)
-        Seq(CFuncImpl(CFuncDef(methodName, resultType,
+        Seq(MethodInfo(CFuncImpl(CFuncDef(methodName, resultType,
           writer.param +: eventParams),
           CAstElements(CIndent, CIf(CEq(CIntLiteral(0),
             component.isEventAllowedMethodName.call(CIntLiteral(id), CTypeCast(eventVar, berType))),
@@ -234,22 +236,22 @@ private[generator] case class ComponentHelper(component: Component) {
               case Right(p) =>
                 CStatements(p.paramType.serializeCallCode(p.cName._var))
             } :+ CReturn(resultOk).line
-        ),
-          CFuncImpl(CFuncDef(eventMessage.fullMethodName(component, c), resultType, eventParams),
+        ), c),
+          MethodInfo(CFuncImpl(CFuncDef(eventMessage.fullMethodName(component, c), resultType, eventParams),
             CStatements(
               writer.v.define(writer.t, Some(component.beginNewEventMethodName.call(CIntLiteral(id), eventParam.name._var))),
               methodName.call(writer.v +: eventParams.map(_.name._var): _*)._try,
-              CReturn(component.endEventMethodName.call()))))
+              CReturn(component.endEventMethodName.call()))), c, isPublic = true))
     }
   }
 
-  def allStatusMessageMethods: Seq[CFuncImpl] = {
-    allStatusMessagesById.toSeq.sortBy(_._1).map(_._2).flatMap {
+  def allStatusMessageMethods: Seq[MethodInfo] = {
+    allStatusMessagesById.toSeq.sortBy(_._1).map(_._2).map {
       case ComponentStatusMessage(c, statusMessage) =>
-        Some(CFuncImpl(CFuncDef(statusMessage.fullImplMethodName(component, c), resultType,
+        MethodInfo(CFuncImpl(CFuncDef(statusMessage.fullImplMethodName(component, c), resultType,
           Seq(writer.param)),
           statusMessage.parameters.flatMap(p =>
-            CComment(p.toString).line +: p.serializeCallCode(component, c)) :+ CReturn(resultOk).line))
+            CComment(p.toString).line +: p.serializeCallCode(component, c)) :+ CReturn(resultOk).line), c)
     }
   }
 
@@ -326,14 +328,16 @@ private[generator] case class ComponentHelper(component: Component) {
     }
   }
 
-  def allSubComponentsMethods: Seq[CFuncImpl] = {
+  def allSubComponentsMethods: Seq[MethodInfo] = {
     component.allSubComponents.toSeq.flatMap { subComponent =>
-      Seq(subComponent.executeCommandMethod(component), subComponent.readExecuteCommandMethod(component),
+      Seq(subComponent.executeCommandMethod(component),
+        subComponent.readExecuteCommandMethod(component),
         subComponent.writeStatusMessageMethod(component))
+        .map(f => MethodInfo(f, subComponent))
     }
   }
 
-  def allCommandsMethods: Seq[CFuncImpl] = {
+  def allCommandsMethods: Seq[MethodInfo] = {
     val componentTypeName = component.prefixedTypeName
     val parameters = Seq(reader.param, writer.param)
     component.allCommandsById.toSeq.sortBy(_._1).map(_._2).map { case ComponentCommand(subComponent, command) =>
@@ -344,14 +348,13 @@ private[generator] case class ComponentHelper(component: Component) {
         CStatements(v.define(paramType.cType), paramType.deserializeCallCode(v.ref)._try)
       }
       val cmdReturnType = command.returnType
-      //val cmdCReturnType = cmdReturnType.map(_.cType)
       val funcCall = component.methodName(command, subComponent).call(
         (for ((v, t) <- vars.zip(command.parameters.map(_.paramType))) yield v.refIfNotSmall(t)): _*)
-      CFuncImpl(CFuncDef(componentTypeName.methodName(methodNamePart), resultType, parameters),
+      MethodInfo(CFuncImpl(CFuncDef(componentTypeName.methodName(methodNamePart), resultType, parameters),
         varInits ++ cmdReturnType.map {
           case n: NativeType if n.isPrimitive => CStatements(n.serializeCallCode(funcCall), CReturn(resultOk))
           case rt => CStatements(CReturn(rt.serializeCallCode(funcCall)))
-        }.getOrElse(CStatements(funcCall, CReturn(resultOk))))
+        }.getOrElse(CStatements(funcCall, CReturn(resultOk)))), subComponent)
     }
   }
 

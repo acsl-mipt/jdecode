@@ -272,11 +272,18 @@ class CSourceGenerator(val config: CGeneratorConfiguration) extends LazyLogging 
         "Component defines".comment.eol ++ guidDefines ++
         "Message ID for component defines".comment.eol ++ component.allMessageDefines ++
         "Command ID for component defines".comment.eol ++ component.allCommandDefines ++
-        "Implemented functions".comment ++ methods.map(_.definition).flatMap(m => Seq(CEol, m))).externC.eol))
+        "Public interface functions".comment.eol ++ methods.groupBy(_.component).flatMap{
+        case (c, cMethods) => cMethods.filter(_.isPublic) match {
+          case m if m.isEmpty => Seq.empty
+          case m =>
+            Seq(CEol) ++ ("Component " + c.name.asMangledString).comment ++
+              m.flatMap(m => CAstElements(CEol, m.impl.definition))
+        }
+        }).externC.eol))
         .protectDoubleInclude(component.namespace.dirPath + hFile.getName))
 
       cFile.write(CInclude(component.namespace.includePathFor(hFile.getName)).eol.eol ++
-        methods.flatMap(m => m.eol.eol))
+        methods.flatMap(m => m.impl.eol.eol))
     }
 
     def generate(): Unit = {
@@ -296,12 +303,12 @@ class CSourceGenerator(val config: CGeneratorConfiguration) extends LazyLogging 
         component.allMethods
 
       val externedCFile = (forwardFuncTableDecl.eol.eol ++ componentTypeForwardDecl.eol.eol ++
-        Seq(componentType) ++ CSemicolon.eol ++ methods.flatMap(m => m.definition.eol)).externC
+        Seq(componentType) ++ CSemicolon.eol ++ methods.flatMap(m => m.impl.definition.eol)).externC
       hFile.writeIfNotEmptyWithComment((CEol +: appendPrologueEpilogue(imports ++ externedCFile))
         .protectDoubleInclude(component.namespace.dirPath + hFileName),
         s"Component ${component.name.asMangledString} interface")
       cFile.writeIfNotEmptyWithComment(CInclude(component.includePath).eol.eol ++
-        methods.flatMap(f => f.eol.eol), s"Component ${component.name.asMangledString} implementation")
+        methods.flatMap(m => m.impl.eol.eol), s"Component ${component.name.asMangledString} implementation")
     }
 
   }
