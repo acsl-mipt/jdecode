@@ -13,6 +13,7 @@
     <description>Decode build</description>
 
     <modules>
+        <module>grapheme</module>
         <module>model</module>
         <module>sqlite-persistence</module>
         <module>parser</module>
