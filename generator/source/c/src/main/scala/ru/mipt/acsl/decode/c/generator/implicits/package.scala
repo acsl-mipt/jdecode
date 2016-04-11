@@ -13,6 +13,7 @@ import ru.mipt.acsl.decode.model.domain.pure.naming.HasName
 import ru.mipt.acsl.generator.c.ast.implicits._
 import ru.mipt.acsl.generator.c.ast.{CConstType, CType, CAstElements => _, _}
 import ru.mipt.acsl.decode.c.generator.CSourceGenerator._
+import ru.mipt.acsl.decode.model.domain.impl.component.message.EventMessage
 
 package object implicits {
 
@@ -24,11 +25,26 @@ package object implicits {
   implicit def file2FileHelper(file: File): FileHelper = FileHelper(file)
 
   implicit class TmMessageHelper(message: TmMessage) {
+
     def fullImplMethodName(rootComponent: Component, component: Component): String =
       rootComponent.prefixedTypeName.methodName("Write" + rootComponent.methodNamePart(message, component).capitalize + "Impl")
 
     def fullMethodName(rootComponent: Component, component: Component): String =
       rootComponent.prefixedTypeName.methodName("Write" + rootComponent.methodNamePart(message, component).capitalize)
+
+  }
+
+  implicit class TmEventMessageHelper(val eventMessage: EventMessage) {
+    def fullMethodDef(component: Component, c: Component): CFuncDef = {
+      val eventParam = CFuncParam("event", eventMessage.baseType.cType)
+      val eventParams = eventParam +: eventMessage.fields.flatMap {
+        case Right(e) =>
+          val t = e.paramType
+          Seq(CFuncParam(e.cName, mapIfNotSmall(t.cType, t, (t: CType) => t.ptr.const)))
+        case _ => Seq.empty
+      }
+      CFuncDef(eventMessage.fullMethodName(component, c), resultType, eventParams)
+    }
   }
 
   implicit class CVarHelper(v: CVar) {

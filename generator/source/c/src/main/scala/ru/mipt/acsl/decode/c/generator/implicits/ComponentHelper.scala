@@ -216,18 +216,14 @@ private[generator] case class ComponentHelper(component: Component) {
     allEventMessagesById.toSeq.sortBy(_._1).flatMap {
       case (id, ComponentEventMessage(c, eventMessage)) =>
         val eventVar = "event"._var
-        val eventParam = CFuncParam("event", eventMessage.baseType.cType)
-        val eventParams = eventParam +: eventMessage.fields.flatMap {
-          case Right(e) =>
-            val t = e.paramType
-            Seq(CFuncParam(e.cName, mapIfNotSmall(t.cType, t, (t: CType) => t.ptr.const)))
-          case _ => Seq.empty
-        }
         val methodName = eventMessage.fullImplMethodName(component, c)
-        Seq(MethodInfo(CFuncImpl(CFuncDef(methodName, resultType,
-          writer.param +: eventParams),
+        val fullMethodDef = eventMessage.fullMethodDef(component, c)
+        val eventParams: Seq[CFuncParam] = fullMethodDef.parameters
+        val eventParam = eventParams.head
+        val idLiteral = CIntLiteral(id)
+        Seq(MethodInfo(CFuncImpl(CFuncDef(methodName, resultType, writer.param +: eventParams),
           CAstElements(CIndent, CIf(CEq(CIntLiteral(0),
-            component.isEventAllowedMethodName.call(CIntLiteral(id), CTypeCast(eventVar, berType))),
+            component.isEventAllowedMethodName.call(idLiteral, CTypeCast(eventVar, berType))),
             CAstElements(CEol, CIndent, CReturn(eventIsDenied), CSemicolon, CEol)),
             eventMessage.baseType.serializeCallCode(eventVar).line) ++
             eventMessage.fields.flatMap {
@@ -237,9 +233,9 @@ private[generator] case class ComponentHelper(component: Component) {
                 CStatements(p.paramType.serializeCallCode(p.cName._var))
             } :+ CReturn(resultOk).line
         ), c),
-          MethodInfo(CFuncImpl(CFuncDef(eventMessage.fullMethodName(component, c), resultType, eventParams),
+          MethodInfo(CFuncImpl(fullMethodDef,
             CStatements(
-              writer.v.define(writer.t, Some(component.beginNewEventMethodName.call(CIntLiteral(id), eventParam.name._var))),
+              writer.v.define(writer.t, Some(component.beginNewEventMethodName.call(idLiteral, eventParam.name._var))),
               methodName.call(writer.v +: eventParams.map(_.name._var): _*)._try,
               CReturn(component.endEventMethodName.call()))), c, isPublic = true))
     }
@@ -308,23 +304,35 @@ private[generator] case class ComponentHelper(component: Component) {
       }.mkString("\\\n") + "\\\n}").eol
   }
 
-  def parameterMethodImplDefs: Seq[CFuncDef] = {
+  def parameterMethodImplDefs: Seq[MethodDefInfo] = {
     val parameters: Seq[ComponentParameterField] = component.allParameters
     val res = parameters.map { case ComponentParameterField(c, f) =>
       val fType = f.typeUnit.t
-      CFuncDef(component.methodName(f, c), fType.cMethodReturnType, fType.cMethodReturnParameters)
+      MethodDefInfo(CFuncDef(component.methodName(f, c), fType.cMethodReturnType, fType.cMethodReturnParameters), c)
     }
     res
   }
 
-  def commandMethodImplDefs: Seq[CFuncDef] = {
+  def beginNewEventMethodDef: CFuncDef =
+    CFuncDef(component.beginNewEventMethodName, writer.t, Seq(messageId.param, eventId.param))
+
+  def endEventMethodDef: CFuncDef = CFuncDef(component.endEventMethodName, resultType)
+
+  def isEventAllowedMethodDef: CFuncDef =
+    CFuncDef(component.isEventAllowedMethodName, b8Type, Seq(messageId.param, eventId.param))
+
+  def serviceMethodDefs: Seq[CFuncDef] =
+    Seq(component.beginNewEventMethodDef, component.endEventMethodDef, component.isEventAllowedMethodDef)
+
+
+  def commandMethodImplDefs: Seq[MethodDefInfo] = {
     component.allCommands.map { case ComponentCommand(c, command) =>
-      CFuncDef(component.methodName(command, c),
+      MethodDefInfo(CFuncDef(component.methodName(command, c),
         command.returnType.map(_.cMethodReturnType).getOrElse(voidType),
         command.parameters.map(p => {
           val t = p.paramType
           CFuncParam(p.cName, mapIfNotSmall(t.cType, t, (ct: CType) => ct.ptr.const))
-        }) ++ command.returnType.map(_.cMethodReturnParameters).getOrElse(Seq.empty))
+        }) ++ command.returnType.map(_.cMethodReturnParameters).getOrElse(Seq.empty)), c)
     }
   }
 

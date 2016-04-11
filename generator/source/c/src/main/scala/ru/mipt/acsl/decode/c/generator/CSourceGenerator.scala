@@ -264,11 +264,15 @@ class CSourceGenerator(val config: CGeneratorConfiguration) extends LazyLogging 
 
       hFile.write((CEol +: appendPrologueEpilogue((component.typeIncludes ++
         "USER command implementation functions, MUST BE implemented".comment ++
-        component.commandMethodImplDefs.flatMap(m => Seq(CEol, m)).eol ++
+        component.commandMethodImplDefs.groupBy(_.component).flatMap{ case (c, cMethods) =>
+          (("Component " + c.name.asMangledString).comment ++ cMethods.flatMap(m => Seq(CEol, m.methodDef))).eol
+        }.toSeq ++
         "USER parameter implementation functions, MUST BE implemented".comment ++
-        component.parameterMethodImplDefs.flatMap(m => Seq(CEol, m)).eol ++
-        "USER other functions, MUST BE implemented".comment ++
-        Seq(CFuncDef(component.isEventAllowedMethodName, b8Type, Seq(messageId.param, eventId.param))) ++
+        component.parameterMethodImplDefs.groupBy(_.component).flatMap{ case (c, cMethods) =>
+          (("Component " + c.name.asMangledString).comment ++ cMethods.flatMap(m => Seq(CEol, m.methodDef))).eol
+        }.toSeq ++
+        "USER service functions, MUST BE implemented".comment ++
+        component.serviceMethodDefs.flatMap(m => Seq(CEol, m)).eol ++
         "Component defines".comment.eol ++ guidDefines ++
         "Message ID for component defines".comment.eol ++ component.allMessageDefines ++
         "Command ID for component defines".comment.eol ++ component.allCommandDefines ++
@@ -283,7 +287,8 @@ class CSourceGenerator(val config: CGeneratorConfiguration) extends LazyLogging 
         .protectDoubleInclude(component.namespace.dirPath + hFile.getName))
 
       cFile.write(CInclude(component.namespace.includePathFor(hFile.getName)).eol.eol ++
-        methods.flatMap(m => m.impl.eol.eol))
+        methods.flatMap(_.impl.definition.eol.eol) ++
+        methods.flatMap(_.impl.eol.eol))
     }
 
     def generate(): Unit = {
@@ -330,7 +335,7 @@ private[generator] object CSourceGenerator {
   val typeInitMethodName = "Init"
 
   val photonBerTypeName = "PhotonBer"
-  private val b8Type = CTypeApplication("PhotonGtB8")
+  val b8Type = CTypeApplication("PhotonGtB8")
   val berType = CTypeApplication("PhotonBer")
   val voidType = CTypeApplication("void")
   val sizeTType = CTypeApplication("size_t")
