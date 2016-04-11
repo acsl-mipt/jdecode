@@ -5,7 +5,7 @@ import ru.mipt.acsl.decode.model.domain.impl.component.message.EventMessage
 import ru.mipt.acsl.decode.model.domain.impl.component.message._
 import ru.mipt.acsl.decode.model.domain.impl.component.{Command, Component}
 import ru.mipt.acsl.decode.model.domain.impl.naming.Namespace
-import ru.mipt.acsl.decode.model.domain.impl.types.{DecodeType, NativeType}
+import ru.mipt.acsl.decode.model.domain.impl.types.{DecodeType, NativeType, StructField}
 import ru.mipt.acsl.decode.model.domain.pure.HasOptionId
 import ru.mipt.acsl.decode.model.domain.pure.component.message.{MessageParameter, StatusMessage, TmMessage}
 import ru.mipt.acsl.generator.c.ast.implicits._
@@ -71,6 +71,46 @@ private[generator] case class ComponentHelper(component: Component) {
 
   def idDefineName: String = component.prefixedTypeName.upperCamel2UpperUnderscore + "_ID"
 
+  def executeMethodNamePart(c: Component): String =
+    "Execute" + methodNamePart(c).capitalize
+
+  def executeMethodNamePart(command: Command, c: Component): String =
+    "Execute" + methodNamePart(command, c).capitalize
+
+  def executeMethodName(c: Component): String =
+    component.prefixedTypeName.methodName(executeMethodNamePart(c))
+
+  def executeMethodName(command: Command, c: Component): String =
+    component.prefixedTypeName.methodName(executeMethodNamePart(command, c))
+
+  def methodNamePart(c: Component): String =
+    ((if (component == c) "" else c.typeName) +
+      component.cName.capitalize).upperCamel2LowerCamel
+
+  def methodNamePart(part: String, c: Component): String =
+    ((if (component == c) "" else c.typeName) + part).upperCamel2LowerCamel
+
+  def methodNamePart(command: Command, c: Component): String =
+    methodNamePart(command.cName.capitalize, c)
+
+  def methodNamePart(message: TmMessage, c: Component): String =
+    methodNamePart(message.cName.capitalize, c)
+
+  def methodNamePart(field: StructField, c: Component): String =
+    methodNamePart(field.cName.capitalize, c)
+
+  def methodName(part: String): String = component.prefixedTypeName.methodName(part)
+
+  def methodName(c: Component): String = methodName(methodNamePart(c))
+
+  def methodName(command: Command, c: Component): String = methodName(methodNamePart(command, c))
+
+  def methodName(field: StructField, c: Component): String = methodName(methodNamePart(field, c))
+
+  def beginNewEventMethodName: String = prefixedTypeName.methodName("BeginNewEvent")
+
+  def endEventMethodName: String = prefixedTypeName.methodName("EndEvent")
+
   def allSubComponents: immutable.Set[Component] =
     component.subComponents.flatMap { ref =>
       val c = ref.component
@@ -100,7 +140,7 @@ private[generator] case class ComponentHelper(component: Component) {
       Seq(messageId.v.serializeBer._try.line, CIndent, CSwitch(messageId.v,
         casesForMap(component.allStatusMessagesById, { (message: TmMessage, c: Component) => message match {
           case message: StatusMessage =>
-            Some(CStatements(CReturn(message.fullMethodName(rootComponent, c).call(writer.v))))
+            Some(CStatements(CReturn(message.fullImplMethodName(rootComponent, c).call(writer.v))))
           case _ => None
         }
         }),
@@ -114,7 +154,7 @@ private[generator] case class ComponentHelper(component: Component) {
       Seq(reader.param, writer.param, commandId.param)),
       Seq(CIndent, CSwitch(commandId.v, casesForMap(component.allCommandsById,
         (command: Command, c: Component) =>
-          Some(CStatements(CReturn(command.executeMethodName(rootComponent, c).call(reader.v, writer.v))))),
+          Some(CStatements(CReturn(rootComponent.executeMethodName(command, c).call(reader.v, writer.v))))),
         default = CStatements(CReturn(invalidCommandId))), CEol))
   }
 
@@ -174,13 +214,16 @@ private[generator] case class ComponentHelper(component: Component) {
     allEventMessagesById.toSeq.sortBy(_._1).flatMap {
       case (id, ComponentEventMessage(c, eventMessage)) =>
         val eventVar = "event"._var
-        Some(CFuncImpl(CFuncDef(eventMessage.fullMethodName(component, c), resultType,
-          Seq(writer.param, CFuncParam("event", eventMessage.baseType.cType)) ++ eventMessage.fields.flatMap {
-            case Right(e) =>
-              val t = e.paramType
-              Seq(CFuncParam(e.cName, mapIfNotSmall(t.cType, t, (t: CType) => t.ptr.const)))
-            case _ => Seq.empty
-          }),
+        val eventParam = CFuncParam("event", eventMessage.baseType.cType)
+        val eventParams = eventParam +: eventMessage.fields.flatMap {
+          case Right(e) =>
+            val t = e.paramType
+            Seq(CFuncParam(e.cName, mapIfNotSmall(t.cType, t, (t: CType) => t.ptr.const)))
+          case _ => Seq.empty
+        }
+        val methodName = eventMessage.fullImplMethodName(component, c)
+        Seq(CFuncImpl(CFuncDef(methodName, resultType,
+          writer.param +: eventParams),
           CAstElements(CIndent, CIf(CEq(CIntLiteral(0),
             component.isEventAllowedMethodName.call(CIntLiteral(id), CTypeCast(eventVar, berType))),
             CAstElements(CEol, CIndent, CReturn(eventIsDenied), CSemicolon, CEol)),
@@ -191,14 +234,19 @@ private[generator] case class ComponentHelper(component: Component) {
               case Right(p) =>
                 CStatements(p.paramType.serializeCallCode(p.cName._var))
             } :+ CReturn(resultOk).line
-        ))
+        ),
+          CFuncImpl(CFuncDef(eventMessage.fullMethodName(component, c), resultType, eventParams),
+            CStatements(
+              writer.v.define(writer.t, Some(component.beginNewEventMethodName.call(CIntLiteral(id), eventParam.name._var))),
+              methodName.call(writer.v +: eventParams.map(_.name._var): _*)._try,
+              CReturn(component.endEventMethodName.call()))))
     }
   }
 
   def allStatusMessageMethods: Seq[CFuncImpl] = {
     allStatusMessagesById.toSeq.sortBy(_._1).map(_._2).flatMap {
       case ComponentStatusMessage(c, statusMessage) =>
-        Some(CFuncImpl(CFuncDef(statusMessage.fullMethodName(component, c), resultType,
+        Some(CFuncImpl(CFuncDef(statusMessage.fullImplMethodName(component, c), resultType,
           Seq(writer.param)),
           statusMessage.parameters.flatMap(p =>
             CComment(p.toString).line +: p.serializeCallCode(component, c)) :+ CReturn(resultOk).line))
@@ -259,19 +307,17 @@ private[generator] case class ComponentHelper(component: Component) {
   }
 
   def parameterMethodImplDefs: Seq[CFuncDef] = {
-    val componentTypeName = component.prefixedTypeName
     val parameters: Seq[ComponentParameterField] = component.allParameters
     val res = parameters.map { case ComponentParameterField(c, f) =>
       val fType = f.typeUnit.t
-      CFuncDef(componentTypeName.methodName(f, component, c), fType.cMethodReturnType, fType.cMethodReturnParameters)
+      CFuncDef(component.methodName(f, c), fType.cMethodReturnType, fType.cMethodReturnParameters)
     }
     res
   }
 
   def commandMethodImplDefs: Seq[CFuncDef] = {
-    val componentTypeName = component.prefixedTypeName
     component.allCommands.map { case ComponentCommand(c, command) =>
-      CFuncDef(componentTypeName.methodName(command, component, c),
+      CFuncDef(component.methodName(command, c),
         command.returnType.map(_.cMethodReturnType).getOrElse(voidType),
         command.parameters.map(p => {
           val t = p.paramType
@@ -291,7 +337,7 @@ private[generator] case class ComponentHelper(component: Component) {
     val componentTypeName = component.prefixedTypeName
     val parameters = Seq(reader.param, writer.param)
     component.allCommandsById.toSeq.sortBy(_._1).map(_._2).map { case ComponentCommand(subComponent, command) =>
-      val methodNamePart = command.executeMethodNamePart(component, subComponent)
+      val methodNamePart = component.executeMethodNamePart(command, subComponent)
       val vars = command.parameters.map { p => CVar(p.mangledCName) }
       val varInits = vars.zip(command.parameters).flatMap { case (v, parameter) =>
         val paramType = parameter.paramType
@@ -299,7 +345,7 @@ private[generator] case class ComponentHelper(component: Component) {
       }
       val cmdReturnType = command.returnType
       //val cmdCReturnType = cmdReturnType.map(_.cType)
-      val funcCall = command.methodName(component, subComponent).call(
+      val funcCall = component.methodName(command, subComponent).call(
         (for ((v, t) <- vars.zip(command.parameters.map(_.paramType))) yield v.refIfNotSmall(t)): _*)
       CFuncImpl(CFuncDef(componentTypeName.methodName(methodNamePart), resultType, parameters),
         varInits ++ cmdReturnType.map {

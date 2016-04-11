@@ -24,8 +24,11 @@ package object implicits {
   implicit def file2FileHelper(file: File): FileHelper = FileHelper(file)
 
   implicit class TmMessageHelper(message: TmMessage) {
+    def fullImplMethodName(rootComponent: Component, component: Component): String =
+      rootComponent.prefixedTypeName.methodName("Write" + rootComponent.methodNamePart(message, component).capitalize + "Impl")
+
     def fullMethodName(rootComponent: Component, component: Component): String =
-      rootComponent.prefixedTypeName.methodName("Write" + message.methodNamePart(rootComponent, component).capitalize)
+      rootComponent.prefixedTypeName.methodName("Write" + rootComponent.methodNamePart(message, component).capitalize)
   }
 
   implicit class CVarHelper(v: CVar) {

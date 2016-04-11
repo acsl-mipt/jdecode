@@ -22,12 +22,6 @@ private[generator] case class StringHelper(str: String) {
 
   def initMethodName: String = methodName(typeInitMethodName)
 
-  def methodName(command: Command, rootComponent: Component, component: Component): String =
-    methodName(command.methodNamePart(rootComponent, component))
-
-  def methodName(f: StructField, rootComponent: Component, component: Component): String =
-    methodName(f.methodNamePart(rootComponent, component))
-
   def comment: CAstElements = Seq(CEol, CComment(str), CEol)
 
   def upperCamel2UpperUnderscore: String = CaseFormat.UPPER_CAMEL.to(CaseFormat.UPPER_UNDERSCORE, str)

@@ -64,10 +64,10 @@ private[generator] case class MessageParameterSerializationHelper(mp: MessagePar
           astGen = Some((inner: CAstElements) => fold(
             Seq(
               CVarDef("array", if (astPtr) rangeCType.ptr else rangeCType, arrExpr).line,
-              CVarDef(size.name, sizeTType, Some(sizeExpr)).line) ++
+              CVarDef(size.name, size.t, Some(sizeExpr)).line) ++
             (if (!isRangeFixed) CAstElements(size.v.serializeCallCodeForArraySize.line) else CAstElements.empty) ++
             CAstElements(CIndent,
-              CForStatement(Seq(CVarDef(i.name, sizeTType, Some(CULongLiteral(range.min)))),
+              CForStatement(Seq(CVarDef(i.name, i.t, Some(CULongLiteral(range.min)))),
                 Seq(CLess(i.v, size.v)), Seq(CIncBefore(i.v)), inner).eol)))
 
           val isNotSmall = !t.isSmall

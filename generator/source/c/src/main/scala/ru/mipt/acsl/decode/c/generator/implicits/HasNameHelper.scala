@@ -9,19 +9,6 @@ import ru.mipt.acsl.decode.c.generator.CSourceGenerator._
   */
 private[generator] case class HasNameHelper(named: HasName) {
 
-  def executeMethodNamePart(rootComponent: Component, component: Component): String =
-    "Execute" + methodNamePart(rootComponent, component).capitalize
-
-  def executeMethodName(rootComponent: Component, component: Component): String =
-    rootComponent.prefixedTypeName.methodName(executeMethodNamePart(rootComponent, component))
-
-  def methodNamePart(rootComponent: Component, component: Component): String =
-    ((if (rootComponent == component) "" else component.typeName) +
-      cName.capitalize).upperCamel2LowerCamel
-
-  def methodName(rootComponent: Component, component: Component): String =
-    rootComponent.prefixedTypeName.methodName(methodNamePart(rootComponent, component))
-
   def cName: String = named.name.asMangledString
 
   def fileName: String = named.name.asMangledString
