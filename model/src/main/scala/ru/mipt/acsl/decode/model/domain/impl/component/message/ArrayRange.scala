@@ -1,13 +1,13 @@
 package ru.mipt.acsl.decode.model.domain.impl.component.message
 
 import ru.mipt.acsl.decode.model.domain.impl.types.ArraySize
-import ru.mipt.acsl.decode.model.domain.pure.component.message.ArrayRange
+import ru.mipt.acsl.decode.model.domain.pure.component.message
 import ru.mipt.acsl.decode.model.domain.pure.types.ArraySize
 
 /**
   * Created by metadeus on 05.04.16.
   */
-private case class ArrayRangeImpl(min: Long, max: Option[Long]) extends ArrayRange {
+private case class ArrayRangeImpl(min: Long, max: Option[Long]) extends message.ArrayRange {
 
   override def toString: String = (min, max) match {
     case (0, None) => "*"
@@ -29,5 +29,5 @@ private case class ArrayRangeImpl(min: Long, max: Option[Long]) extends ArrayRan
 }
 
 object ArrayRange {
-  def apply(min: Long, max: Option[Long]): ArrayRange = ArrayRangeImpl(min, max)
+  def apply(min: Long, max: Option[Long]): message.ArrayRange = ArrayRangeImpl(min, max)
 }

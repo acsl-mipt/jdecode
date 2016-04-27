@@ -31,7 +31,7 @@ class CSourceGenerator(val config: CGeneratorConfiguration) extends LazyLogging 
       return
     val dir = new File(config.outputDir, "decode/")
     dir.mkdirs()
-    config.sources.foreach(s => new File(dir, new File(s.name).getName).write(s.source))
+    config.sources.foreach(s => new File(dir, new File(s.name).getName).write(s.contents))
   }
 
   private def generatePrologueEpilogue(): Unit = {

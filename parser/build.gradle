@@ -1,0 +1,8 @@
+
+dependencies {
+    compile files('lib/grammar-kit.jar')
+    compile files('lib/light-psi-all.jar')
+    compile project(":decode:model")
+}
+
+sourceSets.main.scala.srcDir 'gen'

@@ -30,13 +30,13 @@ class MessageParameterRefWalker(var component: Component, var structField: Optio
     component.subComponents.find(elementName.asMangledString == _.aliasOrMangledName).map { subComponent =>
       component = subComponent.component
       structField = None
-      Success()
+      Success(Unit)
     }
 
   private def findBaseTypeField(elementName: ElementName): Option[Try[Unit]] =
     component.baseType.flatMap(_.fields.find(elementName == _.name).map { f =>
       structField = Some(f)
-      Success()
+      Success(Unit)
     })
 
   private def findTokenString(token: MessageParameterPathElement): Option[Try[Unit]] =

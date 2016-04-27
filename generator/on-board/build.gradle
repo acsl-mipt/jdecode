@@ -1,0 +1,12 @@
+dependencies {
+    compile project(":decode:generator:source:c")
+    compile project(":decode:parser")
+}
+
+task genOnBoardCSources(type: JavaExec, dependsOn: classes) {
+
+    classpath sourceSets.main.runtimeClasspath
+    classpath configurations.runtime
+
+    main = 'ru.mipt.acsl.geotarget.OnBoardCSourceGenerator'
+}

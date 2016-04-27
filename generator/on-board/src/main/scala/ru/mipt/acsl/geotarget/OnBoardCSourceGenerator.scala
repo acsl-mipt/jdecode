@@ -1,6 +1,9 @@
 package ru.mipt.acsl.geotarget
 
 import java.io.File
+import java.nio.charset.StandardCharsets.UTF_8
+
+import com.google.common.io.Resources
 
 import com.typesafe.scalalogging.LazyLogging
 import ru.mipt.acsl.decode.c.generator.{CGeneratorConfiguration, CSourceGenerator, FileGeneratorConfiguration, GeneratorSource}
@@ -20,7 +23,7 @@ object OnBoardCSourceGenerator extends LazyLogging {
 
   def main(args : Array[String]) = {
     val config = new CGeneratorConfiguration(new File("gen/"),
-      ModelRegistry.registry(getClass.getClassLoader),
+      ModelRegistry.registry,
       "ru.mipt.acsl.photon.Main",
       HashMap(
         fqn("decode") -> Some(fqn("photon.decode")),
@@ -33,9 +36,8 @@ object OnBoardCSourceGenerator extends LazyLogging {
         fqn("ru.mipt.acsl.scripting") -> Some(fqn("photon.scripting")),
         fqn("ru.mipt.acsl.segmentation") -> Some(fqn("photon.segmentation")),
         fqn("ru.mipt.acsl.tm") -> Some(fqn("photon.tm"))),
-      sources = ModelRegistry.provider.resourceNames(ModelRegistry.config).map(r =>
-        GeneratorSource(r, Source.fromInputStream(getClass.getResourceAsStream("/" +
-          ModelRegistry.config.resourcePath + "/" + r)))),
+      sources = sources.map(source =>
+        GeneratorSource(ModelRegistry.sourceName(source), ModelRegistry.sourceContents(source))),
       isSingleton = true,
       prologue = FileGeneratorConfiguration(isActive = true, path = Some("photon/prologue.h"),
         contents = Some(

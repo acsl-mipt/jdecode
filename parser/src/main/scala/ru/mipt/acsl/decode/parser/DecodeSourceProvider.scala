@@ -1,5 +1,6 @@
 package ru.mipt.acsl.decode.parser
 
+import java.io.InputStream
 import java.net.URL
 import java.util
 
@@ -22,6 +23,7 @@ import ru.mipt.acsl.decode.model.domain.impl.registry.Registry
 
 import scala.collection.{immutable, mutable}
 import scala.io.Source
+import scala.util.Try
 
 /**
   * @author Artem Shein
@@ -71,29 +73,13 @@ class DecodeSourceProvider extends LazyLogging {
 
   ParserBoilerplate.init()
 
-  def resourceNames(config: DecodeSourceProviderConfiguration, clsLoader: ClassLoader = getClass.getClassLoader): Seq[String] = {
-    val resourcePath = config.resourcePath
-    val resources = clsLoader.getResources(resourcePath)
-    val decodeFiles = mutable.Buffer.empty[String]
-    while (resources.hasMoreElements) {
-      val resUrl = resources.nextElement()
-      decodeFiles ++= Source.fromInputStream(resUrl.openStream())
-        .getLines().filter(_.endsWith(".decode"))
-    }
-    decodeFiles
-  }
-
-  def provide(config: DecodeSourceProviderConfiguration, clsLoader: ClassLoader = getClass.getClassLoader): Registry = {
-    val resourcePath = config.resourcePath
+  def provide(config: DecodeSourceProviderConfiguration, sources: Seq[String]): Registry = {
     val registry = Registry()
-    registry.rootNamespaces ++= resourceNames(config, clsLoader).map { name =>
-      val resource = "/" + resourcePath + "/" + name
-      logger.debug(s"Parsing $resource...")
+    registry.rootNamespaces ++= sources.map { source =>
       val parserDefinition = new DecodeParserDefinition()
       new DecodeAstTransformer().processFile(new DecodeParser().parse(DecodeParserDefinition.file,
         new PsiBuilderFactoryImpl().createBuilder(parserDefinition,
-        parserDefinition.createLexer(null),
-        Source.fromInputStream(getClass.getResourceAsStream(resource)).mkString)))
+        parserDefinition.createLexer(null), source)))
     }.to[immutable.Seq].mergeRoot
     registry
   }
