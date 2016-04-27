@@ -2,7 +2,7 @@ package ru.mipt.acsl.decode.model.domain.impl.naming
 
 import ru.mipt.acsl.decode.model.domain.impl.LocalizedString
 import ru.mipt.acsl.decode.model.domain.impl.component.Component
-import ru.mipt.acsl.decode.model.domain.pure.naming.ElementName
+import ru.mipt.acsl.decode.model.domain.pure.{naming => n}
 import ru.mipt.acsl.decode.model.domain.pure
 import ru.mipt.acsl.decode.model.domain.pure.LocalizedString
 import ru.mipt.acsl.decode.model.domain.impl.registry.DecodeUnit
@@ -31,7 +31,7 @@ trait Namespace extends pure.naming.Namespace {
 }
 
 object Namespace {
-  def apply(name: ElementName, info: LocalizedString = LocalizedString.empty, parent: Option[Namespace] = None,
+  def apply(name: n.ElementName, info: LocalizedString = LocalizedString.empty, parent: Option[Namespace] = None,
             types: immutable.Seq[DecodeType] = immutable.Seq.empty,
             units: immutable.Seq[DecodeUnit] = immutable.Seq.empty,
             subNamespaces: immutable.Seq[Namespace] = immutable.Seq.empty,

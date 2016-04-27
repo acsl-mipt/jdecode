@@ -19,8 +19,10 @@ object ModelRegistry extends LazyLogging {
   val sourceResourcePath = { n: String => "ru/mipt/acsl/decode/" + sourceName(n) }
   val sourceContents = { n: String => Resources.toString(Resources.getResource(sourceResourcePath(n)), UTF_8) }
 
-  def registry: Registry = registryForSourceNames(Seq("runtime", "foundation", "fs", "identification", "mcc", "photon", "scripting", "segmentation",
-    "tm", "routing"))
+  val sources = Seq("runtime", "foundation", "fs", "identification", "mcc", "photon", "scripting", "segmentation",
+    "tm", "routing")
+
+  def registry: Registry = registryForSourceNames(sources)
 
   def registryForSourceNames(sourceNames: Seq[String]): Registry = registry(sourceNames.map(sourceContents))
 

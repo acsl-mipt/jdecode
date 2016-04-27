@@ -24,6 +24,7 @@ subprojects {
         compile "com.typesafe.scala-logging:scala-logging_$scalaBinaryVersion:3.1.0"
         compile 'org.jetbrains:annotations:13.0'
         compile "org.apache.commons:commons-lang3:3.4"
+        testCompile "org.scalatest:scalatest_$scalaBinaryVersion:3.0.0-M15"
     }
 }
 

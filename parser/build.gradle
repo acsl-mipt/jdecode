@@ -1,7 +1,6 @@
 
 dependencies {
-    compile files('lib/grammar-kit.jar')
-    compile files('lib/light-psi-all.jar')
+    compile files('lib/grammar-kit.jar', 'lib/light-psi-all.jar')
     compile project(":decode:model")
 }
 

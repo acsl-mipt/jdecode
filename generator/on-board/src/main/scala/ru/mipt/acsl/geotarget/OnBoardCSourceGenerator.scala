@@ -36,7 +36,7 @@ object OnBoardCSourceGenerator extends LazyLogging {
         fqn("ru.mipt.acsl.scripting") -> Some(fqn("photon.scripting")),
         fqn("ru.mipt.acsl.segmentation") -> Some(fqn("photon.segmentation")),
         fqn("ru.mipt.acsl.tm") -> Some(fqn("photon.tm"))),
-      sources = sources.map(source =>
+      sources = ModelRegistry.sources.map(source =>
         GeneratorSource(ModelRegistry.sourceName(source), ModelRegistry.sourceContents(source))),
       isSingleton = true,
       prologue = FileGeneratorConfiguration(isActive = true, path = Some("photon/prologue.h"),

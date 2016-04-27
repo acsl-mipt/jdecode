@@ -1,4 +1,5 @@
 dependencies {
     compile project(':decode:parser')
     compile project(':decode:generator:doc')
+    compile "com.lihaoyi:scalatags_$scalaBinaryVersion:0.5.4"
 }
