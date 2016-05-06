@@ -1,0 +1,4 @@
+dependencies {
+    compile "com.lihaoyi:scalatags_$scalaBinaryVersion:0.5.4"
+    compile "com.github.japgolly.scalacss:core_$scalaBinaryVersion:0.4.0"
+}

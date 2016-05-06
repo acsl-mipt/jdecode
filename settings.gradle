@@ -2,12 +2,13 @@ rootProject.name = 'decode'
 
 include ':decode:model',
         ':decode:parser',
+        ':decode:ppf',
+        ':decode:sqlite-persistence',
+        ':decode:grapheme',
         ':decode:generator:doc',
         ':decode:generator:model-doc',
         ':decode:generator:on-board',
         ':decode:generator:source:c',
         ':decode:generator:source:cpp',
         ':decode:generator:source:java',
-        ':decode:generator:source:mavlink',
-        ':decode:sqlite-persistence',
-        ':decode:grapheme'
+        ':decode:generator:source:mavlink'
