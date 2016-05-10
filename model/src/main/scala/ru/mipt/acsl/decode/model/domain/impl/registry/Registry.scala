@@ -1,10 +1,9 @@
 package ru.mipt.acsl.decode.model.domain.impl.registry
 
-import ru.mipt.acsl.decode.model.domain.pure
+import ru.mipt.acsl.decode.model.domain.Referenceable
 import ru.mipt.acsl.decode.model.domain.impl.naming.Namespace
-import ru.mipt.acsl.decode.model.domain.impl.proxy.path.ProxyPath
-import ru.mipt.acsl.decode.model.domain.impl.proxy.{DecodeProxyResolver, ResolvingResult}
-import ru.mipt.acsl.decode.model.domain.pure.Referenceable
+import ru.mipt.acsl.decode.model.domain.proxy.path.ProxyPath
+import ru.mipt.acsl.decode.model.domain.proxy.{DecodeProxyResolver, ResolvingResult}
 import ru.mipt.acsl.decode.modeling.ErrorLevel
 import ru.mipt.acsl.decode.modeling.impl.Message
 
@@ -14,7 +13,7 @@ import scala.reflect.ClassTag
 /**
   * @author Artem Shein
   */
-trait Registry extends pure.registry.Registry {
+trait Registry extends ru.mipt.acsl.decode.model.domain.registry.Registry {
 
   override def rootNamespaces: immutable.Seq[Namespace]
 

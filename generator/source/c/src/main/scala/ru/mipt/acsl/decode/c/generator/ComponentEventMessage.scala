@@ -1,7 +1,7 @@
 package ru.mipt.acsl.decode.c.generator
 
-import ru.mipt.acsl.decode.model.domain.impl.component.Component
-import ru.mipt.acsl.decode.model.domain.impl.component.message.EventMessage
+import ru.mipt.acsl.decode.model.domain.component.Component
+import ru.mipt.acsl.decode.model.domain.component.message.EventMessage
 
 /**
   * @author Artem Shein

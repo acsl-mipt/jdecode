@@ -1,8 +1,8 @@
 package ru.mipt.acsl.decode.model.domain.impl.registry
 
 import ru.mipt.acsl.decode.model.domain.impl.naming.{ElementName, Fqn, Namespace}
-import ru.mipt.acsl.decode.model.domain.impl.proxy.{DecodeProxyResolver, ExistingElementsProxyResolver, PrimitiveAndGenericTypesProxyResolver}
-import ru.mipt.acsl.decode.model.domain.pure.naming.ElementName
+import ru.mipt.acsl.decode.model.domain.proxy.{DecodeProxyResolver, ExistingElementsProxyResolver, PrimitiveAndGenericTypesProxyResolver}
+import ru.mipt.acsl.decode.model.domain.naming.ElementName
 
 import scala.collection.immutable
 

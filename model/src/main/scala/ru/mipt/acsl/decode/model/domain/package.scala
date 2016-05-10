@@ -1,6 +1,7 @@
 package ru.mipt.acsl.decode.model
 
-import ru.mipt.acsl.decode.model.domain.impl.proxy.ResolvingResult
+
+import ru.mipt.acsl.decode.model.domain.proxy.ResolvingResult
 
 import scala.collection.immutable
 

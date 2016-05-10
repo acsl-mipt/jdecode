@@ -1,15 +1,15 @@
 package ru.mipt.acsl.decode.model.domain.impl.types
 
-import ru.mipt.acsl.decode.model.domain.{LocalizedString, pure}
+import ru.mipt.acsl.decode.model.domain.LocalizedString
 import ru.mipt.acsl.decode.model.domain.impl.naming.Namespace
-import ru.mipt.acsl.decode.model.domain.impl.proxy.MaybeProxy
-import ru.mipt.acsl.decode.model.domain.pure.naming.ElementName
-import ru.mipt.acsl.decode.model.domain.pure.types.EnumConstant
+import ru.mipt.acsl.decode.model.domain.naming.ElementName
+import ru.mipt.acsl.decode.model.domain.proxy.MaybeProxy
+import ru.mipt.acsl.decode.model.domain.types.{DecodeType, EnumConstant}
 
 /**
   * @author Artem Shein
   */
-trait EnumType extends BaseTypedType with pure.types.EnumType {
+trait EnumType extends HasBaseType with ru.mipt.acsl.decode.model.domain.types.EnumType {
   override def extendsTypeOption: Option[EnumType] = extendsOrBaseType.left.toOption
   override def baseTypeOption: Option[DecodeType] = extendsOrBaseType.right.toOption
   def extendsOrBaseTypeProxy: Either[MaybeProxy[EnumType], MaybeProxy[DecodeType]]

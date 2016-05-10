@@ -1,20 +1,21 @@
 package ru.mipt.acsl.decode.c.generator
 
 import java.io
-import java.io.{ByteArrayOutputStream, File, StringWriter}
+import java.io.{ByteArrayOutputStream, File}
 import java.nio.charset.StandardCharsets
 
 import com.typesafe.scalalogging.LazyLogging
 import ru.mipt.acsl.decode.c.generator.implicits._
 import ru.mipt.acsl.decode.c.generator.implicits.serialization._
-import ru.mipt.acsl.decode.model.domain.impl.component.{Command, Component}
+import ru.mipt.acsl.decode.generator.json.{DecodeJsonGenerator, DecodeJsonGeneratorConfig}
+import ru.mipt.acsl.decode.model.domain.component.message.{EventMessage => _}
+import ru.mipt.acsl.decode.model.domain.component.{Command, Component}
 import ru.mipt.acsl.decode.model.domain.impl.naming.{ElementName, Namespace}
-import ru.mipt.acsl.decode.model.domain.impl.types.{AliasType, ArrayType, DecodeType, EnumType, GenericType, GenericTypeSpecialized, NativeType, PrimitiveTypeInfo, StructType, SubType, TypeKind}
-import ru.mipt.acsl.decode.model.domain.pure.component.message.{EventMessage => _}
-import ru.mipt.acsl.decode.model.domain.pure.naming.HasName
+import ru.mipt.acsl.decode.model.domain.impl.types.{AliasType, ArrayType, EnumType, GenericType, GenericTypeSpecialized, NativeType, PrimitiveTypeInfo, SubType, TypeKind}
+import ru.mipt.acsl.decode.model.domain.naming.HasName
+import ru.mipt.acsl.decode.model.domain.types.{DecodeType, StructType}
 import ru.mipt.acsl.generator.c.ast._
 import ru.mipt.acsl.generator.c.ast.implicits._
-import ru.mipt.acsl.decode.generator.json.{DecodeJsonGenerator, DecodeJsonGeneratorConfig}
 
 import scala.collection.{immutable, mutable}
 

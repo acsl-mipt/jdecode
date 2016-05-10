@@ -1,19 +1,26 @@
 package ru.mipt.acsl.decode.model.domain.impl.types
 
+import ru.mipt.acsl.decode.model.domain.LocalizedString
 import ru.mipt.acsl.decode.model.domain.impl.naming.Namespace
-import ru.mipt.acsl.decode.model.domain.impl.proxy.MaybeProxy
-import ru.mipt.acsl.decode.model.domain.{LocalizedString, pure}
-import ru.mipt.acsl.decode.model.domain.pure.naming.ElementName
+import ru.mipt.acsl.decode.model.domain.naming.ElementName
+import ru.mipt.acsl.decode.model.domain.proxy.MaybeProxy
+import ru.mipt.acsl.decode.model.domain.types.DecodeType
 
 /**
   * @author Artem Shein
   */
-trait GenericTypeSpecialized extends pure.types.GenericTypeSpecialized with DecodeType {
+trait GenericTypeSpecialized extends DecodeType {
+
   def genericTypeProxy: MaybeProxy[GenericType]
-  override def genericType: GenericType = genericTypeProxy.obj
+
+  def genericType: GenericType = genericTypeProxy.obj
+
   def genericTypeArgumentsProxy: Seq[Option[MaybeProxy[DecodeType]]]
-  override def genericTypeArguments: Seq[Option[DecodeType]] = genericTypeArgumentsProxy.map(_.map(_.obj))
+
+  def genericTypeArguments: Seq[Option[DecodeType]] = genericTypeArgumentsProxy.map(_.map(_.obj))
+
   override def toString: String = "GenericTypeSpecialized" + super.toString
+
 }
 
 object GenericTypeSpecialized {

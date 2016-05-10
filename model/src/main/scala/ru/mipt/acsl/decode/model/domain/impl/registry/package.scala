@@ -1,13 +1,13 @@
 package ru.mipt.acsl.decode.model.domain.impl
 
 import ru.mipt.acsl.decode.model.domain.ValidatingResult
-import ru.mipt.acsl.decode.model.domain.impl.component.Component
-import ru.mipt.acsl.decode.model.domain.impl.component.message.EventMessage
-import ru.mipt.acsl.decode.model.domain.impl.proxy.{ResolvingResult, Result}
-import ru.mipt.acsl.decode.model.domain.impl.types.{DecodeType, EnumType, GenericTypeSpecialized, HasBaseType, StructType}
-import ru.mipt.acsl.decode.model.domain.pure.component.message.StatusMessage
-import ru.mipt.acsl.decode.model.domain.pure.naming.Fqn
-import ru.mipt.acsl.decode.model.domain.pure.types.NativeType
+import ru.mipt.acsl.decode.model.domain.component.Component
+import ru.mipt.acsl.decode.model.domain.component.message.{EventMessage, StatusMessage}
+import ru.mipt.acsl.decode.model.domain.impl.types.{EnumType, GenericTypeSpecialized, HasBaseType, NativeType}
+import ru.mipt.acsl.decode.model.domain.naming.Fqn
+import ru.mipt.acsl.decode.model.domain.proxy.{ResolvingResult, Result}
+import ru.mipt.acsl.decode.model.domain.registry.DecodeUnit
+import ru.mipt.acsl.decode.model.domain.types.{DecodeType, StructType}
 
 import scala.collection.mutable
 

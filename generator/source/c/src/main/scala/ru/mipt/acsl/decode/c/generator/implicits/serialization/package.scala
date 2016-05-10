@@ -1,10 +1,10 @@
 package ru.mipt.acsl.decode.c.generator.implicits
 
-import ru.mipt.acsl.decode.c.generator._
-import ru.mipt.acsl.decode.model.domain.impl.types.{ArrayType, DecodeType}
-import ru.mipt.acsl.decode.model.domain.pure.component.message._
-import ru.mipt.acsl.generator.c.ast.{CTypeApplication, CAstElements => _, _}
 import ru.mipt.acsl.decode.c.generator.CSourceGenerator._
+import ru.mipt.acsl.decode.model.domain.component.message._
+import ru.mipt.acsl.decode.model.domain.impl.types.ArrayType
+import ru.mipt.acsl.decode.model.domain.types.DecodeType
+import ru.mipt.acsl.generator.c.ast.{CAstElements => _, _}
 
 /**
   * @author Artem Shein

@@ -1,15 +1,15 @@
 package ru.mipt.acsl.decode.model.domain.impl.types
 
-import ru.mipt.acsl.decode.model.domain.{LocalizedString, pure}
+import ru.mipt.acsl.decode.model.domain.LocalizedString
 import ru.mipt.acsl.decode.model.domain.impl.naming.Namespace
-import ru.mipt.acsl.decode.model.domain.impl.proxy.MaybeProxy
-import ru.mipt.acsl.decode.model.domain.pure.naming.ElementName
-import ru.mipt.acsl.decode.model.domain.pure.types.SubTypeRange
+import ru.mipt.acsl.decode.model.domain.naming.ElementName
+import ru.mipt.acsl.decode.model.domain.proxy.MaybeProxy
+import ru.mipt.acsl.decode.model.domain.types.{DecodeType, SubTypeRange}
 
 /**
   * @author Artem Shein
   */
-trait SubType extends pure.types.SubType with DecodeType with HasBaseType {
+trait SubType extends ru.mipt.acsl.decode.model.domain.types.SubType with DecodeType with HasBaseType {
   def baseTypeProxy: MaybeProxy[DecodeType]
   override def baseType: DecodeType = baseTypeProxy.obj
 }

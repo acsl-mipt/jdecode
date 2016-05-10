@@ -1,7 +1,7 @@
 package ru.mipt.acsl.decode.c.generator.implicits
 
 import ru.mipt.acsl.decode.c.generator.CSourceGenerator._
-import ru.mipt.acsl.decode.model.domain.impl.types.DecodeType
+import ru.mipt.acsl.decode.model.domain.types.DecodeType
 import ru.mipt.acsl.generator.c.ast._
 
 /**

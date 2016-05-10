@@ -8,7 +8,7 @@ import com.google.common.io.Resources
 import com.typesafe.scalalogging.LazyLogging
 import ru.mipt.acsl.decode.c.generator.{CGeneratorConfiguration, CSourceGenerator, FileGeneratorConfiguration, GeneratorSource}
 import ru.mipt.acsl.decode.model.domain.impl.naming.Fqn
-import ru.mipt.acsl.decode.model.domain.pure.naming.Fqn
+import ru.mipt.acsl.decode.model.domain.naming.Fqn
 import ru.mipt.acsl.decode.parser.ModelRegistry
 
 import scala.collection.immutable.HashMap

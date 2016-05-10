@@ -1,7 +1,7 @@
 package ru.mipt.acsl.decode.model.domain.impl.types
 
 import ru.mipt.acsl.decode.model.domain.LocalizedString
-import ru.mipt.acsl.decode.model.domain.pure.naming.{ElementName, HasName}
+import ru.mipt.acsl.decode.model.domain.naming.{ElementName, HasName}
 
 /**
   * @author Artem Shein

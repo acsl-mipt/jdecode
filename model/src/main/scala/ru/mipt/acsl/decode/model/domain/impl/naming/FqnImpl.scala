@@ -1,10 +1,10 @@
 package ru.mipt.acsl.decode.model.domain.impl.naming
 
-import ru.mipt.acsl.decode.model.domain.pure.{naming => n}
+import ru.mipt.acsl.decode.model.domain.naming.{ElementName, Fqn}
 
 /**
   * @author Artem Shein
   */
-private case class FqnImpl(parts: Seq[n.ElementName]) extends n.Fqn {
-  def copyDropLast: n.Fqn = FqnImpl(parts.dropRight(1))
+private case class FqnImpl(parts: Seq[ElementName]) extends Fqn {
+  def copyDropLast: Fqn = FqnImpl(parts.dropRight(1))
 }

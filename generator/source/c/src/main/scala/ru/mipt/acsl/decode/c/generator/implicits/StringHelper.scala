@@ -1,11 +1,9 @@
 package ru.mipt.acsl.decode.c.generator.implicits
 
 import com.google.common.base.CaseFormat
-import ru.mipt.acsl.decode.model.domain.impl.component.{Command, Component}
-import ru.mipt.acsl.decode.model.domain.impl.types.StructField
+import ru.mipt.acsl.decode.c.generator.CSourceGenerator._
 import ru.mipt.acsl.generator.c.ast.implicits._
 import ru.mipt.acsl.generator.c.ast.{CAstElements => _, _}
-import ru.mipt.acsl.decode.c.generator.CSourceGenerator._
 
 /**
   * @author Artem Shein

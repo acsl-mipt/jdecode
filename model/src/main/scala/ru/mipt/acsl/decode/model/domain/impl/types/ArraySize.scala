@@ -1,6 +1,6 @@
 package ru.mipt.acsl.decode.model.domain.impl.types
 
-import ru.mipt.acsl.decode.model.domain.pure.types
+import ru.mipt.acsl.decode.model.domain.types
 
 /**
   * @author Artem Shein

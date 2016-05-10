@@ -6,13 +6,14 @@ import io.circe.Printer
 import io.circe.generic.auto._
 import io.circe.syntax._
 import ru.mipt.acsl.common._
-import ru.mipt.acsl.decode.model.domain.{Language, NamespaceAware}
-import ru.mipt.acsl.decode.model.domain.impl.component.Component
+import ru.mipt.acsl.decode.model.domain.component.Component
+import ru.mipt.acsl.decode.model.domain.expr.{ConstExpr, FloatLiteral, IntLiteral}
 import ru.mipt.acsl.decode.model.domain.impl.naming.Namespace
-import ru.mipt.acsl.decode.model.domain.impl.registry.{DecodeUnit, Registry}
-import ru.mipt.acsl.decode.model.domain.impl.types.{AliasType, ArrayType, DecodeType, EnumType, GenericType, GenericTypeSpecialized, NativeType, StructField, StructType, SubType, TypeUnit}
-import ru.mipt.acsl.decode.model.domain.pure.expr.{ConstExpr, FloatLiteral, IntLiteral}
-import ru.mipt.acsl.decode.model.domain.pure.types.EnumConstant
+import ru.mipt.acsl.decode.model.domain.impl.registry.Registry
+import ru.mipt.acsl.decode.model.domain.impl.types.{AliasType, ArrayType, EnumType, GenericType, GenericTypeSpecialized, NativeType, SubType}
+import ru.mipt.acsl.decode.model.domain.registry.DecodeUnit
+import ru.mipt.acsl.decode.model.domain.types._
+import ru.mipt.acsl.decode.model.domain.{Language, NamespaceAware}
 
 import scala.collection.mutable
 

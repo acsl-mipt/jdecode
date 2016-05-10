@@ -1,14 +1,19 @@
 package ru.mipt.acsl.decode.model.domain.impl.types
 
-import ru.mipt.acsl.decode.model.domain.{LocalizedString, pure}
+import ru.mipt.acsl.decode.model.domain.LocalizedString
 import ru.mipt.acsl.decode.model.domain.impl.naming.Namespace
-import ru.mipt.acsl.decode.model.domain.pure.naming.ElementName
+import ru.mipt.acsl.decode.model.domain.naming.ElementName
+import ru.mipt.acsl.decode.model.domain.types.DecodeType
 
 /**
   * @author Artem Shein
   */
-trait GenericType extends pure.types.GenericType with DecodeType {
+trait GenericType extends DecodeType {
+
+  def typeParameters: Seq[Option[ElementName]]
+
   override def toString: String = "GenericType" + super.toString
+
 }
 
 object GenericType {

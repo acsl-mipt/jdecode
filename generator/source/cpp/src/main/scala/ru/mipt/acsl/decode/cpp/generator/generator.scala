@@ -5,13 +5,13 @@ import java.io.{FileOutputStream, OutputStreamWriter}
 import java.security.MessageDigest
 
 import com.typesafe.scalalogging.LazyLogging
-import ru.mipt.acsl.decode.model.domain.impl.component.{Command, Component}
+import ru.mipt.acsl.decode.model.domain.component.{Command, Component}
 import ru.mipt.acsl.decode.model.domain.impl.naming.Namespace
-import ru.mipt.acsl.decode.model.domain.impl.proxy.MaybeProxy
+import ru.mipt.acsl.decode.model.domain.proxy.MaybeProxy
 import ru.mipt.acsl.decode.model.domain.impl.registry.Registry
 import ru.mipt.acsl.decode.model.domain.impl.types.{AliasType, ArrayType, DecodeType, EnumType, GenericTypeSpecialized, HasBaseType, NativeType, PrimitiveTypeInfo, StructType, SubType, TypeKind}
-import ru.mipt.acsl.decode.model.domain.pure.expr.IntLiteral
-import ru.mipt.acsl.decode.model.domain.pure.naming.{ElementName, Fqn, HasName}
+import ru.mipt.acsl.decode.model.domain.expr.IntLiteral
+import ru.mipt.acsl.decode.model.domain.naming.{ElementName, Fqn, HasName}
 import ru.mipt.acsl.generator.cpp.ast._
 
 import scala.collection.{immutable, mutable}

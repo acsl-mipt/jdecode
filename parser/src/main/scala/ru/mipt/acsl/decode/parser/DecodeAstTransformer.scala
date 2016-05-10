@@ -2,25 +2,24 @@ package ru.mipt.acsl.decode.parser
 
 import com.intellij.lang.ASTNode
 import com.intellij.psi.PsiWhiteSpace
-import ru.mipt.acsl.decode.model.domain.{Language, LocalizedString}
-import ru.mipt.acsl.decode.model.domain.impl.LocalizedString
-import ru.mipt.acsl.decode.model.domain.impl.component.message.{ArrayRange, EventMessage, MessageParameter, StatusMessage}
-import ru.mipt.acsl.decode.model.domain.impl.component.{Command, Component, ComponentRef}
+import ru.mipt.acsl.decode.model.domain.{Language, LocalizedString, Referenceable}
+import ru.mipt.acsl.decode.model.domain.component.message.{ArrayRange, EventMessage, MessageParameter, StatusMessage}
+import ru.mipt.acsl.decode.model.domain.component.{Command, Component, ComponentRef}
 import ru.mipt.acsl.decode.model.domain.impl.expr.{FloatLiteral, IntLiteral}
 import ru.mipt.acsl.decode.model.domain.impl.naming.{ElementName, Fqn, Namespace}
-import ru.mipt.acsl.decode.model.domain.impl.proxy.MaybeProxy
-import ru.mipt.acsl.decode.model.domain.impl.registry.{DecodeUnit, Language}
+import ru.mipt.acsl.decode.model.domain.proxy.MaybeProxy
+import ru.mipt.acsl.decode.model.domain.impl.registry.Language
 import ru.mipt.acsl.decode.model.domain.impl.types._
-import ru.mipt.acsl.decode.model.domain.pure.component.message.{MessageParameterPath, MessageParameterPathElement, StatusMessage}
-import ru.mipt.acsl.decode.model.domain.pure.naming.{ElementName, Fqn}
-import ru.mipt.acsl.decode.model.domain.pure.types.EnumConstant
-import ru.mipt.acsl.decode.model.domain.pure.Referenceable
+import ru.mipt.acsl.decode.model.domain.component.message.{MessageParameterPath, MessageParameterPathElement, StatusMessage}
+import ru.mipt.acsl.decode.model.domain.naming.{ElementName, Fqn}
+import ru.mipt.acsl.decode.model.domain.types.{EnumConstant, EnumType => _, _}
 import ru.mipt.acsl.decode.parser.psi.{DecodeUnit => PsiDecodeUnit, _}
 
 import scala.collection.{immutable, mutable}
 import scala.reflect.ClassTag
 import ru.mipt.acsl.decode.model.domain.impl.naming._
-import ru.mipt.acsl.decode.model.domain.impl.proxy.path.{ArrayTypePath, GenericTypeName, ProxyPath, TypeName}
+import ru.mipt.acsl.decode.model.domain.proxy.path.{ArrayTypePath, GenericTypeName, ProxyPath, TypeName}
+import ru.mipt.acsl.decode.model.domain.registry.DecodeUnit
 
 /**
   * @author Artem Shein

@@ -2,7 +2,8 @@ package ru.mipt.acsl.decode.c.generator.implicits.serialization
 
 import ru.mipt.acsl.decode.c.generator.CSourceGenerator._
 import ru.mipt.acsl.decode.c.generator.implicits._
-import ru.mipt.acsl.decode.model.domain.impl.types.{AliasType, ArrayType, DecodeType, EnumType, GenericTypeSpecialized, HasBaseType, NativeType, PrimitiveTypeInfo, StructType, SubType, TypeKind}
+import ru.mipt.acsl.decode.model.domain.impl.types.{AliasType, ArrayType, EnumType, GenericTypeSpecialized, HasBaseType, NativeType, PrimitiveTypeInfo, SubType, TypeKind}
+import ru.mipt.acsl.decode.model.domain.types.{DecodeType, StructType}
 import ru.mipt.acsl.generator.c.ast.implicits._
 import ru.mipt.acsl.generator.c.ast.{CAstElements => _, _}
 

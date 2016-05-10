@@ -1,10 +1,10 @@
 package ru.mipt.acsl.decode.model.domain.impl.expr
 
-import ru.mipt.acsl.decode.model.domain.pure.{expr => e}
+import ru.mipt.acsl.decode.model.domain.expr.FloatLiteral
 
 /**
   * @author Artem Shein
   */
-private class FloatLiteralImpl(val value: Float) extends e.FloatLiteral {
+private class FloatLiteralImpl(val value: Float) extends FloatLiteral {
   override def toString: String = value.toString
 }

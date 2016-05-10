@@ -1,12 +1,13 @@
-package ru.mipt.acsl.decode.model.domain.impl.types
+package ru.mipt.acsl.decode.model.domain
+package impl.types
 
-import ru.mipt.acsl.decode.model.domain.pure
-import ru.mipt.acsl.decode.model.domain.impl.proxy.MaybeProxy
+import ru.mipt.acsl.decode.model.domain.proxy.MaybeProxy
+import ru.mipt.acsl.decode.model.domain.types.DecodeType
 
 /**
   * @author Artem Shein
   */
-trait HasBaseType extends pure.types.HasBaseType {
-  override def baseType: DecodeType = baseTypeProxy.obj
+trait HasBaseType {
+  def baseType: DecodeType = baseTypeProxy.obj
   def baseTypeProxy: MaybeProxy[DecodeType]
 }

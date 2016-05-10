@@ -1,6 +1,6 @@
 package ru.mipt.acsl.decode.model.domain.impl.naming
 
-import ru.mipt.acsl.decode.model.domain.pure.{naming => n}
+import ru.mipt.acsl.decode.model.domain.naming.ElementName
 
 /**
   * @author Artem Shein
@@ -17,7 +17,7 @@ object ElementName {
     result
   }
 
-  def newFromSourceName(name: String): n.ElementName = ElementNameImpl(ElementName.mangleName(name))
+  def newFromSourceName(name: String): ElementName = ElementNameImpl(ElementName.mangleName(name))
 
-  def newFromMangledName(name: String): n.ElementName = ElementNameImpl(name)
+  def newFromMangledName(name: String): ElementName = ElementNameImpl(name)
 }

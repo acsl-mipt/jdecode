@@ -1,18 +1,20 @@
-package ru.mipt.acsl.decode.model.domain.impl.types
+package ru.mipt.acsl.decode.model.domain
+package impl.types
 
-import ru.mipt.acsl.decode.model.domain.{LocalizedString, pure}
-import ru.mipt.acsl.decode.model.domain.impl.proxy.MaybeProxy
-import ru.mipt.acsl.decode.model.domain.impl.registry.DecodeUnit
-import ru.mipt.acsl.decode.model.domain.pure.naming.ElementName
+import ru.mipt.acsl.decode.model.domain.naming.ElementName
+import ru.mipt.acsl.decode.model.domain.proxy.MaybeProxy
+import ru.mipt.acsl.decode.model.domain.registry.DecodeUnit
+import ru.mipt.acsl.decode.model.domain.types.DecodeType
 
 /**
   * @author Artem Shein
   */
-trait Parameter extends pure.Parameter {
+trait Parameter extends HasNameAndInfo {
+
   def paramTypeProxy: MaybeProxy[DecodeType]
-  override def paramType: DecodeType = paramTypeProxy.obj
+  def paramType: DecodeType = paramTypeProxy.obj
   def unitProxy: Option[MaybeProxy[DecodeUnit]]
-  override def unit: Option[DecodeUnit] = unitProxy.map(_.obj)
+  def unit: Option[DecodeUnit] = unitProxy.map(_.obj)
 }
 
 object Parameter {

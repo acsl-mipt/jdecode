@@ -1,9 +1,8 @@
 package ru.mipt.acsl.decode.model.domain.impl
 
-import ru.mipt.acsl.decode.model.domain
 import ru.mipt.acsl.decode.model.domain.LocalizedString
-import ru.mipt.acsl.decode.model.domain.impl.component.Component
-import ru.mipt.acsl.decode.model.domain.pure.naming.{ElementName, Fqn}
+import ru.mipt.acsl.decode.model.domain.component.Component
+import ru.mipt.acsl.decode.model.domain.naming.{ElementName, Fqn}
 
 import scala.collection.immutable
 

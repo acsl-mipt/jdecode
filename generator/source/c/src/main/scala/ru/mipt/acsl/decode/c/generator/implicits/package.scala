@@ -4,16 +4,16 @@ import java.io
 import java.io.File
 
 import com.google.common.base.CaseFormat
-import ru.mipt.acsl.decode.model.domain.impl.component.{Command, Component}
+import ru.mipt.acsl.decode.c.generator.CSourceGenerator._
+import ru.mipt.acsl.decode.model.domain.component.message.{EventMessage, MessageParameter, TmMessage}
+import ru.mipt.acsl.decode.model.domain.component.{Command, Component}
+import ru.mipt.acsl.decode.model.domain.expr.{ConstExpr, IntLiteral}
 import ru.mipt.acsl.decode.model.domain.impl.naming.Fqn
-import ru.mipt.acsl.decode.model.domain.impl.types.{DecodeType, NativeType}
-import ru.mipt.acsl.decode.model.domain.pure.component.message.{MessageParameter, TmMessage}
-import ru.mipt.acsl.decode.model.domain.pure.expr.{ConstExpr, IntLiteral}
-import ru.mipt.acsl.decode.model.domain.pure.naming.HasName
+import ru.mipt.acsl.decode.model.domain.impl.types.NativeType
+import ru.mipt.acsl.decode.model.domain.naming.HasName
+import ru.mipt.acsl.decode.model.domain.types.DecodeType
 import ru.mipt.acsl.generator.c.ast.implicits._
 import ru.mipt.acsl.generator.c.ast.{CConstType, CType, CAstElements => _, _}
-import ru.mipt.acsl.decode.c.generator.CSourceGenerator._
-import ru.mipt.acsl.decode.model.domain.impl.component.message.EventMessage
 
 package object implicits {
 
@@ -21,7 +21,7 @@ package object implicits {
   implicit def string2StringHelper(str: String): StringHelper = StringHelper(str)
   implicit def cExpression2CExpressionHelper(cExpr: CExpression): CExpressionHelper = CExpressionHelper(cExpr)
   implicit def decodeType2DecodeTypeHelper(decodeType: DecodeType): DecodeTypeHelper = DecodeTypeHelper(decodeType)
-  implicit def component2ComponentHlper(component: Component): ComponentHelper = ComponentHelper(component)
+  implicit def component2ComponentHelper(component: Component): ComponentHelper = ComponentHelper(component)
   implicit def file2FileHelper(file: File): FileHelper = FileHelper(file)
 
   implicit class TmMessageHelper(message: TmMessage) {
