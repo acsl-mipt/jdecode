@@ -1,7 +1,8 @@
 package ru.mipt.acsl.decode.c.generator
 
 import java.io
-import java.io.File
+import java.io.{ByteArrayOutputStream, File, StringWriter}
+import java.nio.charset.StandardCharsets
 
 import com.typesafe.scalalogging.LazyLogging
 import ru.mipt.acsl.decode.c.generator.implicits._
@@ -13,6 +14,7 @@ import ru.mipt.acsl.decode.model.domain.pure.component.message.{EventMessage => 
 import ru.mipt.acsl.decode.model.domain.pure.naming.HasName
 import ru.mipt.acsl.generator.c.ast._
 import ru.mipt.acsl.generator.c.ast.implicits._
+import ru.mipt.acsl.decode.generator.json.{DecodeJsonGenerator, DecodeJsonGeneratorConfig}
 
 import scala.collection.{immutable, mutable}
 
@@ -46,7 +48,6 @@ class CSourceGenerator(val config: CGeneratorConfiguration) extends LazyLogging 
       f.write(c)
     }
   }
-
 
   private def prologuePath: String = config.prologue.path.getOrElse("photon_prologue.h")
   private def epiloguePath: String = config.epilogue.path.getOrElse("photon_epilogue.h")
@@ -286,6 +287,32 @@ class CSourceGenerator(val config: CGeneratorConfiguration) extends LazyLogging 
         }).externC.eol))
         .protectDoubleInclude(component.namespace.dirPath + hFile.getName))
 
+      if (config.includeModelInfo) {
+        val modelC = new StringBuilder()
+
+        new ByteArrayOutputStream() {
+          new DecodeJsonGenerator(DecodeJsonGeneratorConfig(config.registry, this, config.rootComponentFqn, prettyPrint = true)).generate()
+
+          modelC.append("/*").append(new String(toByteArray, StandardCharsets.UTF_8)).append("*/\n\n")
+
+          reset()
+
+          new DecodeJsonGenerator(DecodeJsonGeneratorConfig(config.registry, this, config.rootComponentFqn)).generate()
+
+          modelC.append("static uint8_t modelData[] = {")
+          for ((byte, index) <- toByteArray.zipWithIndex) {
+            modelC.append("0x%02X, ".format(byte))
+            if (index % 20 == 0)
+              modelC.append("\n\t")
+          }
+
+          close()
+        }
+        modelC.append("};\n")
+
+        new File(nsDir, "model" + sourcesExt).write(modelC.toString())
+      }
+
       cFile.write(CInclude(component.namespace.includePathFor(hFile.getName)).eol.eol ++
         methods.flatMap(_.impl.definition.eol.eol) ++
         methods.flatMap(_.impl.eol.eol))
@@ -322,8 +349,8 @@ class CSourceGenerator(val config: CGeneratorConfiguration) extends LazyLogging 
 
 private[generator] object CSourceGenerator {
 
-  val PTR_SIZE = 4
-  val BER_BYTE_SIZE = 8
+  val PtrSize = 4
+  val VaruintByteSize = 8
 
   val headerExt = ".h"
   val sourcesExt = ".c"

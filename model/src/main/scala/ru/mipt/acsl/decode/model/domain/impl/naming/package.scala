@@ -1,8 +1,8 @@
 package ru.mipt.acsl.decode.model.domain.impl
 
+import ru.mipt.acsl.decode.model.domain
+import ru.mipt.acsl.decode.model.domain.LocalizedString
 import ru.mipt.acsl.decode.model.domain.impl.component.Component
-import ru.mipt.acsl.decode.model.domain.pure
-import ru.mipt.acsl.decode.model.domain.pure.LocalizedString
 import ru.mipt.acsl.decode.model.domain.pure.naming.{ElementName, Fqn}
 
 import scala.collection.immutable
@@ -35,7 +35,7 @@ package object naming {
 
   }
 
-  implicit class PureNamespaceHelper(val ns: pure.naming.Namespace) {
+  implicit class PureNamespaceHelper(val ns: Namespace) {
     /**
       * String representation of current namespace
       *

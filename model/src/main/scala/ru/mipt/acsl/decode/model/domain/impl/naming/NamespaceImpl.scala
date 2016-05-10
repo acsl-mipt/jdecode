@@ -1,9 +1,9 @@
 package ru.mipt.acsl.decode.model.domain.impl.naming
 
+import ru.mipt.acsl.decode.model.domain.LocalizedString
 import ru.mipt.acsl.decode.model.domain.impl.component.Component
 import ru.mipt.acsl.decode.model.domain.impl.registry.DecodeUnit
 import ru.mipt.acsl.decode.model.domain.impl.types.DecodeType
-import ru.mipt.acsl.decode.model.domain.pure.LocalizedString
 import ru.mipt.acsl.decode.model.domain.pure.{naming => n}
 
 import scala.collection.immutable

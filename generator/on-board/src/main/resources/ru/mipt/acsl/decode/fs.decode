@@ -1,7 +1,7 @@
 ru"Модуль доступа к бортовой файловой системе"
 namespace ru.mipt.acsl.fs
 
-import decode.{ber, or, u8, b8}
+import decode.{varuint, or, u8, b8}
 
 import ru.mipt.acsl.foundation.string
 import ru.mipt.acsl.foundation.error_code
@@ -14,9 +14,9 @@ type file_info struct
   'Путь до файла'
   path: string,
   'Длина данных в байтах'
-  byteSize: ber,
+  byteSize: varuint,
   'Аттрибуты файла'
-  attrs: ber
+  attrs: varuint
 )
 
 type node_info struct
@@ -26,7 +26,7 @@ type node_info struct
   'Флаг каталога'
   isDir: b8,
   'Аттрибуты узла'
-  attrs: ber,
+  attrs: varuint,
 )
 
 type file_upload_error enum extends error_code (ALREADY_EXISTS = 1, CANT_WRITE = 2, MODE_ERROR = 3, TOO_BIG = 4)
@@ -34,9 +34,9 @@ type file_delete_error enum extends error_code (NOT_FOUND = 1, CANT_DELETE = 2)
 type file_download_error enum extends error_code (NOT_FOUND = 1, CANT_READ = 2, NOT_FILE = 3, EOF = 4)
 type file_list_error enum extends error_code (NOT_FOUND = 1, CANT_READ = 2, NOT_DIR = 3)
 type file_create_dir_error enum extends error_code (NOT_FOUND = 1, CANT_WRITE = 2)
-type files_mode enum ber (BASE = 0, UPLOADING_FILE = 1, DOWNLOADING_FILE = 2, DOWNLOADING_FILE_LIST = 3)
+type files_mode enum varuint (BASE = 0, UPLOADING_FILE = 1, DOWNLOADING_FILE = 2, DOWNLOADING_FILE_LIST = 3)
 
-type files_event enum ber (MODE_CHANGED = 1)
+type files_event enum varuint (MODE_CHANGED = 1)
 
 'Компонент поддерживающий управление файловой системой'
 component Files
@@ -60,16 +60,16 @@ component Files
   command startFileDownload('Путь до файла' path: string): or<file_info, file_download_error>
 
   'Запросить следующую часть данных файла'
-  command downloadFilePart('Максимальный размер части данных файла' byteSize: ber): or<[u8], file_download_error>
+  command downloadFilePart('Максимальный размер части данных файла' byteSize: varuint): or<[u8], file_download_error>
 
   'Закончить скачивание файла'
   command stopFileDownload(): file_download_error
 
   'Начать скачивание списка узлов каталога'
-  command startRequestFileList(): or<ber, file_list_error>
+  command startRequestFileList(): or<varuint, file_list_error>
 
   'Запросить следующую часть списка узлов каталога'
-  command requestFileListPart('Максимальное количество узлов в ответе' nodeSize: ber): or<[node_info], file_list_error>
+  command requestFileListPart('Максимальное количество узлов в ответе' nodeSize: varuint): or<[node_info], file_list_error>
 
   'Закончить скачивание списка узлов каталога'
   command stopRequestFileList(): file_list_error

@@ -1,6 +1,7 @@
 rootProject.name = 'decode'
 
-include ':decode:model',
+include ':decode:common',
+        ':decode:model',
         ':decode:parser',
         ':decode:ppf',
         ':decode:sqlite-persistence',
@@ -8,6 +9,7 @@ include ':decode:model',
         ':decode:generator:doc',
         ':decode:generator:model-doc',
         ':decode:generator:on-board',
+        ':decode:generator:json',
         ':decode:generator:source:c',
         ':decode:generator:source:cpp',
         ':decode:generator:source:java',

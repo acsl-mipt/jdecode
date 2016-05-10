@@ -1,12 +1,12 @@
 ru"Модуль поддержки динамической маршрутизации пакетов"
 namespace ru.mipt.acsl.routing
 
-import decode.ber
+import decode.varuint
 
 language ru
 
 "Адрес абонента"
-type address ber
+type address varuint
 
 "Запись таблицы маршрутизации"
 type route struct
@@ -17,7 +17,7 @@ type route struct
   next_hop: address,
 )
 
-type router_error enum ber (OK = 0, MAXIMUM_ROUTES_REACHED = 1, NO_SUCH_ADDRESS = 2, CANNOUT_ROUTE = 3)
+type router_error enum varuint (OK = 0, MAXIMUM_ROUTES_REACHED = 1, NO_SUCH_ADDRESS = 2, CANNOUT_ROUTE = 3)
 
 "Компонент реализующий возможность динамической маршрутизации и управления таблицей маршрутизации с НКУ"
 component Router

@@ -1,6 +1,6 @@
 package ru.mipt.acsl.decode.model.domain.pure.types
 
-import ru.mipt.acsl.decode.model.domain.pure.HasInfo
+import ru.mipt.acsl.decode.model.domain.HasInfo
 import ru.mipt.acsl.decode.model.domain.pure.expr.ConstExpr
 import ru.mipt.acsl.decode.model.domain.pure.naming.ElementName
 

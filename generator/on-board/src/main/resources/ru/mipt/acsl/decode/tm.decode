@@ -2,7 +2,7 @@
 ru"Модуль управления выдачей ТМ-информации"
 namespace ru.mipt.acsl.tm
 
-import decode.{ber, u8}
+import decode.{varuint, u8}
 
 language ru
 
@@ -12,18 +12,18 @@ type ring_buf struct
   'Данные циклического массива'
   data: [u8],
   'Смещение начала цкилического массива'
-  startOffset: ber,
+  startOffset: varuint,
   'Смещение конца циклического массива'
-  endOffset: ber,
+  endOffset: varuint,
 )
 
 'Номер компонента и номер сообщения'
 type comp_msg struct
 (
   'Номер компонента'
-  componentNum: ber,
+  componentNum: varuint,
   'Номер сообщения в компоненте'
-  messageNum: ber,
+  messageNum: varuint,
 )
 
 'Информация о событии'
@@ -31,10 +31,10 @@ type event_info struct
 (
   componentMessage: comp_msg,
   'Номер события'
-  eventNum: ber,
+  eventNum: varuint,
 )
 
-type tm_cmd_error enum ber (OK = 0, INVALID_ARGUMENT = 1, INVALID_STATE = 2, INVALID_MESSAGE_NUM = 3)
+type tm_cmd_error enum varuint (OK = 0, INVALID_ARGUMENT = 1, INVALID_STATE = 2, INVALID_MESSAGE_NUM = 3)
 
 'Управление формированием и выдачей ТМ-информации'
 component Tm
@@ -42,14 +42,14 @@ component Tm
   parameters
   (
     'число разрешенных для выдачи сообщений'
-    allowedMessages: ber,
+    allowedMessages: varuint,
   )
 
   'Выдать статусное сообщение во внеочередную выдачу'
   command sendStatusMessage(componentMessage: comp_msg): tm_cmd_error
 
   'Установить запрос на выдачу в соответствии с приоритетом'
-  command setMessageRequest(componentMessage: comp_msg, 'Приоритет' ^priority: ber): tm_cmd_error
+  command setMessageRequest(componentMessage: comp_msg, 'Приоритет' ^priority: varuint): tm_cmd_error
 
   'Снять запрос на выдачу в соответствии с приоритетом'
   command clearMessageRequest(componentMessage: comp_msg): tm_cmd_error

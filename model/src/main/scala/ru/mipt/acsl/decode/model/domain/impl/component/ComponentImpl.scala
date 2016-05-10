@@ -1,10 +1,10 @@
 package ru.mipt.acsl.decode.model.domain.impl.component
 
+import ru.mipt.acsl.decode.model.domain.LocalizedString
 import ru.mipt.acsl.decode.model.domain.impl.component.message.EventMessage
 import ru.mipt.acsl.decode.model.domain.impl.naming.Namespace
 import ru.mipt.acsl.decode.model.domain.impl.proxy.MaybeProxy
 import ru.mipt.acsl.decode.model.domain.impl.types.{AbstractNameNamespaceInfoAware, StructType}
-import ru.mipt.acsl.decode.model.domain.pure.LocalizedString
 import ru.mipt.acsl.decode.model.domain.pure.component.message.StatusMessage
 import ru.mipt.acsl.decode.model.domain.pure.naming.ElementName
 

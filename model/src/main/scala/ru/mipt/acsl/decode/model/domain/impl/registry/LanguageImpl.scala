@@ -1,8 +1,8 @@
 package ru.mipt.acsl.decode.model.domain.impl.registry
 
-import ru.mipt.acsl.decode.model.domain.{pure => p}
+import ru.mipt.acsl.decode.model.domain.Language
 
 /**
   * @author Artem Shein
   */
-private case class LanguageImpl(code: String) extends p.Language
+private case class LanguageImpl(code: String) extends Language

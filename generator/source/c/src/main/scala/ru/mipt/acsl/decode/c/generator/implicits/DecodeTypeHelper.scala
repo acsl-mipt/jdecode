@@ -28,7 +28,7 @@ private[generator] case class DecodeTypeHelper(t: DecodeType) {
   }
 
   def byteSize(enclosingTypes: Set[DecodeType]): Int = enclosingTypes.contains(t) match {
-    case true => PTR_SIZE
+    case true => PtrSize
     case _ =>
       val extendedEclosingTypes = enclosingTypes + t
       t match {
@@ -39,12 +39,12 @@ private[generator] case class DecodeTypeHelper(t: DecodeType) {
             _.map(_.byteSize(extendedEclosingTypes)).getOrElse(0)).max
           case _ => sys.error(s"not implemented for $t")
         }
-        case n: NativeType => n.isBerType match {
-          case true => BER_BYTE_SIZE
+        case n: NativeType => n.isVaruintType match {
+          case true => VaruintByteSize
           case _ => sys.error(s"not implemented for $n")
         }
         case t: ArrayType => t.size.max match {
-          case 0 => BER_BYTE_SIZE + PTR_SIZE
+          case 0 => VaruintByteSize + PtrSize
           case _ => (t.size.max * t.baseType.byteSize(extendedEclosingTypes)).toInt
         }
         case t: StructType => t.fields.map(_.typeUnit.t.byteSize(extendedEclosingTypes)).sum

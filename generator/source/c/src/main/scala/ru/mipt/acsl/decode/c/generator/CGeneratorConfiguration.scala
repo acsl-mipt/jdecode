@@ -13,4 +13,5 @@ case class CGeneratorConfiguration(outputDir: File, registry: Registry, rootComp
                                    sources: Seq[GeneratorSource] = Seq.empty,
                                    prologue: FileGeneratorConfiguration = FileGeneratorConfiguration(),
                                    epilogue: FileGeneratorConfiguration = FileGeneratorConfiguration(),
-                                   isSingleton: Boolean = false)
+                                   isSingleton: Boolean = false,
+                                   includeModelInfo: Boolean = false)

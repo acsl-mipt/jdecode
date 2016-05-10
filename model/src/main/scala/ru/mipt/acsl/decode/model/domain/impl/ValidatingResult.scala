@@ -1,6 +1,6 @@
 package ru.mipt.acsl.decode.model.domain.impl
 
-import ru.mipt.acsl.decode.model.domain.pure.ValidatingResult
+import ru.mipt.acsl.decode.model.domain.ValidatingResult
 import ru.mipt.acsl.decode.modeling.aliases.ValidatingMessage
 
 /**

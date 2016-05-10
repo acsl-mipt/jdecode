@@ -32,7 +32,7 @@ private[generator] case class DecodeTypeSerializationHelper(t: DecodeType) {
     case _: ArrayType | _: StructType => deserializeFuncCall(dest)
     case t: NativeType if t.isPrimitive =>
       CAssign(CDeref(dest), callCodeForPrimitiveType(t.primitiveTypeInfo, dest, photonReaderTypeName, "Read", reader.v))
-    case n: NativeType => n.isBerType match {
+    case n: NativeType => n.isVaruintType match {
       case true => callCodeForBer(typeDeserializeMethodName, dest, reader.v)
       case _ => sys.error(s"not implemented for $n")
     }
@@ -46,7 +46,7 @@ private[generator] case class DecodeTypeSerializationHelper(t: DecodeType) {
     case _: ArrayType | _: StructType => serializeFuncCall(src)
     case t: NativeType if t.isPrimitive =>
       callCodeForPrimitiveType(t.primitiveTypeInfo, src, photonWriterTypeName, "Write", writer.v, src)
-    case t: NativeType => t.isBerType match {
+    case t: NativeType => t.isVaruintType match {
       case true => callCodeForBer(typeSerializeMethodName, src, writer.v)
       case _ => sys.error(s"not implemented for $t")
     }

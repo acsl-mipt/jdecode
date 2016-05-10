@@ -53,9 +53,9 @@ package object implicits {
 
   implicit class NativeTypeHelper(n: NativeType) {
 
-    private val berFqn = Fqn.newFromSource("decode.ber")
+    private val varuintFqn = Fqn.newFromSource("decode.varuint")
 
-    def isBerType: Boolean = n.fqn.equals(berFqn)
+    def isVaruintType: Boolean = n.fqn.equals(varuintFqn)
   }
 
   implicit class MessageParameterVarHelper(val mp: MessageParameter) {

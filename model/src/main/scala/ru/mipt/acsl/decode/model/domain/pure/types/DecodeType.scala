@@ -1,6 +1,7 @@
 package ru.mipt.acsl.decode.model.domain.pure.types
 
-import ru.mipt.acsl.decode.model.domain.pure.{HasInfo, NamespaceAware, Referenceable}
+import ru.mipt.acsl.decode.model.domain.{HasInfo, NamespaceAware}
+import ru.mipt.acsl.decode.model.domain.pure.Referenceable
 import ru.mipt.acsl.decode.model.domain.pure.naming.HasName
 
 /**

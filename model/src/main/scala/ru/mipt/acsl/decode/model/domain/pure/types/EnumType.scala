@@ -6,6 +6,8 @@ package ru.mipt.acsl.decode.model.domain.pure.types
 trait EnumType extends DecodeType {
   def isFinal: Boolean
   def extendsOrBaseType: Either[EnumType, DecodeType]
-  def extendsType: Option[EnumType]
+  def extendsTypeOption: Option[EnumType]
+  def baseTypeOption: Option[DecodeType]
   def constants: Set[EnumConstant]
+  override def toString: String = "EnumType" + super.toString
 }

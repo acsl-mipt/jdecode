@@ -10,7 +10,8 @@ import ru.mipt.acsl.decode.model.domain.impl.types._
   */
 case class ArrayTypePath(baseTypePath: ProxyPath, arraySize: ArraySize) extends ProxyElementName {
 
-  def mangledName: ElementName = ElementName.newFromMangledName("[" + baseTypePath.mangledName.asMangledString +
+  def mangledName: ElementName =
+      ElementName.newFromMangledName("[" + baseTypePath.mangledName.asMangledString +
     (if (arraySize.isAny)
       ""
     else
@@ -22,6 +23,6 @@ case class ArrayTypePath(baseTypePath: ProxyPath, arraySize: ArraySize) extends 
             (if (arraySize.isLimited)
               arraySize.max
             else
-              "*")) + "]"))
+              "*"))) + "]")
 
 }

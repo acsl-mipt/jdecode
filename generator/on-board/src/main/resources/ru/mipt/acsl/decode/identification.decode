@@ -1,7 +1,7 @@
 ru"Модуль динамической идентификации устройств"
 namespace ru.mipt.acsl.identification
 
-import decode.ber
+import decode.varuint
 
 import ru.mipt.acsl.foundation.guid
 
@@ -12,7 +12,7 @@ type component_number_guid_pair
 struct
 (
   'Номер компонента в пределах устройства'
-  number: ber,
+  number: varuint,
   'Уникальный идентификатор компонента'
   guid: guid,
 )
@@ -50,7 +50,7 @@ component Identification id = 0
   command requestFullId(): full_id
 
   'Запросить идентификатор компонента по номеру'
-  command requestComponentGuid(componentNumber: ber): guid
+  command requestComponentGuid(componentNumber: varuint): guid
 
   status fullId id = 0 priority = 10
   (

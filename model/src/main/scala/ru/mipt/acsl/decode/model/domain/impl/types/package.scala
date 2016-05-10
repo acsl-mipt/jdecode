@@ -8,7 +8,7 @@ package object types {
 
   import naming._
 
-  implicit class DecodeTypeHelper(val t: DecodeType) {
+  implicit class DecodeTypeHelper(t: DecodeType) {
     def fqn: Fqn = Fqn(t.namespace.fqn.parts :+ t.name)
   }
 
@@ -18,7 +18,7 @@ package object types {
   }
 
   implicit class EnumTypeHelper(val t: EnumType) {
-    def allConstants: Set[EnumConstant] = t.constants ++ t.extendsType.map(_.allConstants).getOrElse(Set.empty)
+    def allConstants: Set[EnumConstant] = t.constants ++ t.extendsTypeOption.map(_.allConstants).getOrElse(Set.empty)
   }
 
   implicit class ArrayTypeHelper(val t: ArrayType) {

@@ -1,9 +1,9 @@
 package ru.mipt.acsl.decode.persistence.sqlite
 
 import com.google.common.base.CaseFormat
+import ru.mipt.acsl.decode.model.domain.Language
 import ru.mipt.acsl.decode.model.domain.impl.naming.ElementName
 import ru.mipt.acsl.decode.model.domain.impl.registry.Language
-import ru.mipt.acsl.decode.model.domain.pure.Language
 import ru.mipt.acsl.decode.model.domain.pure.naming.{ElementName, HasName}
 import ru.mipt.acsl.decode.model.domain.pure.registry.Registry
 import ru.mipt.acsl.decode.model.domain.pure.types._

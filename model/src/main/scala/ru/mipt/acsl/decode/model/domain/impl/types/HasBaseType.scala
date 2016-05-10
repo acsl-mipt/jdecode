@@ -1,7 +1,7 @@
 package ru.mipt.acsl.decode.model.domain.impl.types
 
-import ru.mipt.acsl.decode.model.domain.impl.proxy.MaybeProxy
 import ru.mipt.acsl.decode.model.domain.pure
+import ru.mipt.acsl.decode.model.domain.impl.proxy.MaybeProxy
 
 /**
   * @author Artem Shein

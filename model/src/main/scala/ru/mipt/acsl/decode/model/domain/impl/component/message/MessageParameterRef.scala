@@ -1,8 +1,8 @@
 package ru.mipt.acsl.decode.model.domain.impl.component.message
 
+import ru.mipt.acsl.decode.model.domain.pure
 import ru.mipt.acsl.decode.model.domain.impl.component.Component
 import ru.mipt.acsl.decode.model.domain.impl.types.{DecodeType, StructField}
-import ru.mipt.acsl.decode.model.domain.pure
 import ru.mipt.acsl.decode.model.domain.pure.component.message.MessageParameterPath
 
 /**

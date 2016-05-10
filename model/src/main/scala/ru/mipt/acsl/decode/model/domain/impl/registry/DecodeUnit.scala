@@ -1,9 +1,8 @@
 package ru.mipt.acsl.decode.model.domain.impl.registry
 
+import ru.mipt.acsl.decode.model.domain.{LocalizedString, pure}
 import ru.mipt.acsl.decode.model.domain.impl.LocalizedString
 import ru.mipt.acsl.decode.model.domain.impl.naming.Namespace
-import ru.mipt.acsl.decode.model.domain.pure
-import ru.mipt.acsl.decode.model.domain.pure.LocalizedString
 import ru.mipt.acsl.decode.model.domain.pure.naming.ElementName
 
 /**

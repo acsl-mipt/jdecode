@@ -1,7 +1,7 @@
 ru"Модуль базовых типов и компонентов"
 namespace ru.mipt.acsl.foundation
 
-import decode.{ber, u8}
+import decode.{varuint, u8}
 
 language ru
 
@@ -20,7 +20,7 @@ unit m
   display en'm'
 
 'Метры в секунду'
-en'Meter per second'
+en'Meters per second'
 unit mps
   display 'м/с'
   display en'm/s'
@@ -32,8 +32,8 @@ unit s
   display en's'
 
 "Глобально-уникальный идентификатор"
-type guid   ber
+type guid   varuint
 
 type string [u8]
 
-type error_code enum ber (OK = 0)
+type error_code enum varuint (OK = 0)

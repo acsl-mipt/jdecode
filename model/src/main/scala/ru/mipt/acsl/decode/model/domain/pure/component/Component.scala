@@ -1,8 +1,9 @@
 package ru.mipt.acsl.decode.model.domain.pure.component
 
+import ru.mipt.acsl.decode.model.domain.{HasInfo, HasOptionId, NamespaceAware}
 import ru.mipt.acsl.decode.model.domain.pure.component.message.{EventMessage, StatusMessage}
 import ru.mipt.acsl.decode.model.domain.pure.types.StructType
-import ru.mipt.acsl.decode.model.domain.pure.{HasInfo, HasOptionId, NamespaceAware, Referenceable}
+import ru.mipt.acsl.decode.model.domain.pure.Referenceable
 
 import scala.collection.immutable
 

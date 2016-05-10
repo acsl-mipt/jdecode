@@ -2,7 +2,7 @@ ru"Модуль сегментированной передачи ТМ-сооб�
 namespace ru.mipt.acsl.segmentation
 
 import ru.mipt.acsl.foundation.error_code
-import decode.{ber, b8}
+import decode.{varuint, b8}
 
 language ru
 
@@ -23,7 +23,7 @@ component Segment
     'Режим гарантированной доставки активен'
     isSegmentationAckModeActive: b8,
     'Максимальный номер сегмента'
-    maxSegmentNumber: ber,
+    maxSegmentNumber: varuint,
     'Режим подтверждения получения каждого сегмента активен'
     isAckOnEverySegmentModeActive: b8,
   )
@@ -51,7 +51,7 @@ component Segment
 component SegmentSender with Segment
 {
   'Обработать подтверждения о получении сегментов'
-  command processSegmentsAck(segmentsReceived: [ber, 1..*]): segment_process_ack_error
+  command processSegmentsAck(segmentsReceived: [varuint, 1..*]): segment_process_ack_error
 }
 
 "Компонент клиента поддерживающего сегментированное получение ТМ-сообщения"
@@ -60,7 +60,7 @@ component SegmentReceiver with Segment
   parameters
   (
     'Перечень полученных сегментов'
-    segmentsReceived: [ber],
+    segmentsReceived: [varuint],
   )
 
   'Перечень полученных сегментов'
@@ -70,5 +70,5 @@ component SegmentReceiver with Segment
   )
 
   'Запросить перечень полученных сегментов'
-  command requestSegmentsAck(): [ber]
+  command requestSegmentsAck(): [varuint]
 }

@@ -19,7 +19,7 @@ class MessageParameterRefWalker(var component: Component, var structField: Optio
   override def t: DecodeType = if (structField.isEmpty)
     component.baseType.get
   else
-    TypeMessageParameterPathWalker(structField.get.typeUnit.t, path.head).t
+    TypeMessageParameterPathWalker(structField.get.typeUnit.t, path.head)
 
   override def resultType: DecodeType = if (structField.isEmpty)
     component.baseType.get

@@ -2,9 +2,8 @@ package ru.mipt.acsl.decode.model.domain.impl.types
 
 import ru.mipt.acsl.decode.model.domain.impl.naming.Namespace
 import ru.mipt.acsl.decode.model.domain.impl.proxy.MaybeProxy
-import ru.mipt.acsl.decode.model.domain.pure
-import ru.mipt.acsl.decode.model.domain.pure.LocalizedString
-import ru.mipt.acsl.decode.model.domain.pure.naming.{ElementName, HasName}
+import ru.mipt.acsl.decode.model.domain.{LocalizedString, pure}
+import ru.mipt.acsl.decode.model.domain.pure.naming.ElementName
 
 /**
   * @author Artem Shein

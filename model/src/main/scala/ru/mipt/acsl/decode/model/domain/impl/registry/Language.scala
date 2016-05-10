@@ -1,11 +1,11 @@
 package ru.mipt.acsl.decode.model.domain.impl.registry
 
-import ru.mipt.acsl.decode.model.domain.{pure => p}
+import ru.mipt.acsl.decode.model.domain.Language
 
 /**
   * @author Artem Shein
   */
 object Language {
-  def apply(code: String): p.Language =
+  def apply(code: String): Language =
     new LanguageImpl(code)
 }

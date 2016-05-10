@@ -1,3 +1,4 @@
 dependencies {
     compile project(":decode:model")
+    compile project(':decode:generator:json')
 }

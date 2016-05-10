@@ -6,11 +6,11 @@ import ru.mipt.acsl.decode.model.domain.impl.component.message._
 import ru.mipt.acsl.decode.model.domain.impl.component.{Command, Component}
 import ru.mipt.acsl.decode.model.domain.impl.naming.Namespace
 import ru.mipt.acsl.decode.model.domain.impl.types.{DecodeType, NativeType, StructField}
-import ru.mipt.acsl.decode.model.domain.pure.HasOptionId
 import ru.mipt.acsl.decode.model.domain.pure.component.message.{MessageParameter, StatusMessage, TmMessage}
 import ru.mipt.acsl.generator.c.ast.implicits._
 import ru.mipt.acsl.decode.c.generator.implicits.serialization._
 import ru.mipt.acsl.decode.c.generator.CSourceGenerator._
+import ru.mipt.acsl.decode.model.domain.HasOptionId
 import ru.mipt.acsl.decode.model.domain.impl.registry.Registry
 import ru.mipt.acsl.generator.c.ast._
 

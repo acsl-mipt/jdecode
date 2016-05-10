@@ -2,6 +2,7 @@ package ru.mipt.acsl.decode.parser
 
 import com.intellij.lang.ASTNode
 import com.intellij.psi.PsiWhiteSpace
+import ru.mipt.acsl.decode.model.domain.{Language, LocalizedString}
 import ru.mipt.acsl.decode.model.domain.impl.LocalizedString
 import ru.mipt.acsl.decode.model.domain.impl.component.message.{ArrayRange, EventMessage, MessageParameter, StatusMessage}
 import ru.mipt.acsl.decode.model.domain.impl.component.{Command, Component, ComponentRef}
@@ -13,7 +14,7 @@ import ru.mipt.acsl.decode.model.domain.impl.types._
 import ru.mipt.acsl.decode.model.domain.pure.component.message.{MessageParameterPath, MessageParameterPathElement, StatusMessage}
 import ru.mipt.acsl.decode.model.domain.pure.naming.{ElementName, Fqn}
 import ru.mipt.acsl.decode.model.domain.pure.types.EnumConstant
-import ru.mipt.acsl.decode.model.domain.pure.{Language, LocalizedString, Referenceable}
+import ru.mipt.acsl.decode.model.domain.pure.Referenceable
 import ru.mipt.acsl.decode.parser.psi.{DecodeUnit => PsiDecodeUnit, _}
 
 import scala.collection.{immutable, mutable}
@@ -63,7 +64,7 @@ class DecodeAstTransformer {
         }
       case u: DecodeUnitDecl =>
         ns.units = ns.units :+ DecodeUnit(elementName(u.getElementNameRule), ns,
-          elementInfo(Option(u.getElementInfo)), elementInfo(Option(u.getElementInfo)))
+          localizedStrings(u.getStringValueList), elementInfo(Option(u.getElementInfo)))
       case a: DecodeAliasDecl =>
         ns.types = ns.types :+ AliasType(elementName(a.getElementNameRule), ns,
           typeApplication(Some(a.getTypeApplication)).get, elementInfo(Option(a.getElementInfo)))
@@ -203,9 +204,11 @@ class DecodeAstTransformer {
     Fqn(elementId.getElementNameRuleList.map(elementName))
 
   private def elementInfo(infoStr: Option[DecodeElementInfo]): LocalizedString = infoStr match {
-    case Some(i) => i.getStringValueList.map(info).toMap
+    case Some(i) => localizedStrings(i.getStringValueList)
     case _ => LocalizedString.empty
   }
+
+  private def localizedStrings(values: Seq[DecodeStringValue]): LocalizedString = values.map(info).toMap
 
   private def info(s: DecodeStringValue): (Language, String) = {
     Option(s.getElementNameRule) match {

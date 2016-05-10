@@ -5,12 +5,12 @@ import java.io.{FileOutputStream, OutputStreamWriter}
 import java.net.URLEncoder
 
 import com.google.common.base.Charsets
+import ru.mipt.acsl.decode.model.domain.Language
 import ru.mipt.acsl.decode.model.domain.impl.component.Component
 import ru.mipt.acsl.decode.model.domain.impl.component.message._
 import ru.mipt.acsl.decode.model.domain.impl.naming.Namespace
 import ru.mipt.acsl.decode.model.domain.impl.registry.{Language, Registry}
 import ru.mipt.acsl.decode.model.domain.impl.types.{AliasType, ArrayType, DecodeType, EnumType, GenericType, GenericTypeSpecialized, NativeType, Parameter, PrimitiveTypeInfo, StructType, SubType, TypeKind}
-import ru.mipt.acsl.decode.model.domain.pure.Language
 import ru.mipt.acsl.decode.model.domain.pure.component.message.MessageParameter
 import ru.mipt.acsl.decode.model.domain.pure.naming.Fqn
 
@@ -161,7 +161,7 @@ class HtmlModelDocGenerator(val config: HtmlModelDocGeneratorConfiguration) {
         tbody(s.fields.map(f => tr(td(f.name.asMangledString), td(typeNameWithLink(f.typeUnit.t)),
           td(StringFrag(f.info.getOrElse(lang, ""))))): _*)))
     case e: EnumType => td("Перечисление" +
-      e.extendsType.map(ext => " расширяющее " + typeName(ext)).getOrElse(""),
+      e.extendsTypeOption.map(ext => " расширяющее " + typeName(ext)).getOrElse(""),
       br, "Базовый тип: ", typeNameWithLink(e.baseType), br, "Константы:",
       ul(e.allConstants.toSeq.sortBy(_.value.toString).map(c => li(c.name.asMangledString + " = " + c.value)): _*))
     case n: NativeType =>

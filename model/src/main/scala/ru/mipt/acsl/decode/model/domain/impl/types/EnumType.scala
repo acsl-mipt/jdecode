@@ -1,9 +1,8 @@
 package ru.mipt.acsl.decode.model.domain.impl.types
 
+import ru.mipt.acsl.decode.model.domain.{LocalizedString, pure}
 import ru.mipt.acsl.decode.model.domain.impl.naming.Namespace
 import ru.mipt.acsl.decode.model.domain.impl.proxy.MaybeProxy
-import ru.mipt.acsl.decode.model.domain.pure
-import ru.mipt.acsl.decode.model.domain.pure.LocalizedString
 import ru.mipt.acsl.decode.model.domain.pure.naming.ElementName
 import ru.mipt.acsl.decode.model.domain.pure.types.EnumConstant
 
@@ -11,7 +10,8 @@ import ru.mipt.acsl.decode.model.domain.pure.types.EnumConstant
   * @author Artem Shein
   */
 trait EnumType extends BaseTypedType with pure.types.EnumType {
-  override def extendsType: Option[EnumType] = extendsOrBaseType.left.toOption
+  override def extendsTypeOption: Option[EnumType] = extendsOrBaseType.left.toOption
+  override def baseTypeOption: Option[DecodeType] = extendsOrBaseType.right.toOption
   def extendsOrBaseTypeProxy: Either[MaybeProxy[EnumType], MaybeProxy[DecodeType]]
   def extendsOrBaseType: Either[EnumType, DecodeType] = extendsOrBaseTypeProxy.fold(l => Left(l.obj), r => Right(r.obj))
 }

@@ -1,6 +1,6 @@
 package ru.mipt.acsl.decode.model.domain.impl.types
 
-import ru.mipt.acsl.decode.model.domain.pure.{HasInfo, LocalizedString}
+import ru.mipt.acsl.decode.model.domain.{HasInfo, LocalizedString}
 
 /**
   * @author Artem Shein

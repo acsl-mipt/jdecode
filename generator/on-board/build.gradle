@@ -1,6 +1,6 @@
 dependencies {
-    compile project(":decode:generator:source:c")
-    compile project(":decode:parser")
+    compile project(':decode:generator:source:c')
+    compile project(':decode:parser')
 }
 
 task genOnBoardCSources(type: JavaExec, dependsOn: classes) {

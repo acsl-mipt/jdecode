@@ -1,6 +1,7 @@
 package ru.mipt.acsl.decode.model.domain.pure.component
 
-import ru.mipt.acsl.decode.model.domain.pure.{HasInfo, HasOptionId, Parameter}
+import ru.mipt.acsl.decode.model.domain.{HasInfo, HasOptionId}
+import ru.mipt.acsl.decode.model.domain.pure.Parameter
 import ru.mipt.acsl.decode.model.domain.pure.naming.HasName
 import ru.mipt.acsl.decode.model.domain.pure.types.DecodeType
 

@@ -1,7 +1,7 @@
 package ru.mipt.acsl.decode.model.domain.pure.registry
 
+import ru.mipt.acsl.decode.model.domain.impl.naming.Namespace
 import ru.mipt.acsl.decode.model.domain.pure.Referenceable
-import ru.mipt.acsl.decode.model.domain.pure.naming.Namespace
 
 import scala.collection.immutable
 

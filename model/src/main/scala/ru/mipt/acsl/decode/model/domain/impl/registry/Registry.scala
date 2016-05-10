@@ -1,9 +1,9 @@
 package ru.mipt.acsl.decode.model.domain.impl.registry
 
+import ru.mipt.acsl.decode.model.domain.pure
 import ru.mipt.acsl.decode.model.domain.impl.naming.Namespace
 import ru.mipt.acsl.decode.model.domain.impl.proxy.path.ProxyPath
 import ru.mipt.acsl.decode.model.domain.impl.proxy.{DecodeProxyResolver, ResolvingResult}
-import ru.mipt.acsl.decode.model.domain.pure
 import ru.mipt.acsl.decode.model.domain.pure.Referenceable
 import ru.mipt.acsl.decode.modeling.ErrorLevel
 import ru.mipt.acsl.decode.modeling.impl.Message

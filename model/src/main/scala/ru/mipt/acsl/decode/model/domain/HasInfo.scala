@@ -1,4 +1,4 @@
-package ru.mipt.acsl.decode.model.domain.pure
+package ru.mipt.acsl.decode.model.domain
 
 import scala.collection.immutable
 

@@ -1,6 +1,6 @@
 namespace ru.mipt.acsl.mcc
 
-import decode.{ber, b8, u8, u16, u32, f32, f64}
+import decode.{varuint, b8, u8, u16, u32, f32, f64}
 import ru.mipt.acsl.foundation.{per, grad, m, mps}
 
 language ru
