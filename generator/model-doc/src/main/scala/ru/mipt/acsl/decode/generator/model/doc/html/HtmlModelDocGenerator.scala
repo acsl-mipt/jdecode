@@ -7,12 +7,13 @@ import java.net.URLEncoder
 import com.google.common.base.Charsets
 import ru.mipt.acsl.decode.model.domain.Language
 import ru.mipt.acsl.decode.model.domain.component.Component
-import ru.mipt.acsl.decode.model.domain.component.message._
+import ru.mipt.acsl.decode.model.domain.component.message.{MessageParameter, _}
 import ru.mipt.acsl.decode.model.domain.impl.naming.Namespace
 import ru.mipt.acsl.decode.model.domain.impl.registry.{Language, Registry}
-import ru.mipt.acsl.decode.model.domain.impl.types.{AliasType, ArrayType, DecodeType, EnumType, GenericType, GenericTypeSpecialized, NativeType, Parameter, PrimitiveTypeInfo, StructType, SubType, TypeKind}
-import ru.mipt.acsl.decode.model.domain.component.message.MessageParameter
+import ru.mipt.acsl.decode.model.domain.impl.types._
+import ru.mipt.acsl.decode.model.domain.impl.naming._
 import ru.mipt.acsl.decode.model.domain.naming.Fqn
+import ru.mipt.acsl.decode.model.domain.types.{DecodeType, StructType}
 
 import scalatags.Text.all._
 import scalatags.Text.tags2.{title => titleTag}
