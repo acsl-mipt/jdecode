@@ -4,8 +4,8 @@ import java.nio.charset.StandardCharsets._
 
 import com.google.common.io.Resources
 import com.typesafe.scalalogging.LazyLogging
-import ru.mipt.acsl.decode.model.domain.impl.registry.Registry
-import ru.mipt.acsl.decode.modeling.ErrorLevel
+import ru.mipt.acsl.decode.model.registry.Registry
+import ru.mipt.acsl.modeling.ErrorLevel
 
 /**
   * @author Artem Shein

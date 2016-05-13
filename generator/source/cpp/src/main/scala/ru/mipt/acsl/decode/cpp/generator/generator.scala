@@ -5,14 +5,14 @@ import java.io.{FileOutputStream, OutputStreamWriter}
 import java.security.MessageDigest
 
 import com.typesafe.scalalogging.LazyLogging
-import ru.mipt.acsl.decode.model.domain.component.{Command, Component}
-import ru.mipt.acsl.decode.model.domain.expr.IntLiteral
-import ru.mipt.acsl.decode.model.domain.impl.registry.Registry
-import ru.mipt.acsl.decode.model.domain.impl.types.{Parameter => _, _}
-import ru.mipt.acsl.decode.model.domain.impl.naming._
-import ru.mipt.acsl.decode.model.domain.naming.{ElementName, Fqn, HasName}
-import ru.mipt.acsl.decode.model.domain.proxy.MaybeProxy
-import ru.mipt.acsl.decode.model.domain.types.{DecodeType, StructType}
+import ru.mipt.acsl.decode.model.component.{Command, Component}
+import ru.mipt.acsl.decode.model.expr.IntLiteral
+import ru.mipt.acsl.decode.model.registry.Registry
+import ru.mipt.acsl.decode.model.types.{Parameter => _, _}
+import ru.mipt.acsl.decode.model.naming._
+import ru.mipt.acsl.decode.model.naming.{ElementName, Fqn}
+import ru.mipt.acsl.decode.model.proxy.MaybeProxy
+import ru.mipt.acsl.decode.model.types.{DecodeType, StructType}
 import ru.mipt.acsl.generator.cpp.ast._
 
 import scala.collection.{immutable, mutable}
@@ -271,7 +271,7 @@ class CppSourceGenerator(val config: CppGeneratorConfiguration) extends LazyLogg
     if (comp.baseType.isDefined)
       collectNsForType(comp.baseType.get, set)
     comp.commands.foreach(cmd => {
-      cmd.parameters.foreach(arg => collectNsForType(arg.paramType, set))
+      cmd.parameters.foreach(arg => collectNsForType(arg.parameterType, set))
       if (cmd.returnType.isDefined)
         collectNsForType(cmd.returnType.get, set)
     })
@@ -324,7 +324,7 @@ class CppSourceGenerator(val config: CppGeneratorConfiguration) extends LazyLogg
 
   private def typesForComponent(comp: Component, typesSet: mutable.Set[DecodeType] = mutable.HashSet.empty) = {
     typesSet ++= comp.commands.flatMap { cmd =>
-      cmd.returnType.map(Seq(_)).getOrElse(Seq.empty) ++ cmd.parameters.map(_.paramType)
+      cmd.returnType.map(Seq(_)).getOrElse(Seq.empty) ++ cmd.parameters.map(_.parameterType)
     }
     typesSet ++= comp.baseType.map(_.fields.map(_.typeUnit.t)).getOrElse(Seq.empty)
     typesSet
@@ -364,7 +364,7 @@ class CppSourceGenerator(val config: CppGeneratorConfiguration) extends LazyLogg
     val methods = comp.commands.flatMap{cmd =>
       val methodName = methodNameForDecodeName(cmd.name)
       val returnType = cmd.returnType.map { rt => cppTypeForDecodeType(rt) }.getOrElse(voidType)
-      val parameters = cmd.parameters.map { p => Parameter(p.name.asMangledString, cppTypeForDecodeType(p.paramType)) }
+      val parameters = cmd.parameters.map { p => Parameter(p.name.asMangledString, cppTypeForDecodeType(p.parameterType)) }
       Seq(
         ClassMethodDef(methodName, returnType, parameters.to[mutable.Buffer], virtual = true, _abstract = true),
         ClassMethodDef(methodName, returnType, mutable.Buffer(readerParameter, writerParameter),

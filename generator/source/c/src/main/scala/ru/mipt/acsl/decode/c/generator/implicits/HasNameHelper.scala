@@ -1,8 +1,8 @@
 package ru.mipt.acsl.decode.c.generator.implicits
 
-import ru.mipt.acsl.decode.model.domain.component.Component
-import ru.mipt.acsl.decode.model.domain.naming.HasName
+import ru.mipt.acsl.decode.model.component.Component
 import ru.mipt.acsl.decode.c.generator.CSourceGenerator._
+import ru.mipt.acsl.decode.model.naming.HasName
 
 /**
   * @author Artem Shein

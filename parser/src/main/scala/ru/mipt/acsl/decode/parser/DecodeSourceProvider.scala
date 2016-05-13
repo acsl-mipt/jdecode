@@ -19,7 +19,7 @@ import com.intellij.psi.impl.source.resolve.reference.{ReferenceProvidersRegistr
 import com.typesafe.scalalogging.LazyLogging
 import org.picocontainer.PicoContainer
 import org.picocontainer.defaults.AbstractComponentAdapter
-import ru.mipt.acsl.decode.model.domain.impl.registry.Registry
+import ru.mipt.acsl.decode.model.registry.Registry
 
 import scala.collection.{immutable, mutable}
 import scala.io.Source

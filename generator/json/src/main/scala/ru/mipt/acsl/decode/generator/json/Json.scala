@@ -31,7 +31,8 @@ private object Json {
     def info: LocalizedString
   }
 
-  case class Component(name: String, subComponents: Seq[ComponentRef], baseType: Option[Int])
+  case class Component(name: String, subComponents: Seq[ComponentRef], baseType: Option[Int], commands: Seq[Command],
+                       eventMessages: Seq[EventMessage], statusMessages: Seq[StatusMessage])
 
   case class ComponentRef(alias: Option[String], component: Int)
 
@@ -71,6 +72,25 @@ private object Json {
 
   case class TypeUnit(t: Int, unit: Option[Int])
 
+  trait Field
+
+  case class Parameter(name: String, info: LocalizedString, typeUnit: TypeUnit) extends Field
+
+  trait ParameterPathElement
+
+  case class ElementName(name: String) extends ParameterPathElement
+
+  case class ArrayRange(min: Long, max: Option[Long]) extends ParameterPathElement
+
+  case class MessageParameter(info: LocalizedString, path: Seq[ParameterPathElement]) extends Field
+
+  case class Command(name: String, info: LocalizedString, parameters: Seq[Parameter], returnType: Option[Int])
+
+  case class EventMessage(name: String, info: LocalizedString, baseType: Int, id: Option[Int], fields: Seq[Field])
+
+  case class StatusMessage(name: String, info: LocalizedString, id: Option[Int], priority: Option[Int],
+                           parameters: Seq[MessageParameter])
+
   implicit val encodeType: Encoder[Type] = Encoder.instance {
     case a: Alias => a.asJson
     case s: SubType => s.asJson
@@ -80,6 +100,16 @@ private object Json {
     case g: GenericType => g.asJson
     case s: GenericTypeSpecialized => s.asJson
     case n: NativeType => n.asJson
+  }
+
+  implicit val encodeField: Encoder[Field] = Encoder.instance {
+    case p: Parameter => p.asJson
+    case mp: MessageParameter => mp.asJson
+  }
+
+  implicit val encodePathElement: Encoder[ParameterPathElement] = Encoder.instance {
+    case e: ElementName => e.asJson
+    case ar: ArrayRange => ar.asJson
   }
 
 }

@@ -2,8 +2,8 @@ import java.io.File
 
 import org.scalatest.{FlatSpec, Matchers}
 import ru.mipt.acsl.decode.c.generator.{CGeneratorConfiguration, CSourceGenerator, FileGeneratorConfiguration, GeneratorSource}
-import ru.mipt.acsl.decode.model.domain.impl.naming.Fqn
-import ru.mipt.acsl.decode.model.domain.naming.Fqn
+import ru.mipt.acsl.decode.model.naming.Fqn
+import ru.mipt.acsl.decode.model.naming.Fqn
 import ru.mipt.acsl.decode.parser.ModelRegistry
 
 import scala.collection.immutable.HashMap

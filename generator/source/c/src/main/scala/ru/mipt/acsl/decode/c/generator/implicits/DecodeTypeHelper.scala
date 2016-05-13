@@ -1,9 +1,9 @@
 package ru.mipt.acsl.decode.c.generator.implicits
 
 import ru.mipt.acsl.decode.c.generator.CSourceGenerator._
-import ru.mipt.acsl.decode.model.domain.impl.naming.{Fqn, Namespace}
-import ru.mipt.acsl.decode.model.domain.impl.types.{ArrayType, EnumType, GenericType, GenericTypeSpecialized, HasBaseType, NativeType}
-import ru.mipt.acsl.decode.model.domain.types.{DecodeType, StructType}
+import ru.mipt.acsl.decode.model.naming.{Fqn, Namespace}
+import ru.mipt.acsl.decode.model.types.{ArrayType, EnumType, GenericType, GenericTypeSpecialized, HasBaseType, NativeType}
+import ru.mipt.acsl.decode.model.types.{DecodeType, StructType}
 import ru.mipt.acsl.generator.c.ast._
 
 import scala.collection.{immutable, mutable}

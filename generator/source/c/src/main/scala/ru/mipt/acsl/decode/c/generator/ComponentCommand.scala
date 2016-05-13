@@ -1,6 +1,6 @@
 package ru.mipt.acsl.decode.c.generator
 
-import ru.mipt.acsl.decode.model.domain.component.{Command, Component}
+import ru.mipt.acsl.decode.model.component.{Command, Component}
 
 /**
   * @author Artem Shein

@@ -1,7 +1,7 @@
 package ru.mipt.acsl.decode.c.generator.implicits.serialization
 
 import ru.mipt.acsl.decode.c.generator.CSourceGenerator._
-import ru.mipt.acsl.decode.model.domain.impl.types.ArrayType
+import ru.mipt.acsl.decode.model.types.ArrayType
 import ru.mipt.acsl.generator.c.ast.{CExpression, CFuncCall, CStatements}
 import ru.mipt.acsl.generator.c.ast.implicits._
 import ru.mipt.acsl.decode.c.generator.implicits._

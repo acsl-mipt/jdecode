@@ -2,8 +2,8 @@ package ru.mipt.acsl.decode.c.generator
 
 import java.io.File
 
-import ru.mipt.acsl.decode.model.domain.impl.registry.Registry
-import ru.mipt.acsl.decode.model.domain.naming.Fqn
+import ru.mipt.acsl.decode.model.registry.Registry
+import ru.mipt.acsl.decode.model.naming.Fqn
 
 /**
   * @author Artem Shein

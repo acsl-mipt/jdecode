@@ -5,13 +5,12 @@ import java.io.File
 
 import com.google.common.base.CaseFormat
 import ru.mipt.acsl.decode.c.generator.CSourceGenerator._
-import ru.mipt.acsl.decode.model.domain.component.message.{EventMessage, MessageParameter, TmMessage}
-import ru.mipt.acsl.decode.model.domain.component.{Command, Component}
-import ru.mipt.acsl.decode.model.domain.expr.{ConstExpr, IntLiteral}
-import ru.mipt.acsl.decode.model.domain.impl.naming.Fqn
-import ru.mipt.acsl.decode.model.domain.impl.types.NativeType
-import ru.mipt.acsl.decode.model.domain.naming.HasName
-import ru.mipt.acsl.decode.model.domain.types.DecodeType
+import ru.mipt.acsl.decode.model.component.message.{EventMessage, MessageParameter, TmMessage}
+import ru.mipt.acsl.decode.model.component.{Command, Component}
+import ru.mipt.acsl.decode.model.expr.{ConstExpr, IntLiteral}
+import ru.mipt.acsl.decode.model.naming.{Fqn, HasName}
+import ru.mipt.acsl.decode.model.types.NativeType
+import ru.mipt.acsl.decode.model.types.DecodeType
 import ru.mipt.acsl.generator.c.ast.implicits._
 import ru.mipt.acsl.generator.c.ast.{CConstType, CType, CAstElements => _, _}
 
@@ -39,7 +38,7 @@ package object implicits {
       val eventParam = CFuncParam("event", eventMessage.baseType.cType)
       val eventParams = eventParam +: eventMessage.fields.flatMap {
         case Right(e) =>
-          val t = e.paramType
+          val t = e.parameterType
           Seq(CFuncParam(e.cName, mapIfNotSmall(t.cType, t, (t: CType) => t.ptr.const)))
         case _ => Seq.empty
       }
@@ -81,7 +80,7 @@ package object implicits {
 
     def cFuncParameterTypes(component: Component): Seq[CType] = {
       component.ptrType +: command.parameters.map(p => {
-        val t = p.paramType
+        val t = p.parameterType
         mapIfNotSmall(t.cType, t, (ct: CType) => ct.ptr)
       })
     }

@@ -1,6 +1,6 @@
 import org.scalatest.{FlatSpec, Matchers}
-import ru.mipt.acsl.decode.model.domain.component.message.ArrayRange
-import ru.mipt.acsl.decode.model.domain.impl.types.ArraySize
+import ru.mipt.acsl.decode.model.component.message.ArrayRange
+import ru.mipt.acsl.decode.model.types.ArraySize
 
 /**
   * Created by metadeus on 05.04.16.

@@ -1,9 +1,9 @@
 package ru.mipt.acsl.decode.c.generator.implicits
 
 import ru.mipt.acsl.decode.c.generator.CSourceGenerator._
-import ru.mipt.acsl.decode.model.domain.component.message._
-import ru.mipt.acsl.decode.model.domain.impl.types.ArrayType
-import ru.mipt.acsl.decode.model.domain.types.DecodeType
+import ru.mipt.acsl.decode.model.component.message._
+import ru.mipt.acsl.decode.model.types.ArrayType
+import ru.mipt.acsl.decode.model.types.DecodeType
 import ru.mipt.acsl.generator.c.ast.{CAstElements => _, _}
 
 /**

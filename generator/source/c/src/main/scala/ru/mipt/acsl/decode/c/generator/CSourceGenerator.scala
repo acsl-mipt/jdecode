@@ -1,19 +1,19 @@
 package ru.mipt.acsl.decode.c.generator
 
-import java.io
-import java.io.{ByteArrayOutputStream, File}
+import java.{io, util}
+import java.io.{ByteArrayInputStream, ByteArrayOutputStream, File}
 import java.nio.charset.StandardCharsets
 
 import com.typesafe.scalalogging.LazyLogging
+import org.apache.commons.compress.compressors.xz.{XZCompressorInputStream, XZCompressorOutputStream}
+import org.apache.commons.compress.utils.IOUtils
 import ru.mipt.acsl.decode.c.generator.implicits._
 import ru.mipt.acsl.decode.c.generator.implicits.serialization._
 import ru.mipt.acsl.decode.generator.json.{DecodeJsonGenerator, DecodeJsonGeneratorConfig}
-import ru.mipt.acsl.decode.model.domain.component.message.{EventMessage => _}
-import ru.mipt.acsl.decode.model.domain.component.{Command, Component}
-import ru.mipt.acsl.decode.model.domain.impl.naming.{ElementName, Namespace}
-import ru.mipt.acsl.decode.model.domain.impl.types.{AliasType, ArrayType, EnumType, GenericType, GenericTypeSpecialized, NativeType, PrimitiveTypeInfo, SubType, TypeKind}
-import ru.mipt.acsl.decode.model.domain.naming.HasName
-import ru.mipt.acsl.decode.model.domain.types.{DecodeType, StructType}
+import ru.mipt.acsl.decode.model.component.message.{EventMessage => _}
+import ru.mipt.acsl.decode.model.component.{Command, Component}
+import ru.mipt.acsl.decode.model.naming.{ElementName, HasName, Namespace}
+import ru.mipt.acsl.decode.model.types.{AliasType, ArrayType, DecodeType, EnumType, GenericType, GenericTypeSpecialized, NativeType, PrimitiveTypeInfo, StructType, SubType, TypeKind}
 import ru.mipt.acsl.generator.c.ast._
 import ru.mipt.acsl.generator.c.ast.implicits._
 
@@ -300,8 +300,20 @@ class CSourceGenerator(val config: CGeneratorConfiguration) extends LazyLogging 
 
           new DecodeJsonGenerator(DecodeJsonGeneratorConfig(config.registry, this, config.rootComponentFqn)).generate()
 
-          modelC.append("static uint8_t modelData[] = {")
-          for ((byte, index) <- toByteArray.zipWithIndex) {
+          private val rawJsonMinified = toByteArray
+          private val array = new ByteArrayOutputStream() {
+            new XZCompressorOutputStream(this) {
+              write(rawJsonMinified)
+              finish()
+              close()
+            }
+          }.toByteArray
+
+          assert(util.Arrays.equals(rawJsonMinified,
+            IOUtils.toByteArray(new XZCompressorInputStream(new ByteArrayInputStream(array)))))
+
+          modelC.append(s"static uint8_t modelData[${array.length}] = {")
+          for ((byte, index) <- array.zipWithIndex) {
             modelC.append("0x%02X, ".format(byte))
             if (index % 20 == 0)
               modelC.append("\n\t")

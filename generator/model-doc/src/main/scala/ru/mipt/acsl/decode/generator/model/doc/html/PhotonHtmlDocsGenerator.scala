@@ -2,7 +2,7 @@ package ru.mipt.acsl.decode.generator.model.doc.html
 
 import java.io.File
 
-import ru.mipt.acsl.decode.model.domain.impl.naming.Fqn
+import ru.mipt.acsl.decode.model.naming.Fqn
 import ru.mipt.acsl.decode.parser.ModelRegistry
 
 /**

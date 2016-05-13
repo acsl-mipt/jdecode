@@ -2,12 +2,12 @@ package ru.mipt.acsl.decode.c.generator.implicits.serialization
 
 import ru.mipt.acsl.decode.c.generator.CSourceGenerator._
 import ru.mipt.acsl.decode.c.generator.implicits._
-import ru.mipt.acsl.decode.model.domain.LocalizedString
-import ru.mipt.acsl.decode.model.domain.component.message._
-import ru.mipt.acsl.decode.model.domain.component.{Component, message}
-import ru.mipt.acsl.decode.model.domain.impl.types.ArrayType
-import ru.mipt.acsl.decode.model.domain.proxy.MaybeProxy
-import ru.mipt.acsl.decode.model.domain.types.StructType
+import ru.mipt.acsl.decode.model.LocalizedString
+import ru.mipt.acsl.decode.model.component.message._
+import ru.mipt.acsl.decode.model.component.{Component, message}
+import ru.mipt.acsl.decode.model.types.ArrayType
+import ru.mipt.acsl.decode.model.proxy.MaybeProxy
+import ru.mipt.acsl.decode.model.types.StructType
 import ru.mipt.acsl.generator.c.ast._
 import ru.mipt.acsl.generator.c.ast.implicits._
 

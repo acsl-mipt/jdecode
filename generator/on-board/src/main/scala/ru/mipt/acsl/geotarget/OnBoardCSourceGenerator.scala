@@ -7,8 +7,8 @@ import com.google.common.io.Resources
 
 import com.typesafe.scalalogging.LazyLogging
 import ru.mipt.acsl.decode.c.generator.{CGeneratorConfiguration, CSourceGenerator, FileGeneratorConfiguration, GeneratorSource}
-import ru.mipt.acsl.decode.model.domain.impl.naming.Fqn
-import ru.mipt.acsl.decode.model.domain.naming.Fqn
+import ru.mipt.acsl.decode.model.naming.Fqn
+import ru.mipt.acsl.decode.model.naming.Fqn
 import ru.mipt.acsl.decode.parser.ModelRegistry
 
 import scala.collection.immutable.HashMap
@@ -19,12 +19,14 @@ import scala.io.Source
   */
 object OnBoardCSourceGenerator extends LazyLogging {
 
+  val RootComponentFqn = "ru.mipt.acsl.photon.Main"
+
   def fqn(str: String): Fqn = Fqn.newFromSource(str)
 
   def main(args : Array[String]) = {
     val config = new CGeneratorConfiguration(new File("gen/"),
       ModelRegistry.registry,
-      "ru.mipt.acsl.photon.Main",
+      RootComponentFqn,
       HashMap(
         fqn("decode") -> Some(fqn("photon.decode")),
         fqn("ru.mipt.acsl.photon") -> Some(fqn("photon")),

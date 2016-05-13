@@ -3,12 +3,12 @@ package ru.mipt.acsl.decode.c.generator.implicits
 import ru.mipt.acsl.decode.c.generator.CSourceGenerator._
 import ru.mipt.acsl.decode.c.generator._
 import ru.mipt.acsl.decode.c.generator.implicits.serialization._
-import ru.mipt.acsl.decode.model.domain.HasOptionId
-import ru.mipt.acsl.decode.model.domain.component.message.{EventMessage, MessageParameter, StatusMessage, TmMessage, _}
-import ru.mipt.acsl.decode.model.domain.component.{Command, Component}
-import ru.mipt.acsl.decode.model.domain.impl.naming.Namespace
-import ru.mipt.acsl.decode.model.domain.impl.types.NativeType
-import ru.mipt.acsl.decode.model.domain.types.{DecodeType, StructField}
+import ru.mipt.acsl.decode.model.HasOptionId
+import ru.mipt.acsl.decode.model.component.message.{EventMessage, MessageParameter, StatusMessage, TmMessage, _}
+import ru.mipt.acsl.decode.model.component.{Command, Component}
+import ru.mipt.acsl.decode.model.naming.Namespace
+import ru.mipt.acsl.decode.model.types.NativeType
+import ru.mipt.acsl.decode.model.types.{DecodeType, StructField}
 import ru.mipt.acsl.generator.c.ast._
 import ru.mipt.acsl.generator.c.ast.implicits._
 
@@ -124,7 +124,7 @@ private[generator] case class ComponentHelper(component: Component) {
     for (baseType <- component.baseType)
       collectNsForType(baseType, set)
     component.commands.foreach { cmd =>
-      cmd.parameters.foreach(arg => collectNsForType(arg.paramType, set))
+      cmd.parameters.foreach(arg => collectNsForType(arg.parameterType, set))
       for (returnType <- cmd.returnType)
         collectNsForType(returnType, set)
     }
@@ -228,7 +228,7 @@ private[generator] case class ComponentHelper(component: Component) {
               case Left(p) =>
                 p.serializeCallCode(component, c)
               case Right(p) =>
-                CStatements(p.paramType.serializeCallCode(p.cName._var))
+                CStatements(p.parameterType.serializeCallCode(p.cName._var))
             } :+ CReturn(resultOk).line
         ), c),
           MethodInfo(CFuncImpl(fullMethodDef,
@@ -328,7 +328,7 @@ private[generator] case class ComponentHelper(component: Component) {
       MethodDefInfo(CFuncDef(component.methodName(command, c),
         command.returnType.map(_.cMethodReturnType).getOrElse(voidType),
         command.parameters.map(p => {
-          val t = p.paramType
+          val t = p.parameterType
           CFuncParam(p.cName, mapIfNotSmall(t.cType, t, (ct: CType) => ct.ptr.const))
         }) ++ command.returnType.map(_.cMethodReturnParameters).getOrElse(Seq.empty)), c)
     }
@@ -350,12 +350,12 @@ private[generator] case class ComponentHelper(component: Component) {
       val methodNamePart = component.executeMethodNamePart(command, subComponent)
       val vars = command.parameters.map { p => CVar(p.mangledCName) }
       val varInits = vars.zip(command.parameters).flatMap { case (v, parameter) =>
-        val paramType = parameter.paramType
+        val paramType = parameter.parameterType
         CStatements(v.define(paramType.cType), paramType.deserializeCallCode(v.ref)._try)
       }
       val cmdReturnType = command.returnType
       val funcCall = component.methodName(command, subComponent).call(
-        (for ((v, t) <- vars.zip(command.parameters.map(_.paramType))) yield v.refIfNotSmall(t)): _*)
+        (for ((v, t) <- vars.zip(command.parameters.map(_.parameterType))) yield v.refIfNotSmall(t)): _*)
       MethodInfo(CFuncImpl(CFuncDef(componentTypeName.methodName(methodNamePart), resultType, parameters),
         varInits ++ cmdReturnType.map {
           case n: NativeType if n.isPrimitive => CStatements(n.serializeCallCode(funcCall), CReturn(resultOk))
@@ -366,7 +366,7 @@ private[generator] case class ComponentHelper(component: Component) {
 
   def allTypes: immutable.Set[DecodeType] =
     (component.commands.flatMap(cmd => cmd.returnType.map(_.typeWithDependentTypes).getOrElse(Seq.empty) ++
-      cmd.parameters.flatMap(_.paramType.typeWithDependentTypes)) ++
+      cmd.parameters.flatMap(_.parameterType.typeWithDependentTypes)) ++
       component.eventMessages.map(_.baseType) ++
       component.baseType.map(_.fields.flatMap(_.typeUnit.t.typeWithDependentTypes)).getOrElse(Seq.empty)).toSet ++
       component.allSubComponents.flatMap(_.allTypes)

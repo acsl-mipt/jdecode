@@ -1,7 +1,7 @@
 package ru.mipt.acsl.decode.c.generator
 
-import ru.mipt.acsl.decode.model.domain.component.Component
-import ru.mipt.acsl.decode.model.domain.component.message.StatusMessage
+import ru.mipt.acsl.decode.model.component.Component
+import ru.mipt.acsl.decode.model.component.message.StatusMessage
 
 /**
   * @author Artem Shein

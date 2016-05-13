@@ -5,15 +5,11 @@ import java.io.{FileOutputStream, OutputStreamWriter}
 import java.net.URLEncoder
 
 import com.google.common.base.Charsets
-import ru.mipt.acsl.decode.model.domain.Language
-import ru.mipt.acsl.decode.model.domain.component.Component
-import ru.mipt.acsl.decode.model.domain.component.message.{MessageParameter, _}
-import ru.mipt.acsl.decode.model.domain.impl.naming.Namespace
-import ru.mipt.acsl.decode.model.domain.impl.registry.{Language, Registry}
-import ru.mipt.acsl.decode.model.domain.impl.types._
-import ru.mipt.acsl.decode.model.domain.impl.naming._
-import ru.mipt.acsl.decode.model.domain.naming.Fqn
-import ru.mipt.acsl.decode.model.domain.types.{DecodeType, StructType}
+import ru.mipt.acsl.decode.model.component.Component
+import ru.mipt.acsl.decode.model.component.message.{MessageParameter, _}
+import ru.mipt.acsl.decode.model.naming.{Fqn, Namespace, _}
+import ru.mipt.acsl.decode.model.registry.{Language, Registry}
+import ru.mipt.acsl.decode.model.types.{DecodeType, StructType, _}
 
 import scalatags.Text.all._
 import scalatags.Text.tags2.{title => titleTag}
@@ -259,7 +255,7 @@ class HtmlModelDocGenerator(val config: HtmlModelDocGeneratorConfiguration) {
   def trForParameter(p: Parameter): Tag =
     tr(
       td(p.name.asMangledString),
-      td(typeNameWithLink(p.paramType)),
+      td(typeNameWithLink(p.parameterType)),
       td(StringFrag(p.info.getOrElse(lang, ""))))
 
   implicit class RichFile(val file: io.File) {
