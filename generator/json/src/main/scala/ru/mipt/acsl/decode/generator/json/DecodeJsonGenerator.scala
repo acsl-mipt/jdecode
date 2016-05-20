@@ -56,12 +56,13 @@ class DecodeJsonGenerator(val config: DecodeJsonGeneratorConfig) {
     }
 
     private def generate(c: Component): Int =
-      appendToNamespace(_.components, c, generate[Component, Json.Component](c, components,
+      generate[Component, Json.Component](c, components,
         Json.Component(
         c.name.asMangledString,
+        generate(c.namespace),
         c.subComponents.map { sc => Json.ComponentRef(sc.alias, generate(sc.component)) },
         c.baseType.map(generate(_)), c.commands.map(command), c.eventMessages.map(eventMessage),
-          c.statusMessages.map(statusMessage))))
+          c.statusMessages.map(statusMessage)))
 
     private def constExpr(e: ConstExpr): Json.ConstExpr = e match {
       case f: FloatLiteral => Json.ConstExpr(f.value)
@@ -98,9 +99,6 @@ class DecodeJsonGenerator(val config: DecodeJsonGeneratorConfig) {
 
     private def localizedString(info: Map[Language, String]): Json.LocalizedString = info.map{ i => i._1.code -> i._2}
 
-    private def unit(u: DecodeUnit): Json.Unit =
-      Json.Unit(name(u), info(u), localizedString(u.display))
-
     private def typeUnit(tu: TypeUnit): Json.TypeUnit =
       Json.TypeUnit(generate(tu.t), tu.unit.map(generate))
 
@@ -122,9 +120,7 @@ class DecodeJsonGenerator(val config: DecodeJsonGeneratorConfig) {
 
     private def generate(ns: Namespace): Int = {
       val idx = generate[Namespace, Json.Namespace](ns, namespaces,
-        Json.Namespace(name(ns), info(ns)))
-      for (parentNs <- ns.parent)
-        namespaces.buffer(generate(parentNs)).subNamespaces += idx
+        Json.Namespace(name(ns), info(ns), ns.parent.map(generate)))
       idx
     }
 
@@ -134,28 +130,29 @@ class DecodeJsonGenerator(val config: DecodeJsonGeneratorConfig) {
     }
 
     private def generate(unit: DecodeUnit): Int =
-      appendToNamespace(_.units, unit, generate[DecodeUnit, Json.Unit](unit, units,
-        Json.Unit(name(unit), info(unit), localizedString(unit.display))))
+      generate[DecodeUnit, Json.Unit](unit, units, Json.Unit(name(unit), info(unit), localizedString(unit.display)))
 
     private def generate(t: DecodeType): Int =
-      appendToNamespace(_.types, t, generate[DecodeType, Json.Type](t, types, {
+      generate[DecodeType, Json.Type](t, types, {
         val typeName = name(t)
         val typeInfo = info(t)
         t match {
-          case a: AliasType => Json.Alias(typeName, typeInfo, generate(a.baseType))
-          case s: SubType => Json.SubType(typeName, typeInfo, generate(s.baseType),
+          case a: AliasType => Json.Alias(typeName, typeInfo, generate(a.namespace), generate(a.baseType))
+          case s: SubType => Json.SubType(typeName, typeInfo, generate(s.namespace), generate(s.baseType),
             s.range.map{ r => Json.SubTypeRange(r.from.map(constExpr), r.to.map(constExpr)) })
-          case n: NativeType => Json.NativeType(typeName, typeInfo)
-          case a: ArrayType => Json.ArrayType(typeName, typeInfo, generate(a.baseType), a.size.min, a.size.max)
-          case s: StructType => Json.StructType(typeName, typeInfo, s.fields.map(structField))
-          case g: GenericType => Json.GenericType(typeName, typeInfo, g.typeParameters.map(_.map(_.asMangledString)))
-          case s: GenericTypeSpecialized => Json.GenericTypeSpecialized(typeName, typeInfo, generate(s.genericType),
-            s.genericTypeArguments.map(_.map(generate)))
-          case e: EnumType => new Json.EnumType(typeName, typeInfo, e.extendsTypeOption.map(generate),
-            e.baseTypeOption.map(generate),
-            e.isFinal, e.constants.map(enumConst).toSeq)
+          case n: NativeType => Json.NativeType(typeName, typeInfo, generate(n.namespace))
+          case a: ArrayType => Json.ArrayType(typeName, typeInfo, generate(a.namespace), generate(a.baseType),
+            a.size.min, a.size.max)
+          case s: StructType => Json.StructType(typeName, typeInfo, generate(s.namespace), s.fields.map(structField))
+          case g: GenericType => Json.GenericType(typeName, typeInfo, generate(g.namespace),
+            g.typeParameters.map(_.map(_.asMangledString)))
+          case s: GenericTypeSpecialized => Json.GenericTypeSpecialized(typeName, typeInfo, generate(s.namespace),
+            generate(s.genericType), s.genericTypeArguments.map(_.map(generate)))
+          case e: EnumType => new Json.EnumType(typeName, typeInfo, generate(e.namespace),
+            e.extendsTypeOption.map(generate), e.baseTypeOption.map(generate), e.isFinal,
+            e.constants.map(enumConst).toSeq)
           case _ => sys.error(s"not implemented for $t")
-        }}))
+        }})
   }
 
 }

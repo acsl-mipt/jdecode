@@ -31,38 +31,39 @@ private object Json {
     def info: LocalizedString
   }
 
-  case class Component(name: String, subComponents: Seq[ComponentRef], baseType: Option[Int], commands: Seq[Command],
-                       eventMessages: Seq[EventMessage], statusMessages: Seq[StatusMessage])
+  case class Component(name: String, namespace: Int, subComponents: Seq[ComponentRef], baseType: Option[Int],
+                       commands: Seq[Command], eventMessages: Seq[EventMessage], statusMessages: Seq[StatusMessage])
 
   case class ComponentRef(alias: Option[String], component: Int)
 
-  case class Namespace(name: String, info: LocalizedString, subNamespaces: mutable.Set[Int] = mutable.Set.empty,
-                       units: mutable.Set[Int] = mutable.Set.empty,
-                       types: mutable.Set[Int] = mutable.Set.empty,
-                       components: mutable.Set[Int] = mutable.Set.empty)
+  case class Namespace(name: String, info: LocalizedString, parent: Option[Int] = None)
 
-  case class Alias(name: String, info: LocalizedString, baseType: Int, kind: String = "alias") extends Type
+  case class Alias(name: String, info: LocalizedString, namespace: Int, baseType: Int, kind: String = "alias")
+    extends Type
 
-  case class SubType(name: String, info: LocalizedString, baseType: Int,
+  case class SubType(name: String, info: LocalizedString, namespace: Int, baseType: Int,
                      range: Option[SubTypeRange], kind: String = "subtype") extends Type
 
-  case class NativeType(name: String, info: LocalizedString, kind: String = "native") extends Type
+  case class NativeType(name: String, info: LocalizedString, namespace: Int, kind: String = "native") extends Type
 
-  case class ArrayType(name: String, info: LocalizedString, baseType: Int, min: Long, max: Long, kind: String = "array")
+  case class ArrayType(name: String, info: LocalizedString, namespace: Int, baseType: Int, min: Long, max: Long,
+                       kind: String = "array")
     extends Type
 
   case class StructField(name: String, typeUnit: TypeUnit)
 
-  case class StructType(name: String, info: LocalizedString, fields: Seq[StructField], kind: String = "struct") extends Type
+  case class StructType(name: String, info: LocalizedString, namespace: Int, fields: Seq[StructField],
+                        kind: String = "struct") extends Type
 
-  case class GenericType(name: String, info: LocalizedString, typeParameters: Seq[Option[String]],
+  case class GenericType(name: String, info: LocalizedString, namespace: Int, typeParameters: Seq[Option[String]],
                          kind: String = "generic") extends Type
 
-  case class GenericTypeSpecialized(name: String, info: LocalizedString, genericType: Int,
+  case class GenericTypeSpecialized(name: String, info: LocalizedString, namespace: Int, genericType: Int,
                                     genericTypeArguments: Seq[Option[Int]], kind: String = "specialized") extends Type
 
-  case class EnumType(name: String, info: LocalizedString, extendsType: Option[Int], baseType: Option[Int],
-                      isFinal: Boolean, constants: Seq[EnumConst], kind: String = "enum") extends Type
+  case class EnumType(name: String, info: LocalizedString, namespace: Int, extendsType: Option[Int],
+                      baseType: Option[Int], isFinal: Boolean, constants: Seq[EnumConst],
+                      kind: String = "enum") extends Type
 
   object Type
 
