@@ -292,13 +292,16 @@ class CSourceGenerator(val config: CGeneratorConfiguration) extends LazyLogging 
         val modelC = new StringBuilder()
 
         new ByteArrayOutputStream() {
-          new DecodeJsonGenerator(DecodeJsonGeneratorConfig(config.registry, this, config.rootComponentFqn, prettyPrint = true)).generate()
+
+          private val jsonConfig: DecodeJsonGeneratorConfig = DecodeJsonGeneratorConfig(config.registry, this, Seq(config.rootComponentFqn),
+            prettyPrint = true)
+          DecodeJsonGenerator(jsonConfig).generate()
 
           modelC.append("/*").append(new String(toByteArray, StandardCharsets.UTF_8)).append("*/\n\n")
 
           reset()
 
-          new DecodeJsonGenerator(DecodeJsonGeneratorConfig(config.registry, this, config.rootComponentFqn)).generate()
+          DecodeJsonGenerator(jsonConfig.copy(prettyPrint = false)).generate()
 
           private val rawJsonMinified = toByteArray
           private val array = new ByteArrayOutputStream() {

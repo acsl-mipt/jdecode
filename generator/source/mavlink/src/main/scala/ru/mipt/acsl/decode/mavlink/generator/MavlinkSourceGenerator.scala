@@ -1,6 +1,7 @@
 package ru.mipt.acsl.decode.mavlink.generator
 
-import java.io.{File, FileWriter, IOException}
+import java.io._
+import java.nio.charset.StandardCharsets
 import java.util.regex.Pattern
 
 import com.google.common.base.CaseFormat
@@ -23,21 +24,21 @@ class MavlinkSourceGenerator(val config: MavlinkSourceGeneratorConfig) {
   private val concreteEnums: Multimap[String, String] = MultimapBuilder.hashKeys().hashSetValues().build()
 
   def generate(): Unit = {
-    val outputFile = config.output
-    if (outputFile.exists)
-      outputFile.delete()
-    new FileWriter(outputFile) {
+
+    val output = new ByteArrayOutputStream()
+    new OutputStreamWriter(output) {
       this: Appendable =>
 
       def _eol(): Unit = eol(this)
 
       append("namespace " + config.nsFqn)
       _eol()
+      append("import decode.{u8, u16, u32, u64, i8, i16, i32, i64, f32, f64}")
+      _eol()
       _eol()
       append("language en")
       _eol()
-      val inputFile = config.input
-      processFile(inputFile)
+      processFile(config.inputContents)
       _eol()
       append("alias ^float f32")
       _eol()
@@ -53,7 +54,7 @@ class MavlinkSourceGenerator(val config: MavlinkSourceGeneratorConfig) {
 
       // Component
       _eol()
-      append("component ").append(makeComponentName("\\.".r.split(inputFile.getName).head))
+      append("component ").append(makeComponentName(config.componentName))
       append(" {")
       _eol()
       append("\tparameters (")
@@ -70,7 +71,7 @@ class MavlinkSourceGenerator(val config: MavlinkSourceGeneratorConfig) {
       }
       append("\t)")
       _eol()
-      messages.find(_.name.equals(CommandLong)).foreach { commandMessage =>
+      messages.find(_.name == CommandLong).foreach { commandMessage =>
         val cmdEnum = enums.get(MavCmd)
         assert(cmdEnum.isDefined, "enum for command not found")
         cmdEnum.get.constants.foreach { constant =>
@@ -128,6 +129,7 @@ class MavlinkSourceGenerator(val config: MavlinkSourceGeneratorConfig) {
 
       close()
     }
+    config.writeOutput(new String(output.toByteArray, StandardCharsets.UTF_8))
   }
 
   private def generateConcreteEnum(typeName: String, enumName: String, appendable: Appendable): Unit = {
@@ -163,12 +165,12 @@ class MavlinkSourceGenerator(val config: MavlinkSourceGeneratorConfig) {
     _eol()
   }
 
-  private def processFile(inputFile: File): Unit = {
-    val document = XML.loadFile(inputFile)
+  private def processFile(inputContents: String): Unit = {
+    val document = XML.loadString(inputContents)
     (document \ "_").foreach { element =>
       element.label match {
         case "include" =>
-          processFile(new File(inputFile.getParent, element.text))
+          processFile(config.includeContents(element.text))
         case "version" =>
         case "enums" =>
           (element \ "enum").map(processEnum).foreach { e =>
@@ -257,11 +259,13 @@ object MavlinkSourceGenerator {
   def main(args: Array[String]): Unit = {
     val parser = MavlinkSourceGeneratorConfigCliParser()
     parser.parse(args) match {
-      case Some(config) => new MavlinkSourceGenerator(config).generate()
+      case Some(config) => apply(config).generate()
       case _ =>
         System.exit(1)
     }
   }
+
+  def apply(config: MavlinkSourceGeneratorConfig) = new MavlinkSourceGenerator(config)
 
   private def eol(appendable: Appendable): Unit = appendable.append("\n")
 
@@ -345,21 +349,21 @@ object MavlinkSourceGenerator {
     def generate(appendable: Appendable): Unit = {
 
       def append(s: String): Appendable = appendable.append(s)
-      def _eol = eol(appendable)
+      def _eol(): Unit = eol(appendable)
 
-      _eol
+      _eol()
       for (i <- info) {
         append("'").append(i).append("'")
-        _eol
+        _eol()
       }
       append("type ").append(typeName).append(" struct")
       append("(")
-      _eol
+      _eol()
 
       fields.foreach(_.generate(appendable))
 
       append(")")
-      _eol
+      _eol()
     }
   }
 

@@ -1,4 +1,5 @@
 dependencies {
     compile project(':decode:generator:json')
     compile project(':decode:generator:on-board')
+    compile project(':decode:generator:source:mavlink')
 }

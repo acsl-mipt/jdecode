@@ -17,17 +17,17 @@ import ru.mipt.acsl.decode.model.component.message.{EventMessage, MessageParamet
 
 import scala.collection.mutable
 
-class DecodeJsonGenerator(val config: DecodeJsonGeneratorConfig) {
+case class DecodeJsonGenerator(config: DecodeJsonGeneratorConfig) {
 
   def generate(): Unit = {
 
     new OutputStreamWriter(config.output) {
 
-      val rootComponent = config.registry.component(config.rootComponentFqn)
-        .orElseFail("component not found")
+      val rootComponents = config.componentsFqn.map(f => config.registry.component(f)
+        .orElseFail(s"component not found $f"))
 
       private val jsonRoot = new StatefulDecodeJsonGenerator()
-        .generateRootComponent(rootComponent)
+        .generateRootComponents(rootComponents)
 
       if (config.prettyPrint) {
         val printer = Printer.spaces2.copy(dropNullKeys = true)
@@ -50,8 +50,8 @@ class DecodeJsonGenerator(val config: DecodeJsonGeneratorConfig) {
     val components = MapBuffer[Component, Json.Component]()
     val namespaces = MapBuffer[Namespace, Json.Namespace]()
 
-    def generateRootComponent(c: Component): Json.Root = {
-      generate(c)
+    def generateRootComponents(cs: Seq[Component]): Json.Root = {
+      cs.foreach(generate)
       Json.Root(units.buffer, types.buffer, components.buffer, namespaces.buffer)
     }
 
@@ -65,8 +65,8 @@ class DecodeJsonGenerator(val config: DecodeJsonGeneratorConfig) {
           c.statusMessages.map(statusMessage)))
 
     private def constExpr(e: ConstExpr): Json.ConstExpr = e match {
-      case f: FloatLiteral => Json.ConstExpr(f.value)
-      case i: IntLiteral => Json.ConstExpr(i.value)
+      case f: FloatLiteral => Json.FloatConstExpr(f.value)
+      case i: IntLiteral => Json.LongConstExpr(i.value)
       case _ => sys.error("not implemented")
     }
 
@@ -97,7 +97,8 @@ class DecodeJsonGenerator(val config: DecodeJsonGeneratorConfig) {
     private def parameter(p: Parameter): Json.Parameter =
       Json.Parameter(name(p), info(p), typeUnit(p.typeUnit))
 
-    private def localizedString(info: Map[Language, String]): Json.LocalizedString = info.map{ i => i._1.code -> i._2}
+    private def localizedString(info: Map[Language, String]): Json.LocalizedString =
+      Json.LocalizedString(info.map{ i => i._1.code -> i._2})
 
     private def typeUnit(tu: TypeUnit): Json.TypeUnit =
       Json.TypeUnit(generate(tu.t), tu.unit.map(generate))
@@ -157,5 +158,5 @@ class DecodeJsonGenerator(val config: DecodeJsonGeneratorConfig) {
 
 }
 
-case class DecodeJsonGeneratorConfig(registry: Registry, output: OutputStream, rootComponentFqn: String,
+case class DecodeJsonGeneratorConfig(registry: Registry, output: OutputStream, componentsFqn: Seq[String],
                                      prettyPrint: Boolean = false)

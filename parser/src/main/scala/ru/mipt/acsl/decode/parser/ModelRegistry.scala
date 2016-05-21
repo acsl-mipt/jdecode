@@ -12,26 +12,35 @@ import ru.mipt.acsl.modeling.ErrorLevel
   */
 object ModelRegistry extends LazyLogging {
 
-  val provider = new DecodeSourceProvider()
-  val config = new DecodeSourceProviderConfiguration("ru/mipt/acsl/decode")
+  val Provider = new DecodeSourceProvider()
+  val Config = new DecodeSourceProviderConfiguration("ru/mipt/acsl/decode")
 
-  val sourceName = { n: String => n + ".decode" }
-  val sourceResourcePath = { n: String => "ru/mipt/acsl/decode/" + sourceName(n) }
-  val sourceContents = { n: String => Resources.toString(Resources.getResource(sourceResourcePath(n)), UTF_8) }
+  val RuntimeSource = SourceFileName("runtime")
+  val Sources = Seq(RuntimeSource)
 
-  val sources = Seq("runtime", "foundation", "fs", "identification", "mcc", "photon", "scripting", "segmentation",
-    "tm", "routing")
+  def sourceName(nameWithoutExt: SourceFileName): String = nameWithoutExt.toFileNameWithoutExt + ".decode"
 
-  def registry: Registry = registryForSourceNames(sources)
+  def sourceResourcePath(nameWithoutExt: SourceFileName): String = "ru/mipt/acsl/decode/" + sourceName(nameWithoutExt)
 
-  def registryForSourceNames(sourceNames: Seq[String]): Registry = registry(sourceNames.map(sourceContents))
+  def sourceContents(nameWithoutExt: SourceFileName): String =
+    Resources.toString(Resources.getResource(sourceResourcePath(nameWithoutExt)), UTF_8)
+
+  def registryForSourceNames(sourceNames: Seq[SourceFileName]): Registry = registry(sourceNames.map(sourceContents))
 
   def registry(sources: Seq[String]): Registry = {
-    val registry = provider.provide(config, sources)
+    val registry = Provider.provide(Config, sources)
     val resolvingResult = registry.resolve()
     if (resolvingResult.exists(_.level == ErrorLevel))
       resolvingResult.foreach(msg => logger.error(msg.text))
     registry
+  }
+
+  case class SourceFileName(name: String) {
+
+    def toFileNameWithoutExt: String = name
+
+    override def toString: String = toFileNameWithoutExt
+
   }
 
 }

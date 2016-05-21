@@ -1,9 +1,18 @@
 package ru.mipt.acsl.decode.mavlink.generator
 
-import java.io.File
-
 /**
-  * @author Artem Shein
+  * Created by metadeus on 21.05.16.
   */
-case class MavlinkSourceGeneratorConfig(input: File = new File("in"), output: File = new File("out"),
-                                        nsFqn: String = "mavlink")
+trait MavlinkSourceGeneratorConfig {
+
+  def includeContents(fileName:  String): String
+
+  def inputContents: String
+
+  def writeOutput(contents: String): Unit
+
+  def nsFqn: String
+
+  def componentName: String
+
+}

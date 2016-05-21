@@ -25,7 +25,7 @@ object OnBoardCSourceGenerator extends LazyLogging {
 
   def main(args : Array[String]) = {
     val config = new CGeneratorConfiguration(new File("gen/"),
-      ModelRegistry.registry,
+      OnBoardModelRegistry.registry,
       RootComponentFqn,
       HashMap(
         fqn("decode") -> Some(fqn("photon.decode")),
@@ -38,7 +38,7 @@ object OnBoardCSourceGenerator extends LazyLogging {
         fqn("ru.mipt.acsl.scripting") -> Some(fqn("photon.scripting")),
         fqn("ru.mipt.acsl.segmentation") -> Some(fqn("photon.segmentation")),
         fqn("ru.mipt.acsl.tm") -> Some(fqn("photon.tm"))),
-      sources = ModelRegistry.sources.map(source =>
+      sources = OnBoardModelRegistry.Sources.map(source =>
         GeneratorSource(ModelRegistry.sourceName(source), ModelRegistry.sourceContents(source))),
       isSingleton = true,
       includeModelInfo = true,

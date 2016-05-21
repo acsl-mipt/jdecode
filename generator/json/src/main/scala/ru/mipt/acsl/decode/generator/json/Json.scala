@@ -1,25 +1,22 @@
 package ru.mipt.acsl.decode.generator.json
 
+import io.circe
 import io.circe.Encoder
 import io.circe.generic.auto._
 import io.circe.syntax._
-
-import scala.collection.mutable
 
 /**
   * @author Artem Shein
   */
 private object Json {
 
-  type LocalizedString = Map[String, String]
+  case class LocalizedString(map: Map[String, String])
 
-  type ConstExpr = Either[Long, Float]
+  sealed trait ConstExpr
 
-  object ConstExpr {
-    def apply(value: Long): ConstExpr = Left(value)
+  case class FloatConstExpr(value: Float) extends ConstExpr
 
-    def apply(value: Float): ConstExpr = Right(value)
-  }
+  case class LongConstExpr(value: Long) extends ConstExpr
 
   case class Unit(name: String, info: LocalizedString, display: LocalizedString)
 
@@ -91,6 +88,16 @@ private object Json {
 
   case class StatusMessage(name: String, info: LocalizedString, id: Option[Int], priority: Option[Int],
                            parameters: Seq[MessageParameter])
+
+  implicit val encoderLocalizedString: Encoder[LocalizedString] = Encoder.instance {
+    case i if i.map.isEmpty => circe.Json.Null
+    case i => i.map.asJson
+  }
+
+  implicit val encoderConstExpr: Encoder[ConstExpr] = Encoder.instance {
+    case f: FloatConstExpr => f.value.asJson
+    case l: LongConstExpr => l.value.asJson
+  }
 
   implicit val encodeType: Encoder[Type] = Encoder.instance {
     case a: Alias => a.asJson
