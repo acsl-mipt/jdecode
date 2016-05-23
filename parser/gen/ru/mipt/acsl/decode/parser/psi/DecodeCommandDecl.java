@@ -7,6 +7,9 @@ import com.intellij.psi.PsiElement;
 
 public interface DecodeCommandDecl extends PsiElement {
 
+  @NotNull
+  List<DecodeAnnotationDecl> getAnnotationDeclList();
+
   @Nullable
   DecodeCommandArgs getCommandArgs();
 
@@ -15,9 +18,6 @@ public interface DecodeCommandDecl extends PsiElement {
 
   @NotNull
   DecodeElementNameRule getElementNameRule();
-
-  @Nullable
-  DecodeEntityId getEntityId();
 
   @NotNull
   List<DecodeExpr> getExprList();

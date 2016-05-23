@@ -5,9 +5,12 @@ import java.util.List;
 import org.jetbrains.annotations.*;
 import com.intellij.psi.PsiElement;
 
-public interface DecodeEntityId extends PsiElement {
+public interface DecodeAnnotationDecl extends PsiElement {
 
   @NotNull
-  PsiElement getNonNegativeNumber();
+  List<DecodeAnnotationParameter> getAnnotationParameterList();
+
+  @NotNull
+  DecodeElementNameRule getElementNameRule();
 
 }

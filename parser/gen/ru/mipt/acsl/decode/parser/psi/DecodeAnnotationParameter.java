@@ -5,15 +5,12 @@ import java.util.List;
 import org.jetbrains.annotations.*;
 import com.intellij.psi.PsiElement;
 
-public interface DecodeArrayTypeApplication extends PsiElement {
-
-  @Nullable
-  DecodeLengthFrom getLengthFrom();
-
-  @Nullable
-  DecodeLengthTo getLengthTo();
+public interface DecodeAnnotationParameter extends PsiElement {
 
   @NotNull
-  DecodeTypeApplication getTypeApplication();
+  DecodeElementNameRule getElementNameRule();
+
+  @Nullable
+  DecodeTypeValueLiteral getTypeValueLiteral();
 
 }

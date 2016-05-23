@@ -57,8 +57,6 @@
         MINUS = '-'
         COLON = ':'
         ARROW = '->'
-        LT = '<'
-        GT = '>'
         DISPLAY = "display"
         TRUE = "true"
         FALSE = "false"
@@ -66,7 +64,6 @@
         QUESTION = "?"
         IMPORT = "import"
         AS = "as"
-        ID = "id"
         LANGUAGE = "language"
         DEFAULT = "default"
         PRIORITY = "priority"
@@ -77,6 +74,7 @@
         SCRIPT = "script"
         RANGE = "range"
         FOR = "for"
+        AT = "@"
     ]
 }
 
@@ -106,12 +104,12 @@ namespace_decl ::= element_info? NAMESPACE element_id
 
 element_name_rule ::= ELEMENT_NAME_TOKEN | ESCAPED_NAME
 
-component_decl ::= element_info? COMPONENT element_name_rule entity_id? (WITH component_ref (COMMA component_ref)*)?
+component_decl ::= element_info? COMPONENT element_name_rule annotation_decl* (WITH component_ref (COMMA component_ref)*)?
     LEFT_BRACE component_parameters_decl? (command_decl|message_decl)* RIGHT_BRACE
 
 component_parameters_decl ::= element_info? PARAMETERS LEFT_PAREN command_args RIGHT_PAREN
 
-command_decl ::= element_info? COMMAND element_name_rule entity_id? LEFT_PAREN command_args? RIGHT_PAREN
+command_decl ::= element_info? COMMAND element_name_rule annotation_decl* LEFT_PAREN command_args? RIGHT_PAREN
     (COLON type_unit_application)? (EQ_SIGN LEFT_BRACE expr* RIGHT_BRACE)?
 
 command_args ::= command_arg (COMMA command_arg)* COMMA?
@@ -122,15 +120,13 @@ type_unit_application ::= type_application unit?
 
 optional ::= QUESTION
 
-type_application ::= (simple_or_generic_type_application | array_type_application) optional?
+type_application ::= simple_or_generic_type_application optional?
 
-generic_parameters ::= LT type_unit_application (COMMA type_unit_application?)* COMMA? GT
+generic_parameters ::= LEFT_BRACKET type_unit_application (COMMA type_unit_application?)* COMMA? RIGHT_BRACKET
 
 simple_or_generic_type_application ::= element_id generic_parameters?
 
 unit ::= SLASH element_id SLASH
-
-array_type_application ::= LEFT_BRACKET type_application (COMMA length_from (DOTS (length_to | STAR))?)? RIGHT_BRACKET
 
 struct_type_decl ::= STRUCT LEFT_PAREN command_args RIGHT_PAREN
 
@@ -138,9 +134,13 @@ element_id ::= element_name_rule (DOT element_name_rule)*
 
 message_decl ::= status_message | event_message
 
-entity_id ::= ID EQ_SIGN NON_NEGATIVE_NUMBER
+type_value_literal ::= type_application | range_decl
 
-status_message ::= element_info? STATUS element_name_rule entity_id? (PRIORITY EQ_SIGN NON_NEGATIVE_NUMBER)? status_message_parameters_decl
+annotation_parameter ::= element_name_rule (EQ_SIGN type_value_literal)?
+
+annotation_decl ::= AT element_name_rule (LEFT_PAREN annotation_parameter (COMMA annotation_parameter?)* RIGHT_PAREN)?
+
+status_message ::= element_info? STATUS element_name_rule annotation_decl* (PRIORITY EQ_SIGN NON_NEGATIVE_NUMBER)? status_message_parameters_decl
 
 status_message_parameters_decl ::= LEFT_PAREN parameter_decl (COMMA parameter_decl)* COMMA? RIGHT_PAREN
 
@@ -150,15 +150,15 @@ event_parameter_decl ::= element_info? (parameter_element | var_parameter_elemen
 
 var_parameter_element ::= VAR element_name_rule COLON type_unit_application
 
-event_message ::= element_info? EVENT element_name_rule entity_id? type_application event_message_parameters_decl
+event_message ::= element_info? EVENT element_name_rule annotation_decl* type_application event_message_parameters_decl
 
 parameter_decl ::= element_info? parameter_element
 
 range_upper_bound_decl ::= non_negative_integer_literal | STAR
 
-range_decl ::= LEFT_BRACKET (non_negative_integer_literal (DOTS range_upper_bound_decl)? | STAR) RIGHT_BRACKET
+range_decl ::=  (non_negative_integer_literal (DOTS range_upper_bound_decl)? | STAR)
 
-parameter_path_element ::= range_decl | DOT element_name_rule
+parameter_path_element ::= LEFT_BRACKET range_decl RIGHT_BRACKET | DOT element_name_rule
 
 parameter_element ::= element_name_rule parameter_path_element*
 
@@ -174,13 +174,9 @@ unit_decl ::= element_info? UNIT_TOKEN element_name_rule (DISPLAY string_value)*
 
 generic_arg ::= element_name_rule?
 
-generic_args ::= LT generic_arg (COMMA generic_arg)* GT
+generic_args ::= LEFT_BRACKET generic_arg (COMMA generic_arg)* RIGHT_BRACKET
 
 type_decl ::= element_info? TYPE_KEYWORD element_name_rule generic_args? type_decl_body
-
-length_from ::= NON_NEGATIVE_NUMBER
-
-length_to ::= NON_NEGATIVE_NUMBER
 
 numeric_range_decl ::= numeric_literal DOTS numeric_literal
 

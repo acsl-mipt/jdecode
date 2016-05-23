@@ -7,14 +7,14 @@ import com.intellij.psi.PsiElement;
 
 public interface DecodeEventMessage extends PsiElement {
 
+  @NotNull
+  List<DecodeAnnotationDecl> getAnnotationDeclList();
+
   @Nullable
   DecodeElementInfo getElementInfo();
 
   @NotNull
   DecodeElementNameRule getElementNameRule();
-
-  @Nullable
-  DecodeEntityId getEntityId();
 
   @NotNull
   DecodeEventMessageParametersDecl getEventMessageParametersDecl();

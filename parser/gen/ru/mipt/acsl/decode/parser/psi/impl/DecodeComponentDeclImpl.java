@@ -28,6 +28,12 @@ public class DecodeComponentDeclImpl extends ASTWrapperPsiElement implements Dec
 
   @Override
   @NotNull
+  public List<DecodeAnnotationDecl> getAnnotationDeclList() {
+    return PsiTreeUtil.getChildrenOfTypeAsList(this, DecodeAnnotationDecl.class);
+  }
+
+  @Override
+  @NotNull
   public List<DecodeCommandDecl> getCommandDeclList() {
     return PsiTreeUtil.getChildrenOfTypeAsList(this, DecodeCommandDecl.class);
   }
@@ -54,12 +60,6 @@ public class DecodeComponentDeclImpl extends ASTWrapperPsiElement implements Dec
   @NotNull
   public DecodeElementNameRule getElementNameRule() {
     return findNotNullChildByClass(DecodeElementNameRule.class);
-  }
-
-  @Override
-  @Nullable
-  public DecodeEntityId getEntityId() {
-    return findChildByClass(DecodeEntityId.class);
   }
 
   @Override

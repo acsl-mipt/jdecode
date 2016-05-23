@@ -5,9 +5,12 @@ import java.util.List;
 import org.jetbrains.annotations.*;
 import com.intellij.psi.PsiElement;
 
-public interface DecodeLengthFrom extends PsiElement {
+public interface DecodeTypeValueLiteral extends PsiElement {
 
-  @NotNull
-  PsiElement getNonNegativeNumber();
+  @Nullable
+  DecodeRangeDecl getRangeDecl();
+
+  @Nullable
+  DecodeTypeApplication getTypeApplication();
 
 }

@@ -69,8 +69,6 @@ NON_NEGATIVE_NUMBER=[0-9]+
   "-"                        { return MINUS; }
   ":"                        { return COLON; }
   "->"                       { return ARROW; }
-  "<"                        { return LT; }
-  ">"                        { return GT; }
   "display"                  { return DISPLAY; }
   "true"                     { return TRUE; }
   "false"                    { return FALSE; }
@@ -78,7 +76,6 @@ NON_NEGATIVE_NUMBER=[0-9]+
   "?"                        { return QUESTION; }
   "import"                   { return IMPORT; }
   "as"                       { return AS; }
-  "id"                       { return ID; }
   "language"                 { return LANGUAGE; }
   "default"                  { return DEFAULT; }
   "priority"                 { return PRIORITY; }
@@ -89,6 +86,7 @@ NON_NEGATIVE_NUMBER=[0-9]+
   "script"                   { return SCRIPT; }
   "range"                    { return RANGE; }
   "for"                      { return FOR; }
+  "@"                        { return AT; }
 
   {ESCAPED_NAME}             { return ESCAPED_NAME; }
   {ELEMENT_NAME_TOKEN}       { return ELEMENT_NAME_TOKEN; }

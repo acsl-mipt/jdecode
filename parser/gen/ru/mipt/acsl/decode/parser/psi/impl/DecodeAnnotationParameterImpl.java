@@ -11,14 +11,14 @@ import static ru.mipt.acsl.decode.parser.psi.DecodeTypes.*;
 import com.intellij.extapi.psi.ASTWrapperPsiElement;
 import ru.mipt.acsl.decode.parser.psi.*;
 
-public class DecodeLengthToImpl extends ASTWrapperPsiElement implements DecodeLengthTo {
+public class DecodeAnnotationParameterImpl extends ASTWrapperPsiElement implements DecodeAnnotationParameter {
 
-  public DecodeLengthToImpl(ASTNode node) {
+  public DecodeAnnotationParameterImpl(ASTNode node) {
     super(node);
   }
 
   public void accept(@NotNull DecodeVisitor visitor) {
-    visitor.visitLengthTo(this);
+    visitor.visitAnnotationParameter(this);
   }
 
   public void accept(@NotNull PsiElementVisitor visitor) {
@@ -28,8 +28,14 @@ public class DecodeLengthToImpl extends ASTWrapperPsiElement implements DecodeLe
 
   @Override
   @NotNull
-  public PsiElement getNonNegativeNumber() {
-    return findNotNullChildByType(NON_NEGATIVE_NUMBER);
+  public DecodeElementNameRule getElementNameRule() {
+    return findNotNullChildByClass(DecodeElementNameRule.class);
+  }
+
+  @Override
+  @Nullable
+  public DecodeTypeValueLiteral getTypeValueLiteral() {
+    return findChildByClass(DecodeTypeValueLiteral.class);
   }
 
 }

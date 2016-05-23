@@ -11,7 +11,11 @@ public class DecodeVisitor extends PsiElementVisitor {
     visitPsiElement(o);
   }
 
-  public void visitArrayTypeApplication(@NotNull DecodeArrayTypeApplication o) {
+  public void visitAnnotationDecl(@NotNull DecodeAnnotationDecl o) {
+    visitPsiElement(o);
+  }
+
+  public void visitAnnotationParameter(@NotNull DecodeAnnotationParameter o) {
     visitPsiElement(o);
   }
 
@@ -60,10 +64,6 @@ public class DecodeVisitor extends PsiElementVisitor {
   }
 
   public void visitElementNameRule(@NotNull DecodeElementNameRule o) {
-    visitPsiElement(o);
-  }
-
-  public void visitEntityId(@NotNull DecodeEntityId o) {
     visitPsiElement(o);
   }
 
@@ -128,14 +128,6 @@ public class DecodeVisitor extends PsiElementVisitor {
   }
 
   public void visitImportStmt(@NotNull DecodeImportStmt o) {
-    visitPsiElement(o);
-  }
-
-  public void visitLengthFrom(@NotNull DecodeLengthFrom o) {
-    visitPsiElement(o);
-  }
-
-  public void visitLengthTo(@NotNull DecodeLengthTo o) {
     visitPsiElement(o);
   }
 
@@ -232,6 +224,10 @@ public class DecodeVisitor extends PsiElementVisitor {
   }
 
   public void visitTypeUnitApplication(@NotNull DecodeTypeUnitApplication o) {
+    visitPsiElement(o);
+  }
+
+  public void visitTypeValueLiteral(@NotNull DecodeTypeValueLiteral o) {
     visitPsiElement(o);
   }
 

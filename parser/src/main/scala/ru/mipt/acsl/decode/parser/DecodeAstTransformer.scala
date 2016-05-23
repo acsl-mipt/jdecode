@@ -7,7 +7,7 @@ import ru.mipt.acsl.decode.model.component.{Command, Component, ComponentRef}
 import ru.mipt.acsl.decode.model.expr.{FloatLiteral, IntLiteral}
 import ru.mipt.acsl.decode.model.naming.{ElementName, Fqn, Namespace, _}
 import ru.mipt.acsl.decode.model.proxy.MaybeProxy
-import ru.mipt.acsl.decode.model.proxy.path.{ArrayTypePath, GenericTypeName, ProxyPath, TypeName}
+import ru.mipt.acsl.decode.model.proxy.path.{GenericTypeName, ProxyPath, TypeName}
 import ru.mipt.acsl.decode.model.registry.{DecodeUnit, Language}
 import ru.mipt.acsl.decode.model.types.{EnumConstant, EnumType, _}
 import ru.mipt.acsl.decode.model.{LocalizedString, Referenceable}
@@ -74,7 +74,7 @@ class DecodeAstTransformer {
           MaybeProxy(struct)
         }
         val component: Component = Component(elementName(c.getElementNameRule), ns,
-          id(Option(c.getEntityId)), params, elementInfo(Option(c.getElementInfo)),
+          id(c.getAnnotationDeclList), params, elementInfo(Option(c.getElementInfo)),
           c.getComponentRefList.map(sc => componentRef(Fqn(Seq(elementName(sc.getElementNameRule))))).to[immutable.Seq],
           c.getCommandDeclList.map(c => command(c)).to[immutable.Seq])
         ns.components = ns.components :+ component
@@ -127,11 +127,13 @@ class DecodeAstTransformer {
       elementInfo(Option(v.getElementInfo)))
   }
 
-  private def id(entityId: Option[DecodeEntityId]): Option[Int] =
-    entityId.map(_.getNonNegativeNumber.getText.toInt)
+  private def id(annotations: Seq[DecodeAnnotationDecl]): Option[Int] =
+    annotations.find(a => string(a.getElementNameRule) == "id")
+      .map(_.getAnnotationParameterList.headOption.map(_.getText.toInt))
+      .getOrElse(None)
 
   private def statusMessage(sm: DecodeStatusMessage, c: Component): StatusMessage =
-    StatusMessage(c, elementName(sm.getElementNameRule), id(Option(sm.getEntityId)),
+    StatusMessage(c, elementName(sm.getElementNameRule), id(sm.getAnnotationDeclList),
       elementInfo(Option(sm.getElementInfo)),
       sm.getStatusMessageParametersDecl.getParameterDeclList.map(p =>
         MessageParameter(parameterPath(p.getParameterElement), elementInfo(Option(p.getElementInfo)))))
@@ -149,7 +151,7 @@ class DecodeAstTransformer {
   }
 
   private def eventMessage(em: DecodeEventMessage, c: Component): EventMessage =
-    EventMessage(c, elementName(em.getElementNameRule), id(Option(em.getEntityId)),
+    EventMessage(c, elementName(em.getElementNameRule), id(em.getAnnotationDeclList),
       elementInfo(Option(em.getElementInfo)),
       em.getEventMessageParametersDecl.getEventParameterDeclList.map { p =>
         Option(p.getParameterElement)
@@ -163,7 +165,7 @@ class DecodeAstTransformer {
       }, typeApplication(Some(em.getTypeApplication)).get)
 
   private def command(c: DecodeCommandDecl): Command =
-    Command(elementName(c.getElementNameRule), id(Option(c.getEntityId)),
+    Command(elementName(c.getElementNameRule), id(c.getAnnotationDeclList),
       elementInfo(Option(c.getElementInfo)), Option(c.getCommandArgs).map(_.getCommandArgList.toSeq).getOrElse(Seq.empty)
         .map { cmdArg =>
           Parameter(elementName(cmdArg.getElementNameRule), elementInfo(Option(cmdArg.getElementInfo)),
@@ -218,6 +220,9 @@ class DecodeAstTransformer {
     t.substring(1, t.length - 1)
   }
 
+  private def string(en: DecodeElementNameRule): String =
+    elementName(en).asMangledString
+
   private def unit(u: Option[PsiDecodeUnit]): Option[MaybeProxy[DecodeUnit]] =
     u.map(unit => proxyForFqn(fqn(unit.getElementId)))
 
@@ -234,25 +239,16 @@ class DecodeAstTransformer {
   private def typeApplication(ota: Option[DecodeTypeApplication]): Option[MaybeProxy[DecodeType]] =
     ota match {
       case Some(ta) =>
-        val result = Option(ta.getArrayTypeApplication).map { ata =>
-          val path = typeApplication(Some(ata.getTypeApplication)).get.proxy.path
-          val fromTo = (Option(ata.getLengthFrom).map(_.getText), Option(ata.getLengthTo).map(_.getText))
-          val min = fromTo._1.map(_.toLong).getOrElse(0l)
-          val max = fromTo._2.map(_.toLong).getOrElse(min)
-          MaybeProxy[DecodeType](ProxyPath(path.ns, ArrayTypePath(path,
-            ArraySize(min, max))))
-        }.getOrElse {
-          val nta = ta.getSimpleOrGenericTypeApplication
-          val proxy = proxyForFqn[DecodeType](fqn(nta.getElementId))
-          Option(nta.getGenericParameters).map { params =>
-            val path = proxy.proxy.path
-            // todo: remove asInstanceOf
-            MaybeProxy[DecodeType](ProxyPath(path.ns,
-              GenericTypeName(path.element.asInstanceOf[TypeName].typeName,
-                params.getTypeUnitApplicationList.map(p => typeApplication(Some(p.getTypeApplication))
-                  .map(_.proxy.path)).to[immutable.Seq])))
-          }.getOrElse(proxy)
-        }
+        val nta = ta.getSimpleOrGenericTypeApplication
+        val proxy = proxyForFqn[DecodeType](fqn(nta.getElementId))
+        val result = Option(nta.getGenericParameters).map { params =>
+          val path = proxy.proxy.path
+          // todo: remove asInstanceOf
+          MaybeProxy[DecodeType](ProxyPath(path.ns,
+            GenericTypeName(path.element.asInstanceOf[TypeName].typeName,
+              params.getTypeUnitApplicationList.map(p => typeApplication(Some(p.getTypeApplication))
+                .map(_.proxy.path)).to[immutable.Seq])))
+        }.getOrElse(proxy)
         Some(if (ta.getOptional != null) {
           MaybeProxy.proxyForSystem(GenericTypeName(ElementName.newFromMangledName("optional"),
             immutable.Seq(Some(result.proxy.path))))

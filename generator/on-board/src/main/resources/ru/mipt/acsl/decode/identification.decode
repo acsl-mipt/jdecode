@@ -36,7 +36,7 @@ type full_id struct
 )
 
 'Компонент идентификации устройства и всех его компонентов'
-component Identification id = 0
+component Identification @id(0)
 {
   parameters
   (
@@ -52,7 +52,7 @@ component Identification id = 0
   'Запросить идентификатор компонента по номеру'
   command requestComponentGuid(componentNumber: varuint): guid
 
-  status fullId id = 0 priority = 10
+  status fullId @id(0) @priority(10)
   (
     fullId
   )

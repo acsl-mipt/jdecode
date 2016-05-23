@@ -15,7 +15,7 @@ import ru.mipt.acsl.geotarget.{OnBoardCSourceGenerator, OnBoardModelRegistry}
   */
 object GenerateMccStuff {
 
-  val PixhawkComponentFqn = Fqn.newFromSource("pixhawk.Pixhawk")
+  val PixhawkComponentFqn = Fqn.newFromSource("mavlink.Pixhawk")
 
   val PixhawkSourceResource = "pixhawk/pixhawk.xml"
   val PixhawkIncludes = Seq("pixhawk/common.xml")
