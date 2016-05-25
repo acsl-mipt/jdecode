@@ -2,18 +2,18 @@ ru"Модуль сегментированной передачи ТМ-сооб�
 namespace ru.mipt.acsl.segmentation
 
 import ru.mipt.acsl.foundation.error_code
-import decode.{varuint, b8}
+import decode.(varuint, b8)
 
 language ru
 
 "Ошибка начала режима сегментированной выдачи"
-type segment_start_ack_error enum extends error_code (ALREADY_STARTED = 1, INVALID_STATE = 2)
+enum segment_start_ack_error extends error_code (ALREADY_STARTED = 1, INVALID_STATE = 2)
 
 "Ошибка останова режима сегментированной выдачи"
-type segment_stop_ack_error enum extends error_code (NOT_STARTED = 1, INVALID_STATE = 2)
+enum segment_stop_ack_error extends error_code (NOT_STARTED = 1, INVALID_STATE = 2)
 
 "Ошибка обработки получения сегмента"
-type segment_process_ack_error enum extends error_code (INVALID_STATE = 1)
+enum segment_process_ack_error extends error_code (INVALID_STATE = 1)
 
 "Компонент режима сегментированной передачи ТМ-сообщения"
 component Segment
@@ -51,7 +51,7 @@ component Segment
 component SegmentSender with Segment
 {
   'Обработать подтверждения о получении сегментов'
-  command processSegmentsAck(segmentsReceived: [varuint, 1..*]): segment_process_ack_error
+  command processSegmentsAck(segmentsReceived: array[varuint, 1..*]): segment_process_ack_error
 }
 
 "Компонент клиента поддерживающего сегментированное получение ТМ-сообщения"
@@ -60,7 +60,7 @@ component SegmentReceiver with Segment
   parameters
   (
     'Перечень полученных сегментов'
-    segmentsReceived: [varuint],
+    segmentsReceived: array[varuint],
   )
 
   'Перечень полученных сегментов'
@@ -70,5 +70,5 @@ component SegmentReceiver with Segment
   )
 
   'Запросить перечень полученных сегментов'
-  command requestSegmentsAck(): [varuint]
+  command requestSegmentsAck(): array[varuint]
 }

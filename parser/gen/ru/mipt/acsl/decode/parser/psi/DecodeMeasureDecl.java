@@ -5,7 +5,7 @@ import java.util.List;
 import org.jetbrains.annotations.*;
 import com.intellij.psi.PsiElement;
 
-public interface DecodeTypeDecl extends PsiElement {
+public interface DecodeMeasureDecl extends PsiElement {
 
   @Nullable
   DecodeElementInfo getElementInfo();
@@ -13,10 +13,7 @@ public interface DecodeTypeDecl extends PsiElement {
   @NotNull
   DecodeElementNameRule getElementNameRule();
 
-  @Nullable
-  DecodeGenericArgs getGenericArgs();
-
   @NotNull
-  DecodeTypeDeclBody getTypeDeclBody();
+  List<DecodeStringValue> getStringValueList();
 
 }

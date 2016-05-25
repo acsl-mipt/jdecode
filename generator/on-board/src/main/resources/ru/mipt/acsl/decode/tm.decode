@@ -2,15 +2,15 @@
 ru"Модуль управления выдачей ТМ-информации"
 namespace ru.mipt.acsl.tm
 
-import decode.{varuint, u8}
+import decode.(array, varuint, u8)
 
 language ru
 
 'Циклический массив'
-type ring_buf struct
+struct ring_buf
 (
   'Данные циклического массива'
-  data: [u8],
+  data: array[u8],
   'Смещение начала цкилического массива'
   startOffset: varuint,
   'Смещение конца циклического массива'
@@ -18,7 +18,7 @@ type ring_buf struct
 )
 
 'Номер компонента и номер сообщения'
-type comp_msg struct
+struct comp_msg
 (
   'Номер компонента'
   componentNum: varuint,
@@ -27,14 +27,14 @@ type comp_msg struct
 )
 
 'Информация о событии'
-type event_info struct
+struct event_info
 (
   componentMessage: comp_msg,
   'Номер события'
   eventNum: varuint,
 )
 
-type tm_cmd_error enum varuint (OK = 0, INVALID_ARGUMENT = 1, INVALID_STATE = 2, INVALID_MESSAGE_NUM = 3)
+enum tm_cmd_error varuint (OK = 0, INVALID_ARGUMENT = 1, INVALID_STATE = 2, INVALID_MESSAGE_NUM = 3)
 
 'Управление формированием и выдачей ТМ-информации'
 component Tm

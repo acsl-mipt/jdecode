@@ -27,15 +27,15 @@ public class DecodeAnnotationParameterImpl extends ASTWrapperPsiElement implemen
   }
 
   @Override
-  @NotNull
+  @Nullable
   public DecodeElementNameRule getElementNameRule() {
-    return findNotNullChildByClass(DecodeElementNameRule.class);
+    return findChildByClass(DecodeElementNameRule.class);
   }
 
   @Override
-  @Nullable
-  public DecodeTypeValueLiteral getTypeValueLiteral() {
-    return findChildByClass(DecodeTypeValueLiteral.class);
+  @NotNull
+  public DecodeTypeUnitApplication getTypeUnitApplication() {
+    return findNotNullChildByClass(DecodeTypeUnitApplication.class);
   }
 
 }

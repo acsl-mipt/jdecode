@@ -28,8 +28,8 @@ public class DecodeGenericParametersImpl extends ASTWrapperPsiElement implements
 
   @Override
   @NotNull
-  public List<DecodeTypeUnitApplication> getTypeUnitApplicationList() {
-    return PsiTreeUtil.getChildrenOfTypeAsList(this, DecodeTypeUnitApplication.class);
+  public List<DecodeGenericParameter> getGenericParameterList() {
+    return PsiTreeUtil.getChildrenOfTypeAsList(this, DecodeGenericParameter.class);
   }
 
 }

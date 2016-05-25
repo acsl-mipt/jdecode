@@ -40,8 +40,8 @@ public class DecodeAliasDeclImpl extends ASTWrapperPsiElement implements DecodeA
 
   @Override
   @NotNull
-  public DecodeTypeApplication getTypeApplication() {
-    return findNotNullChildByClass(DecodeTypeApplication.class);
+  public DecodeTypeUnitApplication getTypeUnitApplication() {
+    return findNotNullChildByClass(DecodeTypeUnitApplication.class);
   }
 
 }

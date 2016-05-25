@@ -7,10 +7,10 @@ import com.intellij.psi.PsiElement;
 
 public interface DecodeAnnotationParameter extends PsiElement {
 
-  @NotNull
+  @Nullable
   DecodeElementNameRule getElementNameRule();
 
-  @Nullable
-  DecodeTypeValueLiteral getTypeValueLiteral();
+  @NotNull
+  DecodeTypeUnitApplication getTypeUnitApplication();
 
 }

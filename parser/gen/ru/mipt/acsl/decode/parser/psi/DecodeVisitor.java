@@ -51,10 +51,6 @@ public class DecodeVisitor extends PsiElementVisitor {
     visitPsiElement(o);
   }
 
-  public void visitDefaultLanguageDecl(@NotNull DecodeDefaultLanguageDecl o) {
-    visitPsiElement(o);
-  }
-
   public void visitElementId(@NotNull DecodeElementId o) {
     visitPsiElement(o);
   }
@@ -64,6 +60,10 @@ public class DecodeVisitor extends PsiElementVisitor {
   }
 
   public void visitElementNameRule(@NotNull DecodeElementNameRule o) {
+    visitPsiElement(o);
+  }
+
+  public void visitEnumName(@NotNull DecodeEnumName o) {
     visitPsiElement(o);
   }
 
@@ -103,11 +103,11 @@ public class DecodeVisitor extends PsiElementVisitor {
     visitPsiElement(o);
   }
 
-  public void visitGenericArg(@NotNull DecodeGenericArg o) {
+  public void visitGenericArguments(@NotNull DecodeGenericArguments o) {
     visitPsiElement(o);
   }
 
-  public void visitGenericArgs(@NotNull DecodeGenericArgs o) {
+  public void visitGenericParameter(@NotNull DecodeGenericParameter o) {
     visitPsiElement(o);
   }
 
@@ -131,7 +131,19 @@ public class DecodeVisitor extends PsiElementVisitor {
     visitPsiElement(o);
   }
 
+  public void visitIntegerLiteral(@NotNull DecodeIntegerLiteral o) {
+    visitPsiElement(o);
+  }
+
+  public void visitLanguageDecl(@NotNull DecodeLanguageDecl o) {
+    visitPsiElement(o);
+  }
+
   public void visitLiteral(@NotNull DecodeLiteral o) {
+    visitPsiElement(o);
+  }
+
+  public void visitMeasureDecl(@NotNull DecodeMeasureDecl o) {
     visitPsiElement(o);
   }
 
@@ -147,15 +159,7 @@ public class DecodeVisitor extends PsiElementVisitor {
     visitPsiElement(o);
   }
 
-  public void visitNonNegativeIntegerLiteral(@NotNull DecodeNonNegativeIntegerLiteral o) {
-    visitPsiElement(o);
-  }
-
   public void visitNumericLiteral(@NotNull DecodeNumericLiteral o) {
-    visitPsiElement(o);
-  }
-
-  public void visitNumericRangeDecl(@NotNull DecodeNumericRangeDecl o) {
     visitPsiElement(o);
   }
 
@@ -187,10 +191,6 @@ public class DecodeVisitor extends PsiElementVisitor {
     visitPsiElement(o);
   }
 
-  public void visitSimpleOrGenericTypeApplication(@NotNull DecodeSimpleOrGenericTypeApplication o) {
-    visitPsiElement(o);
-  }
-
   public void visitStatusMessage(@NotNull DecodeStatusMessage o) {
     visitPsiElement(o);
   }
@@ -211,15 +211,11 @@ public class DecodeVisitor extends PsiElementVisitor {
     visitPsiElement(o);
   }
 
+  public void visitSubTypeDecl(@NotNull DecodeSubTypeDecl o) {
+    visitPsiElement(o);
+  }
+
   public void visitTypeApplication(@NotNull DecodeTypeApplication o) {
-    visitPsiElement(o);
-  }
-
-  public void visitTypeDecl(@NotNull DecodeTypeDecl o) {
-    visitPsiElement(o);
-  }
-
-  public void visitTypeDeclBody(@NotNull DecodeTypeDeclBody o) {
     visitPsiElement(o);
   }
 
@@ -227,15 +223,7 @@ public class DecodeVisitor extends PsiElementVisitor {
     visitPsiElement(o);
   }
 
-  public void visitTypeValueLiteral(@NotNull DecodeTypeValueLiteral o) {
-    visitPsiElement(o);
-  }
-
   public void visitUnit(@NotNull DecodeUnit o) {
-    visitPsiElement(o);
-  }
-
-  public void visitUnitDecl(@NotNull DecodeUnitDecl o) {
     visitPsiElement(o);
   }
 

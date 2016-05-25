@@ -14,6 +14,6 @@ public interface DecodeAliasDecl extends PsiElement {
   DecodeElementNameRule getElementNameRule();
 
   @NotNull
-  DecodeTypeApplication getTypeApplication();
+  DecodeTypeUnitApplication getTypeUnitApplication();
 
 }

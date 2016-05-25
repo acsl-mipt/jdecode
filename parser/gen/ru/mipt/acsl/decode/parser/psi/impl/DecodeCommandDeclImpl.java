@@ -57,9 +57,9 @@ public class DecodeCommandDeclImpl extends ASTWrapperPsiElement implements Decod
   }
 
   @Override
-  @Nullable
+  @NotNull
   public DecodeTypeUnitApplication getTypeUnitApplication() {
-    return findChildByClass(DecodeTypeUnitApplication.class);
+    return findNotNullChildByClass(DecodeTypeUnitApplication.class);
   }
 
 }

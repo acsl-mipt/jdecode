@@ -5,6 +5,7 @@ import ru.mipt.acsl.decode.c.generator.{CGeneratorConfiguration, CSourceGenerato
 import ru.mipt.acsl.decode.model.naming.Fqn
 import ru.mipt.acsl.decode.model.naming.Fqn
 import ru.mipt.acsl.decode.parser.ModelRegistry
+import ru.mipt.acsl.geotarget.OnBoardModelRegistry
 
 import scala.collection.immutable.HashMap
 import scala.io.Source
@@ -19,7 +20,7 @@ class OnBoardCSourceGeneratorTest extends FlatSpec with Matchers {
     import OnBoardCSourceGeneratorTest._
 
     val config = new CGeneratorConfiguration(new File("target/gen/"),
-      ModelRegistry.registry,
+      OnBoardModelRegistry.registry,
       "test.TestComp",
       HashMap(
         fqn("decode") -> Some(fqn("photon.decode")),
@@ -32,7 +33,7 @@ class OnBoardCSourceGeneratorTest extends FlatSpec with Matchers {
         fqn("ru.mipt.acsl.scripting") -> Some(fqn("photon.scripting")),
         fqn("ru.mipt.acsl.segmentation") -> Some(fqn("photon.segmentation")),
         fqn("ru.mipt.acsl.tm") -> Some(fqn("photon.tm"))),
-      sources = ModelRegistry.sources.map(source =>
+      sources = OnBoardModelRegistry.Sources.map(source =>
         GeneratorSource(ModelRegistry.sourceName(source), ModelRegistry.sourceContents(source))),
       isSingleton = true,
       prologue = FileGeneratorConfiguration(isActive = true, path = Some("photon/prologue.h"),

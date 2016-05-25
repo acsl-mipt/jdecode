@@ -1,39 +1,39 @@
 ru"Модуль базовых типов и компонентов"
 namespace ru.mipt.acsl.foundation
 
-import decode.{varuint, u8}
+import decode.(varuint, u8)
 
 language ru
 
 'Процент'
 en'Percent'
-unit per  display '%'
+measure per  display '%'
 
 'Градус'
 en'Gradian'
-unit grad display '°'
+measure grad display '°'
 
 'Метр'
 en'Meter'
-unit m
+measure m
   display 'м'
   display en'm'
 
 'Метры в секунду'
 en'Meters per second'
-unit mps
+measure mps
   display 'м/с'
   display en'm/s'
 
 'Секунда'
 en'Second'
-unit s
+measure s
   display 'с'
   display en's'
 
 "Глобально-уникальный идентификатор"
 type guid   varuint
 
-type string [u8]
+type string array[u8]
 
-type error_code enum varuint (OK = 0)
+enum error_code varuint (OK = 0)

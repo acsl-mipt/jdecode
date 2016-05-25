@@ -16,10 +16,10 @@ public interface DecodeStatusMessage extends PsiElement {
   @NotNull
   DecodeElementNameRule getElementNameRule();
 
+  @Nullable
+  DecodeIntegerLiteral getIntegerLiteral();
+
   @NotNull
   DecodeStatusMessageParametersDecl getStatusMessageParametersDecl();
-
-  @Nullable
-  PsiElement getNonNegativeNumber();
 
 }

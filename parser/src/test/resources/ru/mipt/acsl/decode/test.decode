@@ -1,7 +1,7 @@
 ru"Модуль тестовых типов и компонентов (проверка синтаксиса, резолвинга и поддержки сложных типов)"
 namespace test
 
-import decode.{ber, or, f32, u8, i64, u16}
+import decode.(array, unit, varuint, or, f32, u8, i64, u16)
 
 language ru
 
@@ -15,37 +15,35 @@ ru"Тестовое описание на русском языке"
 "Test info in English"
 alias uint8 u8
 
-type uint8_10 uint8 range 0..10
+type uint8_10 0..10
 
 # Native types
-type native_type native
-type native_generic<,T,R,> native
+native native_type
+native native_generic[T,R,]
 
-type f32_arr [f32, 4]
-type u8_dyn_arr [u8, 3..8]
-type u8_dyn_arr2 [u8, 10..*]
+type f32_arr array[f32, 4]
+type u8_dyn_arr array[u8, 3..8]
+type u8_dyn_arr2 array[u8, 10..*]
 
-type u8_enum enum u8 (ZERO = 0, ONE = 1, TEN = 10)
+enum u8_enum u8 (ZERO = 0, ONE = 1, TEN = 10)
 
-type extended_enum final enum extends u8_enum (THREE = 3)
+enum extended_enum final extends u8_enum (THREE = 3)
 
-type sub_struct
-struct
+struct sub_struct
 (
     first: u8,
     second: u8_enum,
     arr: f32_arr
 )
 
-type struct_test
-struct
+struct struct_test
 (
     u8: u8,
     f32: f32,
     dyn_arr: u8_dyn_arr,
     arr: f32_arr,
     int_64: i64,
-    sub_structs: [sub_struct, 2..3]
+    sub_structs: array[sub_struct, 2..3]
 )
 
 component SubComp
@@ -54,7 +52,7 @@ component SubComp
     (
         a: u8,
         b: u16,
-        sub_structs: [sub_struct, 2]
+        sub_structs: array[sub_struct, 2]
     )
 
     command cmd(a: u8): u8 = {
@@ -69,23 +67,23 @@ component TestComp with SubComp
         param1: u8,
     )
 
-    command cmdZero id = 0(): u8 = {
+    command cmdZero @id(0) (): u8 = {
         cmd(20)
     }
-    command cmdOne id = 1(arg0: u8, arg1: f32_arr, arg2: u8_dyn_arr, arg3: struct_test)
+    command cmdOne @inout @id(1) (arg0: u8, arg1: f32_arr, arg2: u8_dyn_arr, arg3: struct_test): unit
 
-    status msgZero id = 0
+    status msgZero @in @out @id(0)
     (
         param1,
     )
 
-    event msgOne id = 1 u8_enum
+    event msgOne @id(1) u8_enum
     (
         param1,
         SubComp.sub_structs[1..2].arr[1..3],
         SubComp.sub_structs[*].arr[1],
         var param2: u8,
-        var param3: or<u8_dyn_arr, struct_test>,
+        var param3: or[u8_dyn_arr, struct_test],
     )
 }
 

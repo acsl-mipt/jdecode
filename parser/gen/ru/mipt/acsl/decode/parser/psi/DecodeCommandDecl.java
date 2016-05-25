@@ -22,7 +22,7 @@ public interface DecodeCommandDecl extends PsiElement {
   @NotNull
   List<DecodeExpr> getExprList();
 
-  @Nullable
+  @NotNull
   DecodeTypeUnitApplication getTypeUnitApplication();
 
 }

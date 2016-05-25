@@ -8,6 +8,6 @@ import com.intellij.psi.PsiElement;
 public interface DecodeGenericParameters extends PsiElement {
 
   @NotNull
-  List<DecodeTypeUnitApplication> getTypeUnitApplicationList();
+  List<DecodeGenericParameter> getGenericParameterList();
 
 }

@@ -28,8 +28,20 @@ public class DecodeEnumTypeDeclImpl extends ASTWrapperPsiElement implements Deco
 
   @Override
   @Nullable
+  public DecodeElementInfo getElementInfo() {
+    return findChildByClass(DecodeElementInfo.class);
+  }
+
+  @Override
+  @Nullable
   public DecodeElementNameRule getElementNameRule() {
     return findChildByClass(DecodeElementNameRule.class);
+  }
+
+  @Override
+  @NotNull
+  public DecodeEnumName getEnumName() {
+    return findNotNullChildByClass(DecodeEnumName.class);
   }
 
   @Override
@@ -46,8 +58,14 @@ public class DecodeEnumTypeDeclImpl extends ASTWrapperPsiElement implements Deco
 
   @Override
   @Nullable
-  public DecodeTypeApplication getTypeApplication() {
-    return findChildByClass(DecodeTypeApplication.class);
+  public DecodeGenericParameters getGenericParameters() {
+    return findChildByClass(DecodeGenericParameters.class);
+  }
+
+  @Override
+  @Nullable
+  public DecodeTypeUnitApplication getTypeUnitApplication() {
+    return findChildByClass(DecodeTypeUnitApplication.class);
   }
 
 }

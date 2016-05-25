@@ -28,8 +28,8 @@ public class DecodeRangeDeclImpl extends ASTWrapperPsiElement implements DecodeR
 
   @Override
   @Nullable
-  public DecodeNonNegativeIntegerLiteral getNonNegativeIntegerLiteral() {
-    return findChildByClass(DecodeNonNegativeIntegerLiteral.class);
+  public DecodeIntegerLiteral getIntegerLiteral() {
+    return findChildByClass(DecodeIntegerLiteral.class);
   }
 
   @Override

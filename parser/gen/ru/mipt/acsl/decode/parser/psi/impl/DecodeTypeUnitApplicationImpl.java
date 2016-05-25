@@ -27,6 +27,12 @@ public class DecodeTypeUnitApplicationImpl extends ASTWrapperPsiElement implemen
   }
 
   @Override
+  @Nullable
+  public DecodeOptional getOptional() {
+    return findChildByClass(DecodeOptional.class);
+  }
+
+  @Override
   @NotNull
   public DecodeTypeApplication getTypeApplication() {
     return findNotNullChildByClass(DecodeTypeApplication.class);

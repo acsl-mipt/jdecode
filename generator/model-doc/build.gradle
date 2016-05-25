@@ -1,5 +1,6 @@
 dependencies {
     compile project(':decode:parser')
     compile project(':decode:generator:doc')
+    compile project(':decode:generator:on-board')
     compile "com.lihaoyi:scalatags_$scalaBinaryVersion:0.5.4"
 }

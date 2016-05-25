@@ -11,14 +11,14 @@ import static ru.mipt.acsl.decode.parser.psi.DecodeTypes.*;
 import com.intellij.extapi.psi.ASTWrapperPsiElement;
 import ru.mipt.acsl.decode.parser.psi.*;
 
-public class DecodeTypeDeclBodyImpl extends ASTWrapperPsiElement implements DecodeTypeDeclBody {
+public class DecodeSubTypeDeclImpl extends ASTWrapperPsiElement implements DecodeSubTypeDecl {
 
-  public DecodeTypeDeclBodyImpl(ASTNode node) {
+  public DecodeSubTypeDeclImpl(ASTNode node) {
     super(node);
   }
 
   public void accept(@NotNull DecodeVisitor visitor) {
-    visitor.visitTypeDeclBody(this);
+    visitor.visitSubTypeDecl(this);
   }
 
   public void accept(@NotNull PsiElementVisitor visitor) {
@@ -28,32 +28,26 @@ public class DecodeTypeDeclBodyImpl extends ASTWrapperPsiElement implements Deco
 
   @Override
   @Nullable
-  public DecodeEnumTypeDecl getEnumTypeDecl() {
-    return findChildByClass(DecodeEnumTypeDecl.class);
+  public DecodeElementInfo getElementInfo() {
+    return findChildByClass(DecodeElementInfo.class);
+  }
+
+  @Override
+  @NotNull
+  public DecodeElementNameRule getElementNameRule() {
+    return findNotNullChildByClass(DecodeElementNameRule.class);
   }
 
   @Override
   @Nullable
-  public DecodeNativeTypeDecl getNativeTypeDecl() {
-    return findChildByClass(DecodeNativeTypeDecl.class);
+  public DecodeGenericParameters getGenericParameters() {
+    return findChildByClass(DecodeGenericParameters.class);
   }
 
   @Override
-  @Nullable
-  public DecodeNumericRangeDecl getNumericRangeDecl() {
-    return findChildByClass(DecodeNumericRangeDecl.class);
-  }
-
-  @Override
-  @Nullable
-  public DecodeStructTypeDecl getStructTypeDecl() {
-    return findChildByClass(DecodeStructTypeDecl.class);
-  }
-
-  @Override
-  @Nullable
-  public DecodeTypeApplication getTypeApplication() {
-    return findChildByClass(DecodeTypeApplication.class);
+  @NotNull
+  public DecodeTypeUnitApplication getTypeUnitApplication() {
+    return findNotNullChildByClass(DecodeTypeUnitApplication.class);
   }
 
 }

@@ -11,14 +11,14 @@ import static ru.mipt.acsl.decode.parser.psi.DecodeTypes.*;
 import com.intellij.extapi.psi.ASTWrapperPsiElement;
 import ru.mipt.acsl.decode.parser.psi.*;
 
-public class DecodeNumericRangeDeclImpl extends ASTWrapperPsiElement implements DecodeNumericRangeDecl {
+public class DecodeEnumNameImpl extends ASTWrapperPsiElement implements DecodeEnumName {
 
-  public DecodeNumericRangeDeclImpl(ASTNode node) {
+  public DecodeEnumNameImpl(ASTNode node) {
     super(node);
   }
 
   public void accept(@NotNull DecodeVisitor visitor) {
-    visitor.visitNumericRangeDecl(this);
+    visitor.visitEnumName(this);
   }
 
   public void accept(@NotNull PsiElementVisitor visitor) {
@@ -28,8 +28,8 @@ public class DecodeNumericRangeDeclImpl extends ASTWrapperPsiElement implements 
 
   @Override
   @NotNull
-  public List<DecodeNumericLiteral> getNumericLiteralList() {
-    return PsiTreeUtil.getChildrenOfTypeAsList(this, DecodeNumericLiteral.class);
+  public DecodeElementNameRule getElementNameRule() {
+    return findNotNullChildByClass(DecodeElementNameRule.class);
   }
 
 }

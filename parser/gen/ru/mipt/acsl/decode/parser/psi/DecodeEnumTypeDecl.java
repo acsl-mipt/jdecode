@@ -8,7 +8,13 @@ import com.intellij.psi.PsiElement;
 public interface DecodeEnumTypeDecl extends PsiElement {
 
   @Nullable
+  DecodeElementInfo getElementInfo();
+
+  @Nullable
   DecodeElementNameRule getElementNameRule();
+
+  @NotNull
+  DecodeEnumName getEnumName();
 
   @NotNull
   DecodeEnumTypeValues getEnumTypeValues();
@@ -17,6 +23,9 @@ public interface DecodeEnumTypeDecl extends PsiElement {
   DecodeFinalEnum getFinalEnum();
 
   @Nullable
-  DecodeTypeApplication getTypeApplication();
+  DecodeGenericParameters getGenericParameters();
+
+  @Nullable
+  DecodeTypeUnitApplication getTypeUnitApplication();
 
 }

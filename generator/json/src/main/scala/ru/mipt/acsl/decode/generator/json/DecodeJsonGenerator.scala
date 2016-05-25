@@ -7,9 +7,9 @@ import io.circe.generic.auto._
 import io.circe.syntax._
 import ru.mipt.acsl.common._
 import ru.mipt.acsl.decode.model.component.{Command, Component}
-import ru.mipt.acsl.decode.model.expr.{ConstExpr, FloatLiteral, IntLiteral}
+import ru.mipt.acsl.decode.model.expr.{ConstExpr, FloatLiteral, LongLiteral$}
 import ru.mipt.acsl.decode.model.naming.{HasName, Namespace}
-import ru.mipt.acsl.decode.model.registry.{DecodeUnit, Language, Registry}
+import ru.mipt.acsl.decode.model.registry.{Measure, Language, Registry}
 import ru.mipt.acsl.decode.model.types.{EnumType, EnumConstant => _, _}
 import ru.mipt.acsl.decode.model.types._
 import ru.mipt.acsl.decode.model.{HasInfo, NamespaceAware}
@@ -45,7 +45,7 @@ case class DecodeJsonGenerator(config: DecodeJsonGeneratorConfig) {
 
     case class MapBuffer[T, JT](map: mutable.Map[T, Int] = mutable.Map[T, Int](), buffer: mutable.Buffer[JT] = mutable.Buffer[JT]())
 
-    val units = MapBuffer[DecodeUnit, Json.Unit]()
+    val units = MapBuffer[Measure, Json.Unit]()
     val types = MapBuffer[DecodeType, Json.Type]()
     val components = MapBuffer[Component, Json.Component]()
     val namespaces = MapBuffer[Namespace, Json.Namespace]()
@@ -66,7 +66,7 @@ case class DecodeJsonGenerator(config: DecodeJsonGeneratorConfig) {
 
     private def constExpr(e: ConstExpr): Json.ConstExpr = e match {
       case f: FloatLiteral => Json.FloatConstExpr(f.value)
-      case i: IntLiteral => Json.LongConstExpr(i.value)
+      case i: LongLiteral => Json.LongConstExpr(i.value)
       case _ => sys.error("not implemented")
     }
 
@@ -100,7 +100,7 @@ case class DecodeJsonGenerator(config: DecodeJsonGeneratorConfig) {
     private def localizedString(info: Map[Language, String]): Json.LocalizedString =
       Json.LocalizedString(info.map{ i => i._1.code -> i._2})
 
-    private def typeUnit(tu: TypeUnit): Json.TypeUnit =
+    private def typeUnit(tu: TypeMeasure): Json.TypeUnit =
       Json.TypeUnit(generate(tu.t), tu.unit.map(generate))
 
     private def structField(f: StructField): Json.StructField =
@@ -130,8 +130,8 @@ case class DecodeJsonGenerator(config: DecodeJsonGeneratorConfig) {
       objIdx
     }
 
-    private def generate(unit: DecodeUnit): Int =
-      generate[DecodeUnit, Json.Unit](unit, units, Json.Unit(name(unit), info(unit), localizedString(unit.display)))
+    private def generate(unit: Measure): Int =
+      generate[Measure, Json.Unit](unit, units, Json.Unit(name(unit), info(unit), localizedString(unit.display)))
 
     private def generate(t: DecodeType): Int =
       generate[DecodeType, Json.Type](t, types, {

@@ -8,8 +8,7 @@ import ru.mipt.acsl.foundation.guid
 language ru
 
 "Пара номер компонента и его уникальный идентификатор"
-type component_number_guid_pair
-struct
+struct component_number_guid_pair
 (
   'Номер компонента в пределах устройства'
   number: varuint,
@@ -18,8 +17,7 @@ struct
 )
 
 "Идентификатор устройства и его корневого компонента"
-type short_id
-struct
+struct short_id
 (
   'Уникальный идентификатор устройства'
   deviceGuid: guid,
@@ -28,11 +26,11 @@ struct
 )
 
 "Идентификатор устройства и всех его компонентов"
-type full_id struct
+struct full_id
 (
     shortId: short_id,
     'Идентификаторы всех компонентов устройства'
-    deviceComponentGuidPairs: [component_number_guid_pair, 1..*],
+    deviceComponentGuidPairs: array[component_number_guid_pair, 1..*],
 )
 
 'Компонент идентификации устройства и всех его компонентов'

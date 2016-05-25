@@ -5,9 +5,9 @@ import java.util.List;
 import org.jetbrains.annotations.*;
 import com.intellij.psi.PsiElement;
 
-public interface DecodeGenericArgs extends PsiElement {
+public interface DecodeIntegerLiteral extends PsiElement {
 
   @NotNull
-  List<DecodeGenericArg> getGenericArgList();
+  PsiElement getNonNegativeInteger();
 
 }

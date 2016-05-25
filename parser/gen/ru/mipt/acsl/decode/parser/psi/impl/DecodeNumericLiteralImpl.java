@@ -34,8 +34,8 @@ public class DecodeNumericLiteralImpl extends ASTWrapperPsiElement implements De
 
   @Override
   @Nullable
-  public DecodeNonNegativeIntegerLiteral getNonNegativeIntegerLiteral() {
-    return findChildByClass(DecodeNonNegativeIntegerLiteral.class);
+  public DecodeIntegerLiteral getIntegerLiteral() {
+    return findChildByClass(DecodeIntegerLiteral.class);
   }
 
 }

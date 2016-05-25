@@ -7,19 +7,19 @@ import ru.mipt.acsl.decode.model.{HasInfo, LocalizedString, NamespaceAware, Refe
 /**
   * @author Artem Shein
   */
-trait DecodeUnit extends HasInfo with Referenceable with NamespaceAware {
+trait Measure extends HasInfo with Referenceable with NamespaceAware {
   def display: LocalizedString
   def namespace_=(ns: Namespace): Unit
 }
 
-object DecodeUnit {
+object Measure {
 
   private class Impl(name: ElementName, namespace: Namespace, var display: LocalizedString,
                                info: LocalizedString)
-    extends AbstractNameNamespaceInfoAware(name, namespace, info) with DecodeUnit
+    extends AbstractNameNamespaceInfoAware(name, namespace, info) with Measure
 
   def apply(name: ElementName, namespace: Namespace, display: LocalizedString = LocalizedString.empty,
-            info: LocalizedString = LocalizedString.empty): DecodeUnit =
+            info: LocalizedString = LocalizedString.empty): Measure =
     new Impl(name, namespace, display, info)
 }
 

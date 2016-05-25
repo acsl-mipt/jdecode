@@ -98,14 +98,14 @@ package object naming {
         subNs.parent = Some(ns)
       }
 
-      val units = ns.units
-      namespace.units.foreach { u =>
+      val units = ns.measures
+      namespace.measures.foreach { u =>
         val name = u.name
         if (units.exists(_.name == name))
           sys.error(s"unit name collision '$name'")
         u.namespace = ns
       }
-      ns.units ++= namespace.units
+      ns.measures ++= namespace.measures
 
       val types = ns.types
       namespace.types.foreach { t =>

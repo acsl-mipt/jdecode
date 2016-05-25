@@ -98,7 +98,7 @@ package object registry {
       }
 
       c.commands.foreach { cmd =>
-        cmd.returnTypeProxy.foreach(rt => result += rt.resolve(r))
+        result += cmd.returnTypeProxy.resolve(r)
         cmd.parameters.foreach { arg =>
           result += arg.typeProxy.resolve(r)
           arg.unitProxy.map(u => result += u.resolve(r))
@@ -130,7 +130,7 @@ package object registry {
       }
 
       c.commands.foreach { cmd =>
-        cmd.returnType.foreach(rt => result += validate(rt))
+        result += validate(cmd.returnType)
         cmd.parameters.foreach { arg =>
           result += validate(arg.parameterType)
           arg.unit.map(u => result += validate(u))
@@ -158,7 +158,7 @@ package object registry {
         case t: EnumType =>
           resolvingResultList += (t.extendsOrBaseTypeProxy match {
             case Left(extendsTypeProxy) => extendsTypeProxy.resolve(r)
-            case Right(baseTypeProxy) => baseTypeProxy.resolve(r)
+            case Right(baseTypeProxy) => baseTypeProxy.typeProxy.resolve(r)
           })
         case t: HasBaseType =>
           resolvingResultList += t.baseTypeProxy.resolve(r)
@@ -173,8 +173,8 @@ package object registry {
           }
         case t: GenericTypeSpecialized =>
           resolvingResultList += t.genericTypeProxy.resolve(r)
-          t.genericTypeArgumentsProxy.foreach(_.foreach(gta =>
-            resolvingResultList += gta.resolve(r)))
+          t.genericTypeArgumentsProxy.foreach(gta =>
+            resolvingResultList += gta.resolve(r))
         case _ =>
       }
       resolvingResultList.flatten
@@ -201,7 +201,7 @@ package object registry {
       result.flatten
     }
 
-    def validate(u: DecodeUnit): ValidatingResult = ValidatingResult.empty
+    def validate(u: Measure): ValidatingResult = ValidatingResult.empty
 
     def getOrCreateNamespaceByFqn(namespaceFqn: String): Namespace = {
       require(!namespaceFqn.isEmpty)

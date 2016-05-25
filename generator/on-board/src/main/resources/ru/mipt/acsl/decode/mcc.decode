@@ -1,7 +1,7 @@
 namespace ru.mipt.acsl.mcc
 
-import decode.{varuint, b8, u8, u16, u32, f32, f64}
-import ru.mipt.acsl.foundation.{per, grad, m, mps}
+import decode.(unit, varuint, b8, u8, u16, u32, f32, f64)
+import ru.mipt.acsl.foundation.(per, grad, m, mps)
 
 language ru
 
@@ -49,31 +49,30 @@ component Mode
 component Navigation with Motion, Mode, DogPoint, Route, Routes
 {
   'Включить'
-  command start()
+  command start(): unit
   'Включить двигатель'
-  command startEngine()
+  command startEngine(): unit
   'Взлететь'
-  command takeOff()
+  command takeOff(): unit
   'Перейти в режим свободного полета'
-  command freeFlying()
+  command freeFlying(): unit
   'Лететь по маршруту'
-  command flyRoute()
+  command flyRoute(): unit
   'Ждать'
-  command wait()
+  command wait(): unit
   'Возвратиться'
-  command return()
+  command return(): unit
   'Приземлиться'
-  command land()
+  command land(): unit
   'Выключить двигатель'
-  command stopEngine()
+  command stopEngine(): unit
   'Выключить'
-  command stop()
+  command stop(): unit
   'Отменить посадку'
-  command cancelLanding()
+  command cancelLanding(): unit
 }
 
-type route_point
-struct
+struct route_point
 (
   'Широта'   latitude: f32 /grad/,
   'Долгота'  longitude: f32 /grad/,
@@ -82,20 +81,18 @@ struct
   'Флаги'    flags: u32,
 )
 
-type route_points [route_point, 0..64]
+type route_points array[route_point, 0..64]
 
-type route
-struct
+struct route
 (
   'Имя маршрута'        name:   u16,
   'Круговой ли маршрут' isRing: b8,
   'Точки маршрута'      points: route_points,
 )
 
-type routes [route, 0..10]
+type routes array[route, 0..10]
 
-type routes_info
-struct
+struct routes_info
 (
   'Следующая точка активного маршрута' nextPoint: u16,
   'Маршруты'                           routes: routes,
@@ -111,7 +108,7 @@ component Route
   )
 
   "Очистить маршрут"
-  command clearRoute()
+  command clearRoute(): unit
 
   'Начать формирование маршрута'
   command beginRoute
@@ -119,7 +116,7 @@ component Route
     "Номер маршрута"           name: u16,
     "Количество путевых точек" waypointsCount: u8,
     "Кольцевой маршрут"        isRing: b8,
-  )
+  ): unit
 
   'Задать путевую точку'
   command setRoutePoint
@@ -130,20 +127,20 @@ component Route
     'Высота'                               altitude:  f32 /m/,
     'Скорость'                             speed:     f32 /mps/,
     'Флаги'                                flags:     u32,
-  )
+  ): unit
 
   'Закончить формирование маршрута'
-  command endRoute()
+  command endRoute(): unit
 
   command setCurrentRoute
   (
     'Изменить маршрут полёта' kind: u16,
-  )
+  ): unit
 
   command setActivePoint
   (
     'Индекс точки, начиная с нуля' index: u16,
-  )
+  ): unit
 
   status all
   (
@@ -160,13 +157,13 @@ component Routes
   )
 
   'Удалить маршрут по имени'
-  command deleteRoute('Имя' name: u16)
+  command deleteRoute('Имя' name: u16): unit
 
   'Добавить маршрут в конец массива'
-  command appendRoute('Данные маршрута' route: route)
+  command appendRoute('Данные маршрута' route: route): unit
 
   'Обновить маршрут по имени'
-  command updateRoute('Имя' name: u16, 'Данные маршрута' route: route)
+  command updateRoute('Имя' name: u16, 'Данные маршрута' route: route): unit
 
   status all
   (

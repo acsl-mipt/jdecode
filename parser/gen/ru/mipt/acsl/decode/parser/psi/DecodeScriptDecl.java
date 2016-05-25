@@ -19,7 +19,7 @@ public interface DecodeScriptDecl extends PsiElement {
   @NotNull
   List<DecodeExpr> getExprList();
 
-  @Nullable
+  @NotNull
   DecodeTypeUnitApplication getTypeUnitApplication();
 
 }

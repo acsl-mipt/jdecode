@@ -8,7 +8,7 @@ import ru.mipt.acsl.decode.model.proxy.MaybeProxy
 /**
   * @author Artem Shein
   */
-trait EnumType extends HasBaseType with DecodeType {
+trait EnumType extends HasBaseType with GenericType {
 
   def isFinal: Boolean
 
@@ -16,11 +16,11 @@ trait EnumType extends HasBaseType with DecodeType {
 
   def extendsTypeOption: Option[EnumType] = extendsOrBaseType.left.toOption
 
-  def baseTypeOption: Option[DecodeType] = extendsOrBaseType.right.toOption
+  def baseTypeOption: Option[DecodeType] = extendsOrBaseType.right.toOption.map(_.t)
 
-  def extendsOrBaseTypeProxy: Either[MaybeProxy[EnumType], MaybeProxy[DecodeType]]
+  def extendsOrBaseTypeProxy: Either[MaybeProxy[EnumType], TypeMeasure]
 
-  def extendsOrBaseType: Either[EnumType, DecodeType] = extendsOrBaseTypeProxy.fold(l => Left(l.obj), r => Right(r.obj))
+  def extendsOrBaseType: Either[EnumType, TypeMeasure] = extendsOrBaseTypeProxy.fold(l => Left(l.obj), r => Right(r))
 
   override def toString: String = "EnumType" + super.toString
 
@@ -29,19 +29,25 @@ trait EnumType extends HasBaseType with DecodeType {
 object EnumType {
 
   private class Impl(name: ElementName, namespace: Namespace,
-                     var extendsOrBaseTypeProxy: Either[MaybeProxy[EnumType], MaybeProxy[DecodeType]],
-                     info: LocalizedString, var constants: Set[EnumConstant], var isFinal: Boolean)
+                     var extendsOrBaseTypeProxy: Either[MaybeProxy[EnumType], TypeMeasure],
+                     info: LocalizedString, var constants: Set[EnumConstant], var isFinal: Boolean,
+                     val typeParameters: Seq[ElementName])
     extends AbstractType(name, namespace, info) with EnumType {
+
     def extendsTypeProxy: Option[MaybeProxy[EnumType]] = extendsOrBaseTypeProxy.left.toOption
 
     override def extendsTypeOption: Option[EnumType] = extendsTypeProxy.map(_.obj)
 
     override def baseTypeProxy: MaybeProxy[DecodeType] =
-      extendsOrBaseTypeProxy.right.getOrElse(extendsTypeOption.get.baseTypeProxy)
+      extendsOrBaseTypeProxy match {
+        case Left(extendsType) => extendsType.asInstanceOf[MaybeProxy[DecodeType]] // fixme
+        case Right(baseType) => baseType.typeProxy
+      }
   }
 
   def apply(name: ElementName, namespace: Namespace,
-            extendsOrBaseTypeProxy: Either[MaybeProxy[EnumType], MaybeProxy[DecodeType]],
-            info: LocalizedString, constants: Set[EnumConstant], isFinal: Boolean): EnumType =
-    new Impl(name, namespace, extendsOrBaseTypeProxy, info, constants, isFinal)
+            extendsOrBaseTypeProxy: Either[MaybeProxy[EnumType], TypeMeasure],
+            info: LocalizedString, constants: Set[EnumConstant], isFinal: Boolean,
+            typeParameters: Seq[ElementName]): EnumType =
+    new Impl(name, namespace, extendsOrBaseTypeProxy, info, constants, isFinal, typeParameters)
 }

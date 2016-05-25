@@ -32,12 +32,11 @@ class PrimitiveAndGenericTypesProxyResolver extends DecodeProxyResolver {
             .map(_.asInstanceOf[GenericTypeSpecialized]).getOrElse({
             val specializedType = GenericTypeSpecialized(name, genericType.namespace, LocalizedString.empty,
               MaybeProxy(genericType),
-              e.genericArgumentPaths.map(_.map(arg => MaybeProxy[DecodeType](arg))))
+              e.genericArgumentPaths.map(arg => MaybeProxy[DecodeType](arg)))
             systemNamespace.types :+= specializedType
             specializedType
           })
-          val argsResult = specializedType.genericTypeArgumentsProxy.map(_.map(_.resolve(registry))
-            .getOrElse(Result.empty))
+          val argsResult = specializedType.genericTypeArgumentsProxy.map(_.resolve(registry))
             .foldLeft(Result.empty)(_ ++ _)
           if (argsResult.hasError)
             (None, argsResult)

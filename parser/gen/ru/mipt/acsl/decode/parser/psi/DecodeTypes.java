@@ -19,10 +19,10 @@ public interface DecodeTypes {
   IElementType COMPONENT_DECL = new DecodeElementType("COMPONENT_DECL");
   IElementType COMPONENT_PARAMETERS_DECL = new DecodeElementType("COMPONENT_PARAMETERS_DECL");
   IElementType COMPONENT_REF = new DecodeElementType("COMPONENT_REF");
-  IElementType DEFAULT_LANGUAGE_DECL = new DecodeElementType("DEFAULT_LANGUAGE_DECL");
   IElementType ELEMENT_ID = new DecodeElementType("ELEMENT_ID");
   IElementType ELEMENT_INFO = new DecodeElementType("ELEMENT_INFO");
   IElementType ELEMENT_NAME_RULE = new DecodeElementType("ELEMENT_NAME_RULE");
+  IElementType ENUM_NAME = new DecodeElementType("ENUM_NAME");
   IElementType ENUM_TYPE_DECL = new DecodeElementType("ENUM_TYPE_DECL");
   IElementType ENUM_TYPE_VALUE = new DecodeElementType("ENUM_TYPE_VALUE");
   IElementType ENUM_TYPE_VALUES = new DecodeElementType("ENUM_TYPE_VALUES");
@@ -32,20 +32,21 @@ public interface DecodeTypes {
   IElementType EXPR = new DecodeElementType("EXPR");
   IElementType FINAL_ENUM = new DecodeElementType("FINAL_ENUM");
   IElementType FLOAT_LITERAL = new DecodeElementType("FLOAT_LITERAL");
-  IElementType GENERIC_ARG = new DecodeElementType("GENERIC_ARG");
-  IElementType GENERIC_ARGS = new DecodeElementType("GENERIC_ARGS");
+  IElementType GENERIC_ARGUMENTS = new DecodeElementType("GENERIC_ARGUMENTS");
+  IElementType GENERIC_PARAMETER = new DecodeElementType("GENERIC_PARAMETER");
   IElementType GENERIC_PARAMETERS = new DecodeElementType("GENERIC_PARAMETERS");
   IElementType IMPORT_ELEMENT = new DecodeElementType("IMPORT_ELEMENT");
   IElementType IMPORT_ELEMENT_AS = new DecodeElementType("IMPORT_ELEMENT_AS");
   IElementType IMPORT_ELEMENT_STAR = new DecodeElementType("IMPORT_ELEMENT_STAR");
   IElementType IMPORT_STMT = new DecodeElementType("IMPORT_STMT");
+  IElementType INTEGER_LITERAL = new DecodeElementType("INTEGER_LITERAL");
+  IElementType LANGUAGE_DECL = new DecodeElementType("LANGUAGE_DECL");
   IElementType LITERAL = new DecodeElementType("LITERAL");
+  IElementType MEASURE_DECL = new DecodeElementType("MEASURE_DECL");
   IElementType MESSAGE_DECL = new DecodeElementType("MESSAGE_DECL");
   IElementType NAMESPACE_DECL = new DecodeElementType("NAMESPACE_DECL");
   IElementType NATIVE_TYPE_DECL = new DecodeElementType("NATIVE_TYPE_DECL");
-  IElementType NON_NEGATIVE_INTEGER_LITERAL = new DecodeElementType("NON_NEGATIVE_INTEGER_LITERAL");
   IElementType NUMERIC_LITERAL = new DecodeElementType("NUMERIC_LITERAL");
-  IElementType NUMERIC_RANGE_DECL = new DecodeElementType("NUMERIC_RANGE_DECL");
   IElementType OPTIONAL = new DecodeElementType("OPTIONAL");
   IElementType PARAMETER_DECL = new DecodeElementType("PARAMETER_DECL");
   IElementType PARAMETER_ELEMENT = new DecodeElementType("PARAMETER_ELEMENT");
@@ -53,25 +54,20 @@ public interface DecodeTypes {
   IElementType RANGE_DECL = new DecodeElementType("RANGE_DECL");
   IElementType RANGE_UPPER_BOUND_DECL = new DecodeElementType("RANGE_UPPER_BOUND_DECL");
   IElementType SCRIPT_DECL = new DecodeElementType("SCRIPT_DECL");
-  IElementType SIMPLE_OR_GENERIC_TYPE_APPLICATION = new DecodeElementType("SIMPLE_OR_GENERIC_TYPE_APPLICATION");
   IElementType STATUS_MESSAGE = new DecodeElementType("STATUS_MESSAGE");
   IElementType STATUS_MESSAGE_PARAMETERS_DECL = new DecodeElementType("STATUS_MESSAGE_PARAMETERS_DECL");
   IElementType STRING_LITERAL = new DecodeElementType("STRING_LITERAL");
   IElementType STRING_VALUE = new DecodeElementType("STRING_VALUE");
   IElementType STRUCT_TYPE_DECL = new DecodeElementType("STRUCT_TYPE_DECL");
+  IElementType SUB_TYPE_DECL = new DecodeElementType("SUB_TYPE_DECL");
   IElementType TYPE_APPLICATION = new DecodeElementType("TYPE_APPLICATION");
-  IElementType TYPE_DECL = new DecodeElementType("TYPE_DECL");
-  IElementType TYPE_DECL_BODY = new DecodeElementType("TYPE_DECL_BODY");
   IElementType TYPE_UNIT_APPLICATION = new DecodeElementType("TYPE_UNIT_APPLICATION");
-  IElementType TYPE_VALUE_LITERAL = new DecodeElementType("TYPE_VALUE_LITERAL");
   IElementType UNIT = new DecodeElementType("UNIT");
-  IElementType UNIT_DECL = new DecodeElementType("UNIT_DECL");
   IElementType VAR_EXPR = new DecodeElementType("VAR_EXPR");
   IElementType VAR_PARAMETER_ELEMENT = new DecodeElementType("VAR_PARAMETER_ELEMENT");
 
   IElementType AFTER = new DecodeTokenType("after");
   IElementType ALIAS = new DecodeTokenType("alias");
-  IElementType ARRAY = new DecodeTokenType("array");
   IElementType ARROW = new DecodeTokenType("->");
   IElementType AS = new DecodeTokenType("as");
   IElementType AT = new DecodeTokenType("@");
@@ -100,17 +96,18 @@ public interface DecodeTypes {
   IElementType LEFT_BRACE = new DecodeTokenType("{");
   IElementType LEFT_BRACKET = new DecodeTokenType("[");
   IElementType LEFT_PAREN = new DecodeTokenType("(");
+  IElementType MEASURE_TOKEN = new DecodeTokenType("measure");
   IElementType MESSAGE = new DecodeTokenType("message");
   IElementType MINUS = new DecodeTokenType("-");
   IElementType MULTILINE_COMMENT = new DecodeTokenType("MULTILINE_COMMENT");
   IElementType NAMESPACE = new DecodeTokenType("namespace");
   IElementType NATIVE = new DecodeTokenType("native");
-  IElementType NON_NEGATIVE_NUMBER = new DecodeTokenType("NON_NEGATIVE_NUMBER");
+  IElementType NON_NEGATIVE_INTEGER = new DecodeTokenType("NON_NEGATIVE_INTEGER");
   IElementType PARAMETER = new DecodeTokenType("parameter");
   IElementType PARAMETERS = new DecodeTokenType("parameters");
   IElementType PLACEMENT = new DecodeTokenType("placement");
   IElementType PLUS = new DecodeTokenType("+");
-  IElementType PRIORITY = new DecodeTokenType("priority");
+  IElementType PRIORITY = new DecodeTokenType("PRIORITY");
   IElementType QUESTION = new DecodeTokenType("?");
   IElementType RANGE = new DecodeTokenType("range");
   IElementType RIGHT_BRACE = new DecodeTokenType("}");
@@ -124,9 +121,9 @@ public interface DecodeTypes {
   IElementType STRING_UNARY_QUOTES = new DecodeTokenType("STRING_UNARY_QUOTES");
   IElementType STRUCT = new DecodeTokenType("struct");
   IElementType SUBCOMPONENT = new DecodeTokenType("subcomponent");
+  IElementType SUBTYPE = new DecodeTokenType("<:");
   IElementType TRUE = new DecodeTokenType("true");
   IElementType TYPE_KEYWORD = new DecodeTokenType("type");
-  IElementType UNIT_TOKEN = new DecodeTokenType("unit");
   IElementType VAR = new DecodeTokenType("var");
   IElementType WITH = new DecodeTokenType("with");
 
@@ -166,9 +163,6 @@ public interface DecodeTypes {
       else if (type == COMPONENT_REF) {
         return new DecodeComponentRefImpl(node);
       }
-      else if (type == DEFAULT_LANGUAGE_DECL) {
-        return new DecodeDefaultLanguageDeclImpl(node);
-      }
       else if (type == ELEMENT_ID) {
         return new DecodeElementIdImpl(node);
       }
@@ -177,6 +171,9 @@ public interface DecodeTypes {
       }
       else if (type == ELEMENT_NAME_RULE) {
         return new DecodeElementNameRuleImpl(node);
+      }
+      else if (type == ENUM_NAME) {
+        return new DecodeEnumNameImpl(node);
       }
       else if (type == ENUM_TYPE_DECL) {
         return new DecodeEnumTypeDeclImpl(node);
@@ -205,11 +202,11 @@ public interface DecodeTypes {
       else if (type == FLOAT_LITERAL) {
         return new DecodeFloatLiteralImpl(node);
       }
-      else if (type == GENERIC_ARG) {
-        return new DecodeGenericArgImpl(node);
+      else if (type == GENERIC_ARGUMENTS) {
+        return new DecodeGenericArgumentsImpl(node);
       }
-      else if (type == GENERIC_ARGS) {
-        return new DecodeGenericArgsImpl(node);
+      else if (type == GENERIC_PARAMETER) {
+        return new DecodeGenericParameterImpl(node);
       }
       else if (type == GENERIC_PARAMETERS) {
         return new DecodeGenericParametersImpl(node);
@@ -226,8 +223,17 @@ public interface DecodeTypes {
       else if (type == IMPORT_STMT) {
         return new DecodeImportStmtImpl(node);
       }
+      else if (type == INTEGER_LITERAL) {
+        return new DecodeIntegerLiteralImpl(node);
+      }
+      else if (type == LANGUAGE_DECL) {
+        return new DecodeLanguageDeclImpl(node);
+      }
       else if (type == LITERAL) {
         return new DecodeLiteralImpl(node);
+      }
+      else if (type == MEASURE_DECL) {
+        return new DecodeMeasureDeclImpl(node);
       }
       else if (type == MESSAGE_DECL) {
         return new DecodeMessageDeclImpl(node);
@@ -238,14 +244,8 @@ public interface DecodeTypes {
       else if (type == NATIVE_TYPE_DECL) {
         return new DecodeNativeTypeDeclImpl(node);
       }
-      else if (type == NON_NEGATIVE_INTEGER_LITERAL) {
-        return new DecodeNonNegativeIntegerLiteralImpl(node);
-      }
       else if (type == NUMERIC_LITERAL) {
         return new DecodeNumericLiteralImpl(node);
-      }
-      else if (type == NUMERIC_RANGE_DECL) {
-        return new DecodeNumericRangeDeclImpl(node);
       }
       else if (type == OPTIONAL) {
         return new DecodeOptionalImpl(node);
@@ -268,9 +268,6 @@ public interface DecodeTypes {
       else if (type == SCRIPT_DECL) {
         return new DecodeScriptDeclImpl(node);
       }
-      else if (type == SIMPLE_OR_GENERIC_TYPE_APPLICATION) {
-        return new DecodeSimpleOrGenericTypeApplicationImpl(node);
-      }
       else if (type == STATUS_MESSAGE) {
         return new DecodeStatusMessageImpl(node);
       }
@@ -286,26 +283,17 @@ public interface DecodeTypes {
       else if (type == STRUCT_TYPE_DECL) {
         return new DecodeStructTypeDeclImpl(node);
       }
+      else if (type == SUB_TYPE_DECL) {
+        return new DecodeSubTypeDeclImpl(node);
+      }
       else if (type == TYPE_APPLICATION) {
         return new DecodeTypeApplicationImpl(node);
-      }
-      else if (type == TYPE_DECL) {
-        return new DecodeTypeDeclImpl(node);
-      }
-      else if (type == TYPE_DECL_BODY) {
-        return new DecodeTypeDeclBodyImpl(node);
       }
       else if (type == TYPE_UNIT_APPLICATION) {
         return new DecodeTypeUnitApplicationImpl(node);
       }
-      else if (type == TYPE_VALUE_LITERAL) {
-        return new DecodeTypeValueLiteralImpl(node);
-      }
       else if (type == UNIT) {
         return new DecodeUnitImpl(node);
-      }
-      else if (type == UNIT_DECL) {
-        return new DecodeUnitDeclImpl(node);
       }
       else if (type == VAR_EXPR) {
         return new DecodeVarExprImpl(node);

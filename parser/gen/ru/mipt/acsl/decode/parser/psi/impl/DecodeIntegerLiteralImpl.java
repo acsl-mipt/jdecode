@@ -11,14 +11,14 @@ import static ru.mipt.acsl.decode.parser.psi.DecodeTypes.*;
 import com.intellij.extapi.psi.ASTWrapperPsiElement;
 import ru.mipt.acsl.decode.parser.psi.*;
 
-public class DecodeNonNegativeIntegerLiteralImpl extends ASTWrapperPsiElement implements DecodeNonNegativeIntegerLiteral {
+public class DecodeIntegerLiteralImpl extends ASTWrapperPsiElement implements DecodeIntegerLiteral {
 
-  public DecodeNonNegativeIntegerLiteralImpl(ASTNode node) {
+  public DecodeIntegerLiteralImpl(ASTNode node) {
     super(node);
   }
 
   public void accept(@NotNull DecodeVisitor visitor) {
-    visitor.visitNonNegativeIntegerLiteral(this);
+    visitor.visitIntegerLiteral(this);
   }
 
   public void accept(@NotNull PsiElementVisitor visitor) {
@@ -28,8 +28,8 @@ public class DecodeNonNegativeIntegerLiteralImpl extends ASTWrapperPsiElement im
 
   @Override
   @NotNull
-  public PsiElement getNonNegativeNumber() {
-    return findNotNullChildByType(NON_NEGATIVE_NUMBER);
+  public PsiElement getNonNegativeInteger() {
+    return findNotNullChildByType(NON_NEGATIVE_INTEGER);
   }
 
 }

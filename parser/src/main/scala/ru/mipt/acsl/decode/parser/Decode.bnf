@@ -1,6 +1,6 @@
 {
     parserClass = "ru.mipt.acsl.decode.parser.DecodeParser"
-  parserUtilClass="ru.mipt.acsl.decode.parser.DecodeParserUtil"
+  //parserUtilClass="ru.mipt.acsl.decode.parser.DecodeParserUtil"
 
     extends = "com.intellij.extapi.psi.ASTWrapperPsiElement"
 
@@ -39,13 +39,13 @@
         STRING_UNARY_QUOTES = "regexp:'([^'\\]|\\.)*'"
         SUBCOMPONENT = "subcomponent"
         PARAMETERS = "parameters"
-        UNIT_TOKEN = "unit"
+        MEASURE_TOKEN = "measure"
         TYPE_KEYWORD = "type"
         ALIAS = "alias"
         DOTS = ".."
         DOT = "."
-        NON_NEGATIVE_NUMBER = "regexp:[0-9]+"
-        ARRAY = "array"
+        SUBTYPE = "<:"
+        NON_NEGATIVE_INTEGER = "regexp:[0-9]+"
         ENUM = "enum"
         PLACEMENT = "placement"
         BEFORE = "before"
@@ -66,7 +66,6 @@
         AS = "as"
         LANGUAGE = "language"
         DEFAULT = "default"
-        PRIORITY = "priority"
         VAR = "var"
         NATIVE = "native"
         FINAL = "final"
@@ -78,11 +77,11 @@
     ]
 }
 
-decodeFile ::= namespace_decl import_stmt* (component_decl | unit_decl | type_decl | alias_decl
-    | default_language_decl | script_decl)*
+decode_file ::= namespace_decl import_stmt* (component_decl | measure_decl | native_type_decl | sub_type_decl
+    | enum_type_decl | struct_type_decl | alias_decl | language_decl | script_decl)*
 
 script_decl ::= SCRIPT element_name_rule FOR component_ref LEFT_PAREN command_args? RIGHT_PAREN
-    (COLON type_unit_application)? EQ_SIGN LEFT_BRACE expr* RIGHT_BRACE
+    COLON type_unit_application EQ_SIGN LEFT_BRACE expr* RIGHT_BRACE
 
 expr ::= command_call | literal | var_expr
 
@@ -90,7 +89,7 @@ var_expr ::= element_name_rule
 
 command_call ::= element_id LEFT_PAREN (expr (COMMA expr)*)? RIGHT_PAREN
 
-import_stmt ::= IMPORT element_id (DOT (LEFT_BRACE import_element (COMMA import_element)* COMMA? RIGHT_BRACE | import_element_star))?
+import_stmt ::= IMPORT element_id (DOT (LEFT_PAREN import_element (COMMA import_element)* COMMA* RIGHT_PAREN | import_element_star))?
 
 import_element_star ::= STAR
 
@@ -98,7 +97,7 @@ import_element_as ::= AS element_name_rule
 
 import_element ::= element_name_rule import_element_as?
 
-alias_decl ::= element_info? ALIAS element_name_rule type_application
+alias_decl ::= element_info? ALIAS element_name_rule type_unit_application
 
 namespace_decl ::= element_info? NAMESPACE element_id
 
@@ -110,37 +109,31 @@ component_decl ::= element_info? COMPONENT element_name_rule annotation_decl* (W
 component_parameters_decl ::= element_info? PARAMETERS LEFT_PAREN command_args RIGHT_PAREN
 
 command_decl ::= element_info? COMMAND element_name_rule annotation_decl* LEFT_PAREN command_args? RIGHT_PAREN
-    (COLON type_unit_application)? (EQ_SIGN LEFT_BRACE expr* RIGHT_BRACE)?
+    COLON type_unit_application (EQ_SIGN LEFT_BRACE expr* RIGHT_BRACE)?
 
 command_args ::= command_arg (COMMA command_arg)* COMMA?
 
 command_arg ::= element_info? element_name_rule COLON type_unit_application
 
-type_unit_application ::= type_application unit?
+type_unit_application ::= type_application unit? optional?
 
 optional ::= QUESTION
 
-type_application ::= simple_or_generic_type_application optional?
+type_application ::= element_id generic_arguments? | range_decl
 
-generic_parameters ::= LEFT_BRACKET type_unit_application (COMMA type_unit_application?)* COMMA? RIGHT_BRACKET
-
-simple_or_generic_type_application ::= element_id generic_parameters?
+generic_arguments ::= LEFT_BRACKET type_unit_application (COMMA type_unit_application?)* COMMA* RIGHT_BRACKET
 
 unit ::= SLASH element_id SLASH
-
-struct_type_decl ::= STRUCT LEFT_PAREN command_args RIGHT_PAREN
 
 element_id ::= element_name_rule (DOT element_name_rule)*
 
 message_decl ::= status_message | event_message
 
-type_value_literal ::= type_application | range_decl
-
-annotation_parameter ::= element_name_rule (EQ_SIGN type_value_literal)?
+annotation_parameter ::= (element_name_rule EQ_SIGN)? type_unit_application
 
 annotation_decl ::= AT element_name_rule (LEFT_PAREN annotation_parameter (COMMA annotation_parameter?)* RIGHT_PAREN)?
 
-status_message ::= element_info? STATUS element_name_rule annotation_decl* (PRIORITY EQ_SIGN NON_NEGATIVE_NUMBER)? status_message_parameters_decl
+status_message ::= element_info? STATUS element_name_rule annotation_decl* (PRIORITY EQ_SIGN integer_literal)? status_message_parameters_decl
 
 status_message_parameters_decl ::= LEFT_PAREN parameter_decl (COMMA parameter_decl)* COMMA? RIGHT_PAREN
 
@@ -154,9 +147,9 @@ event_message ::= element_info? EVENT element_name_rule annotation_decl* type_ap
 
 parameter_decl ::= element_info? parameter_element
 
-range_upper_bound_decl ::= non_negative_integer_literal | STAR
+range_upper_bound_decl ::= integer_literal | STAR
 
-range_decl ::=  (non_negative_integer_literal (DOTS range_upper_bound_decl)? | STAR)
+range_decl ::= integer_literal (DOTS range_upper_bound_decl)? | STAR
 
 parameter_path_element ::= LEFT_BRACKET range_decl RIGHT_BRACKET | DOT element_name_rule
 
@@ -170,36 +163,39 @@ string_value ::= element_name_rule? string_literal
 
 component_ref ::= element_name_rule
 
-unit_decl ::= element_info? UNIT_TOKEN element_name_rule (DISPLAY string_value)* (PLACEMENT (BEFORE | AFTER))?
+measure_decl ::= element_info? MEASURE_TOKEN element_name_rule (DISPLAY string_value)* (PLACEMENT (BEFORE | AFTER))?
 
-generic_arg ::= element_name_rule?
+generic_parameter ::= element_name_rule (SUBTYPE type_unit_application)?
 
-generic_args ::= LEFT_BRACKET generic_arg (COMMA generic_arg)* RIGHT_BRACKET
+generic_parameters ::= LEFT_BRACKET generic_parameter (COMMA generic_parameter)* COMMA* RIGHT_BRACKET
 
-type_decl ::= element_info? TYPE_KEYWORD element_name_rule generic_args? type_decl_body
+sub_type_decl ::= element_info? TYPE_KEYWORD element_name_rule generic_parameters? type_unit_application
 
-numeric_range_decl ::= numeric_literal DOTS numeric_literal
+enum_name ::= element_name_rule
 
-type_decl_body ::= type_application (RANGE numeric_range_decl)? | enum_type_decl | struct_type_decl | native_type_decl
+enum_type_decl ::= element_info? ENUM enum_name generic_parameters?
+    final_enum? (EXTENDS element_name_rule | type_unit_application)
+    LEFT_PAREN enum_type_values RIGHT_PAREN
 
-native_type_decl ::= NATIVE
+struct_type_decl ::= element_info? STRUCT element_name_rule generic_parameters?
+    LEFT_PAREN command_args RIGHT_PAREN
+
+native_type_decl ::= element_info? NATIVE element_name_rule generic_parameters?
 
 final_enum ::= FINAL
-
-enum_type_decl ::= final_enum? ENUM (EXTENDS element_name_rule | type_application) LEFT_PAREN enum_type_values RIGHT_PAREN
 
 enum_type_values ::= enum_type_value (COMMA enum_type_value)* COMMA?
 
 enum_type_value ::= element_info? element_name_rule EQ_SIGN literal
 
-non_negative_integer_literal ::= NON_NEGATIVE_NUMBER
+integer_literal ::= (PLUS | MINUS)? NON_NEGATIVE_INTEGER
 
-numeric_literal ::= float_literal | non_negative_integer_literal
+numeric_literal ::= float_literal | integer_literal
 
 bool_literal ::= TRUE | FALSE
 
 literal ::= numeric_literal | bool_literal
 
-float_literal ::= (PLUS | MINUS)? NON_NEGATIVE_NUMBER DOT NON_NEGATIVE_NUMBER (("e" | "E") (PLUS | MINUS)? NON_NEGATIVE_NUMBER)?
+float_literal ::= (PLUS | MINUS)? NON_NEGATIVE_INTEGER DOT NON_NEGATIVE_INTEGER (("e" | "E") (PLUS | MINUS)? NON_NEGATIVE_INTEGER)?
 
-default_language_decl ::= LANGUAGE element_name_rule
+language_decl ::= LANGUAGE element_name_rule

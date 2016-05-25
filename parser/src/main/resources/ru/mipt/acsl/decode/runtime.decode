@@ -3,61 +3,63 @@ namespace decode
 
 language ru
 
-'Пустой тип представляющий отсутствующее значение'
-type void native
-
 'Беззнаковое целое переменной длины'
-type varuint native
+type varuint 0..*
+
+native array[T, R <: 0..*]
+
+'Пустой тип представляющий отсутствующее значение'
+native unit
 
 'Знаковое целое переменной длины'
-type varint native
+type varint *
 
 'Обощенный тип перечисления с тегом'
-type or<L, R> native
+native or[L, R]
 
 'Обобщенный тип опционального значения'
-type optional<T> native
+type option[T] or[T, unit]
 
 '32-битное вещественное число с плавающей точкой'
 en'32-bit floating point'
-type f32 native
+native f32
 
 '64-битное вещественное число с плавающей точкой'
 en'64-bit floating point'
-type f64 native
+native f64
 
 '8-битное беззнаковое целое число'
 en'8-bit unsigned integer'
-type u8  native
+type u8 0..255
 
 '8-битное знаковое целое число'
 en'8-bit signed integer'
-type i8  native
+type i8 -128..127
 
 '16-битное беззнаковое целое число'
 en'16-bit unsigned integer'
-type u16 native
+type u16 0..65535
 
 '16-битное знаковое целое число'
 en'16-bit signed integer'
-type i16 native
+type i16 -32768..32767
 
 '32-битное беззнаковое целое число'
 en'32-bit unsigned integer'
-type u32 native
+type u32 0..4294967295
 
 '32-битное знаковое целое число'
 en'32-bit signed integer'
-type i32 native
+type i32 -2147483648..2147483647
 
 '64-битное беззнаковое целое число'
 en'64-bit unsigned integer'
-type u64 native
+type u64 0..18446744073709551615
 
 '64-битное знаковое целое число'
 en'64-bit signed integer'
-type i64 native
+type i64 -9223372036854775808..9223372036854775807
 
-'8-битное булево значение'
-en'8-bit boolean'
-type b8  native
+'Булево значение'
+en'Boolean'
+native bool

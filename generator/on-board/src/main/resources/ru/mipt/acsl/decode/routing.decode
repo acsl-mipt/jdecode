@@ -9,7 +9,7 @@ language ru
 type address varuint
 
 "Запись таблицы маршрутизации"
-type route struct
+struct route
 (
   "Адрес назначения"
   destination_address: address,
@@ -17,7 +17,7 @@ type route struct
   next_hop: address,
 )
 
-type router_error enum varuint (OK = 0, MAXIMUM_ROUTES_REACHED = 1, NO_SUCH_ADDRESS = 2, CANNOUT_ROUTE = 3)
+enum router_error varuint (OK = 0, MAXIMUM_ROUTES_REACHED = 1, NO_SUCH_ADDRESS = 2, CANNOUT_ROUTE = 3)
 
 "Компонент реализующий возможность динамической маршрутизации и управления таблицей маршрутизации с НКУ"
 component Router
@@ -25,9 +25,9 @@ component Router
   parameters
   (
     "Таблица маршрутизации по устройствам"
-    routes: [route],
+    routes: array[route],
     "Таблица маршрутизации по группам"
-    groupRoutes: [route],
+    groupRoutes: array[route],
   )
 
   "Установить правило маршрутизации для абонента"

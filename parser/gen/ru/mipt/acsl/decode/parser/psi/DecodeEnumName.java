@@ -5,9 +5,9 @@ import java.util.List;
 import org.jetbrains.annotations.*;
 import com.intellij.psi.PsiElement;
 
-public interface DecodeNumericRangeDecl extends PsiElement {
+public interface DecodeEnumName extends PsiElement {
 
   @NotNull
-  List<DecodeNumericLiteral> getNumericLiteralList();
+  DecodeElementNameRule getElementNameRule();
 
 }

@@ -17,7 +17,7 @@ class ExistingElementsProxyResolver extends DecodeProxyResolver {
     path.element match {
       case e: TypeName =>
         val name = e.typeName
-        val elements = (ns.units ++ ns.types ++ ns.components).filter(_.name.equals(name))
+        val elements = (ns.measures ++ ns.types ++ ns.components).filter(_.name.equals(name))
         if (elements.size == 1)
           (Some(elements.head), Result.empty)
         else

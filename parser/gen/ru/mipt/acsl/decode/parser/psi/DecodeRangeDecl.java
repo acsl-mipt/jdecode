@@ -8,7 +8,7 @@ import com.intellij.psi.PsiElement;
 public interface DecodeRangeDecl extends PsiElement {
 
   @Nullable
-  DecodeNonNegativeIntegerLiteral getNonNegativeIntegerLiteral();
+  DecodeIntegerLiteral getIntegerLiteral();
 
   @Nullable
   DecodeRangeUpperBoundDecl getRangeUpperBoundDecl();

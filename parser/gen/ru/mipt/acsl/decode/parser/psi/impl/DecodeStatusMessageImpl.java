@@ -45,15 +45,15 @@ public class DecodeStatusMessageImpl extends ASTWrapperPsiElement implements Dec
   }
 
   @Override
-  @NotNull
-  public DecodeStatusMessageParametersDecl getStatusMessageParametersDecl() {
-    return findNotNullChildByClass(DecodeStatusMessageParametersDecl.class);
+  @Nullable
+  public DecodeIntegerLiteral getIntegerLiteral() {
+    return findChildByClass(DecodeIntegerLiteral.class);
   }
 
   @Override
-  @Nullable
-  public PsiElement getNonNegativeNumber() {
-    return findChildByType(NON_NEGATIVE_NUMBER);
+  @NotNull
+  public DecodeStatusMessageParametersDecl getStatusMessageParametersDecl() {
+    return findNotNullChildByClass(DecodeStatusMessageParametersDecl.class);
   }
 
 }

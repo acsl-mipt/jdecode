@@ -6,6 +6,6 @@ import ru.mipt.acsl.decode.parser.ModelRegistry
   */
 class ParseTest extends FlatSpec with Matchers {
   "A Parser" should "parse test.decode" in {
-    ModelRegistry.registry
+    ModelRegistry.registry(ModelRegistry.Sources.map(ModelRegistry.sourceContents))
   }
 }

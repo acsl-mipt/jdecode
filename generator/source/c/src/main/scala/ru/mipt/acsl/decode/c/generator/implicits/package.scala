@@ -7,7 +7,7 @@ import com.google.common.base.CaseFormat
 import ru.mipt.acsl.decode.c.generator.CSourceGenerator._
 import ru.mipt.acsl.decode.model.component.message.{EventMessage, MessageParameter, TmMessage}
 import ru.mipt.acsl.decode.model.component.{Command, Component}
-import ru.mipt.acsl.decode.model.expr.{ConstExpr, IntLiteral}
+import ru.mipt.acsl.decode.model.expr.{ConstExpr, LongLiteral$}
 import ru.mipt.acsl.decode.model.naming.{Fqn, HasName}
 import ru.mipt.acsl.decode.model.types.NativeType
 import ru.mipt.acsl.decode.model.types.DecodeType
@@ -90,7 +90,7 @@ package object implicits {
   implicit class ConstExprHelper(val c: ConstExpr) {
 
     def toInt: Int = c match {
-      case i: IntLiteral => i.value
+      case i: LongLiteral => i.value
       case _ => sys.error("not implemented")
     }
 

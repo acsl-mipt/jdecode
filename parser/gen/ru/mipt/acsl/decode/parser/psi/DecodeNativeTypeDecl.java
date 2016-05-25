@@ -7,4 +7,13 @@ import com.intellij.psi.PsiElement;
 
 public interface DecodeNativeTypeDecl extends PsiElement {
 
+  @Nullable
+  DecodeElementInfo getElementInfo();
+
+  @NotNull
+  DecodeElementNameRule getElementNameRule();
+
+  @Nullable
+  DecodeGenericParameters getGenericParameters();
+
 }

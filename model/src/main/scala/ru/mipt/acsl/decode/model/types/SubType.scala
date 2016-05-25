@@ -8,11 +8,11 @@ import ru.mipt.acsl.decode.model.proxy.MaybeProxy
 /**
   * @author Artem Shein
   */
-trait SubType extends DecodeType with HasBaseType {
+trait SubType extends GenericType with HasBaseType {
 
-  def range: Option[SubTypeRange]
+  def typeMeasure: TypeMeasure
 
-  def baseTypeProxy: MaybeProxy[DecodeType]
+  def baseTypeProxy: MaybeProxy[DecodeType] = typeMeasure.typeProxy
 
   override def baseType: DecodeType = baseTypeProxy.obj
 }
@@ -20,10 +20,10 @@ trait SubType extends DecodeType with HasBaseType {
 object SubType {
 
   private class Impl(name: ElementName, namespace: Namespace, info: LocalizedString,
-                     val baseTypeProxy: MaybeProxy[DecodeType], val range: Option[SubTypeRange])
+                     val typeMeasure: TypeMeasure, val typeParameters: Seq[ElementName])
     extends AbstractType(name, namespace, info) with SubType
 
   def apply(name: ElementName, namespace: Namespace, info: LocalizedString,
-            baseTypeProxy: MaybeProxy[DecodeType], range: Option[SubTypeRange] = None): SubType =
-    new Impl(name, namespace, info, baseTypeProxy, range)
+            typeMeasure: TypeMeasure, typeParameters: Seq[ElementName]): SubType =
+    new Impl(name, namespace, info, typeMeasure, typeParameters)
 }

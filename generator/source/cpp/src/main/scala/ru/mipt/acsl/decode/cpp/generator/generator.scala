@@ -6,7 +6,7 @@ import java.security.MessageDigest
 
 import com.typesafe.scalalogging.LazyLogging
 import ru.mipt.acsl.decode.model.component.{Command, Component}
-import ru.mipt.acsl.decode.model.expr.IntLiteral
+import ru.mipt.acsl.decode.model.expr.LongLiteral$
 import ru.mipt.acsl.decode.model.registry.Registry
 import ru.mipt.acsl.decode.model.types.{Parameter => _, _}
 import ru.mipt.acsl.decode.model.naming._
@@ -235,7 +235,7 @@ class CppSourceGenerator(val config: CppGeneratorConfiguration) extends LazyLogg
       case t: SubType => cTypeDefForName(t, cTypeAppForTypeName(t.baseType))
       case t: EnumType => cTypeDefForName(t,
         CppEnumTypeDef(t.constants.map(c => CEnumTypeDefConst(c.name.asMangledString, c.value match {
-          case i: IntLiteral => i.value
+          case i: LongLiteral => i.value
           case _ => sys.error("not implemented")
         }))))
       case t: ArrayType => cTypeDefForName(t, CppVoidType.ptr())

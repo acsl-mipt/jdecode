@@ -1,10 +1,8 @@
 package ru.mipt.acsl.decode.model.types
 
 import ru.mipt.acsl.decode.model.LocalizedString
-import ru.mipt.acsl.decode.model.naming.Namespace
-import ru.mipt.acsl.decode.model.naming.ElementName
+import ru.mipt.acsl.decode.model.naming.{ElementName, Namespace}
 import ru.mipt.acsl.decode.model.proxy.MaybeProxy
-import ru.mipt.acsl.decode.model.types.DecodeType
 
 /**
   * @author Artem Shein

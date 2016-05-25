@@ -1,7 +1,7 @@
 ru"Модуль доступа к бортовой файловой системе"
 namespace ru.mipt.acsl.fs
 
-import decode.{varuint, or, u8, b8}
+import decode.(array, varuint, or, u8, b8)
 
 import ru.mipt.acsl.foundation.string
 import ru.mipt.acsl.foundation.error_code
@@ -9,7 +9,7 @@ import ru.mipt.acsl.foundation.error_code
 language ru
 
 'Информация о файле'
-type file_info struct
+struct file_info
 (
   'Путь до файла'
   path: string,
@@ -19,7 +19,7 @@ type file_info struct
   attrs: varuint
 )
 
-type node_info struct
+struct node_info
 (
   'Имя узла в пределах каталога'
   name: string,
@@ -29,14 +29,14 @@ type node_info struct
   attrs: varuint,
 )
 
-type file_upload_error enum extends error_code (ALREADY_EXISTS = 1, CANT_WRITE = 2, MODE_ERROR = 3, TOO_BIG = 4)
-type file_delete_error enum extends error_code (NOT_FOUND = 1, CANT_DELETE = 2)
-type file_download_error enum extends error_code (NOT_FOUND = 1, CANT_READ = 2, NOT_FILE = 3, EOF = 4)
-type file_list_error enum extends error_code (NOT_FOUND = 1, CANT_READ = 2, NOT_DIR = 3)
-type file_create_dir_error enum extends error_code (NOT_FOUND = 1, CANT_WRITE = 2)
-type files_mode enum varuint (BASE = 0, UPLOADING_FILE = 1, DOWNLOADING_FILE = 2, DOWNLOADING_FILE_LIST = 3)
+enum file_upload_error extends error_code (ALREADY_EXISTS = 1, CANT_WRITE = 2, MODE_ERROR = 3, TOO_BIG = 4)
+enum file_delete_error extends error_code (NOT_FOUND = 1, CANT_DELETE = 2)
+enum file_download_error extends error_code (NOT_FOUND = 1, CANT_READ = 2, NOT_FILE = 3, EOF = 4)
+enum file_list_error extends error_code (NOT_FOUND = 1, CANT_READ = 2, NOT_DIR = 3)
+enum file_create_dir_error extends error_code (NOT_FOUND = 1, CANT_WRITE = 2)
+enum files_mode  varuint (BASE = 0, UPLOADING_FILE = 1, DOWNLOADING_FILE = 2, DOWNLOADING_FILE_LIST = 3)
 
-type files_event enum varuint (MODE_CHANGED = 1)
+enum files_event  varuint (MODE_CHANGED = 1)
 
 'Компонент поддерживающий управление файловой системой'
 component Files
@@ -51,25 +51,25 @@ component Files
   command startFileUpload('Информация о загружаемом файле' fileInfo: file_info): file_upload_error
 
   'Загрузить файл'
-  command uploadFilePart('Часть данных файла' fileContentsPart: [u8]): file_upload_error
+  command uploadFilePart('Часть данных файла' fileContentsPart: array[u8]): file_upload_error
 
   'Закончить загрузку файла'
   command stopFileUpload(): file_upload_error
 
   'Начать скачивание файла'
-  command startFileDownload('Путь до файла' path: string): or<file_info, file_download_error>
+  command startFileDownload('Путь до файла' path: string): or[file_info, file_download_error]
 
   'Запросить следующую часть данных файла'
-  command downloadFilePart('Максимальный размер части данных файла' byteSize: varuint): or<[u8], file_download_error>
+  command downloadFilePart('Максимальный размер части данных файла' byteSize: varuint): or[array[u8], file_download_error]
 
   'Закончить скачивание файла'
   command stopFileDownload(): file_download_error
 
   'Начать скачивание списка узлов каталога'
-  command startRequestFileList(): or<varuint, file_list_error>
+  command startRequestFileList(): or[varuint, file_list_error]
 
   'Запросить следующую часть списка узлов каталога'
-  command requestFileListPart('Максимальное количество узлов в ответе' nodeSize: varuint): or<[node_info], file_list_error>
+  command requestFileListPart('Максимальное количество узлов в ответе' nodeSize: varuint): or[array[node_info], file_list_error]
 
   'Закончить скачивание списка узлов каталога'
   command stopRequestFileList(): file_list_error

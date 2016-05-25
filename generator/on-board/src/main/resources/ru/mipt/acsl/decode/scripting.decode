@@ -1,8 +1,8 @@
 ru"Модуль управления бортовыми скриптами (циклограммами)"
 namespace ru.mipt.acsl.scripting
 
-import decode.{varuint, b8, u8}
-import ru.mipt.acsl.foundation.{s, guid, error_code}
+import decode.(varuint, b8, u8)
+import ru.mipt.acsl.foundation.(s, guid, error_code)
 
 language ru
 
@@ -10,11 +10,11 @@ language ru
 type script_id guid
 
 'Информация о скрипте'
-type script_info struct
+struct script_info
 (
   scriptId: script_id,
   'Байткод скрипта'
-  scriptCode: [u8],
+  scriptCode: array[u8],
 )
 
 'Дата и время'
@@ -23,7 +23,7 @@ type date_time varuint
 type period    varuint
 
 'Запланированный запуск скрипта'
-type script_run_timing struct
+struct script_run_timing
 (
   'Идентификатор запланированного запуска'
   ^id: guid,
@@ -42,13 +42,13 @@ type script_run_timing struct
   repeatUntil: date_time,
 )
 
-type ^script struct
+struct ^script
 (
   ^info: script_info,
   runTiming: script_run_timing,
 )
 
-type scripting_error enum varuint
+enum scripting_error varuint
 (
   OK = 0,
   MAXIMUM_SCRIPTS_REACHED = 1,
@@ -63,7 +63,7 @@ component Scripting
   parameters
   (
     'Идентификаторы бортовых скриптов'
-    scripts: [^script],
+    scripts: array[^script],
   )
 
   'Загрузить скрипт'
