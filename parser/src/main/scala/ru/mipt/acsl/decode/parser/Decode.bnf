@@ -1,6 +1,6 @@
 {
     parserClass = "ru.mipt.acsl.decode.parser.DecodeParser"
-  //parserUtilClass="ru.mipt.acsl.decode.parser.DecodeParserUtil"
+  parserUtilClass="ru.mipt.acsl.decode.parser.DecodeParserUtil"
 
     extends = "com.intellij.extapi.psi.ASTWrapperPsiElement"
 
@@ -69,15 +69,15 @@
         VAR = "var"
         NATIVE = "native"
         FINAL = "final"
+        CONST = "const"
         EXTENDS = "extends"
         SCRIPT = "script"
-        RANGE = "range"
         FOR = "for"
         AT = "@"
     ]
 }
 
-decode_file ::= namespace_decl import_stmt* (component_decl | measure_decl | native_type_decl | sub_type_decl
+decode_file ::= namespace_decl import_stmt* (const_decl | component_decl | measure_decl | native_type_decl | sub_type_decl
     | enum_type_decl | struct_type_decl | alias_decl | language_decl | script_decl)*
 
 script_decl ::= SCRIPT element_name_rule FOR component_ref LEFT_PAREN command_args? RIGHT_PAREN
@@ -119,7 +119,7 @@ type_unit_application ::= type_application unit? optional?
 
 optional ::= QUESTION
 
-type_application ::= element_id generic_arguments? | range_decl
+type_application ::= element_id generic_arguments?
 
 generic_arguments ::= LEFT_BRACKET type_unit_application (COMMA type_unit_application?)* COMMA* RIGHT_BRACKET
 
@@ -147,11 +147,13 @@ event_message ::= element_info? EVENT element_name_rule annotation_decl* type_ap
 
 parameter_decl ::= element_info? parameter_element
 
-range_upper_bound_decl ::= integer_literal | STAR
+range_from_decl ::= numeric_literal
 
-range_decl ::= integer_literal (DOTS range_upper_bound_decl)? | STAR
+range_to_decl ::= numeric_literal
 
-parameter_path_element ::= LEFT_BRACKET range_decl RIGHT_BRACKET | DOT element_name_rule
+dependent_range_decl ::= STAR | range_from_decl (COMMA (range_to_decl | STAR))?
+
+parameter_path_element ::= LEFT_BRACKET dependent_range_decl RIGHT_BRACKET | DOT element_name_rule
 
 parameter_element ::= element_name_rule parameter_path_element*
 
@@ -195,6 +197,8 @@ numeric_literal ::= float_literal | integer_literal
 bool_literal ::= TRUE | FALSE
 
 literal ::= numeric_literal | bool_literal
+
+const_decl ::= element_info? CONST element_name_rule literal
 
 float_literal ::= (PLUS | MINUS)? NON_NEGATIVE_INTEGER DOT NON_NEGATIVE_INTEGER (("e" | "E") (PLUS | MINUS)? NON_NEGATIVE_INTEGER)?
 

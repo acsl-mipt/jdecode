@@ -5,9 +5,8 @@ import ru.mipt.acsl.decode.c.generator.implicits._
 import ru.mipt.acsl.decode.model.LocalizedString
 import ru.mipt.acsl.decode.model.component.message._
 import ru.mipt.acsl.decode.model.component.{Component, message}
-import ru.mipt.acsl.decode.model.types.ArrayType
 import ru.mipt.acsl.decode.model.proxy.MaybeProxy
-import ru.mipt.acsl.decode.model.types.StructType
+import ru.mipt.acsl.decode.model.types.{GenericTypeSpecialized, StructType}
 import ru.mipt.acsl.generator.c.ast._
 import ru.mipt.acsl.generator.c.ast.implicits._
 
@@ -44,8 +43,9 @@ private[generator] case class MessageParameterSerializationHelper(mp: MessagePar
 
         case Right(range) =>
 
-          val arrayType = t.asInstanceOf[ArrayType]
-          t = arrayType.baseType
+          val arrayType = t.asInstanceOf[GenericTypeSpecialized] // fixme
+          sys.error("not implemented")
+          /*t = arrayType.baseType
           val arraySize = arrayType.size
           val rangeType: ArrayType = ArrayType(t.fqn.last, t.namespace, LocalizedString.empty, MaybeProxy(t),
             range.size(arraySize))
@@ -73,7 +73,7 @@ private[generator] case class MessageParameterSerializationHelper(mp: MessagePar
 
           val isNotSmall = !t.isSmall
           expr = "array"._var.dotOrArrow(dataVar, !isPtr)("i"._var).mapIf(isNotSmall, e => CParens(e.ref))
-          isPtr = isNotSmall
+          isPtr = isNotSmall*/
 
       }
     }

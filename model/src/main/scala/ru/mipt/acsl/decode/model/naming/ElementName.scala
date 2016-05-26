@@ -10,7 +10,9 @@ trait ElementName {
 object ElementName {
 
   private case class Impl(value: String) extends ElementName {
+
     override def asMangledString: String = value
+
   }
 
   def mangleName(name: String): String = {

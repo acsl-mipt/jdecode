@@ -2,7 +2,7 @@ package ru.mipt.acsl.decode.c.generator.implicits
 
 import ru.mipt.acsl.decode.c.generator.CSourceGenerator._
 import ru.mipt.acsl.decode.model.naming.{Fqn, Namespace}
-import ru.mipt.acsl.decode.model.types.{ArrayType, EnumType, GenericType, GenericTypeSpecialized, HasBaseType, NativeType}
+import ru.mipt.acsl.decode.model.types.{EnumType, GenericType, GenericTypeSpecialized, HasBaseType, NativeType}
 import ru.mipt.acsl.decode.model.types.{DecodeType, StructType}
 import ru.mipt.acsl.generator.c.ast._
 
@@ -15,13 +15,13 @@ private[generator] case class DecodeTypeHelper(t: DecodeType) {
 
   private val orFqn = Fqn.newFromSource("decode.or")
 
-  private val optionalFqn = Fqn.newFromSource("decode.optional")
+  private val optionFqn = Fqn.newFromSource("decode.option")
 
   def byteSize: Int = byteSize(immutable.Set.empty)
 
   def isOrType: Boolean = t.fqn.equals(orFqn)
 
-  def isOptionalType: Boolean = t.fqn.equals(optionalFqn)
+  def isOptionType: Boolean = t.fqn.equals(optionFqn)
 
   def dotOrArrow(expr: CExpression, exprRight: CExpression): CExpression = t.isSmall match {
     case true => expr.dot(exprRight)
@@ -34,19 +34,21 @@ private[generator] case class DecodeTypeHelper(t: DecodeType) {
       val extendedEclosingTypes = enclosingTypes + t
       t match {
         case t: NativeType if t.isPrimitive => (t.primitiveTypeInfo.bitLength / 8).toInt
+        case t: GenericTypeSpecialized if t.isArray =>
+          sys.error("not implemented")
+        /*t.size.max match {
+        case 0 => VaruintByteSize + PtrSize
+        case _ => (t.size.max * t.baseType.byteSize(extendedEclosingTypes)).toInt
+      }*/
         case t: GenericTypeSpecialized => t.genericType match {
-          case optional if optional.isOptionalType => 1 + t.genericTypeArguments.head.get.byteSize(extendedEclosingTypes)
+          case optional if optional.isOptionType => 1 + t.genericTypeArguments.head.byteSize(extendedEclosingTypes)
           case or if or.isOrType => 1 + t.genericTypeArguments.map(
-            _.map(_.byteSize(extendedEclosingTypes)).getOrElse(0)).max
+            _.byteSize(extendedEclosingTypes)).max
           case _ => sys.error(s"not implemented for $t")
         }
         case n: NativeType => n.isVaruintType match {
           case true => VaruintByteSize
           case _ => sys.error(s"not implemented for $n")
-        }
-        case t: ArrayType => t.size.max match {
-          case 0 => VaruintByteSize + PtrSize
-          case _ => (t.size.max * t.baseType.byteSize(extendedEclosingTypes)).toInt
         }
         case t: StructType => t.fields.map(_.typeUnit.t.byteSize(extendedEclosingTypes)).sum
         case t: HasBaseType => t.baseType.byteSize(extendedEclosingTypes)
@@ -61,8 +63,9 @@ private[generator] case class DecodeTypeHelper(t: DecodeType) {
   def prefixedCTypeName: String = "PhotonGt" + cTypeName
 
   def cTypeName: String = t match {
-    case t: ArrayType =>
-      val baseCType = t.baseType.cTypeName
+    case t: GenericTypeSpecialized if t.isArray =>
+      sys.error("not implemented")
+      /*val baseCType = t.baseType.cTypeName
       val min = t.size.min
       val max = t.size.max
       "Arr" + baseCType + ((t.isFixedSize, min, max) match {
@@ -71,10 +74,10 @@ private[generator] case class DecodeTypeHelper(t: DecodeType) {
         case (false, 0, _) => s"Max$max"
         case (false, _, 0) => s"Min$min"
         case (false, _, _) => s"Min${min}Max$max"
-      })
+      })*/
     case t: GenericTypeSpecialized =>
       t.genericType.cTypeName +
-        t.genericTypeArguments.map(_.map(_.cTypeName).getOrElse("Void")).mkString
+        t.genericTypeArguments.map(_.cTypeName).mkString
     case named => named.name.asMangledString.lowerUnderscore2UpperCamel
   }
 
@@ -93,7 +96,7 @@ private[generator] case class DecodeTypeHelper(t: DecodeType) {
 
   def isBasedOnEnum: Boolean = t match {
     case _: EnumType => true
-    case _: ArrayType => false
+    case t: GenericTypeSpecialized if t.isArray => false
     case t: HasBaseType => t.baseType.isBasedOnEnum
     case _ => false
   }
@@ -116,7 +119,7 @@ private[generator] case class DecodeTypeHelper(t: DecodeType) {
           case t: StructType => t.fields.flatMap(_.typeUnit.t.typeWithDependentTypes(extendedExclude)).toSet
           case t: HasBaseType => t.baseType.typeWithDependentTypes(extendedExclude)
           case t: GenericTypeSpecialized =>
-            t.genericTypeArguments.flatMap(_.map(_.typeWithDependentTypes(extendedExclude)).getOrElse(Set.empty)).toSet ++
+            t.genericTypeArguments.flatMap(_.typeWithDependentTypes(extendedExclude)).toSet ++
               t.genericType.typeWithDependentTypes(extendedExclude)
           case _: NativeType | _: GenericType => Set.empty[DecodeType]
           case _ => sys.error(s"not implemented for $t")
@@ -130,7 +133,7 @@ private[generator] case class DecodeTypeHelper(t: DecodeType) {
     t match {
       case t: HasBaseType => collectNsForType(t.baseType, set)
       case t: StructType => t.fields.foreach(f => collectNsForType(f.typeUnit.t, set))
-      case t: GenericTypeSpecialized => t.genericTypeArguments.foreach(_.foreach(collectNsForType(_, set)))
+      case t: GenericTypeSpecialized => t.genericTypeArguments.foreach(collectNsForType(_, set))
       case _ =>
     }
   }
@@ -145,12 +148,10 @@ private[generator] case class DecodeTypeHelper(t: DecodeType) {
     }
     case s: GenericTypeSpecialized =>
       s.genericType match {
-        case optional if optional.isOptionalType =>
-          Seq(s.genericTypeArguments.head.getOrElse {
-            sys.error("invalid optional types")
-          })
+        case optional if optional.isOptionType =>
+          Seq(s.genericTypeArguments.head)
         case or if or.isOrType =>
-          s.genericTypeArguments.flatMap(_.map(p => Seq(p)).getOrElse(Seq.empty))
+          s.genericTypeArguments
       }
     case t: HasBaseType =>
       if (t.baseType.isNative)

@@ -11,14 +11,14 @@ import static ru.mipt.acsl.decode.parser.psi.DecodeTypes.*;
 import com.intellij.extapi.psi.ASTWrapperPsiElement;
 import ru.mipt.acsl.decode.parser.psi.*;
 
-public class DecodeParameterPathElementImpl extends ASTWrapperPsiElement implements DecodeParameterPathElement {
+public class DecodeDependentRangeDeclImpl extends ASTWrapperPsiElement implements DecodeDependentRangeDecl {
 
-  public DecodeParameterPathElementImpl(ASTNode node) {
+  public DecodeDependentRangeDeclImpl(ASTNode node) {
     super(node);
   }
 
   public void accept(@NotNull DecodeVisitor visitor) {
-    visitor.visitParameterPathElement(this);
+    visitor.visitDependentRangeDecl(this);
   }
 
   public void accept(@NotNull PsiElementVisitor visitor) {
@@ -28,14 +28,14 @@ public class DecodeParameterPathElementImpl extends ASTWrapperPsiElement impleme
 
   @Override
   @Nullable
-  public DecodeDependentRangeDecl getDependentRangeDecl() {
-    return findChildByClass(DecodeDependentRangeDecl.class);
+  public DecodeRangeFromDecl getRangeFromDecl() {
+    return findChildByClass(DecodeRangeFromDecl.class);
   }
 
   @Override
   @Nullable
-  public DecodeElementNameRule getElementNameRule() {
-    return findChildByClass(DecodeElementNameRule.class);
+  public DecodeRangeToDecl getRangeToDecl() {
+    return findChildByClass(DecodeRangeToDecl.class);
   }
 
 }

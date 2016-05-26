@@ -30,7 +30,7 @@ struct full_id
 (
     shortId: short_id,
     'Идентификаторы всех компонентов устройства'
-    deviceComponentGuidPairs: array[component_number_guid_pair, 1..*],
+    deviceComponentGuidPairs: array[component_number_guid_pair, 1],
 )
 
 'Компонент идентификации устройства и всех его компонентов'

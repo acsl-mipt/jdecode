@@ -5,12 +5,15 @@ import java.util.List;
 import org.jetbrains.annotations.*;
 import com.intellij.psi.PsiElement;
 
-public interface DecodeTypeApplication extends PsiElement {
-
-  @NotNull
-  DecodeElementId getElementId();
+public interface DecodeConstDecl extends PsiElement {
 
   @Nullable
-  DecodeGenericArguments getGenericArguments();
+  DecodeElementInfo getElementInfo();
+
+  @NotNull
+  DecodeElementNameRule getElementNameRule();
+
+  @NotNull
+  DecodeLiteral getLiteral();
 
 }

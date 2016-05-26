@@ -125,8 +125,7 @@ private[generator] case class ComponentHelper(component: Component) {
       collectNsForType(baseType, set)
     component.commands.foreach { cmd =>
       cmd.parameters.foreach(arg => collectNsForType(arg.parameterType, set))
-      for (returnType <- cmd.returnType)
-        collectNsForType(returnType, set)
+      collectNsForType(cmd.returnType, set)
     }
   }
 
@@ -326,11 +325,11 @@ private[generator] case class ComponentHelper(component: Component) {
   def commandMethodImplDefs: Seq[MethodDefInfo] = {
     component.allCommands.map { case ComponentCommand(c, command) =>
       MethodDefInfo(CFuncDef(component.methodName(command, c),
-        command.returnType.map(_.cMethodReturnType).getOrElse(voidType),
+        command.returnType.cMethodReturnType,
         command.parameters.map(p => {
           val t = p.parameterType
           CFuncParam(p.cName, mapIfNotSmall(t.cType, t, (ct: CType) => ct.ptr.const))
-        }) ++ command.returnType.map(_.cMethodReturnParameters).getOrElse(Seq.empty)), c)
+        }) ++ command.returnType.cMethodReturnParameters), c)
     }
   }
 
@@ -357,15 +356,16 @@ private[generator] case class ComponentHelper(component: Component) {
       val funcCall = component.methodName(command, subComponent).call(
         (for ((v, t) <- vars.zip(command.parameters.map(_.parameterType))) yield v.refIfNotSmall(t)): _*)
       MethodInfo(CFuncImpl(CFuncDef(componentTypeName.methodName(methodNamePart), resultType, parameters),
-        varInits ++ cmdReturnType.map {
+        varInits ++ (cmdReturnType match {
           case n: NativeType if n.isPrimitive => CStatements(n.serializeCallCode(funcCall), CReturn(resultOk))
+          case rt if rt.isUnit => CStatements(funcCall, CReturn(resultOk))
           case rt => CStatements(CReturn(rt.serializeCallCode(funcCall)))
-        }.getOrElse(CStatements(funcCall, CReturn(resultOk)))), subComponent)
+        })), subComponent)
     }
   }
 
   def allTypes: immutable.Set[DecodeType] =
-    (component.commands.flatMap(cmd => cmd.returnType.map(_.typeWithDependentTypes).getOrElse(Seq.empty) ++
+    (component.commands.flatMap(cmd => cmd.returnType.typeWithDependentTypes ++
       cmd.parameters.flatMap(_.parameterType.typeWithDependentTypes)) ++
       component.eventMessages.map(_.baseType) ++
       component.baseType.map(_.fields.flatMap(_.typeUnit.t.typeWithDependentTypes)).getOrElse(Seq.empty)).toSet ++

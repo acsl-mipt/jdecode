@@ -81,9 +81,9 @@ NON_NEGATIVE_INTEGER=[0-9]+
   "var"                       { return VAR; }
   "native"                    { return NATIVE; }
   "final"                     { return FINAL; }
+  "const"                     { return CONST; }
   "extends"                   { return EXTENDS; }
   "script"                    { return SCRIPT; }
-  "range"                     { return RANGE; }
   "for"                       { return FOR; }
   "@"                         { return AT; }
   "PRIORITY"                  { return PRIORITY; }

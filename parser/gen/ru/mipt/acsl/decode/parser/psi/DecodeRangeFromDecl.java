@@ -5,12 +5,9 @@ import java.util.List;
 import org.jetbrains.annotations.*;
 import com.intellij.psi.PsiElement;
 
-public interface DecodeRangeDecl extends PsiElement {
+public interface DecodeRangeFromDecl extends PsiElement {
 
-  @Nullable
-  DecodeIntegerLiteral getIntegerLiteral();
-
-  @Nullable
-  DecodeRangeUpperBoundDecl getRangeUpperBoundDecl();
+  @NotNull
+  DecodeNumericLiteral getNumericLiteral();
 
 }

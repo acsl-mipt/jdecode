@@ -13,7 +13,7 @@ import ru.mipt.acsl.decode.generator.json.{DecodeJsonGenerator, DecodeJsonGenera
 import ru.mipt.acsl.decode.model.component.message.{EventMessage => _}
 import ru.mipt.acsl.decode.model.component.{Command, Component}
 import ru.mipt.acsl.decode.model.naming.{ElementName, HasName, Namespace}
-import ru.mipt.acsl.decode.model.types.{AliasType, ArrayType, DecodeType, EnumType, GenericType, GenericTypeSpecialized, NativeType, PrimitiveTypeInfo, StructType, SubType, TypeKind}
+import ru.mipt.acsl.decode.model.types.{AliasType, DecodeType, EnumType, GenericType, GenericTypeSpecialized, NativeType, PrimitiveTypeInfo, StructType, SubType, TypeKind}
 import ru.mipt.acsl.generator.c.ast._
 import ru.mipt.acsl.generator.c.ast.implicits._
 
@@ -93,33 +93,30 @@ class CSourceGenerator(val config: CGeneratorConfiguration) extends LazyLogging 
         case t: SubType => (Seq(t.cTypeDef(t.baseType.cType)), Seq.empty)
         case t: EnumType =>
           val prefixedEnumName = t.prefixedCTypeName.upperCamel2UpperUnderscore
-          (Seq(t.cTypeDef(CEnumTypeDef(t.allConstants.toSeq.sortBy(_.value.toInt).map(c =>
-            CEnumTypeDefConst(prefixedEnumName + "_" + c.name.asMangledString, c.value.toInt))))),
+          (Seq(t.cTypeDef(CEnumTypeDef(t.allConstants.toSeq.sortBy(_.value.toLongOrFail).map(c =>
+            CEnumTypeDefConst(prefixedEnumName + "_" + c.name.asMangledString, c.value.toLongOrFail))))),
             Seq.empty)
-        case t: GenericType =>
-          (CAstElements(), CAstElements())
         case t: GenericTypeSpecialized => t.genericType match {
           case optional if optional.name.equals(ElementName.newFromMangledName("optional")) =>
             require(t.genericTypeArguments.size == 1)
-            val head = t.genericTypeArguments.head.getOrElse {
-              sys.error("wtf")
-            }
+            val head = t.genericTypeArguments.head
             head match {
               // TODO: implement or remove
               // case h if h.isBasedOnEnum => (Seq(t.cTypeDef(head.obj.cType)), Seq.empty)
               case _ => (Seq(t.cTypeDef(CStructTypeDef(Seq(
-                CStructTypeDefField("value", t.genericTypeArguments.head.get.cType),
+                CStructTypeDefField("value", t.genericTypeArguments.head.cType),
                 CStructTypeDefField("flag", b8Type))))), Seq.empty)
             }
           case or if or.name.equals(ElementName.newFromMangledName("or")) =>
             var index = 0
-            (Seq(t.cTypeDef(CStructTypeDef(t.genericTypeArguments.flatMap { ot =>
+            (Seq(t.cTypeDef(CStructTypeDef(t.genericTypeArguments.map { t =>
               index += 1
-              ot.map(t => Seq(CStructTypeDefField("_" + index, t.cType))).getOrElse(Seq.empty)
+              CStructTypeDefField("_" + index, t.cType)
             } :+ tag.field))), Seq.empty)
         }
-        case t: ArrayType =>
-          val arrayType: CType = t.size.max match {
+        case t if t.isArray =>
+          sys.error("not implemented")
+          /*val arrayType: CType = t.size.max match {
             case 0 => t.baseType.cType.ptr
             case _ => CArrayType(t.baseType.cType, t.size.max, dataVar.name)
           }
@@ -128,7 +125,7 @@ class CSourceGenerator(val config: CGeneratorConfiguration) extends LazyLogging 
             CStructTypeDefField(dataVar.name, arrayType))))
           val defineNamePrefix = t.prefixedCTypeName.upperCamel2UpperUnderscore
           (Seq(CDefine(defineNamePrefix + "_MIN_SIZE", t.size.min.toString), CEol,
-            CDefine(defineNamePrefix + "_MAX_SIZE", t.size.max.toString), CEol, CEol, typeDef), CAstElements())
+            CDefine(defineNamePrefix + "_MAX_SIZE", t.size.max.toString), CEol, CEol, typeDef), CAstElements())*/
         case t: StructType => (Seq(t.cTypeDef(CStructTypeDef(t.fields.map(f =>
           CStructTypeDefField(f.name.asMangledString, f.typeUnit.t.cType))))), Seq.empty)
         case t: AliasType =>
@@ -216,7 +213,7 @@ class CSourceGenerator(val config: CGeneratorConfiguration) extends LazyLogging 
 
     def structTypeFieldForCommand(c: Component, command: Command): CStructTypeDefField = {
       val methodName = command.cStructFieldName(component, component)
-      CStructTypeDefField(methodName, CFuncType(command.returnType.map(_.cType).getOrElse(voidType),
+      CStructTypeDefField(methodName, CFuncType(command.returnType.cType,
         command.cFuncParameterTypes(component), methodName))
     }
 

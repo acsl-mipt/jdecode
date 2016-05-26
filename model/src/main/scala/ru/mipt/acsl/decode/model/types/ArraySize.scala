@@ -1,27 +1,32 @@
 package ru.mipt.acsl.decode.model.types
 
+import scala.math.BigInt
+
 /**
   * @author Artem Shein
   */
 trait ArraySize {
-  def min: Long
-  def max: Long
+  def min: BigInt
+  def max: BigInt
 }
 
 object ArraySize {
 
-  private case class Impl(min: Long = 0, max: Long = 0) extends ArraySize {
-    require(min >= 0)
-    require(max >= 0)
+  private val Zero = BigInt(0)
+
+  private case class Impl(min: BigInt = Zero, max: BigInt = Zero) extends ArraySize {
+
+    require(min >= Zero)
+    require(max >= Zero)
 
     override def toString: String = (min, max) match {
-      case (0, 0) => "*"
-      case (_, 0) => min + "..*"
+      case (Zero, Zero) => "*"
+      case (_, Zero) => min + "..*"
       case (a, b) if a == b => min.toString
       case _ => min + ".." + max
     }
 
   }
 
-  def apply(min: Long = 0, max: Long = 0): ArraySize = Impl(min, max)
+  def apply(min: BigInt = Zero, max: BigInt = Zero): ArraySize = Impl(min, max)
 }

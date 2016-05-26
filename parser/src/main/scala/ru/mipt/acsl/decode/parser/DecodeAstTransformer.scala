@@ -4,11 +4,11 @@ import com.intellij.lang.ASTNode
 import com.intellij.psi.PsiWhiteSpace
 import ru.mipt.acsl.decode.model.component.message._
 import ru.mipt.acsl.decode.model.component.{Command, Component, ComponentRef}
-import ru.mipt.acsl.decode.model.expr.{FloatLiteral, LongLiteral}
+import ru.mipt.acsl.decode.model.expr.{BigDecimalLiteral, BigDecimalLiteral$, BigIntLiteral, BigIntLiteral$}
 import ru.mipt.acsl.decode.model.naming.{ElementName, Fqn, Namespace, _}
 import ru.mipt.acsl.decode.model.proxy.MaybeProxy
 import ru.mipt.acsl.decode.model.proxy.path.{GenericTypeName, ProxyPath, TypeName}
-import ru.mipt.acsl.decode.model.registry.{Measure, Language}
+import ru.mipt.acsl.decode.model.registry.{Language, Measure}
 import ru.mipt.acsl.decode.model.types.{EnumConstant, EnumType, _}
 import ru.mipt.acsl.decode.model.{LocalizedString, Referenceable}
 import ru.mipt.acsl.decode.parser.psi.{DecodeUnit => PsiDecodeUnit, _}
@@ -43,8 +43,8 @@ class DecodeAstTransformer {
         ns.types = ns.types :+ newType(s)
       case n: DecodeNativeTypeDecl =>
         ns.types = ns.types :+ newType(n)
-    case a: DecodeAliasDecl =>
-      ns.types = ns.types :+ newType(a)
+      case a: DecodeAliasDecl =>
+        ns.types = ns.types :+ newType(a)
       case i: DecodeImportStmt =>
         val els = i.getImportElementList
         val iFqn: Fqn = fqn(i.getElementId)
@@ -93,7 +93,7 @@ class DecodeAstTransformer {
         //sys.error("not implemented")
       case p: PsiWhiteSpace =>
       case p =>
-        sys.error(s"not implemented for ${p.getClass}")
+        sys.error(s"not implemented for ${p.getText} (${p.getClass} $p) at ${p.getTextOffset}")
     })
     ns.rootNamespace
   }
@@ -104,22 +104,22 @@ class DecodeAstTransformer {
 
   private def newType(e: DecodeEnumTypeDecl): EnumType =
     newEnumType(e, elementName(e.getEnumName.getElementNameRule), elementInfo(Option(e.getElementInfo)),
-      typeParameters(e.getGenericParameters))
+      typeParameters(Option(e.getGenericParameters)))
 
   private def newType(n: DecodeNativeTypeDecl): NativeType =
       NativeType(elementName(n.getElementNameRule), ns, elementInfo(Option(n.getElementInfo)),
-        typeParameters(n.getGenericParameters))
+        typeParameters(Option(n.getGenericParameters)))
 
   private def newType(s: DecodeStructTypeDecl): StructType =
     newStructType(elementName(s.getElementNameRule), elementInfo(Option(s.getElementInfo)), s.getCommandArgs,
-      typeParameters(s.getGenericParameters))
+      typeParameters(Option(s.getGenericParameters)))
 
   private def newType(s: DecodeSubTypeDecl): SubType =
     SubType(elementName(s.getElementNameRule), ns, elementInfo(Option(s.getElementInfo)),
-      typeUnit(s.getTypeUnitApplication), typeParameters(s.getGenericParameters))
+      typeUnit(s.getTypeUnitApplication), typeParameters(Option(s.getGenericParameters)))
 
-  private def typeParameters(ga: DecodeGenericParameters): Seq[ElementName] =
-    ga.getGenericParameterList.map(arg => elementName(arg.getElementNameRule))
+  private def typeParameters(ga: Option[DecodeGenericParameters]): Seq[ElementName] =
+    ga.toSeq.flatMap(_.getGenericParameterList.map(arg => elementName(arg.getElementNameRule)))
 
   private def newEnumType(e: DecodeEnumTypeDecl, name: ElementName, _info: LocalizedString,
                           typeParameters: Seq[ElementName]): EnumType =
@@ -139,8 +139,8 @@ class DecodeAstTransformer {
     val literal = v.getLiteral
     val numericLiteral = literal.getNumericLiteral
     EnumConstant(elementName(v.getElementNameRule),
-      Option(numericLiteral.getFloatLiteral).map(l => FloatLiteral(l.getText.toFloat))
-        .getOrElse(LongLiteral(numericLiteral.getIntegerLiteral.getText.toLong)),
+      Option(numericLiteral.getFloatLiteral).map(l => BigDecimalLiteral(l.getText))
+        .getOrElse(BigIntLiteral(numericLiteral.getIntegerLiteral.getText)),
       elementInfo(Option(v.getElementInfo)))
   }
 
@@ -160,11 +160,11 @@ class DecodeAstTransformer {
       el.getParameterPathElementList.map(parameterPathElement).to[immutable.Seq]
 
   private def parameterPathElement(el: DecodeParameterPathElement): MessageParameterPathElement = {
-    val rangeDecl = el.getRangeDecl
+    val rangeDecl = el.getDependentRangeDecl
     Option(el.getElementNameRule).map(e => Left(elementName(e)))
       .getOrElse(Right(ArrayRange(
-        Option(rangeDecl.getIntegerLiteral).map(_.getText.toLong).getOrElse(0),
-        Option(rangeDecl.getRangeUpperBoundDecl).map(_.getText.toLong))))
+        Option(BigInt(rangeDecl.getRangeFromDecl.getText)).getOrElse(0),
+        Option(BigInt(rangeDecl.getRangeToDecl.getText)))))
   }
 
   private def eventMessage(em: DecodeEventMessage, c: Component): EventMessage =
@@ -193,7 +193,7 @@ class DecodeAstTransformer {
     if (fqn.size == 1 && imports.contains(alias)) {
       val _import = imports.get(alias).get
       ComponentRef(_import.asInstanceOf[MaybeProxy[Component]],
-        if (_import.proxy.path.element.mangledName.asMangledString.equals(alias))
+        if (_import.proxy.path.asInstanceOf[ProxyPath.FqnElement].element.mangledName.asMangledString.equals(alias))
           None
         else
           Some(alias))
@@ -238,11 +238,11 @@ class DecodeAstTransformer {
   private def string(en: DecodeElementNameRule): String =
     elementName(en).asMangledString
 
-  private def unit(u: Option[PsiDecodeUnit]): Option[MaybeProxy[Measure]] =
+  private def measure(u: Option[PsiDecodeUnit]): Option[MaybeProxy[Measure]] =
     u.map(unit => proxyForFqn(fqn(unit.getElementId)))
 
   private def typeUnit(tu: DecodeTypeUnitApplication): TypeMeasure = {
-    val result = TypeMeasure(typeApplication(tu.getTypeApplication), unit(Option(tu.getUnit)))
+    val result = TypeMeasure(typeApplication(tu.getTypeApplication), measure(Option(tu.getUnit)))
     if (tu.getOptional != null) {
       TypeMeasure(MaybeProxy.proxyForSystem(GenericTypeName(ElementName.newFromMangledName("option"),
         immutable.Seq(result.typeProxy.proxy.path))), None) // fixme: Not None
@@ -261,12 +261,16 @@ class DecodeAstTransformer {
   private def typeApplication(ta: DecodeTypeApplication): MaybeProxy[DecodeType] = {
     val proxy = proxyForFqn[DecodeType](fqn(ta.getElementId))
     Option(ta.getGenericArguments).map { params =>
-      val path = proxy.proxy.path
-      // todo: remove asInstanceOf
-      MaybeProxy[DecodeType](ProxyPath(path.ns,
-        GenericTypeName(path.element.asInstanceOf[TypeName].typeName,
-          params.getTypeUnitApplicationList.map(p => typeUnit(p).typeProxy.proxy.path)
-          .to[immutable.Seq])))
+      proxy.proxy.path match {
+        case e: ProxyPath.FqnElement =>
+          // todo: remove asInstanceOf
+          MaybeProxy[DecodeType](ProxyPath(e.ns,
+            GenericTypeName(e.element.asInstanceOf[TypeName].typeName,
+              params.getTypeUnitApplicationList.map(p => typeUnit(p).typeProxy.proxy.path)
+                .to[immutable.Seq])))
+        case l: ProxyPath.Literal =>
+          sys.error("literal can't be parametrized")
+      }
     }.getOrElse(proxy)
   }
 }

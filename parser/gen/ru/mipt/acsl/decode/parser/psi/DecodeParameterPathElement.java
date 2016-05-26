@@ -8,9 +8,9 @@ import com.intellij.psi.PsiElement;
 public interface DecodeParameterPathElement extends PsiElement {
 
   @Nullable
-  DecodeElementNameRule getElementNameRule();
+  DecodeDependentRangeDecl getDependentRangeDecl();
 
   @Nullable
-  DecodeRangeDecl getRangeDecl();
+  DecodeElementNameRule getElementNameRule();
 
 }

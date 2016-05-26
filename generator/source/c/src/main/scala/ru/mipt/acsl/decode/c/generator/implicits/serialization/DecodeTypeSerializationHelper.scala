@@ -2,7 +2,7 @@ package ru.mipt.acsl.decode.c.generator.implicits.serialization
 
 import ru.mipt.acsl.decode.c.generator.CSourceGenerator._
 import ru.mipt.acsl.decode.c.generator.implicits._
-import ru.mipt.acsl.decode.model.types.{AliasType, ArrayType, DecodeType, EnumType, GenericTypeSpecialized, HasBaseType, NativeType, PrimitiveTypeInfo, StructType, SubType, TypeKind}
+import ru.mipt.acsl.decode.model.types.{AliasType, DecodeType, EnumType, GenericTypeSpecialized, HasBaseType, NativeType, PrimitiveTypeInfo, StructType, SubType, TypeKind}
 import ru.mipt.acsl.generator.c.ast.implicits._
 import ru.mipt.acsl.generator.c.ast.{CAstElements => _, _}
 
@@ -29,7 +29,8 @@ private[generator] case class DecodeTypeSerializationHelper(t: DecodeType) {
   def deserializeBerCallCode(dest: CExpression): CExpression = callCodeForBer(typeDeserializeMethodName, dest, reader.v)
 
   def deserializeCallCode(dest: CExpression): CExpression = t match {
-    case _: ArrayType | _: StructType => deserializeFuncCall(dest)
+    case t: GenericTypeSpecialized if t.isArray => deserializeFuncCall(dest)
+    case _: StructType => deserializeFuncCall(dest)
     case t: NativeType if t.isPrimitive =>
       CAssign(CDeref(dest), callCodeForPrimitiveType(t.primitiveTypeInfo, dest, photonReaderTypeName, "Read", reader.v))
     case n: NativeType => n.isVaruintType match {
@@ -43,7 +44,8 @@ private[generator] case class DecodeTypeSerializationHelper(t: DecodeType) {
   }
 
   def serializeCallCode(src: CExpression): CExpression = t match {
-    case _: ArrayType | _: StructType => serializeFuncCall(src)
+    case t: GenericTypeSpecialized if t.isArray => serializeFuncCall(src)
+    case _: StructType => serializeFuncCall(src)
     case t: NativeType if t.isPrimitive =>
       callCodeForPrimitiveType(t.primitiveTypeInfo, src, photonWriterTypeName, "Write", writer.v, src)
     case t: NativeType => t.isVaruintType match {
@@ -82,23 +84,18 @@ private[generator] case class DecodeTypeSerializationHelper(t: DecodeType) {
         val tagField = if (isSmall) src.dot(tagVar) else src -> tagVar
         photonBerTypeName.methodName(typeSerializeMethodName).call(tagField, writer.v)._try.line +:
           Seq(CIndent, CSwitch(tagField, t.genericTypeArguments.zipWithIndex.map { case (omp, idx) =>
-            CCase(CIntLiteral(idx), omp.map { mp =>
-              val valueVar = ("_" + (idx + 1))._var
-              Seq(mp.serializeCallCode(
-                mapIfNotSmall(if (isSmall) src.dot(valueVar) else src -> valueVar, mp,
-                  (expr: CExpression) => expr.ref)).line, CIndent, CBreak, CSemicolon, CEol)
-            }.getOrElse {
-              Seq(CStatementLine(CBreak, CSemicolon))
-            })
+            val valueVar = ("_" + (idx + 1))._var
+            CCase(CIntLiteral(idx),
+              Seq(omp.serializeCallCode(
+                mapIfNotSmall(if (isSmall) src.dot(valueVar) else src -> valueVar, omp,
+                  (expr: CExpression) => expr.ref)).line, CIndent, CBreak, CSemicolon, CEol))
           }, default = CStatements(CReturn(invalidValue))), CEol)
-      case optional if optional.isOptionalType =>
+      case optional if optional.isOptionType =>
         val flagField = if (isSmall) src.dot(flagVar) else src -> flagVar
         photonBerTypeName.methodName(typeSerializeMethodName).call(
           flagField, writer.v)._try.line +:
           Seq(CIndent, CIf(flagField, CEol +:
-            t.genericTypeArguments.head.getOrElse {
-              sys.error("wtf")
-            }.serializeCode(
+            t.genericTypeArguments.head.serializeCode(
               if (isSmall) src.dot(valueVar) else src -> valueVar)))
       case _ => sys.error(s"not implemented $t")
     }
@@ -109,20 +106,15 @@ private[generator] case class DecodeTypeSerializationHelper(t: DecodeType) {
       case or if or.isOrType =>
         photonBerTypeName.methodName(typeDeserializeMethodName).call((dest -> tagVar).ref, reader.v)._try.line +:
           Seq(CIndent, CSwitch(dest -> tagVar, t.genericTypeArguments.zipWithIndex.map { case (omp, idx) =>
-            CCase(CIntLiteral(idx), omp.map { mp =>
-              Seq(mp.deserializeCallCode((dest -> ("_" + (idx + 1))._var).ref).line,
-                CIndent, CBreak, CSemicolon, CEol)
-            }.getOrElse {
-              Seq(CStatementLine(CBreak, CSemicolon))
-            })
+            CCase(CIntLiteral(idx),
+              Seq(omp.deserializeCallCode((dest -> ("_" + (idx + 1))._var).ref).line,
+                CIndent, CBreak, CSemicolon, CEol))
           }, default = CStatements(CReturn(invalidValue))), CEol)
-      case optional if optional.isOptionalType =>
+      case optional if optional.isOptionType =>
         photonBerTypeName.methodName(typeDeserializeMethodName).call(
           (dest -> flagVar).ref.cast(CTypeApplication(photonBerTypeName).ptr), reader.v)._try.line +:
           Seq(CIndent, CIf(dest -> flagVar, CEol +:
-            t.genericTypeArguments.head.getOrElse {
-              sys.error("wtf")
-            }.deserializeCode((dest -> valueVar).ref)))
+            t.genericTypeArguments.head.deserializeCode((dest -> valueVar).ref)))
       case _ => sys.error(s"not implemented $t")
     }
 
@@ -140,8 +132,9 @@ private[generator] case class DecodeTypeSerializationHelper(t: DecodeType) {
         case t: SubType => t.baseType.abstractMinSizeExpr(extendedEnclosingTypes, forceParens)
         case t: StructType =>
           sumExprs(t.fields.map(f => f.typeUnit.t.abstractMinSizeExpr(extendedEnclosingTypes, forceParens = false)), forceParens)
-        case array: ArrayType =>
-          val baseType = array.baseType
+        case array: GenericTypeSpecialized if array.isArray =>
+          sys.error("not implemented")
+          /*val baseType = array.baseType
           val baseTypeMinSizeExprOption = baseType.abstractMinSizeExpr(extendedEnclosingTypes, forceParens = false)
           val minSize = array.size.min
           if (baseTypeMinSizeExprOption.isDefined && minSize != 0) {
@@ -154,7 +147,7 @@ private[generator] case class DecodeTypeSerializationHelper(t: DecodeType) {
               .map(expr => if (forceParens) CParens(expr) else expr)
           } else {
             Some(berSizeOf)
-          }
+          }*/
         case _ => sys.error(s"not implemented for $t")
       }
   }
@@ -178,11 +171,12 @@ private[generator] case class DecodeTypeSerializationHelper(t: DecodeType) {
           f.typeUnit.t.concreteMinSizeExpr(src.dotOrArrow(f.cName._var, isDot = !isPtr), isPtr = false)),
         forceParens = false)
         .map(commentBeginEnd(_, struct.cName))
-    case array: ArrayType =>
-      val baseType = array.baseType
+    case array: GenericTypeSpecialized if array.isArray =>
+      sys.error("not implemented")
+      /*val baseType = array.baseType
       baseType.abstractMinSizeExpr(forceParens = true).map(rExpr =>
         CMul(src.dotOrArrow(size.v, isDot = !isPtr),
-          commentBeginEnd(rExpr, baseType.cName)))
+          commentBeginEnd(rExpr, baseType.cName)))*/
     case _: SubType | _: AliasType | _: GenericTypeSpecialized => None // todo: yes you can
     case t: EnumType => t.baseType.concreteMinSizeExpr(src, isPtr)
     case _ => abstractMinSizeExpr(forceParens = false)
@@ -206,8 +200,9 @@ private[generator] case class DecodeTypeSerializationHelper(t: DecodeType) {
       val fVar = f.cName._var
       Seq(fType.serializeCallCode(src.dotOrArrow(fVar, struct.isSmall).refIfNotSmall(fType)).line)
     }
-    case array: ArrayType =>
-      writerSizeCheckCode(src) ++ src.serializeCodeForArraySize(array) ++ array.serializeCodeForArrayElements(src)
+    case array: GenericTypeSpecialized if array.isArray =>
+      sys.error("not implemented")
+      //writerSizeCheckCode(src) ++ src.serializeCodeForArraySize(array) ++ array.serializeCodeForArrayElements(src)
     case alias: AliasType => Seq(alias.baseType.serializeCallCode(src).line)
     case s: SubType => Seq(s.baseType.serializeCallCode(src).line)
     case enum: EnumType => Seq(enum.baseType.serializeCallCode(src).line)
@@ -222,8 +217,9 @@ private[generator] case class DecodeTypeSerializationHelper(t: DecodeType) {
   def deserializeCode(dest: CExpression): CAstElements = t match {
     case t: StructType => /*todo: implement or remove: readerSizeCheckCode(dest) ++*/ t.fields.flatMap(f =>
       Seq(f.typeUnit.t.deserializeCallCode((dest -> f.cName._var).ref).line))
-    case t: ArrayType =>
-      dest.deserializeCodeForArraySize(t) ++ readerSizeCheckCode(dest) ++ t.deserializeCodeForArrayElements(dest)
+    case array: GenericTypeSpecialized if array.isArray =>
+      sys.error("not implemented")
+      //dest.deserializeCodeForArraySize(t) ++ readerSizeCheckCode(dest) ++ t.deserializeCodeForArrayElements(dest)
     case t: AliasType => t.baseType.deserializeCode(dest)
     case t: HasBaseType =>
       val baseType = t.baseType

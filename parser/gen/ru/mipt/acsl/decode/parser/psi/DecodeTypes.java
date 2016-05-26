@@ -19,6 +19,8 @@ public interface DecodeTypes {
   IElementType COMPONENT_DECL = new DecodeElementType("COMPONENT_DECL");
   IElementType COMPONENT_PARAMETERS_DECL = new DecodeElementType("COMPONENT_PARAMETERS_DECL");
   IElementType COMPONENT_REF = new DecodeElementType("COMPONENT_REF");
+  IElementType CONST_DECL = new DecodeElementType("CONST_DECL");
+  IElementType DEPENDENT_RANGE_DECL = new DecodeElementType("DEPENDENT_RANGE_DECL");
   IElementType ELEMENT_ID = new DecodeElementType("ELEMENT_ID");
   IElementType ELEMENT_INFO = new DecodeElementType("ELEMENT_INFO");
   IElementType ELEMENT_NAME_RULE = new DecodeElementType("ELEMENT_NAME_RULE");
@@ -51,8 +53,8 @@ public interface DecodeTypes {
   IElementType PARAMETER_DECL = new DecodeElementType("PARAMETER_DECL");
   IElementType PARAMETER_ELEMENT = new DecodeElementType("PARAMETER_ELEMENT");
   IElementType PARAMETER_PATH_ELEMENT = new DecodeElementType("PARAMETER_PATH_ELEMENT");
-  IElementType RANGE_DECL = new DecodeElementType("RANGE_DECL");
-  IElementType RANGE_UPPER_BOUND_DECL = new DecodeElementType("RANGE_UPPER_BOUND_DECL");
+  IElementType RANGE_FROM_DECL = new DecodeElementType("RANGE_FROM_DECL");
+  IElementType RANGE_TO_DECL = new DecodeElementType("RANGE_TO_DECL");
   IElementType SCRIPT_DECL = new DecodeElementType("SCRIPT_DECL");
   IElementType STATUS_MESSAGE = new DecodeElementType("STATUS_MESSAGE");
   IElementType STATUS_MESSAGE_PARAMETERS_DECL = new DecodeElementType("STATUS_MESSAGE_PARAMETERS_DECL");
@@ -77,6 +79,7 @@ public interface DecodeTypes {
   IElementType COMMAND = new DecodeTokenType("command");
   IElementType COMMENT = new DecodeTokenType("COMMENT");
   IElementType COMPONENT = new DecodeTokenType("component");
+  IElementType CONST = new DecodeTokenType("const");
   IElementType DEFAULT = new DecodeTokenType("default");
   IElementType DISPLAY = new DecodeTokenType("display");
   IElementType DOT = new DecodeTokenType(".");
@@ -109,7 +112,6 @@ public interface DecodeTypes {
   IElementType PLUS = new DecodeTokenType("+");
   IElementType PRIORITY = new DecodeTokenType("PRIORITY");
   IElementType QUESTION = new DecodeTokenType("?");
-  IElementType RANGE = new DecodeTokenType("range");
   IElementType RIGHT_BRACE = new DecodeTokenType("}");
   IElementType RIGHT_BRACKET = new DecodeTokenType("]");
   IElementType RIGHT_PAREN = new DecodeTokenType(")");
@@ -162,6 +164,12 @@ public interface DecodeTypes {
       }
       else if (type == COMPONENT_REF) {
         return new DecodeComponentRefImpl(node);
+      }
+      else if (type == CONST_DECL) {
+        return new DecodeConstDeclImpl(node);
+      }
+      else if (type == DEPENDENT_RANGE_DECL) {
+        return new DecodeDependentRangeDeclImpl(node);
       }
       else if (type == ELEMENT_ID) {
         return new DecodeElementIdImpl(node);
@@ -259,11 +267,11 @@ public interface DecodeTypes {
       else if (type == PARAMETER_PATH_ELEMENT) {
         return new DecodeParameterPathElementImpl(node);
       }
-      else if (type == RANGE_DECL) {
-        return new DecodeRangeDeclImpl(node);
+      else if (type == RANGE_FROM_DECL) {
+        return new DecodeRangeFromDeclImpl(node);
       }
-      else if (type == RANGE_UPPER_BOUND_DECL) {
-        return new DecodeRangeUpperBoundDeclImpl(node);
+      else if (type == RANGE_TO_DECL) {
+        return new DecodeRangeToDeclImpl(node);
       }
       else if (type == SCRIPT_DECL) {
         return new DecodeScriptDeclImpl(node);

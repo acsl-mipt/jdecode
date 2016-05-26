@@ -6,14 +6,13 @@ import io.circe.Printer
 import io.circe.generic.auto._
 import io.circe.syntax._
 import ru.mipt.acsl.common._
+import ru.mipt.acsl.decode.model.component.message.{EventMessage, MessageParameter, MessageParameterPathElement, StatusMessage}
 import ru.mipt.acsl.decode.model.component.{Command, Component}
-import ru.mipt.acsl.decode.model.expr.{ConstExpr, FloatLiteral, LongLiteral$}
+import ru.mipt.acsl.decode.model.expr._
 import ru.mipt.acsl.decode.model.naming.{HasName, Namespace}
-import ru.mipt.acsl.decode.model.registry.{Measure, Language, Registry}
-import ru.mipt.acsl.decode.model.types.{EnumType, EnumConstant => _, _}
+import ru.mipt.acsl.decode.model.registry.{Language, Measure, Registry}
 import ru.mipt.acsl.decode.model.types._
 import ru.mipt.acsl.decode.model.{HasInfo, NamespaceAware}
-import ru.mipt.acsl.decode.model.component.message.{EventMessage, MessageParameter, MessageParameterPath, MessageParameterPathElement, StatusMessage}
 
 import scala.collection.mutable
 
@@ -65,8 +64,8 @@ case class DecodeJsonGenerator(config: DecodeJsonGeneratorConfig) {
           c.statusMessages.map(statusMessage)))
 
     private def constExpr(e: ConstExpr): Json.ConstExpr = e match {
-      case f: FloatLiteral => Json.FloatConstExpr(f.value)
-      case i: LongLiteral => Json.LongConstExpr(i.value)
+      case f: BigDecimalLiteral => Json.NumberLiteral(f.value.toString)
+      case i: BigIntLiteral => Json.NumberLiteral(i.value.toString)
       case _ => sys.error("not implemented")
     }
 
@@ -88,11 +87,11 @@ case class DecodeJsonGenerator(config: DecodeJsonGeneratorConfig) {
 
     private def pathElement(p: MessageParameterPathElement): Json.ParameterPathElement = p match {
       case Left(el) => Json.ElementName(el.asMangledString)
-      case Right(r) => Json.ArrayRange(r.min, r.max)
+      case Right(r) => Json.ArrayRange(r.min.toString, r.max.map(_.toString))
     }
 
     private def command(c: Command): Json.Command =
-      Json.Command(name(c), info(c), c.parameters.map(parameter), c.returnType.map(generate))
+      Json.Command(name(c), info(c), c.parameters.map(parameter), generate(c.returnType))
 
     private def parameter(p: Parameter): Json.Parameter =
       Json.Parameter(name(p), info(p), typeUnit(p.typeUnit))
@@ -139,16 +138,11 @@ case class DecodeJsonGenerator(config: DecodeJsonGeneratorConfig) {
         val typeInfo = info(t)
         t match {
           case a: AliasType => Json.Alias(typeName, typeInfo, generate(a.namespace), generate(a.baseType))
-          case s: SubType => Json.SubType(typeName, typeInfo, generate(s.namespace), generate(s.baseType),
-            s.range.map{ r => Json.SubTypeRange(r.from.map(constExpr), r.to.map(constExpr)) })
+          case s: SubType => Json.SubType(typeName, typeInfo, generate(s.namespace), generate(s.baseType))
           case n: NativeType => Json.NativeType(typeName, typeInfo, generate(n.namespace))
-          case a: ArrayType => Json.ArrayType(typeName, typeInfo, generate(a.namespace), generate(a.baseType),
-            a.size.min, a.size.max)
           case s: StructType => Json.StructType(typeName, typeInfo, generate(s.namespace), s.fields.map(structField))
-          case g: GenericType => Json.GenericType(typeName, typeInfo, generate(g.namespace),
-            g.typeParameters.map(_.map(_.asMangledString)))
           case s: GenericTypeSpecialized => Json.GenericTypeSpecialized(typeName, typeInfo, generate(s.namespace),
-            generate(s.genericType), s.genericTypeArguments.map(_.map(generate)))
+            generate(s.genericType), s.genericTypeArguments.map(generate))
           case e: EnumType => new Json.EnumType(typeName, typeInfo, generate(e.namespace),
             e.extendsTypeOption.map(generate), e.baseTypeOption.map(generate), e.isFinal,
             e.constants.map(enumConst).toSeq)

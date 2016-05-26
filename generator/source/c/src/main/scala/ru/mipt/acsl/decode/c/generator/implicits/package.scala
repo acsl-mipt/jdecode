@@ -7,10 +7,9 @@ import com.google.common.base.CaseFormat
 import ru.mipt.acsl.decode.c.generator.CSourceGenerator._
 import ru.mipt.acsl.decode.model.component.message.{EventMessage, MessageParameter, TmMessage}
 import ru.mipt.acsl.decode.model.component.{Command, Component}
-import ru.mipt.acsl.decode.model.expr.{ConstExpr, LongLiteral$}
+import ru.mipt.acsl.decode.model.expr.{ConstExpr, BigIntLiteral$}
 import ru.mipt.acsl.decode.model.naming.{Fqn, HasName}
-import ru.mipt.acsl.decode.model.types.NativeType
-import ru.mipt.acsl.decode.model.types.DecodeType
+import ru.mipt.acsl.decode.model.types.{DecodeType, NativeType}
 import ru.mipt.acsl.generator.c.ast.implicits._
 import ru.mipt.acsl.generator.c.ast.{CConstType, CType, CAstElements => _, _}
 
@@ -83,15 +82,6 @@ package object implicits {
         val t = p.parameterType
         mapIfNotSmall(t.cType, t, (ct: CType) => ct.ptr)
       })
-    }
-
-  }
-
-  implicit class ConstExprHelper(val c: ConstExpr) {
-
-    def toInt: Int = c match {
-      case i: LongLiteral => i.value
-      case _ => sys.error("not implemented")
     }
 
   }

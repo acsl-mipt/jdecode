@@ -2,7 +2,6 @@ package ru.mipt.acsl.decode.c.generator.implicits
 
 import ru.mipt.acsl.decode.c.generator.CSourceGenerator._
 import ru.mipt.acsl.decode.model.component.message._
-import ru.mipt.acsl.decode.model.types.ArrayType
 import ru.mipt.acsl.decode.model.types.DecodeType
 import ru.mipt.acsl.generator.c.ast.{CAstElements => _, _}
 
@@ -23,9 +22,6 @@ package object serialization {
 
   implicit def decodeType2DecodeTypeSerializationHelper(decodeType: DecodeType): DecodeTypeSerializationHelper =
     DecodeTypeSerializationHelper(decodeType)
-
-  implicit def arrayType2arrayTypeSerializationHelper(arrayType: ArrayType): ArrayTypeSerializationHelper =
-    ArrayTypeSerializationHelper(arrayType)
 
   implicit def messageParameter2MessageParameterSerializationHelper(messageParameter: MessageParameter)
   : MessageParameterSerializationHelper = MessageParameterSerializationHelper(messageParameter)

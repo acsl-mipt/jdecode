@@ -208,7 +208,7 @@ object CTypeApplication {
   def apply(name: String) = new CTypeApplication(name)
 }
 
-case class CEnumTypeDefConst(name: String, value: Int)
+case class CEnumTypeDefConst(name: String, value: Long)
 
 case class CFuncType(returnType: CType, parameterTypes: Iterable[CType], _name: String = "") extends CNamedType(_name) {
   override def generate(s: CGenState): Unit = {

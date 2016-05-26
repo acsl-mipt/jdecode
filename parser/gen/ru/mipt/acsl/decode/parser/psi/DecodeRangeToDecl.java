@@ -5,12 +5,9 @@ import java.util.List;
 import org.jetbrains.annotations.*;
 import com.intellij.psi.PsiElement;
 
-public interface DecodeTypeApplication extends PsiElement {
+public interface DecodeRangeToDecl extends PsiElement {
 
   @NotNull
-  DecodeElementId getElementId();
-
-  @Nullable
-  DecodeGenericArguments getGenericArguments();
+  DecodeNumericLiteral getNumericLiteral();
 
 }

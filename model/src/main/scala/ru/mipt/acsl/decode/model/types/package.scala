@@ -2,25 +2,13 @@ package ru.mipt.acsl.decode.model
 
 package object types {
 
-  import naming._
-
-  implicit class DecodeTypeHelper(t: DecodeType) {
-    def fqn: Fqn = Fqn(t.namespace.fqn.parts :+ t.name)
-  }
-
-  implicit class NativeTypeJelper(val t: NativeType) {
+  implicit class NativeTypeHelper(val t: NativeType) {
     def isPrimitive: Boolean = PrimitiveTypeInfo.typeInfoByFqn.get(t.fqn).nonEmpty
     def primitiveTypeInfo: PrimitiveTypeInfo = PrimitiveTypeInfo.typeInfoByFqn(t.fqn)
   }
 
   implicit class EnumTypeHelper(val t: EnumType) {
     def allConstants: Set[EnumConstant] = t.constants ++ t.extendsTypeOption.map(_.allConstants).getOrElse(Set.empty)
-  }
-
-  implicit class ArrayTypeHelper(val t: ArrayType) {
-
-    def isFixedSize: Boolean = t.size.isFixed
-
   }
 
   implicit class ArraySizeHelper(val s: ArraySize) {

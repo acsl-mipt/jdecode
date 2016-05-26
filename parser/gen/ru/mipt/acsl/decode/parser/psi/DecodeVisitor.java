@@ -51,6 +51,14 @@ public class DecodeVisitor extends PsiElementVisitor {
     visitPsiElement(o);
   }
 
+  public void visitConstDecl(@NotNull DecodeConstDecl o) {
+    visitPsiElement(o);
+  }
+
+  public void visitDependentRangeDecl(@NotNull DecodeDependentRangeDecl o) {
+    visitPsiElement(o);
+  }
+
   public void visitElementId(@NotNull DecodeElementId o) {
     visitPsiElement(o);
   }
@@ -179,11 +187,11 @@ public class DecodeVisitor extends PsiElementVisitor {
     visitPsiElement(o);
   }
 
-  public void visitRangeDecl(@NotNull DecodeRangeDecl o) {
+  public void visitRangeFromDecl(@NotNull DecodeRangeFromDecl o) {
     visitPsiElement(o);
   }
 
-  public void visitRangeUpperBoundDecl(@NotNull DecodeRangeUpperBoundDecl o) {
+  public void visitRangeToDecl(@NotNull DecodeRangeToDecl o) {
     visitPsiElement(o);
   }
 

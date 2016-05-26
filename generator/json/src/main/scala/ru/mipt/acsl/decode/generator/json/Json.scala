@@ -14,9 +14,7 @@ private object Json {
 
   sealed trait ConstExpr
 
-  case class FloatConstExpr(value: Float) extends ConstExpr
-
-  case class LongConstExpr(value: Long) extends ConstExpr
+  case class NumberLiteral(value: String) extends ConstExpr
 
   case class Unit(name: String, info: LocalizedString, display: LocalizedString)
 
@@ -38,25 +36,17 @@ private object Json {
   case class Alias(name: String, info: LocalizedString, namespace: Int, baseType: Int, kind: String = "alias")
     extends Type
 
-  case class SubType(name: String, info: LocalizedString, namespace: Int, baseType: Int,
-                     range: Option[SubTypeRange], kind: String = "subtype") extends Type
+  case class SubType(name: String, info: LocalizedString, namespace: Int, baseType: Int, kind: String = "subtype") extends Type
 
   case class NativeType(name: String, info: LocalizedString, namespace: Int, kind: String = "native") extends Type
-
-  case class ArrayType(name: String, info: LocalizedString, namespace: Int, baseType: Int, min: Long, max: Long,
-                       kind: String = "array")
-    extends Type
 
   case class StructField(name: String, typeUnit: TypeUnit)
 
   case class StructType(name: String, info: LocalizedString, namespace: Int, fields: Seq[StructField],
                         kind: String = "struct") extends Type
 
-  case class GenericType(name: String, info: LocalizedString, namespace: Int, typeParameters: Seq[Option[String]],
-                         kind: String = "generic") extends Type
-
   case class GenericTypeSpecialized(name: String, info: LocalizedString, namespace: Int, genericType: Int,
-                                    genericTypeArguments: Seq[Option[Int]], kind: String = "specialized") extends Type
+                                    genericTypeArguments: Seq[Int], kind: String = "specialized") extends Type
 
   case class EnumType(name: String, info: LocalizedString, namespace: Int, extendsType: Option[Int],
                       baseType: Option[Int], isFinal: Boolean, constants: Seq[EnumConst],
@@ -65,8 +55,6 @@ private object Json {
   object Type
 
   case class EnumConst(name: String, value: ConstExpr, info: LocalizedString)
-
-  case class SubTypeRange(from: Option[ConstExpr], to: Option[ConstExpr])
 
   case class TypeUnit(t: Int, unit: Option[Int])
 
@@ -78,11 +66,11 @@ private object Json {
 
   case class ElementName(name: String) extends ParameterPathElement
 
-  case class ArrayRange(min: Long, max: Option[Long]) extends ParameterPathElement
+  case class ArrayRange(min: String, max: Option[String]) extends ParameterPathElement
 
   case class MessageParameter(info: LocalizedString, path: Seq[ParameterPathElement]) extends Field
 
-  case class Command(name: String, info: LocalizedString, parameters: Seq[Parameter], returnType: Option[Int])
+  case class Command(name: String, info: LocalizedString, parameters: Seq[Parameter], returnType: Int)
 
   case class EventMessage(name: String, info: LocalizedString, baseType: Int, id: Option[Int], fields: Seq[Field])
 
@@ -95,17 +83,14 @@ private object Json {
   }
 
   implicit val encoderConstExpr: Encoder[ConstExpr] = Encoder.instance {
-    case f: FloatConstExpr => f.value.asJson
-    case l: LongConstExpr => l.value.asJson
+    case f: NumberLiteral => f.value.asJson
   }
 
   implicit val encodeType: Encoder[Type] = Encoder.instance {
     case a: Alias => a.asJson
     case s: SubType => s.asJson
-    case a: ArrayType => a.asJson
     case s: StructType => s.asJson
     case e: EnumType => e.asJson
-    case g: GenericType => g.asJson
     case s: GenericTypeSpecialized => s.asJson
     case n: NativeType => n.asJson
   }
