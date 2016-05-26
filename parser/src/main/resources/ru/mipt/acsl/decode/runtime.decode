@@ -30,7 +30,7 @@ const U64_MAX 18446744073709551615
 native range[F, T]
 
 'Беззнаковое целое переменной длины'
-type varuint range[0, U64_MAX]
+type varuint range[U64_MIN, U64_MAX]
 
 native array[T, F <: varuint = U64_MIN, T <: varuint = U64_MAX]
 

@@ -10,7 +10,7 @@ public interface DecodeGenericParameter extends PsiElement {
   @NotNull
   DecodeElementNameRule getElementNameRule();
 
-  @Nullable
-  DecodeTypeUnitApplication getTypeUnitApplication();
+  @NotNull
+  List<DecodeTypeUnitApplication> getTypeUnitApplicationList();
 
 }

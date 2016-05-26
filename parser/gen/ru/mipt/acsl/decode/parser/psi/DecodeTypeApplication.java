@@ -7,10 +7,13 @@ import com.intellij.psi.PsiElement;
 
 public interface DecodeTypeApplication extends PsiElement {
 
-  @NotNull
+  @Nullable
   DecodeElementId getElementId();
 
   @Nullable
   DecodeGenericArguments getGenericArguments();
+
+  @Nullable
+  DecodeLiteral getLiteral();
 
 }

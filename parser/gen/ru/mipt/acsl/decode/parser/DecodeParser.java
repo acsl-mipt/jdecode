@@ -4,7 +4,7 @@ package ru.mipt.acsl.decode.parser;
 import com.intellij.lang.PsiBuilder;
 import com.intellij.lang.PsiBuilder.Marker;
 import static ru.mipt.acsl.decode.parser.psi.DecodeTypes.*;
-import static ru.mipt.acsl.decode.parser.DecodeParserUtil.*;
+import static com.intellij.lang.parser.GeneratedParserUtilBase.*;
 import com.intellij.psi.tree.IElementType;
 import com.intellij.lang.ASTNode;
 import com.intellij.psi.tree.TokenSet;
@@ -299,7 +299,6 @@ public class DecodeParser implements PsiParser, LightPsiParser {
   // (element_name_rule EQ_SIGN)? type_unit_application
   public static boolean annotation_parameter(PsiBuilder b, int l) {
     if (!recursion_guard_(b, l, "annotation_parameter")) return false;
-    if (!nextTokenIs(b, "<annotation parameter>", ELEMENT_NAME_TOKEN, ESCAPED_NAME)) return false;
     boolean r;
     Marker m = enter_section_(b, l, _NONE_, ANNOTATION_PARAMETER, "<annotation parameter>");
     r = annotation_parameter_0(b, l + 1);
@@ -1292,7 +1291,7 @@ public class DecodeParser implements PsiParser, LightPsiParser {
   }
 
   /* ********************************************************** */
-  // element_name_rule (SUBTYPE type_unit_application)?
+  // element_name_rule (SUBTYPE type_unit_application)? (EQ_SIGN type_unit_application)?
   public static boolean generic_parameter(PsiBuilder b, int l) {
     if (!recursion_guard_(b, l, "generic_parameter")) return false;
     if (!nextTokenIs(b, "<generic parameter>", ELEMENT_NAME_TOKEN, ESCAPED_NAME)) return false;
@@ -1300,6 +1299,7 @@ public class DecodeParser implements PsiParser, LightPsiParser {
     Marker m = enter_section_(b, l, _NONE_, GENERIC_PARAMETER, "<generic parameter>");
     r = element_name_rule(b, l + 1);
     r = r && generic_parameter_1(b, l + 1);
+    r = r && generic_parameter_2(b, l + 1);
     exit_section_(b, l, m, r, false, null);
     return r;
   }
@@ -1317,6 +1317,24 @@ public class DecodeParser implements PsiParser, LightPsiParser {
     boolean r;
     Marker m = enter_section_(b);
     r = consumeToken(b, SUBTYPE);
+    r = r && type_unit_application(b, l + 1);
+    exit_section_(b, m, null, r);
+    return r;
+  }
+
+  // (EQ_SIGN type_unit_application)?
+  private static boolean generic_parameter_2(PsiBuilder b, int l) {
+    if (!recursion_guard_(b, l, "generic_parameter_2")) return false;
+    generic_parameter_2_0(b, l + 1);
+    return true;
+  }
+
+  // EQ_SIGN type_unit_application
+  private static boolean generic_parameter_2_0(PsiBuilder b, int l) {
+    if (!recursion_guard_(b, l, "generic_parameter_2_0")) return false;
+    boolean r;
+    Marker m = enter_section_(b);
+    r = consumeToken(b, EQ_SIGN);
     r = r && type_unit_application(b, l + 1);
     exit_section_(b, m, null, r);
     return r;
@@ -2060,21 +2078,31 @@ public class DecodeParser implements PsiParser, LightPsiParser {
   }
 
   /* ********************************************************** */
-  // element_id generic_arguments?
+  // element_id generic_arguments? | literal
   public static boolean type_application(PsiBuilder b, int l) {
     if (!recursion_guard_(b, l, "type_application")) return false;
-    if (!nextTokenIs(b, "<type application>", ELEMENT_NAME_TOKEN, ESCAPED_NAME)) return false;
     boolean r;
     Marker m = enter_section_(b, l, _NONE_, TYPE_APPLICATION, "<type application>");
-    r = element_id(b, l + 1);
-    r = r && type_application_1(b, l + 1);
+    r = type_application_0(b, l + 1);
+    if (!r) r = literal(b, l + 1);
     exit_section_(b, l, m, r, false, null);
     return r;
   }
 
+  // element_id generic_arguments?
+  private static boolean type_application_0(PsiBuilder b, int l) {
+    if (!recursion_guard_(b, l, "type_application_0")) return false;
+    boolean r;
+    Marker m = enter_section_(b);
+    r = element_id(b, l + 1);
+    r = r && type_application_0_1(b, l + 1);
+    exit_section_(b, m, null, r);
+    return r;
+  }
+
   // generic_arguments?
-  private static boolean type_application_1(PsiBuilder b, int l) {
-    if (!recursion_guard_(b, l, "type_application_1")) return false;
+  private static boolean type_application_0_1(PsiBuilder b, int l) {
+    if (!recursion_guard_(b, l, "type_application_0_1")) return false;
     generic_arguments(b, l + 1);
     return true;
   }
@@ -2083,7 +2111,6 @@ public class DecodeParser implements PsiParser, LightPsiParser {
   // type_application unit? optional?
   public static boolean type_unit_application(PsiBuilder b, int l) {
     if (!recursion_guard_(b, l, "type_unit_application")) return false;
-    if (!nextTokenIs(b, "<type unit application>", ELEMENT_NAME_TOKEN, ESCAPED_NAME)) return false;
     boolean r;
     Marker m = enter_section_(b, l, _NONE_, TYPE_UNIT_APPLICATION, "<type unit application>");
     r = type_application(b, l + 1);

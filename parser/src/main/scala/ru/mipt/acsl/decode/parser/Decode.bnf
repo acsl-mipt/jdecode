@@ -1,6 +1,6 @@
 {
     parserClass = "ru.mipt.acsl.decode.parser.DecodeParser"
-  parserUtilClass="ru.mipt.acsl.decode.parser.DecodeParserUtil"
+  //parserUtilClass="ru.mipt.acsl.decode.parser.DecodeParserUtil"
 
     extends = "com.intellij.extapi.psi.ASTWrapperPsiElement"
 
@@ -119,7 +119,7 @@ type_unit_application ::= type_application unit? optional?
 
 optional ::= QUESTION
 
-type_application ::= element_id generic_arguments?
+type_application ::= element_id generic_arguments? | literal
 
 generic_arguments ::= LEFT_BRACKET type_unit_application (COMMA type_unit_application?)* COMMA* RIGHT_BRACKET
 
@@ -167,7 +167,7 @@ component_ref ::= element_name_rule
 
 measure_decl ::= element_info? MEASURE_TOKEN element_name_rule (DISPLAY string_value)* (PLACEMENT (BEFORE | AFTER))?
 
-generic_parameter ::= element_name_rule (SUBTYPE type_unit_application)?
+generic_parameter ::= element_name_rule (SUBTYPE type_unit_application)? (EQ_SIGN type_unit_application)?
 
 generic_parameters ::= LEFT_BRACKET generic_parameter (COMMA generic_parameter)* COMMA* RIGHT_BRACKET
 

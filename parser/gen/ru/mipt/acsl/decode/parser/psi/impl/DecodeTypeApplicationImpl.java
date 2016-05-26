@@ -27,15 +27,21 @@ public class DecodeTypeApplicationImpl extends ASTWrapperPsiElement implements D
   }
 
   @Override
-  @NotNull
+  @Nullable
   public DecodeElementId getElementId() {
-    return findNotNullChildByClass(DecodeElementId.class);
+    return findChildByClass(DecodeElementId.class);
   }
 
   @Override
   @Nullable
   public DecodeGenericArguments getGenericArguments() {
     return findChildByClass(DecodeGenericArguments.class);
+  }
+
+  @Override
+  @Nullable
+  public DecodeLiteral getLiteral() {
+    return findChildByClass(DecodeLiteral.class);
   }
 
 }
