@@ -65,5 +65,5 @@ class OnBoardCSourceGeneratorTest extends FlatSpec with Matchers {
 }
 
 object OnBoardCSourceGeneratorTest {
-  def fqn(str: String): Fqn = Fqn.newFromSource(str)
+  def fqn(str: String): Fqn = Fqn(str)
 }

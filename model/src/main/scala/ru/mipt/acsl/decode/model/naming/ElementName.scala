@@ -4,12 +4,14 @@ package ru.mipt.acsl.decode.model.naming
   * @author Artem Shein
   */
 trait ElementName {
+
   def asMangledString: String
+
 }
 
 object ElementName {
 
-  private case class Impl(value: String) extends ElementName {
+  private case class ElementNameImpl(value: String) extends ElementName {
 
     override def asMangledString: String = value
 
@@ -26,7 +28,7 @@ object ElementName {
     result
   }
 
-  def newFromSourceName(name: String): ElementName = Impl(ElementName.mangleName(name))
+  def newFromSourceName(name: String): ElementName = ElementNameImpl(ElementName.mangleName(name))
 
-  def newFromMangledName(name: String): ElementName = Impl(name)
+  def newFromMangledName(name: String): ElementName = ElementNameImpl(name)
 }

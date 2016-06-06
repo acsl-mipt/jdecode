@@ -1,6 +1,6 @@
 namespace ru.mipt.acsl.mcc
 
-import decode.(unit, varuint, b8, u8, u16, u32, f32, f64)
+import decode.(unit, varuint, bool, u8, u16, u32, f32, f64, array)
 import ru.mipt.acsl.foundation.(per, grad, m, mps)
 
 language ru
@@ -81,16 +81,16 @@ struct route_point
   'Флаги'    flags: u32,
 )
 
-type route_points array[route_point, 0..64]
+type route_points array[route_point, 0, 64]
 
 struct route
 (
   'Имя маршрута'        name:   u16,
-  'Круговой ли маршрут' isRing: b8,
+  'Круговой ли маршрут' isRing: bool,
   'Точки маршрута'      points: route_points,
 )
 
-type routes array[route, 0..10]
+type routes array[route, 0, 10]
 
 struct routes_info
 (
@@ -115,7 +115,7 @@ component Route
   (
     "Номер маршрута"           name: u16,
     "Количество путевых точек" waypointsCount: u8,
-    "Кольцевой маршрут"        isRing: b8,
+    "Кольцевой маршрут"        isRing: bool,
   ): unit
 
   'Задать путевую точку'

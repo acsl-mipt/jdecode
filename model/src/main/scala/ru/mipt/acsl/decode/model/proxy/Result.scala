@@ -6,9 +6,9 @@ import ru.mipt.acsl.modeling.{ErrorLevel, Message, ResolvingMessage}
   * @author Artem Shein
   */
 object Result {
-  def apply(msgs: ResolvingMessage*): ResolvingResult = msgs
+  def apply(msgs: ResolvingMessage*): ResolvingMessages = msgs
 
-  def error(msg: String): ResolvingResult = Result(Message(ErrorLevel, msg))
+  def error(msg: String): ResolvingMessages = Result(Message(ErrorLevel, msg))
 
-  def empty: ResolvingResult = Result()
+  def empty: ResolvingMessages = Result()
 }

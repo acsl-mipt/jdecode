@@ -9,8 +9,8 @@ trait Language {
 
 object Language {
 
-  private case class Impl(code: String) extends Language
+  private case class LanguageImpl(code: String) extends Language
 
   def apply(code: String): Language =
-    new Impl(code)
+    new LanguageImpl(code)
 }

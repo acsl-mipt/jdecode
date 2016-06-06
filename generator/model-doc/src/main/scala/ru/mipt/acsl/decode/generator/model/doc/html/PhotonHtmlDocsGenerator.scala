@@ -13,7 +13,7 @@ object PhotonHtmlDocsGenerator {
   def main(args: Array[String]) = {
     val config = HtmlModelDocGeneratorConfiguration(new File("Photon_components.html"),
       OnBoardModelRegistry.registry,
-      exclude = Set(Fqn.newFromSource("test")))
+      exclude = Set(Fqn("test")))
     new HtmlModelDocGenerator(config).generate()
   }
 }

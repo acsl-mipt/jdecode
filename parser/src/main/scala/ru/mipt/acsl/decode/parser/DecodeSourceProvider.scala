@@ -1,9 +1,5 @@
 package ru.mipt.acsl.decode.parser
 
-import java.io.InputStream
-import java.net.URL
-import java.util
-
 import com.intellij.lang.impl.PsiBuilderFactoryImpl
 import com.intellij.lang.{DefaultASTFactory, DefaultASTFactoryImpl, LanguageParserDefinitions, PsiBuilderFactory}
 import com.intellij.mock.{MockApplicationEx, MockProjectEx}
@@ -19,11 +15,9 @@ import com.intellij.psi.impl.source.resolve.reference.{ReferenceProvidersRegistr
 import com.typesafe.scalalogging.LazyLogging
 import org.picocontainer.PicoContainer
 import org.picocontainer.defaults.AbstractComponentAdapter
+import ru.mipt.acsl.decode.model.naming.Namespace
 import ru.mipt.acsl.decode.model.registry.Registry
-
-import scala.collection.{immutable, mutable}
-import scala.io.Source
-import scala.util.Try
+import ru.mipt.acsl.decode.model.types.Alias
 
 /**
   * @author Artem Shein
@@ -53,16 +47,20 @@ class DecodeSourceProvider extends LazyLogging {
     private def registerApplicationService[T](cls: Class[T], obj: T): Unit = {
       application.registerService(cls, obj)
       Disposer.register(project, new Disposable() {
+
         override def dispose(): Unit = application.getPicoContainer.unregisterComponent(cls.getName)
+
       })
     }
 
     def init(): Unit = {
       initApplication()
       application.getPicoContainer.registerComponent(new AbstractComponentAdapter(classOf[ProgressManager].getName, classOf[Object]) {
+
         override def getComponentInstance(container: PicoContainer): ProgressManager = new ProgressManagerImpl()
 
         override def verify(container: PicoContainer): Unit = {}
+
       })
       registerApplicationService(classOf[PsiBuilderFactory], new PsiBuilderFactoryImpl())
       registerApplicationService(classOf[DefaultASTFactory], new DefaultASTFactoryImpl())
@@ -75,12 +73,40 @@ class DecodeSourceProvider extends LazyLogging {
 
   def provide(config: DecodeSourceProviderConfiguration, sources: Seq[String]): Registry = {
     val registry = Registry()
-    registry.rootNamespaces ++= sources.map { source =>
+    registry.rootNamespace = sources.map { source =>
       val parserDefinition = new DecodeParserDefinition()
-      new DecodeAstTransformer().processFile(new DecodeParser().parse(DecodeParserDefinition.file,
-        new PsiBuilderFactoryImpl().createBuilder(parserDefinition,
-        parserDefinition.createLexer(null), source)))
-    }.to[immutable.Seq].mergeRoot
+      try {
+        new DecodeAstTransformer().processFile(new DecodeParser().parse(DecodeParserDefinition.file,
+          new PsiBuilderFactoryImpl().createBuilder(parserDefinition,
+            parserDefinition.createLexer(null), source)))
+      } catch {
+        case e: Exception =>
+          throw new RuntimeException(s"Can't parse:\n$source", e)
+      }
+    }.reduce(mergeNamespaces)
     registry
   }
+
+  def mergeNamespaces(l: Namespace, r: Namespace): Namespace = {
+    r.objects.foreach {
+      case ns: Namespace =>
+        l.objects.find {
+          case n: Namespace if n.name == ns.name => true
+          case _ => false
+        } match {
+          case Some(lNs) => lNs match {
+            case lNs: Namespace =>
+              mergeNamespaces(lNs, ns)
+            case _ =>
+              sys.error("must be a namespace")
+          }
+          case _ =>
+            l.objects ++= Seq(ns, ns.alias)
+        }
+      case a: Alias.NsNs =>
+      case o => sys.error(s"not implemented for $o")
+    }
+    l
+  }
+
 }

@@ -1,10 +1,10 @@
 package ru.mipt.acsl.decode.model
 
-import ru.mipt.acsl.decode.model.component.Component
+import ru.mipt.acsl.decode.model.component.{Command, Component}
 import ru.mipt.acsl.decode.model.component.message.{EventMessage, StatusMessage}
-import ru.mipt.acsl.decode.model.naming.{ElementName, Fqn, Namespace}
-import ru.mipt.acsl.decode.model.proxy.{ResolvingResult, Result}
-import ru.mipt.acsl.decode.model.types.{DecodeType, EnumType, GenericTypeSpecialized, HasBaseType, NativeType, StructType}
+import ru.mipt.acsl.decode.model.naming.{Container, ElementName, Fqn, Namespace}
+import ru.mipt.acsl.decode.model.proxy.{ResolvingMessages, Result}
+import ru.mipt.acsl.decode.model.types.{Alias, DecodeType, EnumType, GenericTypeSpecialized, NativeType, StructField, StructType, SubType, TypeMeasure}
 
 import scala.collection.mutable
 
@@ -12,53 +12,43 @@ package object registry {
 
   implicit class RegistryHelper(val r: Registry) {
 
-    def allComponents: Seq[Component] = r.rootNamespaces.flatMap(_.allComponents)
+    def allComponents: Seq[Component] = r.rootNamespace.allComponents
 
-    def allNamespaces: Seq[Namespace] = r.rootNamespaces.flatMap(_.allNamespaces)
+    def allNamespaces: Seq[Namespace] = r.rootNamespace.allNamespaces
 
     def component(fqn: String): Option[Component] = {
       val dotPos = fqn.lastIndexOf('.')
       val namespaceOptional = namespace(fqn.substring(0, dotPos))
       if (namespaceOptional.isEmpty)
-      {
         return None
-      }
       val componentName = ElementName.newFromMangledName(fqn.substring(dotPos + 1, fqn.length()))
       namespaceOptional.get.components.find(_.name == componentName)
     }
 
+    // FIXME: duplicate with findNamespace
     def namespace(fqn: String): Option[Namespace] = {
-      var currentNamespaces: Option[Seq[Namespace]] = Some(r.rootNamespaces)
+      var currentNamespaces: Option[Seq[Namespace]] = Some(r.rootNamespace.subNamespaces)
       var currentNamespace: Option[Namespace] = None
-      "\\.".r.split(fqn).foreach(nsName => {
+      "\\.".r.split(fqn).foreach { nsName =>
         if (currentNamespaces.isEmpty)
-        {
           return None
-        }
         val decodeName = ElementName.newFromMangledName(nsName)
         currentNamespace = currentNamespaces.get.find(_.name == decodeName)
-        if (currentNamespace.isDefined)
-        {
-          currentNamespaces = Some(currentNamespace.get.subNamespaces)
-        }
-        else
-        {
-          currentNamespaces = None
-        }
-      })
+        currentNamespaces = currentNamespace.map(_.subNamespaces)
+      }
       currentNamespace
     }
 
     def eventMessage(fqn: String): Option[EventMessage] = {
       val dotPos = fqn.lastIndexOf('.')
       val decodeName = ElementName.newFromMangledName(fqn.substring(dotPos + 1, fqn.length()))
-      component(fqn.substring(0, dotPos)).map(_.eventMessages.find(_.name == decodeName).orNull)
+      component(fqn.substring(0, dotPos)).flatMap(_.eventMessage(decodeName))
     }
 
     def statusMessage(fqn: String): Option[StatusMessage] = {
       val dotPos = fqn.lastIndexOf('.')
       val decodeName = ElementName.newFromMangledName(fqn.substring(dotPos + 1, fqn.length()))
-      component(fqn.substring(0, dotPos)).map(_.statusMessages.find(_.name == decodeName).orNull)
+      component(fqn.substring(0, dotPos)).flatMap(_.statusMessage(decodeName))
     }
 
     def statusMessageOrFail(fqn: String): StatusMessage =
@@ -67,30 +57,43 @@ package object registry {
     def eventMessageOrFail(fqn: String): EventMessage =
       eventMessage(fqn).getOrElse(sys.error("assertion error"))
 
-    def resolve(): ResolvingResult =
-      r.rootNamespaces.flatMap(resolve(_))
+    def resolve(): ResolvingMessages = resolve(r.rootNamespace)
 
-    def validate(): ValidatingResult =
-      r.rootNamespaces.flatMap(validate(_))
+    def validate(): ValidatingResult = validate(r.rootNamespace)
 
-    def resolve(ns: Namespace): ResolvingResult = {
-      val result = new mutable.ArrayBuffer[ResolvingResult]()
-      result ++= ns.types.map(resolve(_))
-      result ++= ns.subNamespaces.map(resolve(_))
-      result ++= ns.components.map(resolve(_))
-      result.flatten
+    def resolve(obj: Referenceable): ResolvingMessages = obj match {
+      case container: Container =>
+        container.objects.flatMap(resolve(_)) ++
+          (container match {
+            case c: Command =>
+              c.returnTypeProxy.resolve(r)
+            case e: EnumType =>
+              e.extendsOrBaseTypeProxy.fold(_.resolve(r), _.typeProxy.resolve(r))
+            case e: EventMessage =>
+              e.baseTypeProxy.resolve(r)
+            case _ =>
+              ResolvingMessages.empty
+          })
+      case cc: Alias.ComponentComponent =>
+        cc.component.resolve(r)
+      case s: SubType if !s.isGeneric =>
+        s.typeMeasure.typeProxy.resolve(r)
+      case tm: TypeMeasure =>
+        tm.typeProxy.resolve(r) ++ tm.measureProxy.seq.flatMap(_.resolve(r))
+      case p: Parameter =>
+        p.typeProxy.resolve(r) ++ p.measureProxy.seq.flatMap(_.resolve(r))
+      case sf: StructField =>
+        sf.typeMeasure.typeProxy.resolve(r) ++ sf.typeMeasure.measureProxy.seq.flatMap(_.resolve(r))
+      case _ => ResolvingMessages.empty
     }
 
-    def validate(ns: Namespace): ValidatingResult = {
-      val result = new mutable.ArrayBuffer[ValidatingResult]()
-      result ++= ns.types.map(validate(_))
-      result ++= ns.subNamespaces.map(validate(_))
-      result ++= ns.components.map(validate(_))
-      result.flatten
+    def validate(obj: Referenceable): ValidatingResult = obj match {
+      case container: Container =>
+        container.objects.flatMap(validate(_))
     }
 
-    def resolve(c: Component): ResolvingResult = {
-      val result = mutable.Buffer.empty[ResolvingResult]
+    /*def resolve(c: Component): ResolvingMessages = {
+      val result = mutable.Buffer.empty[ResolvingMessages]
       c.baseTypeProxy.map { t =>
         result += r.resolve(t.obj)
         if (t.isResolved)
@@ -107,23 +110,23 @@ package object registry {
 
       c.eventMessages.foreach { e =>
         result += e.baseTypeProxy.resolve(r)
-        e.fields.foreach {
-          case Right(p) => result += p.typeProxy.resolve(r)
+        e.parameters.foreach {
+          case Parameter(_, typeUnit) => result += typeUnit.typeProxy.resolve(r)
           case _ =>
         }
       }
 
       c.subComponents.foreach { scr =>
-        val sc = scr.componentProxy
+        val sc = scr.component
         result += sc.resolve(r)
         if (sc.isResolved)
           result += resolve(sc.obj)
       }
       result.flatten
-    }
+    }*/
 
     def validate(c: Component): ValidatingResult = {
-      val result = mutable.Buffer.empty[ResolvingResult]
+      val result = mutable.Buffer.empty[ResolvingMessages]
 
       c.baseTypeProxy.map { t =>
         result += validate(t.obj)
@@ -133,38 +136,36 @@ package object registry {
         result += validate(cmd.returnType)
         cmd.parameters.foreach { arg =>
           result += validate(arg.parameterType)
-          arg.unit.map(u => result += validate(u))
+          arg.measure.map(u => result += validate(u))
         }
       }
 
       c.eventMessages.foreach { e =>
         result += validate(e.baseType)
-        e.fields.foreach {
-          case Right(p) => result += validate(p.parameterType)
+        e.parameters.foreach {
+          case Parameter(a, typeUnit) => result += validate(typeUnit.t)
           case _ =>
         }
       }
 
       c.subComponents.foreach { scr =>
-        val sc = scr.component
+        val sc = scr.obj
         result += validate(sc)
       }
       result.flatten
     }
 
-    def resolve(t: DecodeType): ResolvingResult = {
-      val resolvingResultList = mutable.Buffer.empty[ResolvingResult]
+    /*def resolve(t: DecodeType): ResolvingMessages = {
+      val resolvingResultList = mutable.Buffer.empty[ResolvingMessages]
       t match {
         case t: EnumType =>
           resolvingResultList += (t.extendsOrBaseTypeProxy match {
             case Left(extendsTypeProxy) => extendsTypeProxy.resolve(r)
             case Right(baseTypeProxy) => baseTypeProxy.typeProxy.resolve(r)
           })
-        case t: HasBaseType =>
-          resolvingResultList += t.baseTypeProxy.resolve(r)
         case t: StructType =>
           t.fields.foreach { f =>
-            val typeUnit = f.typeUnit
+            val typeUnit = f.typeMeasure
             resolvingResultList += typeUnit.typeProxy.resolve(r)
             if (typeUnit.typeProxy.isResolved)
               resolvingResultList += resolve(typeUnit.t)
@@ -178,13 +179,13 @@ package object registry {
         case _ =>
       }
       resolvingResultList.flatten
-    }
+    }*/
 
     def validate(t: DecodeType): ValidatingResult = {
       val result = mutable.Buffer.empty[ValidatingResult]
       t match {
         case t: EnumType =>
-          t.extendsOrBaseType match {
+          t.eitherExtendsOrBaseType match {
             case Left(extendsType) => extendsType match {
               case e: EnumType =>
               case e =>
@@ -203,7 +204,7 @@ package object registry {
 
     def validate(u: Measure): ValidatingResult = ValidatingResult.empty
 
-    def getOrCreateNamespaceByFqn(namespaceFqn: String): Namespace = {
+    /*def getOrCreateNamespaceByFqn(namespaceFqn: String): Namespace = {
       require(!namespaceFqn.isEmpty)
 
       val namespaces = r.rootNamespaces
@@ -212,7 +213,8 @@ package object registry {
       "\\.".r.split(namespaceFqn).foreach { nsName =>
         val parentNamespace = namespace
         namespace = Some(namespaces.find(_.name.asMangledString == nsName).getOrElse {
-          val newNamespace = Namespace(ElementName.newFromMangledName(nsName), parent = parentNamespace)
+          val alias = Alias[Namespace, Namespace](ElementName.newFromMangledName(nsName), parentNamespace, LocalizedString.empty, null)
+          val newNamespace = Namespace(alias, parentNamespace)
           parentNamespace match {
             case Some(parentNs) => parentNs.subNamespaces :+= newNamespace
             case _ => r.rootNamespaces :+= newNamespace
@@ -221,18 +223,19 @@ package object registry {
         })
       }
       namespace.getOrElse(sys.error("assertion error"))
-    }
+    }*/
 
     // TODO: refactoring
     def findNamespace(namespaceFqn: Fqn): Option[Namespace] = {
-      var namespaces = r.rootNamespaces
+      var namespaces = r.rootNamespace.subNamespaces
       var namespace: Option[Namespace] = None
       for (nsName <- namespaceFqn.parts) {
         namespace = namespaces.find(_.name == nsName)
         namespace match {
           case Some(ns) =>
             namespaces = ns.subNamespaces
-          case _ => return namespace
+          case _ =>
+            return namespace
         }
       }
       namespace

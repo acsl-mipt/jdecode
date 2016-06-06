@@ -79,7 +79,7 @@ object CppPragma {
 object CppIfNDef {
   type Type = CppAstElements[CppAstElement] with CppMacroAstElement
 
-  class Impl(val name: String, elements: immutable.Seq[CppAstElement]) extends CppAstElements(elements)
+  class CppIfNDefImpl(val name: String, elements: immutable.Seq[CppAstElement]) extends CppAstElements(elements)
   with CppMacroAstElement {
 
     override def generate(s: CppGeneratorState): Unit = {
@@ -91,7 +91,7 @@ object CppIfNDef {
 
   }
 
-  def apply(name: String, statements: Seq[CppAstElement]): Type = new Impl(name, statements.to[immutable.Seq])
+  def apply(name: String, statements: Seq[CppAstElement]): Type = new CppIfNDefImpl(name, statements.to[immutable.Seq])
 }
 
 class CppEndIf extends CppMacroAstElement {
@@ -169,10 +169,10 @@ object CppTypeApplication {
   def apply(name: String): CppTypeApplication = new CppTypeApplication(name)
 }
 
-class CEnumTypeDefConst(val name: String, val value: Int)
+class CEnumTypeDefConst(val name: String, val value: Long)
 
 object CEnumTypeDefConst {
-  def apply(name: String, value: Int) = new CEnumTypeDefConst(name, value)
+  def apply(name: String, value: Long) = new CEnumTypeDefConst(name, value)
 }
 
 trait CppTypeDef extends CppType
@@ -455,28 +455,28 @@ abstract class AbstractNamespace[+A <: CppAstElement](val name: String, statemen
 object MutableNamespace {
   type Type = AbstractMutableNamespace[CppAstElement] with CppAstElement
 
-  private class Impl(name: String, statements: mutable.Buffer[CppAstElement])
+  private class MutableNamespaceImpl(name: String, statements: mutable.Buffer[CppAstElement])
     extends AbstractMutableNamespace[CppAstElement](name, statements) with CppAstElement
 
-  def apply(name: String, statements: CppAstElement*): Type = new Impl(name, statements.to[mutable.Buffer])
+  def apply(name: String, statements: CppAstElement*): Type = new MutableNamespaceImpl(name, statements.to[mutable.Buffer])
 }
 
 object Namespace {
   type Type = AbstractNamespace[CppAstElement] with CppAstElement
 
-  private class Impl(name: String, statements: immutable.Seq[CppAstElement])
+  private class NamespaceImpl(name: String, statements: immutable.Seq[CppAstElement])
     extends AbstractNamespace[CppAstElement](name, statements) with CppAstElement
 
-  def apply(name: String, statements: CppAstElement*): Type = new Impl(name, statements.to[immutable.Seq])
+  def apply(name: String, statements: CppAstElement*): Type = new NamespaceImpl(name, statements.to[immutable.Seq])
 }
 
 object CppNamespace {
   type Type = AbstractNamespace[CppStatement] with CppStatement
 
-  private class Impl(name: String, statements: immutable.Seq[CppStatement])
+  private class CppNamespaceImpl(name: String, statements: immutable.Seq[CppStatement])
     extends AbstractNamespace[CppStatement](name, statements) with CppStatement
 
-  def apply(name: String, statements: CppStatement*): Type = new Impl(name, statements.to[immutable.Seq])
+  def apply(name: String, statements: CppStatement*): Type = new CppNamespaceImpl(name, statements.to[immutable.Seq])
 }
 
 case class MethodCall(methodName: String, arguments: CppExpression*) extends CppExpression {
@@ -544,18 +544,18 @@ case class CppVarDef(name: String, t: CppType, init: Option[CppExpression]) exte
 object CppFile {
   type Type = CppAstElements[CppAstElement]
 
-  private class Impl(statements: immutable.Seq[CppAstElement]) extends CppAstElements[CppAstElement](statements)
+  private class CppFileImpl(statements: immutable.Seq[CppAstElement]) extends CppAstElements[CppAstElement](statements)
 
-  def apply(statements: CppAstElement*): Type = new Impl(statements.to[immutable.Seq])
+  def apply(statements: CppAstElement*): Type = new CppFileImpl(statements.to[immutable.Seq])
 }
 
 
 object File {
   type Type = CppAstElements[CppAstElement]
 
-  private class Impl(statements: immutable.Seq[CppAstElement] = immutable.Seq.empty) extends CppAstElements[CppAstElement](statements)
+  private class FileImpl(statements: immutable.Seq[CppAstElement] = immutable.Seq.empty) extends CppAstElements[CppAstElement](statements)
 
-  def apply(statements: CppAstElement*): Type = new Impl(statements.to[immutable.Seq])
+  def apply(statements: CppAstElement*): Type = new FileImpl(statements.to[immutable.Seq])
 }
 
 class CppGeneratorState(var a: Appendable) {

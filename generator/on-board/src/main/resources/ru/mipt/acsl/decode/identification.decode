@@ -1,7 +1,7 @@
 ru"Модуль динамической идентификации устройств"
 namespace ru.mipt.acsl.identification
 
-import decode.varuint
+import decode.(varuint, array)
 
 import ru.mipt.acsl.foundation.guid
 

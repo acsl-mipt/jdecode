@@ -1,6 +1,6 @@
 {
     parserClass = "ru.mipt.acsl.decode.parser.DecodeParser"
-  //parserUtilClass="ru.mipt.acsl.decode.parser.DecodeParserUtil"
+  parserUtilClass="ru.mipt.acsl.decode.parser.DecodeParserUtil"
 
     extends = "com.intellij.extapi.psi.ASTWrapperPsiElement"
 
@@ -141,7 +141,7 @@ event_message_parameters_decl ::= LEFT_PAREN event_parameter_decl (COMMA event_p
 
 event_parameter_decl ::= element_info? (parameter_element | var_parameter_element)
 
-var_parameter_element ::= VAR element_name_rule COLON type_unit_application
+var_parameter_element ::= element_info? VAR element_name_rule COLON type_unit_application
 
 event_message ::= element_info? EVENT element_name_rule annotation_decl* type_application event_message_parameters_decl
 

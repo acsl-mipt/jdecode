@@ -7,9 +7,17 @@ import ru.mipt.acsl.modeling.{ErrorLevel, ResolvingMessage}
   */
 package object proxy {
 
-  type ResolvingResult = Seq[ResolvingMessage]
+  type ResolvingMessages = Seq[ResolvingMessage]
 
-  implicit class ResolvingResultHelper(result: ResolvingResult) {
+  object ResolvingMessages {
+
+    def apply(messages: ResolvingMessage*): ResolvingMessages = messages.toSeq
+
+    def empty: ResolvingMessages = Seq.empty
+
+  }
+
+  implicit class ResolvingResultHelper(result: ResolvingMessages) {
     def hasError: Boolean = result.exists(_.level == ErrorLevel)
   }
 

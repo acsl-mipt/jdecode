@@ -13,8 +13,8 @@ trait BigIntRangeExpr extends ConstExpr {
 
 object BigIntRangeExpr {
 
-  private case class Impl(from: BigIntLiteral, to: BigIntLiteral) extends BigIntRangeExpr
+  private case class BigIntRangeExprImpl(from: BigIntLiteral, to: BigIntLiteral) extends BigIntRangeExpr
 
-  def apply(from: BigIntLiteral, to: BigIntLiteral): BigIntRangeExpr = Impl(from, to)
+  def apply(from: BigIntLiteral, to: BigIntLiteral): BigIntRangeExpr = BigIntRangeExprImpl(from, to)
 
 }

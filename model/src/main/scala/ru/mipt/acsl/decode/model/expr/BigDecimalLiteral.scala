@@ -9,12 +9,12 @@ trait BigDecimalLiteral extends ConstExpr {
 
 object BigDecimalLiteral {
 
-  private class Impl(val value: BigDecimal) extends BigDecimalLiteral {
+  private class BigDecimalLiteralImpl(val value: BigDecimal) extends BigDecimalLiteral {
 
     override def toString: String = value.toString
 
   }
 
-  def apply(value: String): BigDecimalLiteral = new Impl(BigDecimal(value))
-  def apply(value: BigDecimal): BigDecimalLiteral = new Impl(value)
+  def apply(value: String): BigDecimalLiteral = new BigDecimalLiteralImpl(BigDecimal(value))
+  def apply(value: BigDecimal): BigDecimalLiteral = new BigDecimalLiteralImpl(value)
 }

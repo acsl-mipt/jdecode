@@ -27,6 +27,12 @@ public class DecodeVarParameterElementImpl extends ASTWrapperPsiElement implemen
   }
 
   @Override
+  @Nullable
+  public DecodeElementInfo getElementInfo() {
+    return findChildByClass(DecodeElementInfo.class);
+  }
+
+  @Override
   @NotNull
   public DecodeElementNameRule getElementNameRule() {
     return findNotNullChildByClass(DecodeElementNameRule.class);

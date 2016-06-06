@@ -1,55 +1,45 @@
 package ru.mipt.acsl.decode.model.registry
 
-import ru.mipt.acsl.decode.model.Referenceable
 import ru.mipt.acsl.decode.model.naming.{ElementName, Fqn, Namespace}
 import ru.mipt.acsl.decode.model.proxy.path.ProxyPath
-import ru.mipt.acsl.decode.model.proxy.{DecodeProxyResolver, ExistingElementsProxyResolver, PrimitiveAndGenericTypesProxyResolver, ResolvingResult}
+import ru.mipt.acsl.decode.model.proxy.{DecodeProxyResolver, ExistingElementsProxyResolver, NativeLiteralGenericTypesProxyResolver, ResolvingResult}
+import ru.mipt.acsl.decode.model.Referenceable
 import ru.mipt.acsl.modeling.{ErrorLevel, Message}
-
-import scala.collection.immutable
-import scala.reflect.ClassTag
 
 /**
   * @author Artem Shein
   */
 trait Registry extends Referenceable {
 
-  def rootNamespaces: immutable.Seq[Namespace]
+  def rootNamespace: Namespace
 
-  def rootNamespaces_=(ns: immutable.Seq[Namespace]): Unit
+  def rootNamespace_=(ns: Namespace): Unit
 
-  def proxyResolvers: immutable.Seq[DecodeProxyResolver]
+  def proxyResolvers: Seq[DecodeProxyResolver]
 
-  def resolveElement[T <: Referenceable](path: ProxyPath)(implicit ct: ClassTag[T]): (Option[T], ResolvingResult) = {
+  def resolveElement(path: ProxyPath): ResolvingResult[Referenceable] = {
     for (resolver <- proxyResolvers) {
-      val result = resolver.resolveElement(this, path)
-      for (obj <- result._1)
-        return obj match {
-          case ct(o) =>
-            (Some(o), result._2)
-          case o =>
-            (None, result._2 :+ Message(ErrorLevel, s"invalid type ${o.getClass}, expected ${ct.runtimeClass}"))
-        }
+      val resultAndMessages = resolver.resolveElement(this, path)
+      for (obj <- resultAndMessages.result)
+        return resultAndMessages
     }
-    (None, Seq(Message(ErrorLevel, s"path $path can not be resolved")))
+    ResolvingResult(None, Seq(Message(ErrorLevel, s"path $path can not be resolved")))
   }
+
 }
 
 object Registry {
 
-  private class Impl(val name: ElementName, resolvers: DecodeProxyResolver*) extends Registry {
-    if (Fqn.SystemNamespace.size != 1)
+  private case class RegistryImpl(name: ElementName, var rootNamespace: Namespace, var proxyResolvers: Seq[DecodeProxyResolver])
+    extends Registry {
+
+    if (Fqn.DecodeNamespace.size != 1)
       sys.error("not implemented")
-
-    var rootNamespaces: immutable.Seq[Namespace] = immutable.Seq.empty
-
-    val proxyResolvers = resolvers.to[immutable.Seq]
-
-    def this() = this(ElementName.newFromMangledName("GlobalRegistry"),
-      new ExistingElementsProxyResolver(),
-      new PrimitiveAndGenericTypesProxyResolver())
 
   }
 
-  def apply(): Registry = new Impl()
+  def apply(): Registry = {
+    RegistryImpl(ElementName.newFromMangledName("GlobalRegistry"), Namespace.newRoot,
+      Seq(ExistingElementsProxyResolver, NativeLiteralGenericTypesProxyResolver))
+  }
 }

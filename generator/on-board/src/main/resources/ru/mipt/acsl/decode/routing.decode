@@ -1,7 +1,7 @@
 ru"Модуль поддержки динамической маршрутизации пакетов"
 namespace ru.mipt.acsl.routing
 
-import decode.varuint
+import decode.(varuint, array)
 
 language ru
 

@@ -112,7 +112,11 @@ case class CPlainText(text: String) extends CAstElement {
 }
 
 trait CType extends CExpression {
+
   def ptr: CPtrType = CPtrType(this)
+
+  def constPtr: CConstType = CConstType(ptr)
+
 }
 
 abstract class CNamedType(val name: String) extends CType
@@ -412,7 +416,7 @@ abstract class CUnaryOp(private val expr: CExpression, val op: String, private v
 
 case class CIncBefore(expr: CExpression) extends CUnaryOp(expr, "++")
 case class CRef(expr: CExpression) extends CUnaryOp(expr, "&")
-class CDeref(expr: CExpression) extends CUnaryOp(expr, "*")
+class CDeref(val expr: CExpression) extends CUnaryOp(expr, "*")
 
 object CDeref {
   def apply(expr: CExpression) = expr match {

@@ -1,25 +1,37 @@
 package ru.mipt.acsl.decode.model.types
 
 import ru.mipt.acsl.decode.model._
-import ru.mipt.acsl.decode.model.naming.{ElementName, Namespace}
+import ru.mipt.acsl.decode.model.naming.{Container, ElementName, Namespace}
 
-import scala.collection.immutable
+trait StructType extends DecodeType with Container {
 
-trait StructType extends GenericType {
-  def fields: Seq[StructField]
+  def objects: Seq[Referenceable]
+
+  def fields: Seq[StructField] = objects.flatMap {
+    case f: StructField => Seq(f)
+    case _ => Seq.empty
+  }
+
+  def field(name: ElementName): Option[StructField] = objects.flatMap {
+    case a: Alias.StructField if a.name == name => Seq(a.obj)
+  } match {
+    case s if s.size == 1 => Some(s.head)
+  }
+
+  def systemName: String = "@" + hashCode()
+
+  override def toString: String =
+    s"${this.getClass}{alias = $alias, namespace = $namespace, objects = [${objects.map(_.toString).mkString(", ")}]"
+
 }
 
 object StructType {
 
-  private class Impl(name: ElementName, namespace: Namespace, info: LocalizedString,
-                     var fields: immutable.Seq[StructField], val typeParameters: Seq[ElementName])
-    extends AbstractType(name, namespace, info) with StructType {
+  private class StructTypeImpl(val alias: Option[Alias.NsType], var namespace: Namespace,
+                               var objects: Seq[Referenceable], val typeParameters: Seq[ElementName])
+    extends StructType
 
-    override def toString: String =
-      s"${this.getClass}{name = $name, namespace = $namespace, info = $info, fields = [${fields.map(_.toString).mkString(", ")}]"
-  }
-
-  def apply(name: ElementName, namespace: Namespace, info: LocalizedString, fields: immutable.Seq[StructField],
+  def apply(alias: Option[Alias.NsType], namespace: Namespace, objects: Seq[Referenceable],
             typeParameters: Seq[ElementName]): StructType =
-    new Impl(name, namespace, info, fields, typeParameters)
+    new StructTypeImpl(alias, namespace, objects, typeParameters)
 }

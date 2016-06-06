@@ -7,8 +7,8 @@ import scala.collection.immutable
 /**
   * @author Artem Shein
   */
-case class GenericTypeName(typeName: ElementName, genericArgumentPaths: immutable.Seq[ProxyPath])
+case class GenericTypeName(typeName: ElementName, genericArgumentPaths: Seq[ProxyPath])
   extends ProxyElementName {
   override def mangledName: ElementName = ElementName.newFromMangledName(typeName.asMangledString +
-    genericArgumentPaths.map(_.mangledName.asMangledString).mkString("<", ",", ">"))
+    genericArgumentPaths.map(_.mangledName.asMangledString).mkString("[", ",", "]"))
 }

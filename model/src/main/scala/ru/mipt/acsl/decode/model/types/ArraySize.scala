@@ -14,7 +14,7 @@ object ArraySize {
 
   private val Zero = BigInt(0)
 
-  private case class Impl(min: BigInt = Zero, max: BigInt = Zero) extends ArraySize {
+  private case class ArraySizeImpl(min: BigInt = Zero, max: BigInt = Zero) extends ArraySize {
 
     require(min >= Zero)
     require(max >= Zero)
@@ -28,5 +28,8 @@ object ArraySize {
 
   }
 
-  def apply(min: BigInt = Zero, max: BigInt = Zero): ArraySize = Impl(min, max)
+  def apply(min: BigInt = Zero, max: BigInt = Zero): ArraySize = ArraySizeImpl(min, max)
+
+  def apply(min: Long, max: Long): ArraySize = apply(min, max)
+
 }

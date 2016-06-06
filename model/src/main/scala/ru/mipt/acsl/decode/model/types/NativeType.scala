@@ -1,20 +1,29 @@
 package ru.mipt.acsl.decode.model.types
 
-import ru.mipt.acsl.decode.model.LocalizedString
 import ru.mipt.acsl.decode.model.naming.{ElementName, Namespace}
 
 /**
   * @author Artem Shein
   */
-trait NativeType extends GenericType {
-  override def toString: String = "NativeType" + super.toString
+trait NativeType extends DecodeType {
+
+  def systemName: String = "@" + hashCode()
+
+  override def toString: String =
+    s"${this.getClass}{alias = $alias, namespace = $namespace, typeParameters = $typeParameters}"
+
 }
 
 object NativeType {
 
-  private class Impl(name: ElementName, ns: Namespace, info: LocalizedString, val typeParameters: Seq[ElementName])
-    extends AbstractType(name, ns, info) with NativeType
+  private class NativeTypeImpl(val _alias: Alias.NsType, var namespace: Namespace,
+                               val typeParameters: Seq[ElementName])
+    extends NativeType {
 
-  def apply(name: ElementName, ns: Namespace, info: LocalizedString, typeParameters: Seq[ElementName]): NativeType =
-    new Impl(name, ns, info, typeParameters)
+    override def alias: Option[Alias.NsType] = Some(_alias)
+
+  }
+
+  def apply(alias: Alias.NsType, ns: Namespace, typeParameters: Seq[ElementName]): NativeType =
+    new NativeTypeImpl(alias, ns, typeParameters)
 }

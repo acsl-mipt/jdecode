@@ -12,17 +12,17 @@ import ru.mipt.acsl.generator.java.ast.{JavaType, JavaTypeApplication}
 object JavaDecodeTypeVisitor {
   def classNameFromTypeName(typeName: String): String = CaseFormat.LOWER_UNDERSCORE.to(CaseFormat.UPPER_CAMEL, typeName)
 
-  def classNameFromArrayType(arrayType: ArrayType): String = "Array" + (
+  /*def classNameFromArrayType(arrayType: ArrayType): String = "Array" + (
     if (arrayType.isFixedSize)
       arrayType.size.min
     else if (arrayType.size.max == 0)
       ""
     else
-      arrayType.size.min + "_" + arrayType.size.max)
+      arrayType.size.min + "_" + arrayType.size.max)*/
 
   def getJavaTypeForDecodeType(t: DecodeType, genericUse: Boolean): JavaType = t match {
     case t: NativeType =>
-      val p = PrimitiveTypeInfo.typeInfoByFqn(t.fqn)
+      val p = PrimitiveTypeInfo.typeInfoByFqn(t.fqn.getOrElse(sys.error("invalid type?")))
       (p.kind, p.bitLength, genericUse) match {
         case (TypeKind.Int, 8, true) => JavaType.Std.BYTE
         case (TypeKind.Int, 8, false) => JavaType.Primitive.BYTE
@@ -47,9 +47,9 @@ object JavaDecodeTypeVisitor {
         case (TypeKind.Float, _, false) => JavaType.Primitive.BOOLEAN
         case _ => sys.error("invalid bit length")
       }
-    case t: ArrayType => new JavaTypeApplication(t.namespace.fqn.asMangledString + "." + JavaDecodeTypeVisitor.classNameFromArrayType(t),
-      JavaDecodeTypeVisitor.getJavaTypeForDecodeType(t.baseType, genericUse = true))
-    case t: AliasType => getJavaTypeForDecodeType(t.baseType, genericUse)
+    /*case t: ArrayType => new JavaTypeApplication(t.namespace.fqn.asMangledString + "." + JavaDecodeTypeVisitor.classNameFromArrayType(t),
+      JavaDecodeTypeVisitor.getJavaTypeForDecodeType(t.baseType, genericUse = true))*/
+    //case t: Alias => getJavaTypeForDecodeType(t.obj, genericUse)
     //case t: HasOptionName => new JavaTypeApplication(t.namespace.fqn.asMangledString + "." + JavaDecodeTypeVisitor.classNameFromTypeName(
       // FIXME: handle Option
     //  t.optionName.get.asMangledString))

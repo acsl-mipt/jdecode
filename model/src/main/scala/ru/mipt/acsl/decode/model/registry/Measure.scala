@@ -1,25 +1,33 @@
 package ru.mipt.acsl.decode.model.registry
 
-import ru.mipt.acsl.decode.model.naming.{ElementName, Namespace}
-import ru.mipt.acsl.decode.model.types.AbstractNameNamespaceInfoAware
-import ru.mipt.acsl.decode.model.{HasInfo, LocalizedString, NamespaceAware, Referenceable}
+import ru.mipt.acsl.decode.model.naming.{ElementName, HasName, Namespace}
+import ru.mipt.acsl.decode.model.types.Alias
+import ru.mipt.acsl.decode.model.{HasInfo, HasNamespace, LocalizedString, Referenceable}
 
 /**
   * @author Artem Shein
   */
-trait Measure extends HasInfo with Referenceable with NamespaceAware {
+trait Measure extends Referenceable with HasNamespace with HasName with HasInfo {
+
+  def alias: Alias.NsMeasure
+
   def display: LocalizedString
-  def namespace_=(ns: Namespace): Unit
+
+  override def name: ElementName = alias.name
+
+  override def namespace: Namespace = alias.parent
+
+  override def info: LocalizedString = alias.info
+
 }
 
 object Measure {
 
-  private class Impl(name: ElementName, namespace: Namespace, var display: LocalizedString,
-                               info: LocalizedString)
-    extends AbstractNameNamespaceInfoAware(name, namespace, info) with Measure
+  private case class MeasureImpl(alias: Alias.NsMeasure, var display: LocalizedString)
+    extends Measure
 
-  def apply(name: ElementName, namespace: Namespace, display: LocalizedString = LocalizedString.empty,
-            info: LocalizedString = LocalizedString.empty): Measure =
-    new Impl(name, namespace, display, info)
+  def apply(alias: Alias.NsMeasure,
+            display: LocalizedString = LocalizedString.empty): Measure =
+    MeasureImpl(alias, display)
 }
 

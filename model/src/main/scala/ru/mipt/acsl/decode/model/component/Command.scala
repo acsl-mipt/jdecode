@@ -1,34 +1,41 @@
 package ru.mipt.acsl.decode.model.component
 
 import ru.mipt.acsl.decode.model._
-import ru.mipt.acsl.decode.model.naming.{ElementName, HasName}
+import ru.mipt.acsl.decode.model.naming.{Container, ElementName, HasName}
 import ru.mipt.acsl.decode.model.proxy.MaybeProxy
-import ru.mipt.acsl.decode.model.types.{AbstractNameInfoAware, DecodeType, Parameter, TypeMeasure}
-
-import scala.collection.immutable
+import ru.mipt.acsl.decode.model.types.{Alias, DecodeType, TypeMeasure}
 
 /**
   * @author Artem Shein
   */
-trait Command extends HasInfo with HasName with HasOptionId {
+trait Command extends Referenceable with Container with HasName with MayHaveId with HasInfo {
 
-  def parameters: immutable.Seq[Parameter]
+  def alias: Alias.ComponentCommand
 
   def returnTypeUnit: TypeMeasure
 
-  def returnTypeProxy: MaybeProxy[DecodeType] = returnTypeUnit.typeProxy
+  def returnTypeProxy: MaybeProxy.TypeProxy = returnTypeUnit.typeProxy
 
   def returnType: DecodeType = returnTypeProxy.obj
+
+  def parameters: Seq[Parameter] = objects.flatMap {
+    case p: Parameter => Seq(p)
+    case _ => Seq.empty
+  }
+
+  override def name: ElementName = alias.name
+
+  override def info: LocalizedString = alias.info
 
 }
 
 object Command {
 
-  private class CommandImpl(name: ElementName, val id: Option[Int], info: LocalizedString,
-                            val parameters: immutable.Seq[Parameter], val returnTypeUnit: TypeMeasure)
-    extends AbstractNameInfoAware(name, info) with Command
+  private case class CommandImpl(alias: Alias.ComponentCommand, id: Option[Int],
+                          var objects: Seq[Referenceable], returnTypeUnit: TypeMeasure)
+    extends Command
 
-  def apply(name: ElementName, id: Option[Int], info: LocalizedString,
-            parameters: immutable.Seq[Parameter], returnTypeUnit: TypeMeasure): Command =
-    new CommandImpl(name, id, info, parameters, returnTypeUnit)
+  def apply(alias: Alias.ComponentCommand, id: Option[Int],
+            objects: Seq[Referenceable], returnTypeUnit: TypeMeasure): Command =
+    CommandImpl(alias, id, objects, returnTypeUnit)
 }

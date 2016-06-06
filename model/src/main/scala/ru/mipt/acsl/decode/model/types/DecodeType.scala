@@ -1,34 +1,48 @@
 package ru.mipt.acsl.decode.model.types
 
-import ru.mipt.acsl.decode.model.{HasInfo, NamespaceAware, Referenceable}
-import ru.mipt.acsl.decode.model.naming.{Fqn, HasName, Namespace}
-import ru.mipt.acsl.decode.model.naming.{HasName, Namespace}
+import ru.mipt.acsl.decode.model.naming.{ElementName, Fqn, Namespace}
+import ru.mipt.acsl.decode.model.{LocalizedString, Referenceable}
 
 /**
   * @author Artem Shein
   */
-trait DecodeType extends Referenceable with HasName with HasInfo with NamespaceAware {
+trait DecodeType extends Referenceable {
 
-  import DecodeType._
-
-  override def namespace: Namespace
+  def namespace: Namespace
 
   def namespace_=(ns: Namespace): Unit
 
-  override def toString: String = s"{name: ${name.asMangledString}, info: $info}"
+  def info: LocalizedString = alias.map(_.info).getOrElse(LocalizedString.empty)
 
-  def fqn: Fqn = Fqn(namespace.fqn.parts :+ name)
+  def alias: Option[Alias.Type]
 
-  def isUnit: Boolean = fqn == UnitFqn // fixme: subtyping & alias
+  def systemName: String
 
-  def isArray: Boolean = fqn == ArrayFqn // fixme: subtyping & alias
+  def typeParameters: Seq[ElementName]
 
-}
+  def isGeneric: Boolean = typeParameters.nonEmpty
 
-object DecodeType {
+  def nameOrSystemName: String = alias.map(_.name.asMangledString).getOrElse(systemName)
 
-  val UnitFqn = Fqn.newFromSource("decode.unit")
+  override def toString: String = s"{alias: ${alias.toString}}"
 
-  val ArrayFqn = Fqn.newFromSource("decode.array")
+  def fqn: Option[Fqn] = alias.map(a => Fqn(namespace.fqn.parts :+ a.name))
+
+  def isUnit: Boolean = sys.error("not implemented")
+
+  def isArray: Boolean = sys.error("not implemented")
+
+  def isNative: Boolean = this match {
+    case _: NativeType => true
+    case _ => false
+  }
+
+  def isOrType: Boolean = fqn.contains(Fqn.Or)
+
+  def isOptionType: Boolean = fqn.contains(Fqn.Option)
+
+  def isVaruintType: Boolean = fqn.contains(Fqn.Varuint)
+
+  def nameOption: Option[ElementName] = alias.map(_.name)
 
 }

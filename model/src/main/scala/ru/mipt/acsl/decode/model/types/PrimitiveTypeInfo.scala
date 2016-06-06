@@ -1,6 +1,6 @@
 package ru.mipt.acsl.decode.model.types
 
-import ru.mipt.acsl.decode.model.naming.Fqn
+import ru.mipt.acsl.decode.model.naming.{ElementName, Fqn}
 
 /**
   * @author Artem Shein
@@ -8,7 +8,9 @@ import ru.mipt.acsl.decode.model.naming.Fqn
 class PrimitiveTypeInfo(val bitLength: Long, val kind: TypeKind.Value)
 
 object PrimitiveTypeInfo {
-  private def fqn(name: String) = Fqn.newFromSource("decode." + name)
+
+  private def fqn(name: String) = Fqn(Fqn.DecodeNamespace, ElementName.newFromSourceName(name))
+
   private def typeInfo(bitLength: Long, kind: TypeKind.Value): PrimitiveTypeInfo = new PrimitiveTypeInfo(bitLength, kind)
 
   val typeInfoByFqn = Map(
@@ -20,7 +22,7 @@ object PrimitiveTypeInfo {
     fqn("i16") -> typeInfo(16, TypeKind.Int),
     fqn("i32") -> typeInfo(32, TypeKind.Int),
     fqn("i64") -> typeInfo(64, TypeKind.Int),
-    fqn("b8") -> typeInfo(8, TypeKind.Bool),
+    fqn("bool") -> typeInfo(8, TypeKind.Bool),
     fqn("f32") -> typeInfo(32, TypeKind.Float),
     fqn("f64") -> typeInfo(64, TypeKind.Float)
   )

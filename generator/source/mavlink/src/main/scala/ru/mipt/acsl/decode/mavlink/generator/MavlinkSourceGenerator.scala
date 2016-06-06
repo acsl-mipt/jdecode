@@ -33,7 +33,7 @@ class MavlinkSourceGenerator(val config: MavlinkSourceGeneratorConfig) {
 
       append("namespace " + config.nsFqn)
       _eol()
-      append("import decode.{u8, u16, u32, u64, i8, i16, i32, i64, f32, f64}")
+      append("import decode.(u8, u16, u32, u64, i8, i16, i32, i64, f32, f64, array, unit)")
       _eol()
       _eol()
       append("language en")
@@ -81,7 +81,7 @@ class MavlinkSourceGenerator(val config: MavlinkSourceGeneratorConfig) {
           else constant.name
           append("\tcommand ")
             .append(CaseFormat.UPPER_UNDERSCORE.to(CaseFormat.LOWER_CAMEL, cmdNameOriginal))
-            .append(" id = ").append(constant.value.get.toString).append(" (")
+            .append(" @id(").append(constant.value.get.toString).append(") (")
           _eol()
           commandMessage.fields.foreach { field =>
             val fieldName = field.name
@@ -104,7 +104,7 @@ class MavlinkSourceGenerator(val config: MavlinkSourceGeneratorConfig) {
             append(",")
             _eol()
           }
-          append("\t)")
+          append("\t): unit")
           _eol()
         }
       }
@@ -118,8 +118,8 @@ class MavlinkSourceGenerator(val config: MavlinkSourceGeneratorConfig) {
             append("\tstatus ").append(name)
               .append(StringUtils.repeat(" ",
                 Math.max(1, 40 - name.length())))
-              .append(" id = ").append(idString)
-              .append(" (").append("_").append(idString).append(")")
+              .append(" @id(").append(idString)
+              .append(") (").append("_").append(idString).append(")")
             _eol()
           case _ =>
         }
@@ -138,12 +138,12 @@ class MavlinkSourceGenerator(val config: MavlinkSourceGeneratorConfig) {
     def _eol(): Unit = eol(appendable)
 
     _eol()
-    append("type ").append(makeTypeNameForEnum(typeName, enumName))
-      .append(" enum ").append(typeName)
     val anEnum = enums.get(enumName).get
     for (i <- anEnum.info) {
-      append(" info '").append(escapeUnaryQuotesString(i)).append("'")
+      append("'").append(escapeUnaryQuotesString(i)).append("'")
     }
+    append("enum ").append(makeTypeNameForEnum(typeName, enumName))
+      .append(" ").append(typeName)
     append(" (")
     _eol()
     anEnum.constants.foreach { c =>
@@ -156,7 +156,7 @@ class MavlinkSourceGenerator(val config: MavlinkSourceGeneratorConfig) {
       }
       for (i <- c.info) {
         append(StringUtils.repeat(" ", Math.max(1, 40 - width)))
-        append(" info '").append(escapeUnaryQuotesString(i)).append("'")
+        append("'").append(escapeUnaryQuotesString(i)).append("'")
       }
       append(",")
       _eol()
@@ -232,7 +232,7 @@ class MavlinkSourceGenerator(val config: MavlinkSourceGeneratorConfig) {
       if (t.contains("[")) {
         val index = t.indexOf('[')
         val baseType = escapeIfKeyword(t.substring(0, index))
-        t = "[" + baseType + ", " + t.substring(index + 1)
+        t = "array[" + baseType + ", " + t.substring(index + 1)
         types += baseType
       }
       else {
@@ -356,7 +356,7 @@ object MavlinkSourceGenerator {
         append("'").append(i).append("'")
         _eol()
       }
-      append("type ").append(typeName).append(" struct")
+      append("struct ").append(typeName).append(" ")
       append("(")
       _eol()
 

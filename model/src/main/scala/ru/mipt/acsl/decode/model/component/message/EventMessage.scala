@@ -1,30 +1,41 @@
 package ru.mipt.acsl.decode.model.component.message
 
-import ru.mipt.acsl.decode.model._
 import ru.mipt.acsl.decode.model.component.Component
-import ru.mipt.acsl.decode.model.types.{DecodeType, HasBaseType, Parameter}
 import ru.mipt.acsl.decode.model.naming.ElementName
 import ru.mipt.acsl.decode.model.proxy.MaybeProxy
+import ru.mipt.acsl.decode.model.types.{Alias, DecodeType}
+import ru.mipt.acsl.decode.model.{LocalizedString, Referenceable, TmParameter}
 
-trait EventMessage extends TmMessage with HasBaseType {
+trait EventMessage extends TmMessage {
 
-  def fields: Seq[Either[MessageParameter, Parameter]]
+  def alias: Alias.ComponentEventMessage
 
-  def baseTypeProxy: MaybeProxy[DecodeType]
+  def baseTypeProxy: MaybeProxy.TypeProxy
 
-  override def baseType: DecodeType = baseTypeProxy.obj
+  def baseType: DecodeType = baseTypeProxy.obj
+
+  override def name: ElementName = alias.name
+
+  override def info: LocalizedString = alias.info
+
+  override def component: Component = alias.parent
+
+  def parameters: Seq[TmParameter] = objects.flatMap {
+    case m: TmParameter => Seq(m)
+    case _ => Seq.empty
+  }
 
 }
 
 object EventMessage {
 
-  private class EventMessageImpl(component: Component, name: ElementName, id: Option[Int], info: LocalizedString,
-                                 val fields: Seq[Either[MessageParameter, Parameter]],
-                                 val baseTypeProxy: MaybeProxy[DecodeType])
-    extends AbstractImmutableMessage(component, name, id, info) with EventMessage
+  private case class EventMessageImpl(alias: Alias.ComponentEventMessage, id: Option[Int],
+                          var objects: Seq[Referenceable],
+                          baseTypeProxy: MaybeProxy.TypeProxy)
+    extends EventMessage
 
-  def apply(component: Component, name: ElementName, id: Option[Int], info: LocalizedString,
-            fields: Seq[Either[MessageParameter, Parameter]],
-            baseTypeProxy: MaybeProxy[DecodeType]): EventMessage =
-    new EventMessageImpl(component, name, id, info, fields, baseTypeProxy)
+  def apply(alias: Alias.ComponentEventMessage, id: Option[Int],
+            objects: Seq[Referenceable],
+            baseTypeProxy: MaybeProxy.TypeProxy): EventMessage =
+    EventMessageImpl(alias, id, objects, baseTypeProxy)
 }

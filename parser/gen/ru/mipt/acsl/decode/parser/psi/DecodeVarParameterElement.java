@@ -7,6 +7,9 @@ import com.intellij.psi.PsiElement;
 
 public interface DecodeVarParameterElement extends PsiElement {
 
+  @Nullable
+  DecodeElementInfo getElementInfo();
+
   @NotNull
   DecodeElementNameRule getElementNameRule();
 

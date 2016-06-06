@@ -5,6 +5,6 @@ import ru.mipt.acsl.decode.model.naming.Namespace
 /**
   * @author Artem Shein
   */
-trait NamespaceAware {
+trait HasNamespace {
   def namespace: Namespace
 }

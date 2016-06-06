@@ -6,10 +6,10 @@ import java.net.URLEncoder
 
 import com.google.common.base.Charsets
 import ru.mipt.acsl.decode.model.component.Component
-import ru.mipt.acsl.decode.model.component.message.{MessageParameter, _}
-import ru.mipt.acsl.decode.model.naming.{Fqn, Namespace, _}
+import ru.mipt.acsl.decode.model.naming.{Fqn, Namespace}
 import ru.mipt.acsl.decode.model.registry.{Language, Registry}
 import ru.mipt.acsl.decode.model.types.{DecodeType, StructType, _}
+import ru.mipt.acsl.decode.model.{Parameter, StatusParameter}
 
 import scalatags.Text.all._
 import scalatags.Text.tags2.{title => titleTag}
@@ -149,28 +149,27 @@ class HtmlModelDocGenerator(val config: HtmlModelDocGeneratorConfiguration) {
   }
 
   def typeKind(t: DecodeType): Tag = t match {
-    case a: ArrayType => td("Массив " + typeName(a.baseType) + " элементов")
-    case a: AliasType => td("Псевдоним для ", typeNameWithLink(a.baseType))
+    case array if array.isArray => td("Массив " + typeName(ArrayTypeInfo(array).baseType) + " элементов")
+    case a: Alias.Type => td("Псевдоним для ", typeNameWithLink(a.obj))
     case s: SubType => td("Расширение типа ", typeNameWithLink(s.baseType))
     case s: StructType => td("Структура", br, "Поля:",
       table(cls := "table", style := "width: auto")(
         thead(tr(th("Имя поля"), th("Тип"), th("Описание"))),
-        tbody(s.fields.map(f => tr(td(f.name.asMangledString), td(typeNameWithLink(f.typeUnit.t)),
+        tbody(s.fields.map(f => tr(td(f.name.asMangledString), td(typeNameWithLink(f.typeMeasure.t)),
           td(StringFrag(f.info.getOrElse(lang, ""))))): _*)))
     case e: EnumType => td("Перечисление" +
       e.extendsTypeOption.map(ext => " расширяющее " + typeName(ext)).getOrElse(""),
       br, "Базовый тип: ", typeNameWithLink(e.baseType), br, "Константы:",
       ul(e.allConstants.toSeq.sortBy(_.value.toString).map(c => li(c.name.asMangledString + " = " + c.value)): _*))
     case n: NativeType =>
-      val p = PrimitiveTypeInfo.typeInfoByFqn.get(n.fqn)
+      val p = PrimitiveTypeInfo.typeInfoByFqn.get(n.fqn.getOrElse(sys.error("not implemented")))
       td(StringFrag(p.map(pi => pi.bitLength + "-битный " + TypeKind.nameForTypeKind(pi.kind))
         .getOrElse("Системный встроенный тип")))
-    case g: GenericType => td("Обобщенный тип ")(g.name.asMangledString)('<' +
-      g.typeParameters.map(_.map(_.asMangledString).getOrElse("")).mkString(", ") + '>')
+    /*case g: GenericType => td("Обобщенный тип ")(g.name.asMangledString)('<' +
+      g.typeParameters.map(_.map(_.asMangledString).getOrElse("")).mkString(", ") + '>')*/
     case s: GenericTypeSpecialized =>
       td("Специализированный обобщенный тип ", typeNameWithLink(s.genericType), "<",
-        raw(s.genericTypeArguments.map(
-          _.map(mt => typeNameWithLink(mt).toString).getOrElse("void")).mkString(", ")), ">")
+        raw(s.genericTypeArguments.map(typeNameWithLink(_).toString).mkString(", ")), ">")
   }
 
   def htmlId(ns: Namespace): String = "n" + URLEncoder.encode(ns.fqn.asMangledString, Charsets.UTF_8.name)
@@ -181,12 +180,10 @@ class HtmlModelDocGenerator(val config: HtmlModelDocGeneratorConfiguration) {
     a(href := "#" + htmlId(t))(typeName(t))
 
   def typeName(t: DecodeType): String = t match {
-    case a: ArrayType => "[" + typeName(a.baseType) + "]"
-    case t: GenericTypeSpecialized => typeName(t.genericType) + "<" + t.genericTypeArguments.map {
-      case Some(at) => typeName(at)
-      case _ => "void"
-    } .mkString(", ")+ ">"
-    case _ => t.name.asMangledString
+    case array if array.isArray => "[" + typeName(ArrayTypeInfo(array).baseType) + "]"
+    case t: GenericTypeSpecialized => typeName(t.genericType) + "<" +
+      t.genericTypeArguments.map(a => typeName(a)) .mkString(", ")+ ">"
+    case _ => sys.error("not implemented") //t.name.asMangledString
   }
 
   def generateComponent(component: Component): Seq[Tag] = {
@@ -195,8 +192,8 @@ class HtmlModelDocGenerator(val config: HtmlModelDocGeneratorConfiguration) {
         Seq.empty
       else
         Seq(p("Включает компоненты: ", raw(component.subComponents.map(cr =>
-          a(href := "#" + htmlId(cr.component))(cr.component.name.asMangledString) +
-            cr.alias.map(" под именем " + _).getOrElse("")).mkString(", ")), "."))) ++
+          a(href := "#" + htmlId(cr.obj))(cr.obj.name.asMangledString) +
+            (if (cr.name == cr.obj.name) " под именем " + cr.name.asMangledString else "")).mkString(", ")), "."))) ++
       component.info.get(lang).map(div(_)).toSeq ++
       component.baseType.map(bt => Seq(h4("Параметры"),
         table(cls := "table table-bordered", style := "width: auto")(
@@ -204,8 +201,8 @@ class HtmlModelDocGenerator(val config: HtmlModelDocGeneratorConfiguration) {
           tbody(bt.fields.map(f =>
             tr(
               td(f.name.asMangledString),
-              td(typeNameWithLink(f.typeUnit.t)),
-              td(StringFrag(f.typeUnit.unit.map(_.name.asMangledString).getOrElse(""))),
+              td(typeNameWithLink(f.typeMeasure.t)),
+              td(StringFrag(f.typeMeasure.measure.map(_.name.asMangledString).getOrElse(""))),
               td(StringFrag(f.info.getOrElse(lang, ""))))): _*))))
         .getOrElse(Seq.empty) ++
       (if (component.eventMessages.isEmpty)
@@ -215,9 +212,9 @@ class HtmlModelDocGenerator(val config: HtmlModelDocGeneratorConfiguration) {
           component.eventMessages.flatMap(e => Seq(h5(e.name.asMangledString)) ++ Seq(e.info.get(lang).map(div(_))).flatten ++
             Seq(table(cls := "table table-bordered", style := "width: auto")(
               thead(tr(th("Параметр или переменная"), th("Тип параметра"), th("Описание параметра"))),
-              tbody(e.fields.map{
-                case Left(mp) => trForMessageParameter(mp, component)
-                case Right(parameter) => trForParameter(parameter)
+              tbody(e.parameters.map{
+                case s @ StatusParameter(_) => trForMessageParameter(s, component)
+                case p @ Parameter(_) => trForParameter(p)
               }: _*))))) ++
       (if (component.statusMessages.isEmpty)
         Seq.empty
@@ -234,7 +231,10 @@ class HtmlModelDocGenerator(val config: HtmlModelDocGeneratorConfiguration) {
         Seq(h4("Команды")) ++
           component.commands.flatMap{ c =>
             Seq(h4(c.name.asMangledString), p("Возвращаемое значение: ",
-              c.returnType.map(rt => a(href := "#" + htmlId(rt))(typeName(rt))).getOrElse("нет"), ".")) ++
+              c.returnType match {
+                case t if t.isUnit => "нет"
+                case rt => a(href := "#" + htmlId(rt))(typeName(rt))
+              }, ".")) ++
               Seq(c.info.get(lang).map(div(_))).flatten ++
               (if (c.parameters.isEmpty)
                 Seq.empty
@@ -246,7 +246,7 @@ class HtmlModelDocGenerator(val config: HtmlModelDocGeneratorConfiguration) {
     Seq(hr)
   }
 
-  def trForMessageParameter(mp: MessageParameter, component: Component): Tag =
+  def trForMessageParameter(mp: StatusParameter, component: Component): Tag =
     tr(
       td("Параметр " + mp.path),
       td(typeNameWithLink(mp.ref(component).resultType)),

@@ -1,7 +1,7 @@
 ru"Модуль управления бортовыми скриптами (циклограммами)"
 namespace ru.mipt.acsl.scripting
 
-import decode.(varuint, b8, u8)
+import decode.(varuint, bool, u8, array)
 import ru.mipt.acsl.foundation.(s, guid, error_code)
 
 language ru
@@ -28,16 +28,16 @@ struct script_run_timing
   'Идентификатор запланированного запуска'
   ^id: guid,
   'Запуск запланирован'
-  isActive: b8,
+  isActive: bool,
   scriptId: script_id,
   'Время запуска'
   runOn: date_time,
   'Периодический скрипт'
-  isRepeated: b8,
+  isRepeated: bool,
   'Период повторения'
   repeatPeriod: period /s/,
   'Повторение ограничено'
-  isRepeatingLimitedByDate: b8,
+  isRepeatingLimitedByDate: bool,
   'Дата и время окончания повторения запусков скрипта'
   repeatUntil: date_time,
 )

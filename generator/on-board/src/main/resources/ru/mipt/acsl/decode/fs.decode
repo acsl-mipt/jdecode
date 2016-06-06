@@ -1,7 +1,7 @@
 ru"Модуль доступа к бортовой файловой системе"
 namespace ru.mipt.acsl.fs
 
-import decode.(array, varuint, or, u8, b8)
+import decode.(array, varuint, or, u8, bool)
 
 import ru.mipt.acsl.foundation.string
 import ru.mipt.acsl.foundation.error_code
@@ -24,7 +24,7 @@ struct node_info
   'Имя узла в пределах каталога'
   name: string,
   'Флаг каталога'
-  isDir: b8,
+  isDir: bool,
   'Аттрибуты узла'
   attrs: varuint,
 )

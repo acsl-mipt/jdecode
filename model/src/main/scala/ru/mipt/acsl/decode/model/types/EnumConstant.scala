@@ -2,24 +2,26 @@ package ru.mipt.acsl.decode.model.types
 
 import ru.mipt.acsl.decode.model._
 import ru.mipt.acsl.decode.model.expr.ConstExpr
-import ru.mipt.acsl.decode.model.naming.ElementName
+import ru.mipt.acsl.decode.model.naming.{ElementName, HasName}
 
 /**
   * Created by metadeus on 08.03.16.
   */
-trait EnumConstant extends HasNameAndInfo {
+trait EnumConstant extends Referenceable with HasName {
 
-  def name: ElementName
+  def alias: Alias.EnumConstant
 
   def value: ConstExpr
+
+  override def name: ElementName = alias.name
 
 }
 
 object EnumConstant {
 
-  private class Impl(val name: ElementName, val value: ConstExpr, info: LocalizedString)
-    extends AbstractHasInfo(info) with EnumConstant
+  private case class EnumConstantImpl(alias: Alias.EnumConstant, value: ConstExpr)
+    extends EnumConstant
 
-  def apply(name: ElementName, value: ConstExpr, info: LocalizedString): EnumConstant =
-    new Impl(name, value, info)
+  def apply(alias: Alias.EnumConstant, value: ConstExpr): EnumConstant =
+    EnumConstantImpl(alias, value)
 }

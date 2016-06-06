@@ -13,8 +13,8 @@ trait BigDecimalRangeExpr {
 
 object BigDecimalRangeExpr {
 
-  private case class Impl(from: BigDecimalLiteral, to: BigDecimalLiteral) extends BigDecimalRangeExpr
+  private case class BigDecimalRangeExprImpl(from: BigDecimalLiteral, to: BigDecimalLiteral) extends BigDecimalRangeExpr
 
-  def apply(from: BigDecimalLiteral, to: BigDecimalLiteral): BigDecimalRangeExpr = Impl(from, to)
+  def apply(from: BigDecimalLiteral, to: BigDecimalLiteral): BigDecimalRangeExpr = BigDecimalRangeExprImpl(from, to)
 
 }

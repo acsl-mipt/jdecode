@@ -19,22 +19,22 @@ class MessageParameterRefWalker(var component: Component, var structField: Optio
   override def t: DecodeType = if (structField.isEmpty)
     component.baseType.get
   else
-    TypeMessageParameterPathWalker(structField.get.typeUnit.t, path.head)
+    TypeMessageParameterPathWalker(structField.get.typeMeasure.t, path.head)
 
   override def resultType: DecodeType = if (structField.isEmpty)
     component.baseType.get
   else
-    path.foldLeft(structField.get.typeUnit.t)(TypeMessageParameterPathWalker)
+    path.foldLeft(structField.get.typeMeasure.t)(TypeMessageParameterPathWalker)
 
   private def findSubComponent(elementName: ElementName): Option[Try[Unit]] =
-    component.subComponents.find(elementName.asMangledString == _.aliasOrMangledName).map { subComponent =>
-      component = subComponent.component
+    component.subComponents.find(elementName == _.name).map { subComponent =>
+      component = subComponent.obj
       structField = None
       Success(Unit)
     }
 
   private def findBaseTypeField(elementName: ElementName): Option[Try[Unit]] =
-    component.baseType.flatMap(_.fields.find(elementName == _.name).map { f =>
+    component.baseType.flatMap(_.field(elementName).map { f =>
       structField = Some(f)
       Success(Unit)
     })

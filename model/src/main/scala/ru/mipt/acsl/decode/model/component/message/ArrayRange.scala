@@ -16,7 +16,7 @@ object ArrayRange {
 
   private val Zero = BigInt(0)
 
-  private case class Impl(min: BigInt, max: Option[BigInt]) extends ArrayRange {
+  private case class ArrayRangeImpl(min: BigInt, max: Option[BigInt]) extends ArrayRange {
 
     override def toString: String = (min, max) match {
       case (Zero, None) => "*"
@@ -37,5 +37,5 @@ object ArrayRange {
     }
   }
 
-  def apply(min: BigInt, max: Option[BigInt]): message.ArrayRange = Impl(min, max)
+  def apply(min: BigInt, max: Option[BigInt]): message.ArrayRange = ArrayRangeImpl(min, max)
 }

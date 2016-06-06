@@ -1,29 +1,33 @@
 package ru.mipt.acsl.decode.model.types
 
-import ru.mipt.acsl.decode.model.LocalizedString
-import ru.mipt.acsl.decode.model.naming.Namespace
-import ru.mipt.acsl.decode.model.naming.ElementName
+import ru.mipt.acsl.decode.model.naming.{ElementName, Namespace}
 import ru.mipt.acsl.decode.model.proxy.MaybeProxy
 
 /**
   * @author Artem Shein
   */
-trait SubType extends GenericType with HasBaseType {
+trait SubType extends DecodeType {
 
   def typeMeasure: TypeMeasure
 
-  def baseTypeProxy: MaybeProxy[DecodeType] = typeMeasure.typeProxy
+  def baseTypeProxy: MaybeProxy.TypeProxy = typeMeasure.typeProxy
 
-  override def baseType: DecodeType = baseTypeProxy.obj
+  def baseType: DecodeType = baseTypeProxy.obj
+
+  def systemName: String = "@" + hashCode()
+
+  override def toString: String =
+    s"${this.getClass}{alias = $alias, namespace = $namespace, typeMeasure = $typeMeasure, typeParameters = $typeParameters}"
+
 }
 
 object SubType {
 
-  private class Impl(name: ElementName, namespace: Namespace, info: LocalizedString,
-                     val typeMeasure: TypeMeasure, val typeParameters: Seq[ElementName])
-    extends AbstractType(name, namespace, info) with SubType
+  private class SubTypeImpl(val alias: Option[Alias.NsType], var namespace: Namespace,
+                            val typeMeasure: TypeMeasure, val typeParameters: Seq[ElementName])
+    extends SubType
 
-  def apply(name: ElementName, namespace: Namespace, info: LocalizedString,
-            typeMeasure: TypeMeasure, typeParameters: Seq[ElementName]): SubType =
-    new Impl(name, namespace, info, typeMeasure, typeParameters)
+  def apply(alias: Option[Alias.NsType], namespace: Namespace, typeMeasure: TypeMeasure,
+            typeParameters: Seq[ElementName]): SubType =
+    new SubTypeImpl(alias, namespace, typeMeasure, typeParameters)
 }

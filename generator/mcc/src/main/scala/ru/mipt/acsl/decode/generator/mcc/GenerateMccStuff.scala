@@ -15,13 +15,18 @@ import ru.mipt.acsl.geotarget.{OnBoardCSourceGenerator, OnBoardModelRegistry}
   */
 object GenerateMccStuff {
 
-  val PixhawkComponentFqn = Fqn.newFromSource("mavlink.Pixhawk")
+  val PixhawkComponentFqn = Fqn("mavlink.Pixhawk")
 
   val PixhawkSourceResource = "pixhawk/pixhawk.xml"
   val PixhawkIncludes = Seq("pixhawk/common.xml")
 
   def main(args: Array[String]): Unit = {
-    require(args.nonEmpty)
+
+    if (args.isEmpty) {
+      println(s"Usage: generate-mcc-stuff <json output file path>")
+      sys.exit(1)
+    }
+
     new FileOutputStream(new File(args(0))) { os: OutputStream =>
 
       val pixhawkOutput = new ByteArrayOutputStream()

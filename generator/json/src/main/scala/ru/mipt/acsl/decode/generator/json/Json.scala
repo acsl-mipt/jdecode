@@ -10,57 +10,61 @@ import io.circe.syntax._
   */
 private object Json {
 
+  sealed trait Referenceable
+
   case class LocalizedString(map: Map[String, String])
 
   sealed trait ConstExpr
 
   case class NumberLiteral(value: String) extends ConstExpr
 
-  case class Unit(name: String, info: LocalizedString, display: LocalizedString)
+  case class Measure(alias: Int, display: LocalizedString)
+    extends Referenceable
 
-  case class Root(units: Seq[Unit], types: Seq[Type], components: Seq[Component], namespaces: Seq[Namespace])
+  case class Root(objects: Seq[Referenceable])
 
-  sealed trait Type {
-    def name: String
+  sealed trait Type extends Referenceable
 
-    def info: LocalizedString
-  }
+  case class Component(alias: Int, namespace: Int, baseType: Option[Int],
+                       objects: Seq[Int], kind: String = "component")
+    extends Referenceable
 
-  case class Component(name: String, namespace: Int, subComponents: Seq[ComponentRef], baseType: Option[Int],
-                       commands: Seq[Command], eventMessages: Seq[EventMessage], statusMessages: Seq[StatusMessage])
+  case class ComponentRef(alias: String, component: Int)
 
-  case class ComponentRef(alias: Option[String], component: Int)
+  case class Namespace(alias: Int, parent: Option[Int] = None, kind: String = "namespace")
+    extends Referenceable
 
-  case class Namespace(name: String, info: LocalizedString, parent: Option[Int] = None)
-
-  case class Alias(name: String, info: LocalizedString, namespace: Int, baseType: Int, kind: String = "alias")
+  case class Alias(name: String, info: LocalizedString, namespace: Int, obj: Int, kind: String = "alias")
     extends Type
 
-  case class SubType(name: String, info: LocalizedString, namespace: Int, baseType: Int, kind: String = "subtype") extends Type
+  case class SubType(alias: Option[Int], namespace: Int, baseType: Int, kind: String = "subtype") extends Type
 
-  case class NativeType(name: String, info: LocalizedString, namespace: Int, kind: String = "native") extends Type
+  case class NativeType(alias: Int, namespace: Int, kind: String = "native") extends Type
 
-  case class StructField(name: String, typeUnit: TypeUnit)
+  case class StructField(alias: Int, typeUnit: TypeMeasure) extends Referenceable
 
-  case class StructType(name: String, info: LocalizedString, namespace: Int, fields: Seq[StructField],
+  case class StructType(alias: Option[Int], namespace: Int, objects: Seq[Referenceable],
                         kind: String = "struct") extends Type
 
-  case class GenericTypeSpecialized(name: String, info: LocalizedString, namespace: Int, genericType: Int,
+  case class GenericTypeSpecialized(alias: Option[Int], namespace: Int, genericType: Int,
                                     genericTypeArguments: Seq[Int], kind: String = "specialized") extends Type
 
-  case class EnumType(name: String, info: LocalizedString, namespace: Int, extendsType: Option[Int],
-                      baseType: Option[Int], isFinal: Boolean, constants: Seq[EnumConst],
+  case class EnumType(alias: Option[Int], namespace: Int, extendsType: Option[Int],
+                      baseType: Option[Int], isFinal: Boolean, objects: Seq[Int],
                       kind: String = "enum") extends Type
+
+  case class Const(alias: Int, namespace: Int, value: String) extends Type
 
   object Type
 
-  case class EnumConst(name: String, value: ConstExpr, info: LocalizedString)
+  case class EnumConst(alias: Int, value: ConstExpr)
+    extends Referenceable
 
-  case class TypeUnit(t: Int, unit: Option[Int])
+  case class TypeMeasure(t: Int, unit: Option[Int]) extends Type
 
-  trait Field
+  trait Field extends Referenceable
 
-  case class Parameter(name: String, info: LocalizedString, typeUnit: TypeUnit) extends Field
+  case class Parameter(alias: Int, typeMeasure: TypeMeasure) extends Field
 
   trait ParameterPathElement
 
@@ -68,14 +72,17 @@ private object Json {
 
   case class ArrayRange(min: String, max: Option[String]) extends ParameterPathElement
 
-  case class MessageParameter(info: LocalizedString, path: Seq[ParameterPathElement]) extends Field
+  case class StatusParameter(info: LocalizedString, path: Seq[ParameterPathElement]) extends Field
 
-  case class Command(name: String, info: LocalizedString, parameters: Seq[Parameter], returnType: Int)
+  case class Command(alias: Int, objects: Seq[Int], returnType: Int)
+    extends Referenceable
 
-  case class EventMessage(name: String, info: LocalizedString, baseType: Int, id: Option[Int], fields: Seq[Field])
+  case class EventMessage(alias: Int, baseType: Int, id: Option[Int], objects: Seq[Int])
+    extends Referenceable
 
-  case class StatusMessage(name: String, info: LocalizedString, id: Option[Int], priority: Option[Int],
-                           parameters: Seq[MessageParameter])
+  case class StatusMessage(alias: Int, id: Option[Int], priority: Option[Int],
+                           objects: Seq[Int])
+    extends Referenceable
 
   implicit val encoderLocalizedString: Encoder[LocalizedString] = Encoder.instance {
     case i if i.map.isEmpty => circe.Json.Null
@@ -93,16 +100,31 @@ private object Json {
     case e: EnumType => e.asJson
     case s: GenericTypeSpecialized => s.asJson
     case n: NativeType => n.asJson
+    case c: Const => c.asJson
+    case tm: TypeMeasure => tm.asJson
   }
 
   implicit val encodeField: Encoder[Field] = Encoder.instance {
     case p: Parameter => p.asJson
-    case mp: MessageParameter => mp.asJson
+    case mp: StatusParameter => mp.asJson
   }
 
   implicit val encodePathElement: Encoder[ParameterPathElement] = Encoder.instance {
     case e: ElementName => e.asJson
     case ar: ArrayRange => ar.asJson
+  }
+
+  implicit val encodeReferenceable: Encoder[Referenceable] = Encoder.instance {
+    case t: Type => t.asJson
+    case c: Component => c.asJson
+    case m: Measure => m.asJson
+    case ns: Namespace => ns.asJson
+    case sf: StructField => sf.asJson
+    case e: EnumConst => e.asJson
+    case c: Command => c.asJson
+    case p: Parameter => p.asJson
+    case sm: StatusMessage => sm.asJson
+    case sp: StatusParameter => sp.asJson
   }
 
 }

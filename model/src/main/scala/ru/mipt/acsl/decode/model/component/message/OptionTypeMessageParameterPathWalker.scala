@@ -2,7 +2,7 @@ package ru.mipt.acsl.decode.model
 package component
 package message
 
-import ru.mipt.acsl.decode.model.types.{AliasType, DecodeType, GenericTypeSpecialized, NativeType, StructType, SubType}
+import ru.mipt.acsl.decode.model.types.{DecodeType, GenericTypeSpecialized, StructType, SubType}
 
 /**
   * @author Artem Shein
@@ -20,11 +20,9 @@ case object OptionTypeMessageParameterPathWalker
       if (pathElement.isRight)
         sys.error(s"invalid token ${pathElement.right.get}")
       val name = pathElement.left.get
-      Some(t.fields.find(_.name == name)
-        .getOrElse {
+      Some(t.field(name).getOrElse {
           sys.error(s"Field '$name' not found in struct '$t'")
-        }.typeUnit.t)
-    case t: AliasType => apply(t.baseType, pathElement)
+        }.typeMeasure.t)
     case _ => None
   }
 
