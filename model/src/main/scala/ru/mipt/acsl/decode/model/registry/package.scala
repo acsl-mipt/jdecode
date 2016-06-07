@@ -1,13 +1,12 @@
 package ru.mipt.acsl.decode.model
 
+import ru.mipt.acsl.decode.model.component.Component
 import ru.mipt.acsl.decode.model.component.message.{EventMessage, StatusMessage}
-import ru.mipt.acsl.decode.model.component.{Command, Component}
 import ru.mipt.acsl.decode.model.naming.{Container, ElementName, Fqn, Namespace}
-import ru.mipt.acsl.decode.model.proxy.{ResolvingMessages, Result}
-import ru.mipt.acsl.decode.model.types.{Alias, DecodeType, EnumType, NativeType, StructField, SubType, TypeMeasure}
+import ru.mipt.acsl.decode.model.proxy.ResolvingMessages
+import ru.mipt.acsl.decode.model.types.{DecodeType, EnumType, NativeType}
 
 import scala.collection.JavaConversions._
-import scala.collection.mutable
 
 package object registry {
 
@@ -58,44 +57,13 @@ package object registry {
     def eventMessageOrFail(fqn: String): EventMessage =
       eventMessage(fqn).getOrElse(sys.error("assertion error"))
 
-    def resolve(): ResolvingMessages = resolve(r.rootNamespace)
+    def resolve(): ResolvingMessages = RegistryUtils.resolve(r, r.rootNamespace)
 
     def validate(): ValidatingResult = validate(r.rootNamespace)
 
-    def resolve(obj: Referenceable): ResolvingMessages = obj match {
-      case container: Container =>
-        container.objects.flatMap(resolve(_)) ++
-          (container match {
-            case c: Command =>
-              c.returnTypeProxy.resolve(r)
-            case e: EnumType =>
-              val proxy = e.extendsOrBaseTypeProxy()
-              val enum = proxy.maybeProxyEnum()
-              if (enum.isPresent)
-                enum.get().resolve(r)
-              else
-                proxy.typeMeasure().get().typeProxy.resolve(r)
-            case e: EventMessage =>
-              e.baseTypeProxy.resolve(r)
-            case _ =>
-              ResolvingMessages.empty
-          })
-      case cc: Alias.ComponentComponent =>
-        cc.obj().resolve(r)
-      case s: SubType if !s.isGeneric =>
-        s.typeMeasure.typeProxy.resolve(r)
-      case tm: TypeMeasure =>
-        tm.typeProxy.resolve(r) ++ Option(tm.measureProxy.orElse(null)).seq.flatMap(_.resolve(r))
-      case p: Parameter =>
-        p.typeProxy.resolve(r) ++ Option(p.measureProxy.orElse(null)).seq.flatMap(_.resolve(r))
-      case sf: StructField =>
-        sf.typeMeasure.typeProxy.resolve(r) ++ Option(sf.typeMeasure.measureProxy.orElse(null)).seq.flatMap(_.resolve(r))
-      case _ => ResolvingMessages.empty
-    }
-
     def validate(obj: Referenceable): ValidatingResult = obj match {
       case container: Container =>
-        container.objects.flatMap(validate(_))
+        container.objects.foldLeft(ValidatingResult.newInstance()){(r, ref) => r.addAll(validate(ref)); r}
     }
 
     /*def resolve(c: Component): ResolvingMessages = {
@@ -132,33 +100,33 @@ package object registry {
     }*/
 
     def validate(c: Component): ValidatingResult = {
-      val result = mutable.Buffer.empty[ResolvingMessages]
+      val result = ValidatingResult.newInstance()
 
-      c.baseTypeProxy.map { t =>
-        result += validate(t.obj)
+      c.baseTypeProxy.foreach { t =>
+        result.addAll(validate(t.obj))
       }
 
       c.commands.foreach { cmd =>
-        result += validate(cmd.returnType)
+        result.addAll(validate(cmd.returnType))
         cmd.parameters.foreach { arg =>
-          result += validate(arg.parameterType)
-          Option(arg.measure.orElse(null)).map(u => result += validate(u))
+          result.addAll(validate(arg.parameterType))
+          Option(arg.measure.orElse(null)).foreach(u => result.addAll(validate(u)))
         }
       }
 
       c.eventMessages.foreach { e =>
-        result += validate(e.baseType)
+        result.addAll(validate(e.baseType))
         e.parameters.foreach {
-          case p: Parameter => result += validate(p.typeMeasure().t)
+          case p: Parameter => result.addAll(validate(p.typeMeasure().t))
           case _ =>
         }
       }
 
       c.subComponents.foreach { scr =>
         val sc = scr.obj
-        result += validate(sc)
+        result.addAll(validate(sc))
       }
-      result.flatten
+      result
     }
 
     /*def resolve(t: DecodeType): ResolvingMessages = {
@@ -188,7 +156,7 @@ package object registry {
     }*/
 
     def validate(t: DecodeType): ValidatingResult = {
-      val result = mutable.Buffer.empty[ValidatingResult]
+      val result = ValidatingResult.newInstance()
       t match {
         case t: EnumType =>
           val extendsOrBaseType = t.eitherExtendsOrBaseType
@@ -197,20 +165,20 @@ package object registry {
             case true => enumType.get() match {
               case e: EnumType =>
               case e =>
-                result += Result.error(s"enum type can extend an enum, not a ${e.getClass}")
+                result.add(Message.newError(s"enum type can extend an enum, not a ${e.getClass}"))
             }
             case false => extendsOrBaseType.typeMeasure().get() match {
               case _: NativeType =>
               case b =>
-                result += Result.error(s"enum base type must be an instance of PrimitiveType or NativeType, not a ${b.getClass}")
+                result.add(Message.newError(s"enum base type must be an instance of PrimitiveType or NativeType, not a ${b.getClass}"))
             }
           }
         case _ =>
       }
-      result.flatten
+      result
     }
 
-    def validate(u: Measure): ValidatingResult = ValidatingResult.empty
+    def validate(u: Measure): ValidatingResult = ValidatingResult.newInstance()
 
     /*def getOrCreateNamespaceByFqn(namespaceFqn: String): Namespace = {
       require(!namespaceFqn.isEmpty)

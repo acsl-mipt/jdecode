@@ -22,4 +22,12 @@ public class FqnImpl implements Fqn {
         this.parts = parts;
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (o == null || !(o instanceof Fqn))
+            return false;
+        Fqn fqn = (Fqn) o;
+        return getParts().equals(fqn.getParts());
+    }
+
 }

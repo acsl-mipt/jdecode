@@ -2,10 +2,10 @@ package ru.mipt.acsl.decode.parser
 
 import java.nio.charset.StandardCharsets._
 
+import scala.collection.JavaConversions._
 import com.google.common.io.Resources
 import com.typesafe.scalalogging.LazyLogging
 import ru.mipt.acsl.decode.model.registry.Registry
-import ru.mipt.acsl.modeling.ErrorLevel
 
 /**
   * @author Artem Shein
@@ -30,8 +30,8 @@ object ModelRegistry extends LazyLogging {
   def registry(sources: Seq[String]): Registry = {
     val registry = Provider.provide(Config, sources)
     val resolvingResult = registry.resolve()
-    if (resolvingResult.exists(_.level == ErrorLevel))
-      resolvingResult.foreach(msg => logger.error(msg.text))
+    if (resolvingResult.hasError)
+      resolvingResult.messages().foreach(msg => logger.error(msg.text))
     registry
   }
 

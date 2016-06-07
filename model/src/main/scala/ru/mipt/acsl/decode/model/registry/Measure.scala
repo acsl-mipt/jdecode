@@ -1,9 +1,10 @@
 package ru.mipt.acsl.decode.model.registry
 
 import java.util
+
 import ru.mipt.acsl.decode.model.naming.{ElementName, HasName, Namespace}
 import ru.mipt.acsl.decode.model.types.Alias
-import ru.mipt.acsl.decode.model.{HasInfo, HasNamespace, Referenceable}
+import ru.mipt.acsl.decode.model.{HasInfo, HasNamespace, Referenceable, ReferenceableVisitor}
 
 /**
   * @author Artem Shein
@@ -19,6 +20,10 @@ trait Measure extends Referenceable with HasNamespace with HasName with HasInfo 
   override def namespace: Namespace = alias.parent
 
   override def info: util.Map[Language, String] = alias.info
+
+  def accept(visitor: ReferenceableVisitor) {
+    visitor.visit(this)
+  }
 
 }
 

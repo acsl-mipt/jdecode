@@ -3,6 +3,7 @@ package ru.mipt.acsl.decode.model.types;
 import ru.mipt.acsl.decode.model.CommandOrTmMessage;
 import ru.mipt.acsl.decode.model.Parameter;
 import ru.mipt.acsl.decode.model.Referenceable;
+import ru.mipt.acsl.decode.model.ReferenceableVisitor;
 import ru.mipt.acsl.decode.model.component.Command;
 import ru.mipt.acsl.decode.model.component.Component;
 import ru.mipt.acsl.decode.model.component.message.EventMessage;
@@ -33,6 +34,10 @@ public interface Alias<P extends Container, O extends Referenceable> extends Ref
     O obj();
 
     void obj(O obj);
+
+    default void accept(ReferenceableVisitor visitor) {
+        visitor.visit(this);
+    }
 
     class NsType extends AbstractTypeAlias<Namespace, DecodeType> {
 

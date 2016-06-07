@@ -1,14 +1,14 @@
 package ru.mipt.acsl.decode.parser
 
 import java.util
-import java.util.{Collections, Optional}
+import java.util.Collections
 
 import com.intellij.lang.ASTNode
 import com.intellij.psi.PsiWhiteSpace
 import org.jetbrains.annotations.Nullable
 import ru.mipt.acsl.decode.model._
 import ru.mipt.acsl.decode.model.component.message._
-import ru.mipt.acsl.decode.model.component.{Command, Component}
+import ru.mipt.acsl.decode.model.component.{Command, Component, MessageParameterPath, MessageParameterPathElement}
 import ru.mipt.acsl.decode.model.expr.{BigDecimalLiteral, BigIntLiteral}
 import ru.mipt.acsl.decode.model.naming.{ElementName, Fqn, Namespace}
 import ru.mipt.acsl.decode.model.proxy.path.{GenericTypeName, ProxyPath, TypeName}
@@ -191,13 +191,13 @@ class DecodeAstTransformer {
   }
 
   private def parameterPath(el: DecodeParameterElement): MessageParameterPath =
-    Left(elementName(el.getElementNameRule)) +:
-      el.getParameterPathElementList.map(parameterPathElement)
+    MessageParameterPath.newInstance(MessageParameterPathElement.newInstance(elementName(el.getElementNameRule)) +:
+      el.getParameterPathElementList.map(parameterPathElement))
 
   private def parameterPathElement(el: DecodeParameterPathElement): MessageParameterPathElement = {
     val rangeDecl = el.getDependentRangeDecl
-    Option(el.getElementNameRule).map(e => Left(elementName(e)))
-      .getOrElse(Right(ArrayRange(
+    Option(el.getElementNameRule).map(e => MessageParameterPathElement.newInstance(elementName(e)))
+      .getOrElse(MessageParameterPathElement.newInstance(ArrayRange(
         Option(rangeDecl.getRangeFromDecl).map(from => BigInt(from.getText)).getOrElse(0),
         Option(rangeDecl.getRangeToDecl).map(to => BigInt(to.getText)))))
   }

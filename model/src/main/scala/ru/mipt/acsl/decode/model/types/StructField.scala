@@ -1,7 +1,8 @@
 package ru.mipt.acsl.decode.model.types
 
 import java.util
-import ru.mipt.acsl.decode.model.Referenceable
+
+import ru.mipt.acsl.decode.model.{Referenceable, ReferenceableVisitor}
 import ru.mipt.acsl.decode.model.naming.{ElementName, HasName}
 import ru.mipt.acsl.decode.model.registry.Language
 
@@ -17,6 +18,10 @@ trait StructField extends Referenceable with HasName {
   override def name: ElementName = alias.name
 
   def info: util.Map[Language, String] = alias.info
+
+  def accept(visitor: ReferenceableVisitor) {
+    visitor.visit(this)
+  }
 
 }
 

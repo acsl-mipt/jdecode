@@ -20,14 +20,11 @@ object GenerateMccStuff {
   val PixhawkSourceResource = "pixhawk/pixhawk.xml"
   val PixhawkIncludes = Seq("pixhawk/common.xml")
 
+  val ModelFilePath = "src/mcc/core/db/db/model.json"
+
   def main(args: Array[String]): Unit = {
 
-    if (args.isEmpty) {
-      println(s"Usage: generate-mcc-stuff <json output file path>")
-      sys.exit(1)
-    }
-
-    new FileOutputStream(new File(args(0))) { os: OutputStream =>
+    new FileOutputStream(new File(ModelFilePath)) { os: OutputStream =>
 
       val pixhawkOutput = new ByteArrayOutputStream()
 

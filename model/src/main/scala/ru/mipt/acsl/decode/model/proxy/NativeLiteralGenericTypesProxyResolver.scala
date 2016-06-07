@@ -1,7 +1,6 @@
 package ru.mipt.acsl.decode.model.proxy
 
 import java.util
-import java.util.Optional
 
 import ru.mipt.acsl.decode.model.Referenceable
 import ru.mipt.acsl.decode.model.naming.Fqn
@@ -31,7 +30,7 @@ case object NativeLiteralGenericTypesProxyResolver extends DecodeProxyResolver {
     alias.obj(Const.newInstance(alias, ns, literal.value, util.Collections.emptyList()))
     ns.objects().add(alias)
     ns.objects().add(alias.obj)
-    ResolvingResult(Some(alias.obj))
+    ResolvingResult.newInstance(alias.obj)
   }
 
   private def resolveFqnElement(registry: Registry, fqnElement: ProxyPath.FqnElement): ResolvingResult[Referenceable] = {
@@ -40,7 +39,7 @@ case object NativeLiteralGenericTypesProxyResolver extends DecodeProxyResolver {
 
     val nsFqn = fqnElement.ns
     if (nsFqn != Fqn.DECODE_NAMESPACE)
-      return ResolvingResult(None)
+      return ResolvingResult.newInstance()
 
     val systemNamespace = registry.findNamespace(Fqn.DECODE_NAMESPACE).getOrElse(sys.error("system namespace not found"))
     fqnElement.element match {
@@ -49,7 +48,7 @@ case object NativeLiteralGenericTypesProxyResolver extends DecodeProxyResolver {
         val maybeProxy = MaybeProxy.Type(Left(Proxy(ProxyPath(nsFqn, e.typeName))))
         val result = maybeProxy.resolve(registry)
         if (result.hasError)
-          return ResolvingResult(None, result)
+          return ResolvingResult.newInstance(null, result)
         val genericType = maybeProxy.obj
         val name = fqnElement.element.mangledName
         val specializedType = Option(systemNamespace.alias(name).orElse(null)).flatMap(_.obj match {
@@ -64,13 +63,13 @@ case object NativeLiteralGenericTypesProxyResolver extends DecodeProxyResolver {
           specializedType
         }
         val argsResult = specializedType.genericTypeArgumentsProxy.map(_.resolve(registry))
-          .foldLeft(Result.empty)(_ ++ _)
+          .foldLeft(ResolvingMessages.newInstance()){ (l, r) => l.addAll(r); l }
         if (argsResult.hasError)
-          ResolvingResult(None, argsResult)
+          ResolvingResult.newInstance(null, argsResult)
         else
-          ResolvingResult(Some(specializedType), Result.empty)
+          ResolvingResult.newInstance(specializedType)
       case _ =>
-        ResolvingResult(None)
+        ResolvingResult.newInstance()
     }
   }
 }

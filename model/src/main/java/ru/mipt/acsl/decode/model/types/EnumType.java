@@ -2,6 +2,7 @@ package ru.mipt.acsl.decode.model.types;
 
 import org.jetbrains.annotations.Nullable;
 import ru.mipt.acsl.decode.model.Referenceable;
+import ru.mipt.acsl.decode.model.ReferenceableVisitor;
 import ru.mipt.acsl.decode.model.naming.Container;
 import ru.mipt.acsl.decode.model.naming.ElementName;
 import ru.mipt.acsl.decode.model.naming.Namespace;
@@ -63,6 +64,10 @@ public interface EnumType extends DecodeType, Container {
         Set<EnumConstant> result = new HashSet<>(constants());
         result.addAll(extendsTypeOption().map(EnumType::allConstants).orElseGet(Collections::emptySet));
         return result;
+    }
+
+    default void accept(ReferenceableVisitor visitor) {
+        visitor.visit(this);
     }
 
 }

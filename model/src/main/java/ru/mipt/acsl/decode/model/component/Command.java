@@ -1,10 +1,7 @@
 package ru.mipt.acsl.decode.model.component;
 
 import org.jetbrains.annotations.Nullable;
-import ru.mipt.acsl.decode.model.HasInfo;
-import ru.mipt.acsl.decode.model.MayHaveId;
-import ru.mipt.acsl.decode.model.Parameter;
-import ru.mipt.acsl.decode.model.Referenceable;
+import ru.mipt.acsl.decode.model.*;
 import ru.mipt.acsl.decode.model.naming.Container;
 import ru.mipt.acsl.decode.model.naming.ElementName;
 import ru.mipt.acsl.decode.model.naming.HasName;
@@ -22,7 +19,7 @@ import java.util.stream.Stream;
 /**
  * Created by metadeus on 06.06.16.
  */
-public interface Command extends Referenceable, Container, HasName, MayHaveId, HasInfo {
+public interface Command extends Container, HasName, MayHaveId, HasInfo {
 
     static Command newInstance(Alias.ComponentCommand alias, @Nullable Integer id, List<Referenceable> objects,
                                TypeMeasure returnTypeUnit) {

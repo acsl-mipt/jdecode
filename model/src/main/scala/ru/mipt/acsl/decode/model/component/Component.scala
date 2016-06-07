@@ -18,7 +18,7 @@ import scala.collection.JavaConversions._
 /**
   * @author Artem Shein
   */
-trait Component extends Referenceable with Container with HasName {
+trait Component extends Container with HasName {
 
   @Nullable
   def id: Integer

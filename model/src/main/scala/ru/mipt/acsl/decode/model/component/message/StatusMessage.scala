@@ -6,7 +6,7 @@ import java.util.Optional
 import org.jetbrains.annotations.Nullable
 
 import scala.collection.JavaConversions._
-import ru.mipt.acsl.decode.model.component.Component
+import ru.mipt.acsl.decode.model.component.{Component, StatusParameter}
 import ru.mipt.acsl.decode.model.naming.ElementName
 import ru.mipt.acsl.decode.model.registry.Language
 import ru.mipt.acsl.decode.model.types.Alias

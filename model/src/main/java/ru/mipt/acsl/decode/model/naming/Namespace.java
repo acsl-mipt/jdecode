@@ -3,6 +3,7 @@ package ru.mipt.acsl.decode.model.naming;
 import org.jetbrains.annotations.Nullable;
 import ru.mipt.acsl.decode.model.HasInfo;
 import ru.mipt.acsl.decode.model.Referenceable;
+import ru.mipt.acsl.decode.model.ReferenceableVisitor;
 import ru.mipt.acsl.decode.model.component.Component;
 import ru.mipt.acsl.decode.model.registry.Language;
 import ru.mipt.acsl.decode.model.registry.Measure;
@@ -17,7 +18,7 @@ import java.util.stream.Stream;
 /**
  * Created by metadeus on 06.06.16.
  */
-public interface Namespace extends Referenceable, Container, HasName, HasInfo {
+public interface Namespace extends Container, HasName, HasInfo {
 
     ElementName ROOT_NAME = ElementName.newInstanceFromMangledName("%root");
 

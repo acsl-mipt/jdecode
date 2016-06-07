@@ -54,4 +54,10 @@ abstract class AbstractAlias<P extends Container, O extends Referenceable> imple
         this.obj = obj;
     }
 
+    @Override
+    public String toString() {
+        return String.format("%s{name = %s, info = %s, parent = %s, obj = %s}", getClass().getSimpleName(), name, info,
+                parent, obj.getClass().getSimpleName());
+    }
+
 }

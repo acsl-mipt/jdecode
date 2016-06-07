@@ -1,23 +1,24 @@
 package ru.mipt.acsl.decode.generator.json
 
 import java.io.{OutputStream, OutputStreamWriter}
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 import java.util
 
-import scala.collection.JavaConversions._
 import io.circe.Printer
 import io.circe.generic.auto._
 import io.circe.syntax._
 import ru.mipt.acsl.common._
 import ru.mipt.acsl.decode.model._
-import ru.mipt.acsl.decode.model.component.message.{EventMessage, MessageParameterPathElement, StatusMessage}
-import ru.mipt.acsl.decode.model.component.{Command, Component}
+import ru.mipt.acsl.decode.model.component.message.{EventMessage, StatusMessage}
+import ru.mipt.acsl.decode.model.component.{Command, Component, MessageParameterPathElement, StatusParameter}
 import ru.mipt.acsl.decode.model.expr._
 import ru.mipt.acsl.decode.model.naming.{ElementName, HasName, Namespace}
 import ru.mipt.acsl.decode.model.registry.{Language, Measure, Registry}
 import ru.mipt.acsl.decode.model.types._
 
+import scala.collection.JavaConversions._
 import scala.collection.mutable
-import scala.collection.immutable
 
 case class DecodeJsonGenerator(config: DecodeJsonGeneratorConfig) {
 
@@ -51,7 +52,7 @@ case class DecodeJsonGenerator(config: DecodeJsonGeneratorConfig) {
 
     def generateRootComponents(cs: Seq[Component]): Json.Root = {
       cs.foreach(generate)
-      Json.Root(objects.buffer)
+      Json.Root(LocalDateTime.now().format(DateTimeFormatter.ISO_DATE_TIME), objects.buffer)
     }
 
     private def generate(c: Component): Int =
@@ -72,9 +73,11 @@ case class DecodeJsonGenerator(config: DecodeJsonGeneratorConfig) {
 
     private def info(obj: HasInfo): Json.LocalizedString = localizedString(obj.info)
 
-    private def pathElement(p: MessageParameterPathElement): Json.ParameterPathElement = p match {
-      case Left(el) => Json.ElementName(el.mangledNameString())
-      case Right(r) => Json.ArrayRange(r.min.toString, r.max.map(_.toString))
+    private def pathElement(p: MessageParameterPathElement): Json.ParameterPathElement = p.isElementName match {
+      case true => Json.ElementName(p.elementName().get().mangledNameString())
+      case _ =>
+        val arrayRange = p.arrayRange().get()
+        Json.ArrayRange(arrayRange.min.toString, arrayRange.max.map(_.toString))
     }
 
     private def localizedString(info: util.Map[Language, String]): Json.LocalizedString =
@@ -84,7 +87,7 @@ case class DecodeJsonGenerator(config: DecodeJsonGeneratorConfig) {
       Json.TypeMeasure(generate(tm.t), Option(tm.measure.orElse(null)).map(generate))
 
     private def structField(f: StructField): Json.StructField =
-      Json.StructField(generate(f.alias), typeMeasure(f.typeMeasure))
+      Json.StructField(generate(f.alias), generate(f.typeMeasure))
 
     private def enumConst(c: EnumConstant): Json.EnumConst =
       Json.EnumConst(generate(c.alias), constExpr(c.value))
@@ -106,7 +109,7 @@ case class DecodeJsonGenerator(config: DecodeJsonGeneratorConfig) {
           case m: Measure => Json.Measure(generate(m.alias), localizedString(m.display))
           case s: SubType => Json.SubType(Option(s.alias).map(generate), generate(s.namespace), generate(s.baseType))
           case n: NativeType => Json.NativeType(Option(n.alias).map(generate).getOrElse(sys.error("must have an alias")), generate(n.namespace))
-          case s: StructType => Json.StructType(Option(s.alias).map(generate), generate(s.namespace), s.fields.map(structField))
+          case s: StructType => Json.StructType(Option(s.alias).map(generate), generate(s.namespace), s.objects.map(generate))
           case s: GenericTypeSpecialized => Json.GenericTypeSpecialized(Option(s.alias).map(generate), generate(s.namespace),
             generate(s.genericType), s.genericTypeArguments.map(generate))
           case e: EnumType => new Json.EnumType(Option(e.alias).map(generate), generate(e.namespace),
@@ -126,8 +129,9 @@ case class DecodeJsonGenerator(config: DecodeJsonGeneratorConfig) {
           }
           case e: EventMessage => eventMessage(e)
           case s: StatusMessage => statusMessage(s)
-          case s: StatusParameter => Json.StatusParameter(info(s.info), s.path.map(pathElement))
-          case p: Parameter => Json.Parameter(generate(p.alias), typeMeasure(p.typeMeasure))
+          case s: StatusParameter => Json.StatusParameter(info(s.info), s.path.elements().map(pathElement))
+          case p: Parameter => Json.Parameter(generate(p.alias), generate(p.typeMeasure))
+          case f: StructField => Json.StructField(generate(f.alias), generate(f.typeMeasure))
           case _ => sys.error(s"not implemented for $r")
         }
       })
@@ -136,7 +140,8 @@ case class DecodeJsonGenerator(config: DecodeJsonGeneratorConfig) {
       Json.EventMessage(generate(e.alias), generate(e.baseType), Option(e.id.toInt), e.objects.map(generate))
 
     def statusMessage(s: StatusMessage): Json.StatusMessage =
-      Json.StatusMessage(generate(s.alias), Option(s.id.toInt), Option(s.priority.toInt), s.objects.map(generate))
+      Json.StatusMessage(generate(s.alias), Option(s.id).map(_.toInt), Option(s.priority).map(_.toInt),
+        s.objects.map(generate))
 
   }
 

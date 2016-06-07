@@ -1,10 +1,9 @@
 package ru.mipt.acsl.decode.model.registry
 
-import ru.mipt.acsl.decode.model.Referenceable
 import ru.mipt.acsl.decode.model.naming.{ElementName, Fqn, Namespace}
+import ru.mipt.acsl.decode.model.proxy._
 import ru.mipt.acsl.decode.model.proxy.path.ProxyPath
-import ru.mipt.acsl.decode.model.proxy.{DecodeProxyResolver, ExistingElementsProxyResolver, NativeLiteralGenericTypesProxyResolver, ResolvingResult}
-import ru.mipt.acsl.modeling.{ErrorLevel, Message}
+import ru.mipt.acsl.decode.model.{Message, Referenceable, ReferenceableVisitor}
 
 /**
   * @author Artem Shein
@@ -20,10 +19,14 @@ trait Registry extends Referenceable {
   def resolveElement(path: ProxyPath): ResolvingResult[Referenceable] = {
     for (resolver <- proxyResolvers) {
       val resultAndMessages = resolver.resolveElement(this, path)
-      for (obj <- resultAndMessages.result)
+      if (resultAndMessages.result.isPresent)
         return resultAndMessages
     }
-    ResolvingResult(None, Seq(Message(ErrorLevel, s"path $path can not be resolved")))
+    ResolvingResult.newInstance(Message.newInstance(Level.ERROR, s"path $path can not be resolved"))
+  }
+
+  def accept(visitor: ReferenceableVisitor) {
+    visitor.visit(this)
   }
 
 }

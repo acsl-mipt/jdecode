@@ -1,11 +1,9 @@
 package ru.mipt.acsl.decode.model.proxy
 
 import ru.mipt.acsl.decode.model
-import ru.mipt.acsl.decode.model.expr.ConstExpr
 import ru.mipt.acsl.decode.model.registry.Registry
-import ru.mipt.acsl.decode.model.types.{Const, DecodeType, EnumType, StructType}
-import ru.mipt.acsl.decode.model.{Referenceable, component, registry}
-import ru.mipt.acsl.modeling.{ErrorLevel, Message}
+import ru.mipt.acsl.decode.model.types.{DecodeType, EnumType, StructType}
+import ru.mipt.acsl.decode.model._
 
 /**
   * @author Artem Shein
@@ -13,11 +11,11 @@ import ru.mipt.acsl.modeling.{ErrorLevel, Message}
 sealed trait MaybeProxy extends Referenceable {
 
   def resolve(registry: Registry): ResolvingMessages = isResolved match {
-    case true => Result.empty
+    case true => ResolvingMessages.newInstance()
     case _ =>
       val resolvingResult = registry.resolveElement(proxy.path)
-      resolvingResult.result match {
-        case Some(o) => resolvingResult.messages ++= resolveTo(o)
+      resolvingResult.result.isPresent match {
+        case true => resolvingResult.messages.addAll(resolveTo(resolvingResult.result().get()))
         case _ => sys.error(s"can't resolve proxy $proxy")
       }
       resolvingResult.messages
@@ -28,6 +26,11 @@ sealed trait MaybeProxy extends Referenceable {
   def proxy: Proxy
 
   def isResolved: Boolean
+
+  def accept(visitor: ReferenceableVisitor) {
+    visitor.visit(this)
+  }
+
 /*
   def isProxy: Boolean = v.isLeft
 
@@ -58,8 +61,8 @@ object MaybeProxy {
     override def proxy: Proxy = v.left.get
 
     override def resolveTo(obj: model.Referenceable): ResolvingMessages = obj match {
-      case obj: DecodeType => v = Right(obj); ResolvingMessages.empty
-      case _ => ResolvingMessages(Message(ErrorLevel, s"$obj is not a type"))
+      case obj: DecodeType => v = Right(obj); ResolvingMessages.newInstance()
+      case _ => ResolvingMessages.newInstance(Message.newInstance(Level.ERROR, s"$obj is not a type"))
     }
 
   }
@@ -73,8 +76,8 @@ object MaybeProxy {
     override def proxy: Proxy = v.left.get
 
     override def resolveTo(obj: model.Referenceable): ResolvingMessages = obj match {
-      case obj: StructType => v = Right(obj); ResolvingMessages.empty
-      case _ => ResolvingMessages(Message(ErrorLevel, s"$obj is not a StructType"))
+      case obj: StructType => v = Right(obj); ResolvingMessages.newInstance()
+      case _ => ResolvingMessages.newInstance(Message.newInstance(Level.ERROR, s"$obj is not a StructType"))
     }
 
   }
@@ -88,8 +91,8 @@ object MaybeProxy {
     override def proxy: Proxy = v.left.get
 
     override def resolveTo(obj: model.Referenceable): ResolvingMessages = obj match {
-      case obj: EnumType => v = Right(obj); ResolvingMessages.empty
-      case _ => ResolvingMessages(Message(ErrorLevel, s"$obj is not an EnumType"))
+      case obj: EnumType => v = Right(obj); ResolvingMessages.newInstance()
+      case _ => ResolvingMessages.newInstance(Message.newInstance(Level.ERROR, s"$obj is not an EnumType"))
     }
 
   }
@@ -103,8 +106,8 @@ object MaybeProxy {
     override def proxy: Proxy = v.left.get
 
     override def resolveTo(obj: model.Referenceable): ResolvingMessages = obj match {
-      case obj: registry.Measure => v = Right(obj); ResolvingMessages.empty
-      case _ => ResolvingMessages(Message(ErrorLevel, s"$obj is not a Measure"))
+      case obj: registry.Measure => v = Right(obj); ResolvingMessages.newInstance()
+      case _ => ResolvingMessages.newInstance(Message.newInstance(Level.ERROR, s"$obj is not a Measure"))
     }
 
   }
@@ -118,15 +121,15 @@ object MaybeProxy {
     override def proxy: Proxy = v.left.get
 
     override def resolveTo(obj: model.Referenceable): ResolvingMessages = obj match {
-      case obj: component.Component => v = Right(obj); ResolvingMessages.empty
-      case _ => ResolvingMessages(Message(ErrorLevel, s"$obj is not a Component"))
+      case obj: component.Component => v = Right(obj); ResolvingMessages.newInstance()
+      case _ => ResolvingMessages.newInstance(Message.newInstance(Level.ERROR, s"$obj is not a Component"))
     }
 
   }
 
   final case class Referenceable(var v: Either[Proxy, model.Referenceable]) extends MaybeProxy {
 
-    override def resolveTo(obj: model.Referenceable): ResolvingMessages = { v = Right(obj); ResolvingMessages.empty }
+    override def resolveTo(obj: model.Referenceable): ResolvingMessages = { v = Right(obj); ResolvingMessages.newInstance() }
 
     override def proxy: Proxy = v.left.get
 

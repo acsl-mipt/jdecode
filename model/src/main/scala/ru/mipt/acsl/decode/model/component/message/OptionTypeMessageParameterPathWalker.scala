@@ -13,13 +13,13 @@ case object OptionTypeMessageParameterPathWalker
   override def apply(t: DecodeType, pathElement: MessageParameterPathElement): Option[DecodeType] = t match {
     case t: SubType => apply(t.baseType, pathElement)
     case a: GenericTypeSpecialized if a.genericType.isArray =>
-      if (!pathElement.isRight)
+      if (!pathElement.isArrayRange)
         sys.error("invalid token")
       Some(a.genericTypeArgumentsProxy.head.obj)
     case t: StructType =>
-      if (pathElement.isRight)
-        sys.error(s"invalid token ${pathElement.right.get}")
-      val name = pathElement.left.get
+      if (pathElement.isArrayRange)
+        sys.error(s"invalid token ${pathElement.arrayRange().get()}")
+      val name = pathElement.elementName().get()
       Some(t.field(name).getOrElse {
           sys.error(s"Field '$name' not found in struct '$t'")
         }.typeMeasure.t)

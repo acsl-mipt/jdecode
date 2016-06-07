@@ -4,7 +4,6 @@ import io.circe
 import io.circe.Encoder
 import io.circe.generic.auto._
 import io.circe.syntax._
-import org.jetbrains.annotations.Nullable
 
 /**
   * @author Artem Shein
@@ -22,7 +21,7 @@ private object Json {
   case class Measure(alias: Int, display: LocalizedString)
     extends Referenceable
 
-  case class Root(objects: Seq[Referenceable])
+  case class Root(generated: String, objects: Seq[Referenceable])
 
   sealed trait Type extends Referenceable
 
@@ -30,7 +29,7 @@ private object Json {
                        objects: Seq[Int], kind: String = "component")
     extends Referenceable
 
-  case class ComponentRef(alias: String, component: Int)
+  case class ComponentRef(alias: String, component: Int, kind: String = "componentRef")
 
   case class Namespace(alias: Int, parent: Option[Int] = None, kind: String = "namespace")
     extends Referenceable
@@ -42,9 +41,9 @@ private object Json {
 
   case class NativeType(alias: Int, namespace: Int, kind: String = "native") extends Type
 
-  case class StructField(alias: Int, typeUnit: TypeMeasure) extends Referenceable
+  case class StructField(alias: Int, typeUnit: Int, kind: String = "structField") extends Referenceable
 
-  case class StructType(alias: Option[Int], namespace: Int, objects: Seq[Referenceable],
+  case class StructType(alias: Option[Int], namespace: Int, objects: Seq[Int],
                         kind: String = "struct") extends Type
 
   case class GenericTypeSpecialized(alias: Option[Int], namespace: Int, genericType: Int,
@@ -54,18 +53,18 @@ private object Json {
                       baseType: Option[Int], isFinal: Boolean, objects: Seq[Int],
                       kind: String = "enum") extends Type
 
-  case class Const(alias: Int, namespace: Int, value: String) extends Type
+  case class Const(alias: Int, namespace: Int, value: String, kind: String = "const") extends Type
 
   object Type
 
-  case class EnumConst(alias: Int, value: ConstExpr)
+  case class EnumConst(alias: Int, value: ConstExpr, kind: String = "enumConst")
     extends Referenceable
 
-  case class TypeMeasure(t: Int, unit: Option[Int]) extends Type
+  case class TypeMeasure(t: Int, unit: Option[Int], kind: String = "typeMeasure") extends Type
 
   trait Field extends Referenceable
 
-  case class Parameter(alias: Int, typeMeasure: TypeMeasure) extends Field
+  case class Parameter(alias: Int, typeMeasure: Int, kind: String = "parameter") extends Field
 
   trait ParameterPathElement
 
@@ -75,14 +74,14 @@ private object Json {
 
   case class StatusParameter(info: LocalizedString, path: Seq[ParameterPathElement]) extends Field
 
-  case class Command(alias: Int, objects: Seq[Int], returnType: Int)
+  case class Command(alias: Int, objects: Seq[Int], returnType: Int, kind: String = "command")
     extends Referenceable
 
-  case class EventMessage(alias: Int, baseType: Int, id: Option[Int], objects: Seq[Int])
+  case class EventMessage(alias: Int, baseType: Int, id: Option[Int], objects: Seq[Int], kind: String = "eventMessage")
     extends Referenceable
 
   case class StatusMessage(alias: Int, id: Option[Int], priority: Option[Int],
-                           objects: Seq[Int])
+                           objects: Seq[Int], kind: String = "statusMessage")
     extends Referenceable
 
   implicit val encoderLocalizedString: Encoder[LocalizedString] = Encoder.instance {

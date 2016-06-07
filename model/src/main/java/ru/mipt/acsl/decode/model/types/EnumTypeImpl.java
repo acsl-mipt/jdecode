@@ -92,8 +92,8 @@ public class EnumTypeImpl implements EnumType {
     @Override
     public String toString() {
         return String.format("%s{alias = %s, namespace = %s, extendsOrBaseTypeProxy = %s," +
-                " objects = %s, isFinal = %s, typeParameters = %s}", getClass(), alias, namespace,
-                extendsOrBaseTypeProxy, objects, isFinal, typeParameters);
+                " objects = %d items, isFinal = %s, typeParameters = %s}", getClass(), alias, namespace,
+                extendsOrBaseTypeProxy, objects.size(), isFinal, typeParameters);
     }
 
 }

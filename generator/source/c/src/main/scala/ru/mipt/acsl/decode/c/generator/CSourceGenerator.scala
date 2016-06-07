@@ -12,7 +12,7 @@ import org.apache.commons.compress.utils.IOUtils
 import ru.mipt.acsl.decode.generator.json.{DecodeJsonGenerator, DecodeJsonGeneratorConfig}
 import ru.mipt.acsl.decode.model.{MayHaveId, Parameter, StatusParameter}
 import ru.mipt.acsl.decode.model.component.message.{EventMessage, StatusMessage, TmMessage}
-import ru.mipt.acsl.decode.model.component.{Command, Component}
+import ru.mipt.acsl.decode.model.component.{Command, Component, StatusParameter}
 import ru.mipt.acsl.decode.model.naming.{HasName, Namespace}
 import ru.mipt.acsl.decode.model.types.{Alias, DecodeType, EnumType, GenericTypeSpecialized, NativeType, PrimitiveTypeInfo, StructField, StructType, SubType, TypeAlias, TypeKind}
 import ru.mipt.acsl.generator.c.ast.{CDefine, _}
@@ -792,7 +792,7 @@ private[generator] object CSourceGenerator {
 
   def parameterMethodName(component: Component, parameter: StatusParameter, rootComponent: Component): String =
     methodName(prefixedTypeName(rootComponent), cStructFieldName(parameter.ref(component).structField
-      .getOrElse {
+      .orElse {
         sys.error("not implemented")
       }, rootComponent, component))
 
@@ -811,7 +811,7 @@ private[generator] object CSourceGenerator {
             CAstElements(CEol, CIndent, CReturn(eventIsDenied), CSemicolon, CEol)),
             CStatementLine(serializeCallCode(eventMessage.baseType, eventVar))) ++
             eventMessage.parameters.flatMap {
-              case s @ StatusParameter(_, _) =>
+              case s: StatusParameter =>
                 serializeCallCode(s, component, c)
               case p: Parameter =>
                 CStatements(serializeCallCode(p.parameterType, CVar(cName(p))))
@@ -1357,10 +1357,10 @@ private[generator] object CSourceGenerator {
 
     var t = sf.typeMeasure.t
 
-    for (next <- mpr.path) {
-      next match {
-        case Left(elementName) =>
-
+    for (next <- mpr.path.elements()) {
+      next.isElementName match {
+        case true =>
+          val elementName = next.elementName().get()
           t = t.asInstanceOf[StructType].fields.find(_.name == elementName)
             .getOrElse(sys.error(s"field $elementName not found")).typeMeasure.t
 
@@ -1368,7 +1368,7 @@ private[generator] object CSourceGenerator {
           expr = mapIf(dotOrArrow(expr, CVar(elementName.mangledNameString()), !isPtr), isNotSmall, e => CParens(ref(e)))
           isPtr = isNotSmall
 
-        case Right(range) =>
+        case _ =>
 
           val arrayType = t.asInstanceOf[GenericTypeSpecialized] // fixme
           sys.error("not implemented")

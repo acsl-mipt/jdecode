@@ -2,6 +2,7 @@ package ru.mipt.acsl.decode.model.types;
 
 import org.jetbrains.annotations.Nullable;
 import ru.mipt.acsl.decode.model.Referenceable;
+import ru.mipt.acsl.decode.model.ReferenceableVisitor;
 import ru.mipt.acsl.decode.model.naming.ElementName;
 import ru.mipt.acsl.decode.model.naming.Fqn;
 import ru.mipt.acsl.decode.model.naming.Namespace;
@@ -77,6 +78,10 @@ public interface DecodeType extends Referenceable {
     default Optional<ElementName> nameOption() {
         return Optional.ofNullable(alias())
                 .map(TypeAlias::name);
+    }
+
+    default void accept(ReferenceableVisitor visitor) {
+        visitor.visit(this);
     }
 
 }

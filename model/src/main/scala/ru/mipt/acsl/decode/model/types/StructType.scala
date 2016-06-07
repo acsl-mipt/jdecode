@@ -23,8 +23,12 @@ trait StructType extends DecodeType with Container {
 
   def systemName: String = "@" + hashCode()
 
+  override def accept(visitor: ReferenceableVisitor): Unit = {
+    visitor.visit(this)
+  }
+
   override def toString: String =
-    s"${this.getClass}{alias = $alias, namespace = $namespace, objects = [${objects.map(_.toString).mkString(", ")}]"
+    s"${this.getClass.getSimpleName}{alias = $alias, namespace = $namespace, objects = ${objects.size()} items}"
 
 }
 

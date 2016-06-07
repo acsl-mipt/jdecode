@@ -1,7 +1,11 @@
-package ru.mipt.acsl.decode.model
-package component
-package message
+package ru.mipt.acsl.decode.model.component.message
 
+import java.util.Optional
+
+import org.jetbrains.annotations.Nullable
+import ru.mipt.acsl.decode.model.component.{Component, MessageParameterPath, MessageParameterPathElement}
+
+import scala.collection.JavaConversions._
 import scala.util.{Failure, Success, Try}
 import ru.mipt.acsl.decode.model.naming.ElementName
 import ru.mipt.acsl.decode.model.types.{DecodeType, StructField}
@@ -9,49 +13,54 @@ import ru.mipt.acsl.decode.model.types.{DecodeType, StructField}
 /**
   * @author Artem Shein
   */
-class MessageParameterRefWalker(var component: Component, var structField: Option[StructField] = None,
-                                var path: MessageParameterPath = MessageParameterPath.empty)
+class MessageParameterRefWalker(var component: Component, @Nullable var _structField: StructField = null,
+                                var path: MessageParameterPath = MessageParameterPath.newInstance())
   extends MessageParameterRef {
 
-  while (structField.isEmpty)
+  while (_structField == null)
     walkOne()
 
-  override def t: DecodeType = if (structField.isEmpty)
+  override def t: DecodeType = if (_structField == null)
     component.baseType.get
   else
-    TypeMessageParameterPathWalker(structField.get.typeMeasure.t, path.head)
+    TypeMessageParameterPathWalker(_structField.typeMeasure.t, path.head)
 
-  override def resultType: DecodeType = if (structField.isEmpty)
+  override def resultType: DecodeType = if (_structField == null)
     component.baseType.get
   else
-    path.foldLeft(structField.get.typeMeasure.t)(TypeMessageParameterPathWalker)
+    path.elements().foldLeft(_structField.typeMeasure.t)(TypeMessageParameterPathWalker)
 
   private def findSubComponent(elementName: ElementName): Option[Try[Unit]] =
     component.subComponents.find(elementName == _.name).map { subComponent =>
       component = subComponent.obj.obj
-      structField = None
+      _structField = null
       Success(Unit)
     }
 
   private def findBaseTypeField(elementName: ElementName): Option[Try[Unit]] =
     component.baseType.flatMap(_.field(elementName).map { f =>
-      structField = Some(f)
+      _structField = f
       Success(Unit)
     })
 
   private def findTokenString(token: MessageParameterPathElement): Option[Try[Unit]] =
-    token.left.toOption.flatMap { elementName =>
+    if (token.elementName().isPresent) {
+      val elementName = token.elementName().get()
       findSubComponent(elementName).orElse(findBaseTypeField(elementName))
+    } else {
+      None
     }
 
   private def walkOne(): Try[Unit] = {
-    require(path.nonEmpty)
+    require(!path.elements().isEmpty)
     val token = path.head
     val fail = () => Try[Unit] { Failure(new IllegalStateException(s"can't walk $token for $this")) }
     path = path.tail
-    structField match {
-      case Some(_) => fail()
-      case _ => findTokenString(token).getOrElse { fail() }
-    }
+    if (structField != null)
+      fail()
+    else
+      findTokenString(token).getOrElse { fail() }
   }
+
+  override def structField(): Optional[StructField] = Optional.ofNullable(_structField)
 }
