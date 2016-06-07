@@ -4,6 +4,7 @@ import java.io._
 import java.nio.charset.StandardCharsets
 import java.{io, util}
 
+import scala.collection.JavaConversions._
 import com.google.common.base.CaseFormat
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.compress.compressors.xz.{XZCompressorInputStream, XZCompressorOutputStream}
@@ -13,7 +14,7 @@ import ru.mipt.acsl.decode.model.{MayHaveId, Parameter, StatusParameter}
 import ru.mipt.acsl.decode.model.component.message.{EventMessage, StatusMessage, TmMessage}
 import ru.mipt.acsl.decode.model.component.{Command, Component}
 import ru.mipt.acsl.decode.model.naming.{HasName, Namespace}
-import ru.mipt.acsl.decode.model.types.{Alias, DecodeType, EnumType, GenericTypeSpecialized, NativeType, PrimitiveTypeInfo, StructField, StructType, SubType, TypeKind}
+import ru.mipt.acsl.decode.model.types.{Alias, DecodeType, EnumType, GenericTypeSpecialized, NativeType, PrimitiveTypeInfo, StructField, StructType, SubType, TypeAlias, TypeKind}
 import ru.mipt.acsl.generator.c.ast.{CDefine, _}
 import ru.mipt.acsl.generator.c.ast.implicits._
 
@@ -67,7 +68,7 @@ class CSourceGenerator(val config: CGeneratorConfiguration) extends LazyLogging 
         CAstElements())
   }
 
-  private def isAliasNameAndRawTypeNameAreEquals(t: Alias.Type): Boolean = cTypeName(t) == cTypeName(t.obj)
+  private def isAliasNameAndRawTypeNameAreEquals(t: TypeAlias[_, _ <: DecodeType]): Boolean = cTypeName(t) == cTypeName(t.obj)
 
   private def generate(t: DecodeType, nsDir: io.File): (CAstElements, CAstElements) = {
     var (h, c): (CAstElements, CAstElements) = t match {
@@ -77,7 +78,7 @@ class CSourceGenerator(val config: CGeneratorConfiguration) extends LazyLogging 
       case t: EnumType =>
         val prefixedEnumName = upperCamel2UpperUnderscore(prefixedCTypeName(t))
         (Seq(cTypeDef(t, CEnumTypeDef(t.allConstants.toSeq.sortBy(_.value.toLongOrFail).map(c =>
-          CEnumTypeDefConst(prefixedEnumName + "_" + c.name.asMangledString, c.value.toLongOrFail))))),
+          CEnumTypeDefConst(prefixedEnumName + "_" + c.name.mangledNameString(), c.value.toLongOrFail))))),
           Seq.empty)
       case t: GenericTypeSpecialized => sys.error("not implemented")/*t.genericType match {
           case optional if optional.name.equals(ElementName.newFromMangledName("optional")) =>
@@ -110,8 +111,8 @@ class CSourceGenerator(val config: CGeneratorConfiguration) extends LazyLogging 
       (Seq(CDefine(defineNamePrefix + "_MIN_SIZE", t.size.min.toString), CEol,
         CDefine(defineNamePrefix + "_MAX_SIZE", t.size.max.toString), CEol, CEol, typeDef), CAstElements())*/
       case t: StructType => (Seq(cTypeDef(t, CStructTypeDef(t.fields.map(f =>
-        CStructTypeDefField(f.name.asMangledString, cType(f.typeMeasure.t)))))), Seq.empty)
-      case t: Alias.Type =>
+        CStructTypeDefField(f.name.mangledNameString(), cType(f.typeMeasure.t)))))), Seq.empty)
+      case t: TypeAlias[_, _] =>
         if (isAliasNameAndRawTypeNameAreEquals(t))
           (Seq.empty, Seq.empty)
         else
@@ -148,7 +149,7 @@ class CSourceGenerator(val config: CGeneratorConfiguration) extends LazyLogging 
     ns.types.foreach(t => generateSeparateFiles(t, nsDir))
     val fileName: String = "types" + headerExt
     writeIfNotEmptyWithComment(new io.File(nsDir, fileName), protectDoubleInclude(typesHeader, dirPath(ns) +
-      io.File.separator + fileName), s"Types of ${ns.fqn.asMangledString} namespace")
+      io.File.separator + fileName), s"Types of ${ns.fqn.mangledNameString()} namespace")
   }
 
 
@@ -169,7 +170,7 @@ class CSourceGenerator(val config: CGeneratorConfiguration) extends LazyLogging 
   }
 
   def nsOrAliasCppSourceParts(ns: Namespace): Seq[String] =
-    config.namespaceAliases.getOrElse(ns.fqn, Some(ns.fqn)).map(_.parts.map(_.asMangledString)).getOrElse(Seq.empty)
+    config.namespaceAliases.getOrElse(ns.fqn, Some(ns.fqn)).map(_.getParts.map(_.mangledNameString())).getOrElse(Seq.empty)
 
   def dirPath(ns: Namespace): String = nsOrAliasCppSourceParts(ns).mkString(io.File.separator)
 
@@ -188,7 +189,7 @@ class CSourceGenerator(val config: CGeneratorConfiguration) extends LazyLogging 
     includePathFor(component.namespace, prefixedTypeName(component) + headerExt)
 
   def generateRoot(component: Component): Unit = {
-    logger.debug(s"Generating component ${component.name.asMangledString}")
+    logger.debug(s"Generating component ${component.name.mangledNameString()}")
     provideSources()
     generatePrologueEpilogue()
     config.isSingleton match {
@@ -223,13 +224,13 @@ class CSourceGenerator(val config: CGeneratorConfiguration) extends LazyLogging 
       Seq(componentType) ++ Seq(CSemicolon, CEol) ++ methods.flatMap(m => Seq(m.impl.definition, CEol)))
     writeIfNotEmptyWithComment(hFile, protectDoubleInclude(CEol +: appendPrologueEpilogue(imports ++ externedCFile),
       dirPath(component.namespace) + hFileName),
-      s"Component ${component.name.asMangledString} interface")
+      s"Component ${component.name.mangledNameString()} interface")
     writeIfNotEmptyWithComment(cFile, Seq(CInclude(includePath(component)), CEol, CEol) ++
-      methods.flatMap(m => Seq(m.impl, CEol, CEol)), s"Component ${component.name.asMangledString} implementation")
+      methods.flatMap(m => Seq(m.impl, CEol, CEol)), s"Component ${component.name.mangledNameString()} implementation")
   }
 
   def collectNamespaces(component: Component, nsSet: mutable.HashSet[Namespace]) {
-    component.subComponents.foreach(c => collectNamespaces(c.obj, nsSet))
+    component.subComponents.foreach(c => collectNamespaces(c.obj.obj, nsSet))
     collectNsForTypes(component, nsSet)
   }
 
@@ -258,11 +259,11 @@ class CSourceGenerator(val config: CGeneratorConfiguration) extends LazyLogging 
     write(hFile, protectDoubleInclude(Seq(CEol) ++ appendPrologueEpilogue(externC(typeIncludes(component) ++
       Seq(CComment("USER command implementation functions, MUST BE implemented")) ++
       commandMethodImplDefs(component).groupBy(_.component).flatMap { case (c, cMethods) =>
-        Seq(CComment("Component " + c.name.asMangledString)) ++ cMethods.flatMap(m => Seq(CEol, m.methodDef)) ++ Seq(CEol)
+        Seq(CComment("Component " + c.name.mangledNameString())) ++ cMethods.flatMap(m => Seq(CEol, m.methodDef)) ++ Seq(CEol)
       }.toSeq ++
       Seq(CComment("USER parameter implementation functions, MUST BE implemented")) ++
       parameterMethodImplDefs(component).groupBy(_.component).flatMap{ case (c, cMethods) =>
-        Seq(CComment("Component " + c.name.asMangledString)) ++ cMethods.flatMap(m => Seq(CEol, m.methodDef)) ++ Seq(CEol)
+        Seq(CComment("Component " + c.name.mangledNameString())) ++ cMethods.flatMap(m => Seq(CEol, m.methodDef)) ++ Seq(CEol)
       }.toSeq ++
       Seq(CComment("USER service functions, MUST BE implemented")) ++
       serviceMethodDefs(component).flatMap(m => Seq(CEol, m)) ++ Seq(CEol) ++
@@ -273,7 +274,7 @@ class CSourceGenerator(val config: CGeneratorConfiguration) extends LazyLogging 
       case (c, cMethods) => cMethods.filter(_.isPublic) match {
         case m if m.isEmpty => Seq.empty
         case m =>
-          Seq(CEol) ++ Seq(CComment("Component " + c.name.asMangledString)) ++
+          Seq(CEol) ++ Seq(CComment("Component " + c.name.mangledNameString())) ++
             m.flatMap(m => CAstElements(CEol, m.impl.definition))
       }
       }) ++ Seq(CEol)), dirPath(component.namespace) + hFile.getName))
@@ -332,7 +333,7 @@ class CSourceGenerator(val config: CGeneratorConfiguration) extends LazyLogging 
       CDefine("PHOTON_COMPONENT_IDS", '{' + allComponentsById(component).keys.toSeq.sorted.mkString(", ") + '}'), CEol) ++
       allComponentsById(component).flatMap { case (id, c) =>
         val _guidDefineName = guidDefineName(c)
-        Seq(CDefine(_guidDefineName, '"' + c.fqn.asMangledString + '"'), CEol,
+        Seq(CDefine(_guidDefineName, '"' + c.fqn.mangledNameString() + '"'), CEol,
           CDefine("PHOTON_COMPONENT_" + id + "_GUID", _guidDefineName), CEol,
           CDefine(idDefineName(c), id.toString), CEol)
       } ++
@@ -341,7 +342,7 @@ class CSourceGenerator(val config: CGeneratorConfiguration) extends LazyLogging 
   }
 
   def importStatements(component: Component): CAstElements = {
-    val imports = component.subComponents.flatMap(cr => Seq(CInclude(includePath(cr.obj)), CEol)).to[mutable.Buffer]
+    val imports = component.subComponents.flatMap(cr => Seq(CInclude(includePath(cr.obj.obj)), CEol)).to[mutable.Buffer]
     if (imports.nonEmpty)
       imports += CEol
     val types = allTypes(component).toSeq
@@ -418,7 +419,7 @@ private[generator] object CSourceGenerator {
 
   def cTypeDef(t: DecodeType, cType: CType) = CTypeDefStatement(prefixedCTypeName(t), cType)
 
-  def cTypeName(a: Alias.Type): String = a.name.asMangledString
+  def cTypeName(a: TypeAlias[_, _]): String = a.name.mangledNameString()
 
   def cTypeName(t: DecodeType): String = t match {
     case t: GenericTypeSpecialized if t.isArray =>
@@ -484,7 +485,7 @@ private[generator] object CSourceGenerator {
       Seq(CIfNDef(uniqueName), CEol, CDefine(uniqueName)) ++ els :+ CEndIf
   }
 
-  def typeName(component: Component): String = component.name.asMangledString
+  def typeName(component: Component): String = component.name.mangledNameString()
 
   def ptrType(component: Component): CPtrType = CTypeApplication(prefixedTypeName(component)).ptr
 
@@ -507,7 +508,7 @@ private[generator] object CSourceGenerator {
                                            componentsSet: immutable.HashSet[Component] = immutable.HashSet.empty)
   : immutable.HashSet[Component] = {
     componentsSet ++ Seq(component) ++ component.subComponents.flatMap(cr =>
-      allComponentsSetForComponent(cr.obj, componentsSet))
+      allComponentsSetForComponent(cr.obj.obj, componentsSet))
   }
 
   def componentDataTypeName(component: Component): String = prefixedTypeName(component) + "Data"
@@ -812,7 +813,7 @@ private[generator] object CSourceGenerator {
             eventMessage.parameters.flatMap {
               case s @ StatusParameter(_, _) =>
                 serializeCallCode(s, component, c)
-              case p @ Parameter(_, _) =>
+              case p: Parameter =>
                 CStatements(serializeCallCode(p.parameterType, CVar(cName(p))))
             } :+ CStatementLine(CReturn(resultOk))
         ), c),
@@ -874,9 +875,9 @@ private[generator] object CSourceGenerator {
       Seq(CDefine(statusIdsDefineName + "_SIZE", statusMessagesSortedById.size.toString), CEol) ++
       Seq(CDefine(statusIdsDefineName, '{' + statusMessagesSortedById.map(_._1.toString).mkString(", ") + '}'), CEol) ++
       Seq(CDefine(statusPrioritiesDefineName,
-        "{" + statusMessagesSortedById.map(_._2._2.priority.getOrElse(0)).mkString(", ") + "}"), CEol) ++
+        "{" + statusMessagesSortedById.map(s => Option(s._2._2.priority).getOrElse(0)).mkString(", ") + "}"), CEol) ++
       Seq(CDefine(statusMessageIdPrioritiesDefineName, "{\\\n" + statusMessagesSortedById.map {
-        case (id, ComponentStatusMessage(c, m)) => s"  {$id, ${m.priority.getOrElse(0)}}"
+        case (id, ComponentStatusMessage(c, m)) => s"  {$id, ${Option(m.priority).getOrElse(0)}}"
         case _ => sys.error("assertion error")
       }.mkString("\\\n") + "\\\n}"), CEol)
   }
@@ -950,17 +951,17 @@ private[generator] object CSourceGenerator {
     var nextId = 0
     val mapById = mutable.HashMap.empty[Int, WithComponent[T]]
     // fixme: remove Option.get
-    seq.filter(_.id.isDefined).foreach(el => assert(mapById.put(el.id.get, WithComponent[T](component, el)).isEmpty))
-    seq.filter(_.id.isEmpty).foreach { el =>
+    seq.filter(_.id != null).foreach(el => assert(mapById.put(el.id, WithComponent[T](component, el)).isEmpty))
+    seq.filter(_.id != null).foreach { el =>
       // todo: optimize: too many contain checks
       while (mapById.contains(nextId))
         nextId += 1
-      assert(mapById.put(el.id.getOrElse {
+      assert(mapById.put(Option(el.id.toInt).getOrElse {
         nextId += 1
         nextId - 1
       }, WithComponent[T](component, el)).isEmpty)
     }
-    allSubComponents(component).toSeq.sortBy(_.fqn.asMangledString).filterNot(_ == component).foreach(subComponent =>
+    allSubComponents(component).toSeq.sortBy(_.fqn.mangledNameString()).filterNot(_ == component).foreach(subComponent =>
       subSeq(subComponent).foreach { el =>
         assert(mapById.put(nextId, WithComponent[T](subComponent, el)).isEmpty)
         nextId += 1
@@ -981,8 +982,8 @@ private[generator] object CSourceGenerator {
     val map = mutable.HashMap.empty[Int, Component]
     var nextId = 0
     val components = component +: allSubComponents(component).toSeq
-    val (withId, withoutId) = (components.filter(_.id.isDefined), components.filter(_.id.isEmpty))
-    withId.foreach { c => assert(map.put(c.id.getOrElse(sys.error("wtf")), c).isEmpty) }
+    val (withId, withoutId) = (components.filter(_.id != null), components.filter(_.id == null))
+    withId.foreach { c => assert(map.put(Option(c.id.toInt).getOrElse(sys.error("wtf")), c).isEmpty) }
     map ++= withoutId.map { c =>
       while (map.contains(nextId))
         nextId += 1
@@ -994,8 +995,10 @@ private[generator] object CSourceGenerator {
 
   def allSubComponents(component: Component): Set[Component] =
     component.subComponents.flatMap { alias =>
-      val c = alias.obj
-      allSubComponents(c) + c
+      val c = alias.obj.obj
+      val set = allSubComponents(c)
+      set.add(c)
+      set
     }.toSet
 
   def allCommands(component: Component): Seq[WithComponent[Command]] =
@@ -1035,9 +1038,9 @@ private[generator] object CSourceGenerator {
     methodName
   }
 
-  def cName(named: HasName): String = named.name.asMangledString
+  def cName(named: HasName): String = named.name.mangledNameString()
 
-  def cName(t: DecodeType): String = t.alias match {
+  def cName(t: DecodeType): String = Option(t.alias) match {
     case Some(a) => cName(a)
     case _ => sys.error("not implemented")
   }
@@ -1086,16 +1089,16 @@ private[generator] object CSourceGenerator {
     case _ => true
   }
 
-  def fileName(named: HasName): String = named.name.asMangledString
+  def fileName(named: HasName): String = named.name.mangledNameString()
 
-  def cTypeName(named: HasName): String = named.name.asMangledString
+  def cTypeName(named: HasName): String = named.name.mangledNameString()
 
   def fullMethodDef(eventMessage: EventMessage, component: Component, c: Component): CFuncDef = {
     val eventParam = CFuncParam("event", cType(eventMessage.baseType))
     val eventParams = eventParam +: eventMessage.parameters.flatMap {
-      case Parameter(a, tm) =>
-        val t = tm.t
-        Seq(CFuncParam(cName(a), mapIfNotSmall(cType(t), t, (t: CType) => t.constPtr)))
+      case p: Parameter =>
+        val t = p.typeMeasure().t
+        Seq(CFuncParam(cName(p.parameterType()), mapIfNotSmall(cType(t), t, (t: CType) => t.constPtr)))
       case _ => Seq.empty
     }
     CFuncDef(fullMethodName(eventMessage, component, c), resultType, eventParams)
@@ -1229,7 +1232,7 @@ private[generator] object CSourceGenerator {
       val extendedEnclosingTypes = enclosingTypes + t
       t match {
         case t: NativeType => Some(cCall("sizeof", cType(t)))
-        case t: Alias.Type => abstractMinSizeExpr(t.obj, extendedEnclosingTypes, forceParens)
+        case t: TypeAlias[_, _] => abstractMinSizeExpr(t.obj, extendedEnclosingTypes, forceParens)
         case t: SubType => abstractMinSizeExpr(t.baseType, extendedEnclosingTypes, forceParens)
         case t: StructType =>
           sumExprs(t.fields.map(f => abstractMinSizeExpr(f.typeMeasure.t, extendedEnclosingTypes, forceParens = false)), forceParens)
@@ -1278,7 +1281,7 @@ private[generator] object CSourceGenerator {
     baseType.abstractMinSizeExpr(forceParens = true).map(rExpr =>
       CMul(src.dotOrArrow(size.v, isDot = !isPtr),
         commentBeginEnd(rExpr, baseType.cName)))*/
-    case _: SubType | _: Alias | _: GenericTypeSpecialized => None // todo: yes you can
+    case _: SubType | _: TypeAlias[_, _] | _: GenericTypeSpecialized => None // todo: yes you can
     case t: EnumType => concreteMinSizeExpr(t.extendsOrBaseType, src, isPtr)
     case _ => abstractMinSizeExpr(t, forceParens = false)
   }
@@ -1306,7 +1309,7 @@ private[generator] object CSourceGenerator {
     case array: GenericTypeSpecialized if array.isArray =>
       sys.error("not implemented")
     //writerSizeCheckCode(src) ++ src.serializeCodeForArraySize(array) ++ array.serializeCodeForArrayElements(src)
-    case alias: Alias.Type => Seq(CStatementLine(serializeCallCode(alias.obj, src)))
+    case alias: TypeAlias[_, _] => Seq(CStatementLine(serializeCallCode(alias.obj, src)))
     case s: SubType => Seq(CStatementLine(serializeCallCode(s.baseType, src)))
     case enum: EnumType => Seq(CStatementLine(serializeCallCode(enum.extendsOrBaseType, src)))
     case native: NativeType if native.isPrimitive => Seq(CStatementLine(serializeCallCode(native, src)))
@@ -1323,7 +1326,7 @@ private[generator] object CSourceGenerator {
     case array: GenericTypeSpecialized if array.isArray =>
       sys.error("not implemented")
     //dest.deserializeCodeForArraySize(t) ++ readerSizeCheckCode(dest) ++ t.deserializeCodeForArrayElements(dest)
-    case t: Alias.Type => deserializeCode(t.obj, dest)
+    case t: TypeAlias[_, _] => deserializeCode(t.obj, dest)
     /*case t: HasBaseType =>
       val baseType = t.baseType
       Seq(baseType.deserializeCallCode(dest.cast(baseType.cType.ptr)).line)*/
@@ -1362,7 +1365,7 @@ private[generator] object CSourceGenerator {
             .getOrElse(sys.error(s"field $elementName not found")).typeMeasure.t
 
           val isNotSmall = !isSmall(t)
-          expr = mapIf(dotOrArrow(expr, CVar(elementName.asMangledString), !isPtr), isNotSmall, e => CParens(ref(e)))
+          expr = mapIf(dotOrArrow(expr, CVar(elementName.mangledNameString()), !isPtr), isNotSmall, e => CParens(ref(e)))
           isPtr = isNotSmall
 
         case Right(range) =>

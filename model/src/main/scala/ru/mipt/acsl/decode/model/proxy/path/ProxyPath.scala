@@ -1,6 +1,8 @@
 package ru.mipt.acsl.decode.model.proxy.path
 
-import ru.mipt.acsl.decode.model.naming.{ElementName, Fqn, Namespace}
+import ru.mipt.acsl.decode.model.naming.ElementName.newInstanceFromMangledName
+import ru.mipt.acsl.decode.model.naming.Fqn.DECODE_NAMESPACE
+import ru.mipt.acsl.decode.model.naming.{ElementName, _}
 
 /**
   * @author Artem Shein
@@ -16,23 +18,23 @@ object ProxyPath {
   case class FqnElement(ns: Fqn, element: ProxyElementName) extends ProxyPath {
 
     override def mangledName: ElementName =
-      ElementName.newFromMangledName(s"${ns.asMangledString}.${element.mangledName.asMangledString}")
+      ElementName.newInstanceFromMangledName(s"${ns.mangledNameString()}.${element.mangledName.mangledNameString}")
 
-    override def toString: String = s"ProxyPath.Element{${ns.asMangledString}.$element}"
+    override def toString: String = s"ProxyPath.Element{${ns.mangledNameString()}.$element}"
 
   }
 
   case class Literal(value: String) extends ProxyPath {
 
     override def mangledName: ElementName =
-      ElementName.newFromMangledName(s"$value")
+      ElementName.newInstanceFromMangledName(s"$value")
 
     override def toString: String = s"ProxyPath.Literal{$value}"
 
   }
 
   def apply(elementName: ProxyElementName): ProxyPath =
-    apply(Fqn.DecodeNamespace, elementName)
+    apply(Fqn.DECODE_NAMESPACE, elementName)
 
   def apply(fqn: Fqn): ProxyPath = apply(fqn.copyDropLast, fqn.last)
 

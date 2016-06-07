@@ -1,11 +1,12 @@
 package ru.mipt.acsl.decode.model
 
-import ru.mipt.acsl.decode.model.component.{Command, Component}
 import ru.mipt.acsl.decode.model.component.message.{EventMessage, StatusMessage}
+import ru.mipt.acsl.decode.model.component.{Command, Component}
 import ru.mipt.acsl.decode.model.naming.{Container, ElementName, Fqn, Namespace}
 import ru.mipt.acsl.decode.model.proxy.{ResolvingMessages, Result}
-import ru.mipt.acsl.decode.model.types.{Alias, DecodeType, EnumType, GenericTypeSpecialized, NativeType, StructField, StructType, SubType, TypeMeasure}
+import ru.mipt.acsl.decode.model.types.{Alias, DecodeType, EnumType, NativeType, StructField, SubType, TypeMeasure}
 
+import scala.collection.JavaConversions._
 import scala.collection.mutable
 
 package object registry {
@@ -21,7 +22,7 @@ package object registry {
       val namespaceOptional = namespace(fqn.substring(0, dotPos))
       if (namespaceOptional.isEmpty)
         return None
-      val componentName = ElementName.newFromMangledName(fqn.substring(dotPos + 1, fqn.length()))
+      val componentName = ElementName.newInstanceFromMangledName(fqn.substring(dotPos + 1, fqn.length()))
       namespaceOptional.get.components.find(_.name == componentName)
     }
 
@@ -32,7 +33,7 @@ package object registry {
       "\\.".r.split(fqn).foreach { nsName =>
         if (currentNamespaces.isEmpty)
           return None
-        val decodeName = ElementName.newFromMangledName(nsName)
+        val decodeName = ElementName.newInstanceFromMangledName(nsName)
         currentNamespace = currentNamespaces.get.find(_.name == decodeName)
         currentNamespaces = currentNamespace.map(_.subNamespaces)
       }
@@ -41,13 +42,13 @@ package object registry {
 
     def eventMessage(fqn: String): Option[EventMessage] = {
       val dotPos = fqn.lastIndexOf('.')
-      val decodeName = ElementName.newFromMangledName(fqn.substring(dotPos + 1, fqn.length()))
+      val decodeName = ElementName.newInstanceFromMangledName(fqn.substring(dotPos + 1, fqn.length()))
       component(fqn.substring(0, dotPos)).flatMap(_.eventMessage(decodeName))
     }
 
     def statusMessage(fqn: String): Option[StatusMessage] = {
       val dotPos = fqn.lastIndexOf('.')
-      val decodeName = ElementName.newFromMangledName(fqn.substring(dotPos + 1, fqn.length()))
+      val decodeName = ElementName.newInstanceFromMangledName(fqn.substring(dotPos + 1, fqn.length()))
       component(fqn.substring(0, dotPos)).flatMap(_.statusMessage(decodeName))
     }
 
@@ -68,22 +69,27 @@ package object registry {
             case c: Command =>
               c.returnTypeProxy.resolve(r)
             case e: EnumType =>
-              e.extendsOrBaseTypeProxy.fold(_.resolve(r), _.typeProxy.resolve(r))
+              val proxy = e.extendsOrBaseTypeProxy()
+              val enum = proxy.maybeProxyEnum()
+              if (enum.isPresent)
+                enum.get().resolve(r)
+              else
+                proxy.typeMeasure().get().typeProxy.resolve(r)
             case e: EventMessage =>
               e.baseTypeProxy.resolve(r)
             case _ =>
               ResolvingMessages.empty
           })
       case cc: Alias.ComponentComponent =>
-        cc.component.resolve(r)
+        cc.obj().resolve(r)
       case s: SubType if !s.isGeneric =>
         s.typeMeasure.typeProxy.resolve(r)
       case tm: TypeMeasure =>
-        tm.typeProxy.resolve(r) ++ tm.measureProxy.seq.flatMap(_.resolve(r))
+        tm.typeProxy.resolve(r) ++ Option(tm.measureProxy.orElse(null)).seq.flatMap(_.resolve(r))
       case p: Parameter =>
-        p.typeProxy.resolve(r) ++ p.measureProxy.seq.flatMap(_.resolve(r))
+        p.typeProxy.resolve(r) ++ Option(p.measureProxy.orElse(null)).seq.flatMap(_.resolve(r))
       case sf: StructField =>
-        sf.typeMeasure.typeProxy.resolve(r) ++ sf.typeMeasure.measureProxy.seq.flatMap(_.resolve(r))
+        sf.typeMeasure.typeProxy.resolve(r) ++ Option(sf.typeMeasure.measureProxy.orElse(null)).seq.flatMap(_.resolve(r))
       case _ => ResolvingMessages.empty
     }
 
@@ -136,14 +142,14 @@ package object registry {
         result += validate(cmd.returnType)
         cmd.parameters.foreach { arg =>
           result += validate(arg.parameterType)
-          arg.measure.map(u => result += validate(u))
+          Option(arg.measure.orElse(null)).map(u => result += validate(u))
         }
       }
 
       c.eventMessages.foreach { e =>
         result += validate(e.baseType)
         e.parameters.foreach {
-          case Parameter(a, typeUnit) => result += validate(typeUnit.t)
+          case p: Parameter => result += validate(p.typeMeasure().t)
           case _ =>
         }
       }
@@ -185,13 +191,15 @@ package object registry {
       val result = mutable.Buffer.empty[ValidatingResult]
       t match {
         case t: EnumType =>
-          t.eitherExtendsOrBaseType match {
-            case Left(extendsType) => extendsType match {
+          val extendsOrBaseType = t.eitherExtendsOrBaseType
+          val enumType = extendsOrBaseType.enumType()
+          enumType.isPresent match {
+            case true => enumType.get() match {
               case e: EnumType =>
               case e =>
                 result += Result.error(s"enum type can extend an enum, not a ${e.getClass}")
             }
-            case Right(baseType) => baseType match {
+            case false => extendsOrBaseType.typeMeasure().get() match {
               case _: NativeType =>
               case b =>
                 result += Result.error(s"enum base type must be an instance of PrimitiveType or NativeType, not a ${b.getClass}")
@@ -229,7 +237,7 @@ package object registry {
     def findNamespace(namespaceFqn: Fqn): Option[Namespace] = {
       var namespaces = r.rootNamespace.subNamespaces
       var namespace: Option[Namespace] = None
-      for (nsName <- namespaceFqn.parts) {
+      for (nsName <- namespaceFqn.getParts) {
         namespace = namespaces.find(_.name == nsName)
         namespace match {
           case Some(ns) =>

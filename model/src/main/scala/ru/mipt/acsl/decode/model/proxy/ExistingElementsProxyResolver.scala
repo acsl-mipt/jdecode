@@ -1,9 +1,12 @@
 package ru.mipt.acsl.decode.model.proxy
 
 import ru.mipt.acsl.decode.model.Referenceable
-import ru.mipt.acsl.decode.model.naming.Fqn
+import ru.mipt.acsl.decode.model.naming.Fqn.DECODE_NAMESPACE
+import ru.mipt.acsl.decode.model.naming.{Fqn, FqnImpl}
 import ru.mipt.acsl.decode.model.proxy.path.{ProxyPath, TypeName}
 import ru.mipt.acsl.decode.model.registry._
+
+import scala.collection.JavaConversions._
 
 /**
   * Created by metadeus on 20.02.16.
@@ -21,7 +24,7 @@ case object ExistingElementsProxyResolver extends DecodeProxyResolver {
   }
 
   private def resolveLiteralElement(registry: Registry, literal: ProxyPath.Literal): ResolvingResult[Referenceable] = {
-    val ns = registry.findNamespace(Fqn.DecodeNamespace).getOrElse(sys.error("decode namespace not found"))
+    val ns = registry.findNamespace(Fqn.DECODE_NAMESPACE).getOrElse(sys.error("decode namespace not found"))
     val elements = ns.aliases.filter(_.name == literal.mangledName)
     if (elements.size == 1) {
       val obj = elements.head.obj
@@ -37,7 +40,7 @@ case object ExistingElementsProxyResolver extends DecodeProxyResolver {
   private def resolveFqnElement(registry: Registry, fqnElement: ProxyPath.FqnElement): ResolvingResult[Referenceable] = {
     val nsOption = registry.findNamespace(fqnElement.ns)
     if (nsOption.isEmpty)
-      return ResolvingResult(None, Result.error(s"namespace not found ${fqnElement.ns.asMangledString}"))
+      return ResolvingResult(None, Result.error(s"namespace not found ${fqnElement.ns.mangledNameString()}"))
     val ns = nsOption.get
     fqnElement.element match {
       case e: TypeName =>

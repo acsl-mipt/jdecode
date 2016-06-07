@@ -1,31 +1,43 @@
 package ru.mipt.acsl.decode.model.component.message
 
+import java.util
+import java.util.Optional
+
+import org.jetbrains.annotations.Nullable
+
+import scala.collection.JavaConversions._
 import ru.mipt.acsl.decode.model.component.Component
 import ru.mipt.acsl.decode.model.naming.ElementName
+import ru.mipt.acsl.decode.model.registry.Language
 import ru.mipt.acsl.decode.model.types.Alias
-import ru.mipt.acsl.decode.model.{LocalizedString, Referenceable, StatusParameter}
+import ru.mipt.acsl.decode.model.{Referenceable, StatusParameter}
 
 trait StatusMessage extends TmMessage {
 
   def alias: Alias.ComponentStatusMessage
 
-  def priority: Option[Int]
+  @Nullable
+  def priority: Integer
 
   def parameters: Seq[StatusParameter] = objects.flatMap { case m: StatusParameter => Seq(m) }
 
   override def name: ElementName = alias.name
 
-  override def info: LocalizedString = alias.info
+  override def info: util.Map[Language, String] = alias.info
 
 }
 
 object StatusMessage {
 
-  private case class StatusMessageImpl(alias: Alias.ComponentStatusMessage, component: Component, id: Option[Int],
-                          var objects: Seq[Referenceable], priority: Option[Int] = None)
-    extends StatusMessage
+  private case class StatusMessageImpl(alias: Alias.ComponentStatusMessage, component: Component, @Nullable id: Integer,
+                                       var objects: util.List[Referenceable], @Nullable priority: Integer)
+    extends StatusMessage {
 
-  def apply(alias: Alias.ComponentStatusMessage, component: Component, id: Option[Int],
-            parameters: Seq[StatusParameter], priority: Option[Int] = None): StatusMessage =
+    override def objects(objects: util.List[Referenceable]): Unit = this.objects = objects
+
+  }
+
+  def apply(alias: Alias.ComponentStatusMessage, component: Component, @Nullable id: Integer,
+            parameters: Seq[StatusParameter], @Nullable priority: Integer): StatusMessage =
     StatusMessageImpl(alias, component, id, parameters, priority)
 }

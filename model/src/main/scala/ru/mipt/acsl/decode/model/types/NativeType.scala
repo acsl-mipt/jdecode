@@ -1,5 +1,6 @@
 package ru.mipt.acsl.decode.model.types
 
+import java.util
 import ru.mipt.acsl.decode.model.naming.{ElementName, Namespace}
 
 /**
@@ -16,14 +17,14 @@ trait NativeType extends DecodeType {
 
 object NativeType {
 
-  private class NativeTypeImpl(val _alias: Alias.NsType, var namespace: Namespace,
-                               val typeParameters: Seq[ElementName])
+  private class NativeTypeImpl(val alias: Alias.NsType, var namespace: Namespace,
+                               val typeParameters: util.List[ElementName])
     extends NativeType {
 
-    override def alias: Option[Alias.NsType] = Some(_alias)
+    override def namespace(ns: Namespace): Unit = this.namespace = ns
 
   }
 
-  def apply(alias: Alias.NsType, ns: Namespace, typeParameters: Seq[ElementName]): NativeType =
+  def apply(alias: Alias.NsType, ns: Namespace, typeParameters: util.List[ElementName]): NativeType =
     new NativeTypeImpl(alias, ns, typeParameters)
 }

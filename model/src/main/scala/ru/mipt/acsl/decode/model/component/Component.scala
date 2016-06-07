@@ -1,18 +1,27 @@
 package ru.mipt.acsl.decode.model.component
 
+import java.util
+import java.util.Optional
+
+import org.jetbrains.annotations.Nullable
 import ru.mipt.acsl.decode.model._
 import ru.mipt.acsl.decode.model.component.message.{EventMessage, StatusMessage}
-import ru.mipt.acsl.decode.model.naming._
+import ru.mipt.acsl.decode.model.naming.Fqn.newInstance
+import ru.mipt.acsl.decode.model.naming.{Fqn, _}
 import ru.mipt.acsl.decode.model.proxy.MaybeProxy
+import ru.mipt.acsl.decode.model.registry.Language
 import ru.mipt.acsl.decode.model.types.StructType
 import ru.mipt.acsl.decode.model.types.Alias
+
+import scala.collection.JavaConversions._
 
 /**
   * @author Artem Shein
   */
 trait Component extends Referenceable with Container with HasName {
 
-  def id: Option[Int]
+  @Nullable
+  def id: Integer
 
   def namespace: Namespace
 
@@ -26,7 +35,7 @@ trait Component extends Referenceable with Container with HasName {
 
   def name: ElementName = alias.name
 
-  def info: LocalizedString = alias.info
+  def info: util.Map[Language, String] = alias.info
 
   def statusMessages: Seq[StatusMessage] = objects.flatMap {
     case s: StatusMessage => Seq(s)
@@ -48,7 +57,7 @@ trait Component extends Referenceable with Container with HasName {
     case _ => Seq.empty
   }
 
-  def fqn: Fqn = Fqn(namespace.fqn, name)
+  def fqn: Fqn = Fqn.newInstance(namespace.fqn, name)
 
   def eventMessage(name: ElementName): Option[EventMessage] = objects.flatMap {
     case a: Alias.ComponentEventMessage if a.name == name => Seq(a.obj)
@@ -66,12 +75,17 @@ trait Component extends Referenceable with Container with HasName {
 
 object Component {
 
-  private class ComponentImpl(val alias: Alias.NsComponent, var namespace: Namespace, var id: Option[Int],
-                              var baseTypeProxy: Option[MaybeProxy.Struct], var objects: Seq[Referenceable] = Seq.empty)
-    extends Component
+  private class ComponentImpl(val alias: Alias.NsComponent, var namespace: Namespace, @Nullable var id: Integer,
+                              var baseTypeProxy: Option[MaybeProxy.Struct],
+                              var objects: util.List[Referenceable] = util.Collections.emptyList())
+    extends Component {
 
-  def apply(alias: Alias.NsComponent, namespace: Namespace, id: Option[Int],
+    override def objects(objects: util.List[Referenceable]): Unit = this.objects = objects
+
+  }
+
+  def apply(alias: Alias.NsComponent, namespace: Namespace, @Nullable id: Integer,
             baseTypeProxy: Option[MaybeProxy.Struct],
-            objects: Seq[Referenceable]): Component =
+            objects: util.List[Referenceable]): Component =
     new ComponentImpl(alias, namespace, id, baseTypeProxy, objects)
 }

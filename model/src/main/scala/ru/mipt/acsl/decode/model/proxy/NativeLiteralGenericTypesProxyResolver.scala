@@ -1,10 +1,15 @@
 package ru.mipt.acsl.decode.model.proxy
 
+import java.util
+import java.util.Optional
+
+import ru.mipt.acsl.decode.model.Referenceable
 import ru.mipt.acsl.decode.model.naming.Fqn
 import ru.mipt.acsl.decode.model.proxy.path.{GenericTypeName, ProxyPath}
 import ru.mipt.acsl.decode.model.registry.Registry
 import ru.mipt.acsl.decode.model.types.{Alias, Const, GenericTypeSpecialized}
-import ru.mipt.acsl.decode.model.{LocalizedString, Referenceable}
+
+import scala.collection.JavaConversions._
 
 /**
   * Created by metadeus on 20.02.16.
@@ -21,22 +26,23 @@ case object NativeLiteralGenericTypesProxyResolver extends DecodeProxyResolver {
   }
 
   private def resolveLiteralElement(registry: Registry, literal: ProxyPath.Literal): ResolvingResult[Referenceable] = {
-    val ns = registry.findNamespace(Fqn.DecodeNamespace).getOrElse(sys.error("decode namespace not found"))
-    val alias = Alias.NsConst(literal.mangledName, LocalizedString.empty)(ns, null)
-    alias.obj = Const(Some(alias), ns, literal.value)
-    ns.objects ++= Seq(alias, alias.obj)
+    val ns = registry.findNamespace(Fqn.DECODE_NAMESPACE).getOrElse(sys.error("decode namespace not found"))
+    val alias = new Alias.NsConst(literal.mangledName, util.Collections.emptyMap(), ns, null)
+    alias.obj(Const.newInstance(alias, ns, literal.value, util.Collections.emptyList()))
+    ns.objects().add(alias)
+    ns.objects().add(alias.obj)
     ResolvingResult(Some(alias.obj))
   }
 
   private def resolveFqnElement(registry: Registry, fqnElement: ProxyPath.FqnElement): ResolvingResult[Referenceable] = {
 
-    assert(Fqn.DecodeNamespace.size == 1, "not implemented")
+    assert(Fqn.DECODE_NAMESPACE.size == 1, "not implemented")
 
     val nsFqn = fqnElement.ns
-    if (nsFqn != Fqn.DecodeNamespace)
+    if (nsFqn != Fqn.DECODE_NAMESPACE)
       return ResolvingResult(None)
 
-    val systemNamespace = registry.findNamespace(Fqn.DecodeNamespace).getOrElse(sys.error("system namespace not found"))
+    val systemNamespace = registry.findNamespace(Fqn.DECODE_NAMESPACE).getOrElse(sys.error("system namespace not found"))
     fqnElement.element match {
       // Generic type
       case e: GenericTypeName =>
@@ -46,14 +52,14 @@ case object NativeLiteralGenericTypesProxyResolver extends DecodeProxyResolver {
           return ResolvingResult(None, result)
         val genericType = maybeProxy.obj
         val name = fqnElement.element.mangledName
-        val specializedType = systemNamespace.alias(name).flatMap(_.obj match {
+        val specializedType = Option(systemNamespace.alias(name).orElse(null)).flatMap(_.obj match {
           case g: GenericTypeSpecialized => Some(g)
         }).getOrElse {
-          val alias = Alias.NsType(name, LocalizedString.empty)(genericType.namespace, null)
-          val specializedType = GenericTypeSpecialized(Some(alias), genericType.namespace,
+          val alias = new Alias.NsType(name, util.Collections.emptyMap(), genericType.namespace, null)
+          val specializedType = GenericTypeSpecialized(alias, genericType.namespace,
             MaybeProxy.Type(Right(genericType)),
-            e.genericArgumentPaths.map(arg => MaybeProxy.Type(Left(Proxy(arg)))), Seq.empty)
-          alias.obj = specializedType
+            e.genericArgumentPaths.map(arg => MaybeProxy.Type(Left(Proxy(arg)))), util.Collections.emptyList())
+          alias.obj(specializedType)
           systemNamespace.objects ++= Seq(alias, specializedType)
           specializedType
         }

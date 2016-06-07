@@ -10,7 +10,7 @@ import ru.mipt.acsl.modeling.{ErrorLevel, Message}
 /**
   * @author Artem Shein
   */
-sealed trait MaybeProxy {
+sealed trait MaybeProxy extends Referenceable {
 
   def resolve(registry: Registry): ResolvingMessages = isResolved match {
     case true => Result.empty
@@ -18,7 +18,7 @@ sealed trait MaybeProxy {
       val resolvingResult = registry.resolveElement(proxy.path)
       resolvingResult.result match {
         case Some(o) => resolvingResult.messages ++= resolveTo(o)
-        case _ => sys.error("can't resolve proxy")
+        case _ => sys.error(s"can't resolve proxy $proxy")
       }
       resolvingResult.messages
   }

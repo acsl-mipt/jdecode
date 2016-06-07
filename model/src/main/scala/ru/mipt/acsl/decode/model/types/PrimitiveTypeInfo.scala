@@ -9,7 +9,7 @@ class PrimitiveTypeInfo(val bitLength: Long, val kind: TypeKind.Value)
 
 object PrimitiveTypeInfo {
 
-  private def fqn(name: String) = Fqn(Fqn.DecodeNamespace, ElementName.newFromSourceName(name))
+  private def fqn(name: String) = Fqn.newInstance(Fqn.DECODE_NAMESPACE, ElementName.newInstanceFromSourceName(name))
 
   private def typeInfo(bitLength: Long, kind: TypeKind.Value): PrimitiveTypeInfo = new PrimitiveTypeInfo(bitLength, kind)
 

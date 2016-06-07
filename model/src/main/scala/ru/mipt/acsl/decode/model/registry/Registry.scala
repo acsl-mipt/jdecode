@@ -1,9 +1,9 @@
 package ru.mipt.acsl.decode.model.registry
 
+import ru.mipt.acsl.decode.model.Referenceable
 import ru.mipt.acsl.decode.model.naming.{ElementName, Fqn, Namespace}
 import ru.mipt.acsl.decode.model.proxy.path.ProxyPath
 import ru.mipt.acsl.decode.model.proxy.{DecodeProxyResolver, ExistingElementsProxyResolver, NativeLiteralGenericTypesProxyResolver, ResolvingResult}
-import ru.mipt.acsl.decode.model.Referenceable
 import ru.mipt.acsl.modeling.{ErrorLevel, Message}
 
 /**
@@ -33,13 +33,13 @@ object Registry {
   private case class RegistryImpl(name: ElementName, var rootNamespace: Namespace, var proxyResolvers: Seq[DecodeProxyResolver])
     extends Registry {
 
-    if (Fqn.DecodeNamespace.size != 1)
+    if (Fqn.DECODE_NAMESPACE.size != 1)
       sys.error("not implemented")
 
   }
 
   def apply(): Registry = {
-    RegistryImpl(ElementName.newFromMangledName("GlobalRegistry"), Namespace.newRoot,
+    RegistryImpl(ElementName.newInstanceFromMangledName("GlobalRegistry"), Namespace.newInstanceRoot(),
       Seq(ExistingElementsProxyResolver, NativeLiteralGenericTypesProxyResolver))
   }
 }

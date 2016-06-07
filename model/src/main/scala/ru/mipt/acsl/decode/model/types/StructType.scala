@@ -1,11 +1,14 @@
 package ru.mipt.acsl.decode.model.types
 
+import java.util
+import scala.collection.JavaConversions._
+import org.jetbrains.annotations.Nullable
 import ru.mipt.acsl.decode.model._
 import ru.mipt.acsl.decode.model.naming.{Container, ElementName, Namespace}
 
 trait StructType extends DecodeType with Container {
 
-  def objects: Seq[Referenceable]
+  def objects: util.List[Referenceable]
 
   def fields: Seq[StructField] = objects.flatMap {
     case f: StructField => Seq(f)
@@ -27,11 +30,17 @@ trait StructType extends DecodeType with Container {
 
 object StructType {
 
-  private class StructTypeImpl(val alias: Option[Alias.NsType], var namespace: Namespace,
-                               var objects: Seq[Referenceable], val typeParameters: Seq[ElementName])
-    extends StructType
+  private class StructTypeImpl(@Nullable val alias: Alias.NsType, var namespace: Namespace,
+                               var objects: util.List[Referenceable], val typeParameters: util.List[ElementName])
+    extends StructType {
 
-  def apply(alias: Option[Alias.NsType], namespace: Namespace, objects: Seq[Referenceable],
-            typeParameters: Seq[ElementName]): StructType =
+    override def objects(objects: util.List[Referenceable]): Unit = this.objects = objects
+
+    override def namespace(ns: Namespace): Unit = this.namespace = ns
+
+  }
+
+  def apply(@Nullable alias: Alias.NsType, namespace: Namespace, objects: util.List[Referenceable],
+            typeParameters: util.List[ElementName]): StructType =
     new StructTypeImpl(alias, namespace, objects, typeParameters)
 }

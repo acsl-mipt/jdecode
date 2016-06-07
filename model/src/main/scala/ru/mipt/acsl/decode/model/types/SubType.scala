@@ -1,5 +1,8 @@
 package ru.mipt.acsl.decode.model.types
 
+import java.util
+
+import org.jetbrains.annotations.Nullable
 import ru.mipt.acsl.decode.model.naming.{ElementName, Namespace}
 import ru.mipt.acsl.decode.model.proxy.MaybeProxy
 
@@ -23,11 +26,15 @@ trait SubType extends DecodeType {
 
 object SubType {
 
-  private class SubTypeImpl(val alias: Option[Alias.NsType], var namespace: Namespace,
-                            val typeMeasure: TypeMeasure, val typeParameters: Seq[ElementName])
-    extends SubType
+  private class SubTypeImpl(@Nullable val alias: Alias.NsType, var namespace: Namespace,
+                            val typeMeasure: TypeMeasure, val typeParameters: util.List[ElementName])
+    extends SubType {
 
-  def apply(alias: Option[Alias.NsType], namespace: Namespace, typeMeasure: TypeMeasure,
-            typeParameters: Seq[ElementName]): SubType =
+    override def namespace(ns: Namespace): Unit = this.namespace = namespace
+
+  }
+
+  def apply(@Nullable alias: Alias.NsType, namespace: Namespace, typeMeasure: TypeMeasure,
+            typeParameters: util.List[ElementName]): SubType =
     new SubTypeImpl(alias, namespace, typeMeasure, typeParameters)
 }

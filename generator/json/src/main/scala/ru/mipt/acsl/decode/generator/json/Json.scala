@@ -4,6 +4,7 @@ import io.circe
 import io.circe.Encoder
 import io.circe.generic.auto._
 import io.circe.syntax._
+import org.jetbrains.annotations.Nullable
 
 /**
   * @author Artem Shein

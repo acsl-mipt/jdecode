@@ -1,5 +1,6 @@
 package ru.mipt.acsl.decode.parser
 
+import scala.collection.JavaConversions._
 import com.intellij.lang.impl.PsiBuilderFactoryImpl
 import com.intellij.lang.{DefaultASTFactory, DefaultASTFactoryImpl, LanguageParserDefinitions, PsiBuilderFactory}
 import com.intellij.mock.{MockApplicationEx, MockProjectEx}

@@ -1,7 +1,9 @@
 package ru.mipt.acsl.decode.model.types
 
-import ru.mipt.acsl.decode.model.{LocalizedString, Referenceable}
+import java.util
+import ru.mipt.acsl.decode.model.Referenceable
 import ru.mipt.acsl.decode.model.naming.{ElementName, HasName}
+import ru.mipt.acsl.decode.model.registry.Language
 
 /**
   * Created by metadeus on 11.05.16.
@@ -14,7 +16,7 @@ trait StructField extends Referenceable with HasName {
 
   override def name: ElementName = alias.name
 
-  def info: LocalizedString = alias.info
+  def info: util.Map[Language, String] = alias.info
 
 }
 

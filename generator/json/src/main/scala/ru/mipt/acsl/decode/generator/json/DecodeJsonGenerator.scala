@@ -1,7 +1,9 @@
 package ru.mipt.acsl.decode.generator.json
 
 import java.io.{OutputStream, OutputStreamWriter}
+import java.util
 
+import scala.collection.JavaConversions._
 import io.circe.Printer
 import io.circe.generic.auto._
 import io.circe.syntax._
@@ -15,6 +17,7 @@ import ru.mipt.acsl.decode.model.registry.{Language, Measure, Registry}
 import ru.mipt.acsl.decode.model.types._
 
 import scala.collection.mutable
+import scala.collection.immutable
 
 case class DecodeJsonGenerator(config: DecodeJsonGeneratorConfig) {
 
@@ -61,24 +64,24 @@ case class DecodeJsonGenerator(config: DecodeJsonGeneratorConfig) {
       case _ => sys.error("not implemented")
     }
 
-    private def name(name: ElementName): String = name.asMangledString
+    private def name(name: ElementName): String = name.mangledNameString()
 
-    private def name(named: HasName): String = named.name.asMangledString
+    private def name(named: HasName): String = named.name.mangledNameString()
 
-    private def info(info: LocalizedString): Json.LocalizedString = localizedString(info)
+    private def info(info: util.Map[Language, String]): Json.LocalizedString = localizedString(info)
 
     private def info(obj: HasInfo): Json.LocalizedString = localizedString(obj.info)
 
     private def pathElement(p: MessageParameterPathElement): Json.ParameterPathElement = p match {
-      case Left(el) => Json.ElementName(el.asMangledString)
+      case Left(el) => Json.ElementName(el.mangledNameString())
       case Right(r) => Json.ArrayRange(r.min.toString, r.max.map(_.toString))
     }
 
-    private def localizedString(info: Map[Language, String]): Json.LocalizedString =
-      Json.LocalizedString(info.map{ i => i._1.code -> i._2})
+    private def localizedString(info: util.Map[Language, String]): Json.LocalizedString =
+      Json.LocalizedString(info.map{ i => i._1.code() -> i._2}.toMap)
 
     private def typeMeasure(tm: TypeMeasure): Json.TypeMeasure =
-      Json.TypeMeasure(generate(tm.t), tm.measure.map(generate))
+      Json.TypeMeasure(generate(tm.t), Option(tm.measure.orElse(null)).map(generate))
 
     private def structField(f: StructField): Json.StructField =
       Json.StructField(generate(f.alias), typeMeasure(f.typeMeasure))
@@ -99,24 +102,24 @@ case class DecodeJsonGenerator(config: DecodeJsonGeneratorConfig) {
     private def generate(r: Referenceable): Int =
       generate(r, {
         r match {
-          case ns: Namespace => Json.Namespace(generate(ns.alias), ns.parent.map(generate))
+          case ns: Namespace => Json.Namespace(generate(ns.alias), Option(ns.parent.orElse(null)).map(generate))
           case m: Measure => Json.Measure(generate(m.alias), localizedString(m.display))
-          case s: SubType => Json.SubType(s.alias.map(generate), generate(s.namespace), generate(s.baseType))
-          case n: NativeType => Json.NativeType(n.alias.map(generate).getOrElse(sys.error("must have an alias")), generate(n.namespace))
-          case s: StructType => Json.StructType(s.alias.map(generate), generate(s.namespace), s.fields.map(structField))
-          case s: GenericTypeSpecialized => Json.GenericTypeSpecialized(s.alias.map(generate), generate(s.namespace),
+          case s: SubType => Json.SubType(Option(s.alias).map(generate), generate(s.namespace), generate(s.baseType))
+          case n: NativeType => Json.NativeType(Option(n.alias).map(generate).getOrElse(sys.error("must have an alias")), generate(n.namespace))
+          case s: StructType => Json.StructType(Option(s.alias).map(generate), generate(s.namespace), s.fields.map(structField))
+          case s: GenericTypeSpecialized => Json.GenericTypeSpecialized(Option(s.alias).map(generate), generate(s.namespace),
             generate(s.genericType), s.genericTypeArguments.map(generate))
-          case e: EnumType => new Json.EnumType(e.alias.map(generate), generate(e.namespace),
-            e.extendsTypeOption.map(generate), e.baseTypeOption.map(generate), e.isFinal,
+          case e: EnumType => new Json.EnumType(Option(e.alias).map(generate), generate(e.namespace),
+            Option(e.extendsTypeOption.orElse(null)).map(generate), Option(e.baseTypeOption.orElse(null)).map(generate), e.isFinal,
             e.objects.map(generate))
-          case c: Const => new Json.Const(c.alias.map(generate).getOrElse(sys.error("must have an alias")), generate(c.namespace), c.value)
-          case tm: TypeMeasure => new Json.TypeMeasure(generate(tm.t), tm.measure.map(generate))
-          case a: Alias => Json.Alias(name(a.name), info(a.info), generate(a.parent), 0)
+          case c: Const => new Json.Const(Option(c.alias).map(generate).getOrElse(sys.error("must have an alias")), generate(c.namespace), c.value)
+          case tm: TypeMeasure => new Json.TypeMeasure(generate(tm.t), Option(tm.measure.orElse(null)).map(generate))
+          case a: Alias[_, _] => Json.Alias(name(a.name), info(a.info), generate(a.parent), 0)
           case ec: EnumConstant => Json.EnumConst(generate(ec.alias), constExpr(ec.value))
           case c: Command => Json.Command(generate(c.alias), c.objects.map(generate), generate(c.returnType))
-          case com: CommandOrTmMessage => com.toEither match {
-            case Left(c) => Json.Command(generate(c.alias), c.objects.map(generate), generate(c.returnType))
-            case Right(tm) => tm match {
+          case com: CommandOrTmMessage => com.isCommand match {
+            case true => val c = com.command().get(); Json.Command(generate(c.alias()), c.objects().map(generate), generate(c.returnType))
+            case _ => com.tmMessage().get() match {
               case e: EventMessage => eventMessage(e)
               case s: StatusMessage => statusMessage(s)
             }
@@ -130,10 +133,10 @@ case class DecodeJsonGenerator(config: DecodeJsonGeneratorConfig) {
       })
 
     def eventMessage(e: EventMessage): Json.EventMessage =
-      Json.EventMessage(generate(e.alias), generate(e.baseType), e.id, e.objects.map(generate))
+      Json.EventMessage(generate(e.alias), generate(e.baseType), Option(e.id.toInt), e.objects.map(generate))
 
     def statusMessage(s: StatusMessage): Json.StatusMessage =
-      Json.StatusMessage(generate(s.alias), s.id, s.priority, s.objects.map(generate))
+      Json.StatusMessage(generate(s.alias), Option(s.id.toInt), Option(s.priority.toInt), s.objects.map(generate))
 
   }
 

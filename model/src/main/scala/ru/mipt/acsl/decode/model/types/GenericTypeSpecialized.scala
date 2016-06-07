@@ -1,5 +1,7 @@
 package ru.mipt.acsl.decode.model.types
 
+import java.util
+import org.jetbrains.annotations.Nullable
 import ru.mipt.acsl.decode.model.naming.{ElementName, Namespace}
 import ru.mipt.acsl.decode.model.proxy.MaybeProxy
 
@@ -26,15 +28,19 @@ trait GenericTypeSpecialized extends DecodeType {
 
 object GenericTypeSpecialized {
 
-  private class GenericTypeSpecializedImpl(val alias: Option[Alias.NsType], var namespace: Namespace,
+  private class GenericTypeSpecializedImpl(@Nullable val alias: Alias.NsType, var namespace: Namespace,
                                            val genericTypeProxy: MaybeProxy.TypeProxy,
                                            val genericTypeArgumentsProxy: Seq[MaybeProxy.TypeProxy],
-                                           val typeParameters: Seq[ElementName])
-    extends GenericTypeSpecialized
+                                           val typeParameters: util.List[ElementName])
+    extends GenericTypeSpecialized {
 
-  def apply(alias: Option[Alias.NsType], namespace: Namespace,
+    override def namespace(ns: Namespace): Unit = this.namespace = ns
+
+  }
+
+  def apply(@Nullable alias: Alias.NsType, namespace: Namespace,
             genericType: MaybeProxy.TypeProxy,
             genericTypeArguments: Seq[MaybeProxy.TypeProxy],
-            typeParameters: Seq[ElementName]): GenericTypeSpecialized =
+            typeParameters: util.List[ElementName]): GenericTypeSpecialized =
     new GenericTypeSpecializedImpl(alias, namespace, genericType, genericTypeArguments, typeParameters)
 }

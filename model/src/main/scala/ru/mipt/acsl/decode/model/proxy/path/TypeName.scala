@@ -7,5 +7,5 @@ import ru.mipt.acsl.decode.model.naming.ElementName
   */
 case class TypeName(typeName: ElementName) extends ProxyElementName {
   override def mangledName: ElementName = typeName
-  override def toString: String = typeName.asMangledString
+  override def toString: String = typeName.mangledNameString
 }

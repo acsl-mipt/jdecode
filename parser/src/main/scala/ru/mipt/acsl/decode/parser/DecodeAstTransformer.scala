@@ -1,7 +1,11 @@
 package ru.mipt.acsl.decode.parser
 
+import java.util
+import java.util.{Collections, Optional}
+
 import com.intellij.lang.ASTNode
 import com.intellij.psi.PsiWhiteSpace
+import org.jetbrains.annotations.Nullable
 import ru.mipt.acsl.decode.model._
 import ru.mipt.acsl.decode.model.component.message._
 import ru.mipt.acsl.decode.model.component.{Command, Component}
@@ -32,24 +36,24 @@ class DecodeAstTransformer {
     while (children.head.getPsi.isInstanceOf[PsiWhiteSpace])
       children = children.tail
     val nsDecl = children.head.getPsi(classOf[DecodeNamespaceDecl])
-    val rootNs = Namespace.newRoot
-    ns = Namespace(fqn(nsDecl.getElementId), rootNs, elementInfo(Option(nsDecl.getElementInfo)))
+    val rootNs = Namespace.newInstanceRoot()
+    ns = Namespace.newInstance(fqn(nsDecl.getElementId), rootNs, elementInfo(Option(nsDecl.getElementInfo)))
     children.drop(1).foreach(_.getPsi match {
       case s: DecodeSubTypeDecl =>
-        ns.objects ++= newType(s)
+        ns.objects.addAll(newType(s))
       case e: DecodeEnumTypeDecl =>
-        ns.objects ++= newType(e)
+        ns.objects.addAll(newType(e))
       case s: DecodeStructTypeDecl =>
-        ns.objects ++= newType(s)
+        ns.objects.addAll(newType(s))
       case n: DecodeNativeTypeDecl =>
-        ns.objects ++= newType(n)
+        ns.objects.addAll(newType(n))
       case a: DecodeAliasDecl =>
-        ns.objects :+= newType(a)
+        ns.objects.add(newType(a))
       case i: DecodeImportStmt =>
         val els = i.getImportElementList
         val iFqn: Fqn = fqn(i.getElementId)
         if (els.isEmpty) {
-          imports.put(iFqn.last.asMangledString, MaybeProxy.Referenceable(Left(Proxy(ProxyPath(iFqn.copyDropLast, TypeName(iFqn.last))))))
+          imports.put(iFqn.last.mangledNameString, MaybeProxy.Referenceable(Left(Proxy(ProxyPath(iFqn.copyDropLast, TypeName(iFqn.last))))))
         } else if (i.getImportElementStar != null) {
           sys.error("not implemented")
         } else {
@@ -61,77 +65,77 @@ class DecodeAstTransformer {
               ImportPartName(name)
           }.foreach(p =>
             assert(imports.put(
-              ElementName.newFromSourceName(p.alias).asMangledString,
+              ElementName.newInstanceFromSourceName(p.alias).mangledNameString(),
               MaybeProxy.Referenceable(Left(Proxy(ProxyPath(iFqn, TypeName(p.originalName)))))).isEmpty))
         }
       case m: DecodeMeasureDecl =>
-        val alias = Alias.NsMeasure(elementName(m.getElementNameRule), elementInfo(Option(m.getElementInfo)))(ns, null)
-        alias.obj = Measure(alias, localizedStrings(m.getStringValueList))
-        ns.objects ++= Seq(alias, alias.obj)
+        val alias = new Alias.NsMeasure(elementName(m.getElementNameRule), elementInfo(Option(m.getElementInfo)), ns, null)
+        alias.obj(Measure(alias, localizedStrings(m.getStringValueList)))
+        ns.objects.addAll(Seq(alias, alias.obj))
       case c: DecodeComponentDecl =>
         val params = Option(c.getComponentParametersDecl).map { params =>
-          val struct = StructType(None, ns, Seq.empty, Seq.empty)
-          struct.objects ++= params.getCommandArgs.getCommandArgList.flatMap { arg =>
-            val alias = Alias.StructField(elementName(arg.getElementNameRule),
-              elementInfo(Option(arg.getElementInfo)))(struct, null)
-            alias.obj = StructField(alias, typeMeasure(arg.getTypeUnitApplication))
+          val struct = StructType(null, ns, new util.ArrayList[Referenceable](), new util.ArrayList[ElementName]())
+          struct.objects.addAll(params.getCommandArgs.getCommandArgList.flatMap { arg =>
+            val alias = new Alias.StructField(elementName(arg.getElementNameRule),
+              elementInfo(Option(arg.getElementInfo)), struct, null)
+            alias.obj(StructField(alias, typeMeasure(arg.getTypeUnitApplication)))
             Seq(alias, alias.obj)
-          }
-          ns.objects :+= struct
+          })
+          ns.objects.add(struct)
           MaybeProxy.Struct(Right(struct))
         }
-        val alias = Alias.NsComponent(elementName(c.getElementNameRule), elementInfo(Option(c.getElementInfo)))(ns, null)
-        val component = Component(alias, ns, id(c.getAnnotationDeclList), params, Seq.empty)
-        alias.obj = component
-        alias.obj.objects ++= c.getComponentRefList.map(sc =>
-          componentRef(component, Fqn(Seq(elementName(sc.getElementNameRule))))) ++
-          c.getCommandDeclList.flatMap(c => command(c, component))
-        ns.objects ++= Seq(alias, alias.obj)
-        component.objects ++= c.getMessageDeclList
+        val alias = new Alias.NsComponent(elementName(c.getElementNameRule), elementInfo(Option(c.getElementInfo)), ns, null)
+        val component = Component(alias, ns, id(c.getAnnotationDeclList), params, new util.ArrayList[Referenceable]())
+        alias.obj(component)
+        alias.obj.objects.addAll(c.getComponentRefList.map(sc =>
+          componentRef(component, Fqn.newInstance(Seq(elementName(sc.getElementNameRule))))) ++
+          c.getCommandDeclList.flatMap(c => command(c, component)))
+        ns.objects.addAll(Seq(alias, alias.obj))
+        component.objects.addAll(c.getMessageDeclList
           .flatMap(m => Option(m.getEventMessage).seq.flatMap(eventMessage(_, component))) ++
           c.getMessageDeclList
-            .flatMap(m => Option(m.getStatusMessage).seq.flatMap(statusMessage(_, component)))
+            .flatMap(m => Option(m.getStatusMessage).seq.flatMap(statusMessage(_, component))))
       case l: DecodeLanguageDecl =>
-        defaultLanguage = Some(Language(elementName(l.getElementNameRule).asMangledString))
+        defaultLanguage = Some(Language.newInstance(elementName(l.getElementNameRule).mangledNameString()))
       case c: DecodeConstDecl =>
-        val alias = Alias.NsConst(elementName(c.getElementNameRule), elementInfo(Option(c.getElementInfo)))(ns, null)
-        alias.obj = Const(Some(alias), ns, c.getLiteral.getText)
-        ns.objects ++= Seq(alias, alias.obj)
+        val alias = new Alias.NsConst(elementName(c.getElementNameRule), elementInfo(Option(c.getElementInfo)), ns, null)
+        alias.obj(Const.newInstance(alias, ns, c.getLiteral.getText, util.Collections.emptyList()))
+        ns.objects.addAll(Seq(alias, alias.obj))
       case s: DecodeScriptDecl =>
         //sys.error("not implemented")
       case p: PsiWhiteSpace =>
       case p =>
         sys.error(s"not implemented for ${p.getText} (${p.getClass} $p) at ${p.getTextOffset}")
     })
-    ns.rootNamespace
+    ns.rootNamespace()
   }
 
   private def newType(a: DecodeAliasDecl): Alias.NsTypeMeasure =
-    Alias.NsTypeMeasure(elementName(a.getElementNameRule), elementInfo(Option(a.getElementInfo)))(ns, typeMeasure(a.getTypeUnitApplication))
+    new Alias.NsTypeMeasure(elementName(a.getElementNameRule), elementInfo(Option(a.getElementInfo)), ns, typeMeasure(a.getTypeUnitApplication))
 
   private def newType(e: DecodeEnumTypeDecl): Seq[Referenceable] = {
-    val alias = Alias.NsType(elementName(e.getEnumName.getElementNameRule), elementInfo(Option(e.getElementInfo)))(ns, null)
-    alias.obj = newEnumType(e, alias, typeParameters(Option(e.getGenericParameters)))
+    val alias = new Alias.NsType(elementName(e.getEnumName.getElementNameRule), elementInfo(Option(e.getElementInfo)), ns, null)
+    alias.obj(newEnumType(e, alias, typeParameters(Option(e.getGenericParameters))))
     Seq(alias, alias.obj)
   }
 
   private def newType(n: DecodeNativeTypeDecl): Seq[Referenceable] = {
-    val alias = Alias.NsType(elementName(n.getElementNameRule), elementInfo(Option(n.getElementInfo)))(ns, null)
-    alias.obj = NativeType(alias, ns, typeParameters(Option(n.getGenericParameters)))
+    val alias = new Alias.NsType(elementName(n.getElementNameRule), elementInfo(Option(n.getElementInfo)), ns, null)
+    alias.obj(NativeType(alias, ns, typeParameters(Option(n.getGenericParameters))))
     Seq(alias, alias.obj)
   }
 
   private def newType(s: DecodeStructTypeDecl): Seq[Referenceable] = {
-    val alias = Alias.NsType(elementName(s.getElementNameRule), elementInfo(Option(s.getElementInfo)))(ns, null)
-    alias.obj = newStructType(alias, s.getCommandArgs, typeParameters(Option(s.getGenericParameters)))
+    val alias = new Alias.NsType(elementName(s.getElementNameRule), elementInfo(Option(s.getElementInfo)), ns, null)
+    alias.obj(newStructType(alias, s.getCommandArgs, typeParameters(Option(s.getGenericParameters))))
     Seq(alias, alias.obj)
   }
 
   private def newType(s: DecodeSubTypeDecl): Seq[Referenceable] = {
-    val alias = Alias.NsType(elementName(s.getElementNameRule), elementInfo(Option(s.getElementInfo)))(ns, null)
-    val t = SubType(Some(alias), ns, typeMeasure(s.getTypeUnitApplication),
+    val alias = new Alias.NsType(elementName(s.getElementNameRule), elementInfo(Option(s.getElementInfo)), ns, null)
+    val t = SubType(alias, ns, typeMeasure(s.getTypeUnitApplication),
       typeParameters(Option(s.getGenericParameters)))
-    alias.obj = t
+    alias.obj(t)
     Seq(alias, t)
   }
 
@@ -140,47 +144,49 @@ class DecodeAstTransformer {
 
   private def newEnumType(e: DecodeEnumTypeDecl, alias: Alias.NsType,
                           typeParameters: Seq[ElementName]): EnumType = {
-    val enum = EnumType(Some(alias), ns, Option(e.getElementNameRule)
-      .map(n => Left(MaybeProxy.Enum(Left(proxyForFqn(Fqn(Seq(elementName(n)))).proxy))))
-      .getOrElse(Right(typeMeasure(e.getTypeUnitApplication))),
-        Seq.empty, e.getFinalEnum != null,
+    val enum = EnumType.newInstance(alias, ns, Option(e.getElementNameRule)
+      .map(n => new MaybeProxyEnumOrTypeMeasure(MaybeProxy.Enum(Left(proxyForFqn(Fqn.newInstance(Seq(elementName(n)))).proxy))))
+      .getOrElse(new MaybeProxyEnumOrTypeMeasure(typeMeasure(e.getTypeUnitApplication))),
+      new util.ArrayList[Referenceable](), e.getFinalEnum != null,
       typeParameters)
-    alias.obj = enum
-    enum.objects ++= e.getEnumTypeValues.getEnumTypeValueList.flatMap(v => newEnumConstant(v, enum))
+    alias.obj(enum)
+    enum.objects.addAll(e.getEnumTypeValues.getEnumTypeValueList.flatMap(v => newEnumConstant(v, enum)))
     enum
   }
 
   private def newStructType(alias: Alias.NsType, args: DecodeCommandArgs, typeParameters: Seq[ElementName]): StructType = {
-    val t = StructType(Some(alias), ns, Seq.empty, typeParameters)
-    t.objects = args.getCommandArgList.flatMap { cmdArg =>
-      val alias = Alias.StructField(elementName(cmdArg.getElementNameRule),
-        elementInfo(Option(cmdArg.getElementInfo)))(t, null)
-      alias.obj = StructField(alias, typeMeasure(cmdArg.getTypeUnitApplication))
+    val t = StructType(alias, ns, Collections.emptyList(), typeParameters)
+    t.objects(args.getCommandArgList.flatMap { cmdArg =>
+      val alias = new Alias.StructField(elementName(cmdArg.getElementNameRule),
+        elementInfo(Option(cmdArg.getElementInfo)), t, null)
+      alias.obj(StructField(alias, typeMeasure(cmdArg.getTypeUnitApplication)))
       Seq(alias, alias.obj)
-    }
+    })
     t
   }
 
   private def newEnumConstant(v: DecodeEnumTypeValue, enum: EnumType): Seq[Referenceable] = {
     val literal = v.getLiteral
     val numericLiteral = literal.getNumericLiteral
-    val alias = Alias.EnumConstant(elementName(v.getElementNameRule), elementInfo(Option(v.getElementInfo)))(enum, null)
-    alias.obj = EnumConstant(alias, Option(numericLiteral.getFloatLiteral).map(l => BigDecimalLiteral(l.getText))
-        .getOrElse(BigIntLiteral(numericLiteral.getIntegerLiteral.getText)))
+    val alias = new Alias.EnumConstant(elementName(v.getElementNameRule), elementInfo(Option(v.getElementInfo)), enum, null)
+    alias.obj(EnumConstant(alias, Option(numericLiteral.getFloatLiteral).map(l => BigDecimalLiteral(l.getText))
+        .getOrElse(BigIntLiteral(numericLiteral.getIntegerLiteral.getText))))
     Seq(alias, alias.obj)
   }
 
-  private def id(annotations: Seq[DecodeAnnotationDecl]): Option[Int] =
-    annotations.find(a => string(a.getElementNameRule) == "id")
-      .map(_.getAnnotationParameterList.headOption.map(_.getText.toInt))
-      .getOrElse(None)
+  @Nullable
+  private def id(annotations: Seq[DecodeAnnotationDecl]): Integer =
+    annotations.find(a => string(a.getElementNameRule) == "id") match {
+      case Some(annotation) => annotation.getAnnotationParameterList.headOption.map(p => Integer.valueOf(p.getText)).get
+      case None => null
+    }
 
   private def statusMessage(sm: DecodeStatusMessage, c: Component): Seq[Referenceable] = {
-    val alias = Alias.ComponentStatusMessage(elementName(sm.getElementNameRule),
-      elementInfo(Option(sm.getElementInfo)))(c, null)
-    alias.obj = StatusMessage(alias, c, id(sm.getAnnotationDeclList),
+    val alias = new Alias.ComponentStatusMessage(elementName(sm.getElementNameRule),
+      elementInfo(Option(sm.getElementInfo)), c, null)
+    alias.obj(StatusMessage(alias, c, id(sm.getAnnotationDeclList),
       sm.getStatusMessageParametersDecl.getParameterDeclList.map(p =>
-        StatusParameter(parameterPath(p.getParameterElement), elementInfo(Option(p.getElementInfo)))))
+        StatusParameter(parameterPath(p.getParameterElement), elementInfo(Option(p.getElementInfo)))), null))
     Seq(alias, alias.obj)
   }
 
@@ -197,44 +203,44 @@ class DecodeAstTransformer {
   }
 
   private def eventMessage(em: DecodeEventMessage, c: Component): Seq[Referenceable] = {
-    val alias = Alias.ComponentEventMessage(elementName(em.getElementNameRule),
-      elementInfo(Option(em.getElementInfo)))(c, null)
-    alias.obj = EventMessage(alias, id(em.getAnnotationDeclList), Seq.empty, typeApplication(em.getTypeApplication))
-    alias.obj.objects ++= em.getEventMessageParametersDecl.getEventParameterDeclList.flatMap { p =>
+    val alias = new Alias.ComponentEventMessage(elementName(em.getElementNameRule),
+      elementInfo(Option(em.getElementInfo)), c, null)
+    alias.obj(EventMessage(alias, id(em.getAnnotationDeclList), new util.ArrayList[Referenceable](), typeApplication(em.getTypeApplication)))
+    alias.obj.objects.addAll(em.getEventMessageParametersDecl.getEventParameterDeclList.flatMap { p =>
       Option(p.getParameterElement)
         .map(mp => Seq(StatusParameter(parameterPath(mp), elementInfo(Option(p.getElementInfo)))))
         .getOrElse {
           val _var = p.getVarParameterElement
-          val paramAlias = Alias.MessageOrCommandParameter(elementName(_var.getElementNameRule),
-            elementInfo(Option(_var.getElementInfo)))(CommandOrTmMessage(Right(alias.obj)), null)
-          paramAlias.obj = Parameter(paramAlias, typeMeasure(_var.getTypeUnitApplication))
+          val paramAlias = new Alias.MessageOrCommandParameter(elementName(_var.getElementNameRule),
+            elementInfo(Option(_var.getElementInfo)), CommandOrTmMessage.newInstance(alias.obj), null)
+          paramAlias.obj(Parameter.newInstance(paramAlias, typeMeasure(_var.getTypeUnitApplication)))
           Seq(paramAlias, paramAlias.obj)
         }
-    }
+    })
     Seq(alias, alias.obj)
   }
 
   private def command(c: DecodeCommandDecl, component: Component): Seq[Referenceable] = {
-    val alias = Alias.ComponentCommand(elementName(c.getElementNameRule),
-      elementInfo(Option(c.getElementInfo)))(component, null)
-    alias.obj = Command(alias, id(c.getAnnotationDeclList), Seq.empty, typeMeasure(c.getTypeUnitApplication))
-    alias.obj.objects ++= Option(c.getCommandArgs).map(_.getCommandArgList.toSeq).getOrElse(Seq.empty)
+    val alias = new Alias.ComponentCommand(elementName(c.getElementNameRule),
+      elementInfo(Option(c.getElementInfo)), component, null)
+    alias.obj(Command.newInstance(alias, id(c.getAnnotationDeclList), new util.ArrayList[Referenceable](), typeMeasure(c.getTypeUnitApplication)))
+    alias.obj.objects.addAll(Option(c.getCommandArgs).map(_.getCommandArgList.toSeq).getOrElse(Seq.empty)
       .flatMap { cmdArg =>
-        val paramAlias = Alias.MessageOrCommandParameter(elementName(cmdArg.getElementNameRule),
-          elementInfo(Option(cmdArg.getElementInfo)))(CommandOrTmMessage(Left(alias.obj)), null)
-        paramAlias.obj = Parameter(paramAlias, typeMeasure(cmdArg.getTypeUnitApplication))
+        val paramAlias = new Alias.MessageOrCommandParameter(elementName(cmdArg.getElementNameRule),
+          elementInfo(Option(cmdArg.getElementInfo)), CommandOrTmMessage.newInstance(alias.obj), null)
+        paramAlias.obj(Parameter.newInstance(paramAlias, typeMeasure(cmdArg.getTypeUnitApplication)))
         Seq(paramAlias, paramAlias.obj)
-      }
+      })
     Seq(alias, alias.obj)
   }
 
   private def componentRef(component: Component, fqn: Fqn): Alias.ComponentComponent = {
-    val alias = fqn.asMangledString
+    val alias = fqn.mangledNameString()
     if (fqn.size == 1 && imports.contains(alias)) {
       val _import = imports.get(alias).get
-      Alias.ComponentComponent(fqn.last, LocalizedString.empty)(component, MaybeProxy.Component(Left(Proxy(_import.proxy.path))))
+      new Alias.ComponentComponent(fqn.last, util.Collections.emptyMap(), component, MaybeProxy.Component(Left(Proxy(_import.proxy.path))))
     } else {
-      Alias.ComponentComponent(fqn.last, LocalizedString.empty)(component, MaybeProxy.Component(Left(Proxy(ProxyPath(fqn, ns)))))
+      new Alias.ComponentComponent(fqn.last, util.Collections.emptyMap(), component, MaybeProxy.Component(Left(Proxy(ProxyPath(fqn, ns)))))
     }
   }
 
@@ -242,21 +248,21 @@ class DecodeAstTransformer {
     elementName(Option(nameRule.getElementNameToken).map(_.getText)
       .getOrElse(nameRule.getEscapedName.getText.substring(1)))
 
-  private def elementName(str: String): ElementName = ElementName.newFromSourceName(str)
+  private def elementName(str: String): ElementName = ElementName.newInstanceFromSourceName(str)
 
   private def fqn(elementId: DecodeElementId): Fqn =
-    Fqn(elementId.getElementNameRuleList.map(elementName))
+    Fqn.newInstance(elementId.getElementNameRuleList.map(elementName))
 
-  private def elementInfo(infoStr: Option[DecodeElementInfo]): LocalizedString = infoStr match {
+  private def elementInfo(infoStr: Option[DecodeElementInfo]): util.Map[Language, String] = infoStr match {
     case Some(i) => localizedStrings(i.getStringValueList)
-    case _ => LocalizedString.empty
+    case _ => util.Collections.emptyMap()
   }
 
-  private def localizedStrings(values: Seq[DecodeStringValue]): LocalizedString = values.map(info).toMap
+  private def localizedStrings(values: Seq[DecodeStringValue]): util.Map[Language, String] = values.map(info).toMap[Language, String]
 
   private def info(s: DecodeStringValue): (Language, String) = {
     Option(s.getElementNameRule) match {
-      case Some(l) => (Language(elementName(l).asMangledString),
+      case Some(l) => (Language.newInstance(elementName(l).mangledNameString()),
         string(s.getStringLiteral))
       case _ => (defaultLanguage.getOrElse(sys.error("default language not set")),
         string(s.getStringLiteral))
@@ -269,24 +275,25 @@ class DecodeAstTransformer {
   }
 
   private def string(en: DecodeElementNameRule): String =
-    elementName(en).asMangledString
+    elementName(en).mangledNameString()
 
-  private def measure(u: Option[PsiDecodeUnit]): Option[MaybeProxy.Measure] =
-    u.map(unit => MaybeProxy.Measure(Left(proxyForFqn(fqn(unit.getElementId)).proxy)))
+  @Nullable
+  private def measure(u: Option[PsiDecodeUnit]): MaybeProxy.Measure =
+    u.map(unit => MaybeProxy.Measure(Left(proxyForFqn(fqn(unit.getElementId)).proxy))).orNull
 
   private def typeMeasure(tu: DecodeTypeUnitApplication): TypeMeasure = {
-    val result = TypeMeasure(typeApplication(tu.getTypeApplication), measure(Option(tu.getUnit)))
+    val result = TypeMeasure.newInstance(typeApplication(tu.getTypeApplication), measure(Option(tu.getUnit)))
     if (tu.getOptional != null) {
-      TypeMeasure(MaybeProxy.Type(Left(Proxy(ProxyPath(GenericTypeName(ElementName.newFromMangledName("option"),
-        Seq(result.typeProxy.proxy.path)))))), None) // fixme: Not None
+      TypeMeasure.newInstance(MaybeProxy.Type(Left(Proxy(ProxyPath(GenericTypeName(Fqn.OPTION.last(),
+        Seq(result.typeProxy().proxy.path)))))), null) // fixme: Not None
     } else {
       result
     }
   }
 
   private def proxyForFqn(fqn: Fqn): MaybeProxy.Referenceable =
-    if (fqn.size == 1 && imports.contains(fqn.last.asMangledString))
-      imports.get(fqn.last.asMangledString).get
+    if (fqn.size == 1 && imports.contains(fqn.last.mangledNameString()))
+      imports.get(fqn.last.mangledNameString()).get
     else
       MaybeProxy.Referenceable(Left(Proxy(ProxyPath(fqn, ns))))
 

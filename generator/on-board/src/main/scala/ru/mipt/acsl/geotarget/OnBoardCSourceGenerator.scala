@@ -21,7 +21,7 @@ object OnBoardCSourceGenerator extends LazyLogging {
 
   val RootComponentFqn = "ru.mipt.acsl.photon.Main"
 
-  def fqn(str: String): Fqn = Fqn(str)
+  def fqn(str: String): Fqn = Fqn.newInstance(str)
 
   def main(args : Array[String]) = {
     val config = new CGeneratorConfiguration(new File("gen/"),

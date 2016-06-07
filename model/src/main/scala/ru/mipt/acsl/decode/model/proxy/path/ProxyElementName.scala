@@ -9,6 +9,6 @@ abstract class ProxyElementName {
 
   def mangledName: ElementName
 
-  override def toString: String = mangledName.asMangledString
+  override def toString: String = mangledName.mangledNameString
 
 }

@@ -15,7 +15,7 @@ import ru.mipt.acsl.geotarget.{OnBoardCSourceGenerator, OnBoardModelRegistry}
   */
 object GenerateMccStuff {
 
-  val PixhawkComponentFqn = Fqn("mavlink.Pixhawk")
+  val PixhawkComponentFqn = Fqn.newInstance("mavlink.Pixhawk")
 
   val PixhawkSourceResource = "pixhawk/pixhawk.xml"
   val PixhawkIncludes = Seq("pixhawk/common.xml")
@@ -35,7 +35,7 @@ object GenerateMccStuff {
         StandardCharsets.UTF_8)
 
       MavlinkSourceGenerator(MavlinkSourceGeneratorInternalConfig(resourceContents(PixhawkSourceResource),
-        PixhawkComponentFqn.copyDropLast.asMangledString, PixhawkComponentFqn.last.asMangledString, pixhawkOutput,
+        PixhawkComponentFqn.copyDropLast.mangledNameString(), PixhawkComponentFqn.last.mangledNameString(), pixhawkOutput,
         PixhawkIncludes.map(i => (new File(i).getName, resourceContents(i))).toMap))
         .generate()
 
@@ -43,7 +43,7 @@ object GenerateMccStuff {
         ModelRegistry.registry(
           OnBoardModelRegistry.Sources.map(ModelRegistry.sourceContents) :+
             new String(pixhawkOutput.toByteArray, StandardCharsets.UTF_8)), os,
-        Seq(OnBoardCSourceGenerator.RootComponentFqn, PixhawkComponentFqn.asMangledString), prettyPrint = true))
+        Seq(OnBoardCSourceGenerator.RootComponentFqn, PixhawkComponentFqn.mangledNameString()), prettyPrint = true))
         .generate()
 
       close()
