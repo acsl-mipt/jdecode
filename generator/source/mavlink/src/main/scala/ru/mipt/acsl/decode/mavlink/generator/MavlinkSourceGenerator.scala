@@ -31,14 +31,14 @@ class MavlinkSourceGenerator(val config: MavlinkSourceGeneratorConfig) {
 
       def _eol(): Unit = eol(this)
 
-      append("namespace " + config.nsFqn)
+      append("namespace " + config.getNamespaceFqn)
       _eol()
       append("import decode.(u8, u16, u32, u64, i8, i16, i32, i64, f32, f64, array, unit)")
       _eol()
       _eol()
       append("language en")
       _eol()
-      processFile(config.inputContents)
+      processFile(config.getInputContents)
       _eol()
       append("alias ^float f32")
       _eol()
@@ -54,7 +54,7 @@ class MavlinkSourceGenerator(val config: MavlinkSourceGeneratorConfig) {
 
       // Component
       _eol()
-      append("component ").append(makeComponentName(config.componentName))
+      append("component ").append(makeComponentName(config.getComponentName))
       append(" {")
       _eol()
       append("\tparameters (")
@@ -170,7 +170,7 @@ class MavlinkSourceGenerator(val config: MavlinkSourceGeneratorConfig) {
     (document \ "_").foreach { element =>
       element.label match {
         case "include" =>
-          processFile(config.includeContents(element.text))
+          processFile(config.getIncludeContents(element.text))
         case "version" =>
         case "enums" =>
           (element \ "enum").map(processEnum).foreach { e =>

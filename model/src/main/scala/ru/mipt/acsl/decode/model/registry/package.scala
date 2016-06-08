@@ -3,7 +3,6 @@ package ru.mipt.acsl.decode.model
 import ru.mipt.acsl.decode.model.component.Component
 import ru.mipt.acsl.decode.model.component.message.{EventMessage, StatusMessage}
 import ru.mipt.acsl.decode.model.naming.{Container, ElementName, Fqn, Namespace}
-import ru.mipt.acsl.decode.model.proxy.ResolvingMessages
 import ru.mipt.acsl.decode.model.types.{DecodeType, EnumType, NativeType}
 
 import scala.collection.JavaConversions._
@@ -56,8 +55,6 @@ package object registry {
 
     def eventMessageOrFail(fqn: String): EventMessage =
       eventMessage(fqn).getOrElse(sys.error("assertion error"))
-
-    def resolve(): ResolvingMessages = RegistryUtils.resolve(r, r.rootNamespace)
 
     def validate(): ValidatingResult = validate(r.rootNamespace)
 

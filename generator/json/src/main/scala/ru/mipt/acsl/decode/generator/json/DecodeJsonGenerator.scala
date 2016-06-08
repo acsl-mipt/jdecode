@@ -1,6 +1,6 @@
 package ru.mipt.acsl.decode.generator.json
 
-import java.io.{OutputStream, OutputStreamWriter}
+import java.io.OutputStreamWriter
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util
@@ -14,7 +14,7 @@ import ru.mipt.acsl.decode.model.component.message.{EventMessage, StatusMessage}
 import ru.mipt.acsl.decode.model.component.{Command, Component, MessageParameterPathElement, StatusParameter}
 import ru.mipt.acsl.decode.model.expr._
 import ru.mipt.acsl.decode.model.naming.{ElementName, HasName, Namespace}
-import ru.mipt.acsl.decode.model.registry.{Language, Measure, Registry}
+import ru.mipt.acsl.decode.model.registry.{Language, Measure}
 import ru.mipt.acsl.decode.model.types._
 
 import scala.collection.JavaConversions._
@@ -24,15 +24,15 @@ case class DecodeJsonGenerator(config: DecodeJsonGeneratorConfig) {
 
   def generate(): Unit = {
 
-    new OutputStreamWriter(config.output) {
+    new OutputStreamWriter(config.getOutput) {
 
-      val rootComponents = config.componentsFqn.map(f => config.registry.component(f)
+      val rootComponents = config.getComponentsFqn.map(f => config.getRegistry.component(f)
         .orElseFail(s"component not found $f"))
 
       private val jsonRoot = new StatefulDecodeJsonGenerator()
         .generateRootComponents(rootComponents)
 
-      if (config.prettyPrint) {
+      if (config.isPrettyPrint) {
         val printer = Printer.spaces2.copy(dropNullKeys = true)
         write(jsonRoot.asJson.pretty(printer))
       } else {
@@ -146,6 +146,3 @@ case class DecodeJsonGenerator(config: DecodeJsonGeneratorConfig) {
   }
 
 }
-
-case class DecodeJsonGeneratorConfig(registry: Registry, output: OutputStream, componentsFqn: Seq[String],
-                                     prettyPrint: Boolean = false)

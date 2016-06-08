@@ -5,9 +5,7 @@ import ru.mipt.acsl.decode.model.Referenceable;
 import ru.mipt.acsl.decode.model.ReferenceableVisitor;
 import ru.mipt.acsl.decode.model.TmParameter;
 import ru.mipt.acsl.decode.model.component.Command;
-import ru.mipt.acsl.decode.model.component.Component;
 import ru.mipt.acsl.decode.model.component.message.EventMessage;
-import ru.mipt.acsl.decode.model.component.message.TmMessage;
 import ru.mipt.acsl.decode.model.expr.ConstExpr;
 import ru.mipt.acsl.decode.model.naming.Container;
 import ru.mipt.acsl.decode.model.proxy.MaybeProxy;
@@ -21,6 +19,10 @@ import java.util.Optional;
  * @author Artem Shein
  */
 public class RegistryUtils {
+
+    public static ResolvingMessages resolve(Registry r) {
+        return RegistryUtils.resolve(r, r.rootNamespace());
+    }
 
     public static ResolvingMessages resolve(Registry r, Referenceable obj) {
         final ResolvingMessages result = ResolvingMessages.newInstance();

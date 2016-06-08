@@ -67,6 +67,7 @@ trait Component extends Container with HasName {
 
   def statusMessage(name: ElementName): Option[StatusMessage] = objects.flatMap {
     case a: Alias.ComponentStatusMessage if a.name == name => Seq(a.obj)
+    case _ => Seq.empty
   } match {
     case s if s.size == 1 => Some(s.head)
   }

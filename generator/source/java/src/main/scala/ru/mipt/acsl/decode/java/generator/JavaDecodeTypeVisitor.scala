@@ -22,7 +22,7 @@ object JavaDecodeTypeVisitor {
 
   def getJavaTypeForDecodeType(t: DecodeType, genericUse: Boolean): JavaType = t match {
     case t: NativeType =>
-      val p = PrimitiveTypeInfo.typeInfoByFqn(t.fqn.getOrElse(sys.error("invalid type?")))
+      val p = PrimitiveTypeInfo.typeInfoByFqn(t.fqn.get())
       (p.kind, p.bitLength, genericUse) match {
         case (TypeKind.Int, 8, true) => JavaType.Std.BYTE
         case (TypeKind.Int, 8, false) => JavaType.Primitive.BYTE

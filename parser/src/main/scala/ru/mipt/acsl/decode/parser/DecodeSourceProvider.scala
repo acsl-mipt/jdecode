@@ -1,5 +1,6 @@
 package ru.mipt.acsl.decode.parser
 
+import java.util
 import scala.collection.JavaConversions._
 import com.intellij.lang.impl.PsiBuilderFactoryImpl
 import com.intellij.lang.{DefaultASTFactory, DefaultASTFactoryImpl, LanguageParserDefinitions, PsiBuilderFactory}
@@ -72,7 +73,7 @@ class DecodeSourceProvider extends LazyLogging {
 
   ParserBoilerplate.init()
 
-  def provide(config: DecodeSourceProviderConfiguration, sources: Seq[String]): Registry = {
+  def provide(config: DecodeSourceProviderConfiguration, sources: util.List[String]): Registry = {
     val registry = Registry()
     registry.rootNamespace = sources.map { source =>
       val parserDefinition = new DecodeParserDefinition()

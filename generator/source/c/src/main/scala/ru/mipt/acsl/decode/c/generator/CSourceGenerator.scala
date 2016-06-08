@@ -2,22 +2,23 @@ package ru.mipt.acsl.decode.c.generator
 
 import java.io._
 import java.nio.charset.StandardCharsets
+import java.util.Optional
 import java.{io, util}
 
-import scala.collection.JavaConversions._
 import com.google.common.base.CaseFormat
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.compress.compressors.xz.{XZCompressorInputStream, XZCompressorOutputStream}
 import org.apache.commons.compress.utils.IOUtils
 import ru.mipt.acsl.decode.generator.json.{DecodeJsonGenerator, DecodeJsonGeneratorConfig}
-import ru.mipt.acsl.decode.model.{MayHaveId, Parameter, StatusParameter}
 import ru.mipt.acsl.decode.model.component.message.{EventMessage, StatusMessage, TmMessage}
 import ru.mipt.acsl.decode.model.component.{Command, Component, StatusParameter}
 import ru.mipt.acsl.decode.model.naming.{HasName, Namespace}
-import ru.mipt.acsl.decode.model.types.{Alias, DecodeType, EnumType, GenericTypeSpecialized, NativeType, PrimitiveTypeInfo, StructField, StructType, SubType, TypeAlias, TypeKind}
-import ru.mipt.acsl.generator.c.ast.{CDefine, _}
+import ru.mipt.acsl.decode.model.types.{DecodeType, EnumType, GenericTypeSpecialized, NativeType, PrimitiveTypeInfo, StructField, StructType, SubType, TypeAlias, TypeKind}
+import ru.mipt.acsl.decode.model.{MayHaveId, Parameter}
 import ru.mipt.acsl.generator.c.ast.implicits._
+import ru.mipt.acsl.generator.c.ast.{CDefine, _}
 
+import scala.collection.JavaConversions._
 import scala.collection.immutable.HashMap
 import scala.collection.{immutable, mutable}
 import scala.io.Source
@@ -27,42 +28,43 @@ class CSourceGenerator(val config: CGeneratorConfiguration) extends LazyLogging 
   import CSourceGenerator._
 
   def generate(): Unit = {
-    val component = config.registry.component(config.rootComponentFqn).getOrElse(
-      sys.error(s"component not found ${config.rootComponentFqn}"))
+    val component = config.getRegistry.component(config.getRootComponentFqn).getOrElse(
+      sys.error(s"component not found ${config.getRootComponentFqn}"))
     generateRoot(component)
   }
 
   private def provideSources(): Unit = {
-    if (config.sources.isEmpty)
+    if (config.getSources.isEmpty)
       return
     val dir = new File(config.outputDir, "decode/")
     dir.mkdirs()
-    config.sources.foreach(s => write(new File(dir, new File(s.name).getName), s.contents))
+    config.getSources.foreach(s => write(new File(dir, new File(s.getName).getName), s.getContents))
   }
 
   private def generatePrologueEpilogue(): Unit = {
-    generateFile(config.prologue.isActive, prologuePath, config.prologue.contents)
-    generateFile(config.epilogue.isActive, epiloguePath, config.epilogue.contents)
+    generateFile(config.getEpilogue.isActive, prologuePath, config.getPrologue.getContents)
+    generateFile(config.getEpilogue.isActive, epiloguePath, config.getEpilogue.getContents)
   }
 
-  private def generateFile(isActive: Boolean, filePath: String, contents: Option[String]): Unit = {
-    if (isActive) for (c <- contents) {
+  private def generateFile(isActive: Boolean, filePath: String, contents: Optional[String]): Unit = {
+    if (isActive && contents.isPresent) {
+      val c = contents.get()
       val f = new io.File(config.outputDir, filePath)
       f.getParentFile.mkdirs()
       write(f, c)
     }
   }
 
-  private def prologuePath: String = config.prologue.path.getOrElse("photon_prologue.h")
-  private def epiloguePath: String = config.epilogue.path.getOrElse("photon_epilogue.h")
+  private def prologuePath: String = config.getPrologue.getPath.orElse("photon_prologue.h")
+  private def epiloguePath: String = config.getEpilogue.getPath.orElse("photon_epilogue.h")
 
   private def appendPrologueEpilogue(file: CAstElements): CAstElements = {
-    (if (config.prologue.isActive)
+    (if (config.getPrologue.isActive)
       Seq(CInclude(prologuePath), CEol, CEol)
     else
       CAstElements()) ++
       file ++
-      (if (config.epilogue.isActive)
+      (if (config.getEpilogue.isActive)
         Seq(CEol, CInclude(epiloguePath), CEol, CEol)
       else
         CAstElements())
@@ -170,7 +172,7 @@ class CSourceGenerator(val config: CGeneratorConfiguration) extends LazyLogging 
   }
 
   def nsOrAliasCppSourceParts(ns: Namespace): Seq[String] =
-    config.namespaceAliases.getOrElse(ns.fqn, Some(ns.fqn)).map(_.getParts.map(_.mangledNameString())).getOrElse(Seq.empty)
+    config.getNamespaceAliases.getOrElse(ns.fqn, ns.fqn).getParts.map(_.mangledNameString())
 
   def dirPath(ns: Namespace): String = nsOrAliasCppSourceParts(ns).mkString(io.File.separator)
 
@@ -279,20 +281,21 @@ class CSourceGenerator(val config: CGeneratorConfiguration) extends LazyLogging 
       }
       }) ++ Seq(CEol)), dirPath(component.namespace) + hFile.getName))
 
-    if (config.includeModelInfo) {
+    if (config.isIncludeModelInfo) {
       val modelC = new StringBuilder()
 
       new ByteArrayOutputStream() {
 
-        private val jsonConfig: DecodeJsonGeneratorConfig = DecodeJsonGeneratorConfig(config.registry, this, Seq(config.rootComponentFqn),
-          prettyPrint = true)
+        private val jsonConfig: DecodeJsonGeneratorConfig = DecodeJsonGeneratorConfig.newInstance(config.getRegistry,
+          this, Seq(config.getRootComponentFqn), true)
         DecodeJsonGenerator(jsonConfig).generate()
 
         modelC.append("/*").append(new String(toByteArray, StandardCharsets.UTF_8)).append("*/\n\n")
 
         reset()
 
-        DecodeJsonGenerator(jsonConfig.copy(prettyPrint = false)).generate()
+        DecodeJsonGenerator(DecodeJsonGeneratorConfig.newInstance(jsonConfig.getRegistry, jsonConfig.getOutput,
+          jsonConfig.getComponentsFqn, false)).generate()
 
         private val rawJsonMinified = toByteArray
         private val array = new ByteArrayOutputStream() {
