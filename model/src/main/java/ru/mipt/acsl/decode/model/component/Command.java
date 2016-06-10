@@ -5,7 +5,8 @@ import ru.mipt.acsl.decode.model.*;
 import ru.mipt.acsl.decode.model.naming.Container;
 import ru.mipt.acsl.decode.model.naming.ElementName;
 import ru.mipt.acsl.decode.model.naming.HasName;
-import ru.mipt.acsl.decode.model.proxy.MaybeProxy;
+import ru.mipt.acsl.decode.model.proxy.MaybeProxyCompanion;
+import ru.mipt.acsl.decode.model.proxy.MaybeTypeProxy;
 import ru.mipt.acsl.decode.model.registry.Language;
 import ru.mipt.acsl.decode.model.types.Alias;
 import ru.mipt.acsl.decode.model.types.DecodeType;
@@ -30,7 +31,7 @@ public interface Command extends Container, HasName, MayHaveId, HasInfo {
 
     TypeMeasure returnTypeUnit();
 
-    default MaybeProxy.TypeProxy returnTypeProxy() {
+    default MaybeTypeProxy returnTypeProxy() {
         return returnTypeUnit().typeProxy();
     }
 

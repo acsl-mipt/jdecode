@@ -3,7 +3,8 @@ package ru.mipt.acsl.decode.model.types;
 import org.jetbrains.annotations.Nullable;
 import ru.mipt.acsl.decode.model.naming.ElementName;
 import ru.mipt.acsl.decode.model.naming.Namespace;
-import ru.mipt.acsl.decode.model.proxy.MaybeProxy;
+import ru.mipt.acsl.decode.model.proxy.MaybeProxyCompanion;
+import ru.mipt.acsl.decode.model.proxy.MaybeTypeProxy;
 import ru.mipt.acsl.decode.model.registry.Measure;
 
 import java.util.List;
@@ -14,20 +15,20 @@ import java.util.Optional;
  */
 public interface TypeMeasure extends DecodeType {
 
-    static TypeMeasure newInstance(MaybeProxy.TypeProxy typeProxy, @Nullable MaybeProxy.Measure measureProxy) {
+    static TypeMeasure newInstance(MaybeTypeProxy typeProxy, @Nullable MaybeProxyCompanion.Measure measureProxy) {
         return new TypeMeasureImpl(typeProxy, measureProxy);
     }
 
-    MaybeProxy.TypeProxy typeProxy();
+    MaybeTypeProxy typeProxy();
 
     default DecodeType t() {
         return typeProxy().obj();
     }
 
-    Optional<MaybeProxy.Measure> measureProxy();
+    Optional<MaybeProxyCompanion.Measure> measureProxy();
 
     default Optional<Measure> measure() {
-        return measureProxy().map(MaybeProxy.Measure::obj);
+        return measureProxy().map(MaybeProxyCompanion.Measure::obj);
     }
 
     @Override

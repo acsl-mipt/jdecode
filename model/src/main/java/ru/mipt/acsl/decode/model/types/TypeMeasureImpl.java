@@ -2,7 +2,8 @@ package ru.mipt.acsl.decode.model.types;
 
 import org.jetbrains.annotations.Nullable;
 import ru.mipt.acsl.decode.model.naming.Namespace;
-import ru.mipt.acsl.decode.model.proxy.MaybeProxy;
+import ru.mipt.acsl.decode.model.proxy.MaybeProxyCompanion;
+import ru.mipt.acsl.decode.model.proxy.MaybeTypeProxy;
 
 import java.util.Optional;
 
@@ -11,11 +12,11 @@ import java.util.Optional;
  */
 public class TypeMeasureImpl implements TypeMeasure {
 
-    private final MaybeProxy.TypeProxy typeProxy;
+    private final MaybeTypeProxy typeProxy;
     @Nullable
-    private final MaybeProxy.Measure measureProxy;
+    private final MaybeProxyCompanion.Measure measureProxy;
 
-    TypeMeasureImpl(MaybeProxy.TypeProxy typeProxy, @Nullable MaybeProxy.Measure measureProxy) {
+    TypeMeasureImpl(MaybeTypeProxy typeProxy, @Nullable MaybeProxyCompanion.Measure measureProxy) {
         this.typeProxy = typeProxy;
         this.measureProxy = measureProxy;
     }
@@ -32,12 +33,12 @@ public class TypeMeasureImpl implements TypeMeasure {
     }
 
     @Override
-    public MaybeProxy.TypeProxy typeProxy() {
+    public MaybeTypeProxy typeProxy() {
         return typeProxy;
     }
 
     @Override
-    public Optional<MaybeProxy.Measure> measureProxy() {
+    public Optional<MaybeProxyCompanion.Measure> measureProxy() {
         return Optional.ofNullable(measureProxy);
     }
 }

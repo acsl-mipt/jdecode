@@ -1,20 +1,22 @@
 package ru.mipt.acsl.decode.model.types
 
 import java.util
+
+import scala.collection.JavaConversions._
 import org.jetbrains.annotations.Nullable
 import ru.mipt.acsl.decode.model.naming.{ElementName, Namespace}
-import ru.mipt.acsl.decode.model.proxy.MaybeProxy
+import ru.mipt.acsl.decode.model.proxy.{MaybeProxyCompanion, MaybeTypeProxy}
 
 /**
   * @author Artem Shein
   */
 trait GenericTypeSpecialized extends DecodeType {
 
-  def genericTypeProxy: MaybeProxy.TypeProxy
+  def genericTypeProxy: MaybeTypeProxy
 
   def genericType: DecodeType = genericTypeProxy.obj
 
-  def genericTypeArgumentsProxy: Seq[MaybeProxy.TypeProxy]
+  def genericTypeArgumentsProxy: util.List[MaybeTypeProxy]
 
   def genericTypeArguments: Seq[DecodeType] = genericTypeArgumentsProxy.map(_.obj)
 
@@ -29,8 +31,8 @@ trait GenericTypeSpecialized extends DecodeType {
 object GenericTypeSpecialized {
 
   private class GenericTypeSpecializedImpl(@Nullable val alias: Alias.NsType, var namespace: Namespace,
-                                           val genericTypeProxy: MaybeProxy.TypeProxy,
-                                           val genericTypeArgumentsProxy: Seq[MaybeProxy.TypeProxy],
+                                           val genericTypeProxy: MaybeTypeProxy,
+                                           val genericTypeArgumentsProxy: util.List[MaybeTypeProxy],
                                            val typeParameters: util.List[ElementName])
     extends GenericTypeSpecialized {
 
@@ -39,8 +41,8 @@ object GenericTypeSpecialized {
   }
 
   def apply(@Nullable alias: Alias.NsType, namespace: Namespace,
-            genericType: MaybeProxy.TypeProxy,
-            genericTypeArguments: Seq[MaybeProxy.TypeProxy],
+            genericType: MaybeTypeProxy,
+            genericTypeArguments: util.List[MaybeTypeProxy],
             typeParameters: util.List[ElementName]): GenericTypeSpecialized =
     new GenericTypeSpecializedImpl(alias, namespace, genericType, genericTypeArguments, typeParameters)
 }

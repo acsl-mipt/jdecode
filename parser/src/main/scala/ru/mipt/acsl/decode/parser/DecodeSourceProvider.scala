@@ -74,8 +74,8 @@ class DecodeSourceProvider extends LazyLogging {
   ParserBoilerplate.init()
 
   def provide(config: DecodeSourceProviderConfiguration, sources: util.List[String]): Registry = {
-    val registry = Registry()
-    registry.rootNamespace = sources.map { source =>
+    val registry = Registry.newInstance()
+    registry.setRootNamespace(sources.map { source =>
       val parserDefinition = new DecodeParserDefinition()
       try {
         new DecodeAstTransformer().processFile(new DecodeParser().parse(DecodeParserDefinition.file,
@@ -85,7 +85,7 @@ class DecodeSourceProvider extends LazyLogging {
         case e: Exception =>
           throw new RuntimeException(s"Can't parse:\n$source", e)
       }
-    }.reduce(mergeNamespaces)
+    }.reduce(mergeNamespaces))
     registry
   }
 

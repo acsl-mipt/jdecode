@@ -4,13 +4,14 @@ import java.io
 import java.io.{FileOutputStream, OutputStreamWriter}
 import java.security.MessageDigest
 
+import scala.collection.JavaConversions._
 import com.typesafe.scalalogging.LazyLogging
 import ru.mipt.acsl.decode.model.component.{Command, Component}
 import ru.mipt.acsl.decode.model.registry.Registry
 import ru.mipt.acsl.decode.model.naming._
 import ru.mipt.acsl.decode.model.naming.{ElementName, Fqn}
-import ru.mipt.acsl.decode.model.proxy.MaybeProxy
-import ru.mipt.acsl.decode.model.types.{Alias, DecodeType, EnumType, GenericTypeSpecialized, NativeType, PrimitiveTypeInfo, StructType, SubType, TypeKind}
+import ru.mipt.acsl.decode.model.proxy.{MaybeProxyCompanion, MaybeTypeProxy}
+import ru.mipt.acsl.decode.model.types.{Alias, DecodeType, EnumType, GenericTypeSpecialized, NativeType, PrimitiveTypeInfo, StructType, SubType, TypeAlias, TypeKind}
 import ru.mipt.acsl.generator.cpp.ast._
 
 import scala.collection.{immutable, mutable}
@@ -46,12 +47,13 @@ class CppSourceGenerator(val config: CppGeneratorConfiguration) extends LazyLogg
   private val componentIdByComponent = mutable.HashMap.empty[Component, Int]
 
   private def enumerateComponentsFrom(component: Component): Unit = {
-    for (id <- component.id) {
+    if (component.id.isPresent) {
+      val id = component.id.get()
       assert(componentIdByComponent.put(component, id).isEmpty)
       assert(componentByComponentId.put(id, component).isEmpty)
     }
-    component.subComponents.foreach {cr => enumerateComponentsFrom(cr.obj)}
-    if (component.id.isEmpty) {
+    component.subComponents.foreach {cr => enumerateComponentsFrom(cr.obj.obj)}
+    if (!component.id.isPresent) {
       while (componentByComponentId.contains(nextComponentId))
         nextComponentId += 1
       componentByComponentId.put(nextComponentId, component)
@@ -61,13 +63,13 @@ class CppSourceGenerator(val config: CppGeneratorConfiguration) extends LazyLogg
   }
 
   def generate() {
-    val component: Component = config.registry.component(config.rootComponentFqn).get
+    val component: Component = config.registry.component(Fqn.newInstance(config.rootComponentFqn)).get
     enumerateComponentsFrom(component)
     generateRootComponent(component)
   }
 
   private def nsOrAliasCppSourceParts(ns: Namespace): Seq[String] = {
-    config.namespaceAlias.getOrElse(ns.fqn, ns.fqn).parts.map(_.asMangledString)
+    config.namespaceAlias.getOrElse(ns.fqn, ns.fqn).getParts.map(_.mangledNameString())
   }
 
   private def dirPathForNs(ns: Namespace): String = nsOrAliasCppSourceParts(ns).mkString("/")
@@ -103,7 +105,7 @@ class CppSourceGenerator(val config: CppGeneratorConfiguration) extends LazyLogg
     ns.subNamespaces.foreach(generateNs)
     val typesHeader = File()
     ns.types.foreach(generateType(_, nsDir))
-    writeFileIfNotEmptyWithComment(new io.File(nsDir, "types.h"), protectDoubleIncludeFile(typesHeader), s"Types of ${ns.fqn.asMangledString} namespace")
+    writeFileIfNotEmptyWithComment(new io.File(nsDir, "types.h"), protectDoubleIncludeFile(typesHeader), s"Types of ${ns.fqn.mangledNameString()} namespace")
     //ns.getComponents.toTraversable.foreach(generateRootComponent)
   }
 
@@ -112,7 +114,7 @@ class CppSourceGenerator(val config: CppGeneratorConfiguration) extends LazyLogg
 
   private def fileNameFromOptionName(name: Option[ElementName]): String = {
     if (name.isDefined) {
-      name.get.asMangledString
+      name.get.mangledNameString()
     } else {
       fileNameId += 1
       "type" + fileNameId
@@ -121,7 +123,7 @@ class CppSourceGenerator(val config: CppGeneratorConfiguration) extends LazyLogg
 
   private def cppTypeNameFromOptionName(name: Option[ElementName]): String = {
     if (name.isDefined) {
-      name.get.asMangledString
+      name.get.mangledNameString()
     } else {
       typeNameId += 1
       "type" + typeNameId
@@ -144,7 +146,7 @@ class CppSourceGenerator(val config: CppGeneratorConfiguration) extends LazyLogg
     case t: GenericTypeSpecialized =>
       fileNameFor(t.genericType) + "_" +
         t.genericTypeArguments.map(tp => fileNameFor(tp)).mkString("_")
-    case t: HasName => t.name.asMangledString
+    case t: HasName => t.name.mangledNameString()
     case _ => sys.error("not implemented")
   }
 
@@ -167,7 +169,7 @@ class CppSourceGenerator(val config: CppGeneratorConfiguration) extends LazyLogg
       case t: GenericTypeSpecialized =>
         cppTypeNameFor(t.genericType) + "_" +
         t.genericTypeArguments.map(tp => cppTypeNameFor(tp)).mkString("_")
-      case t: HasName => t.name.asMangledString
+      case t: HasName => t.name.mangledNameString()
       case _ => sys.error("not implemented")
     }
   }
@@ -187,7 +189,7 @@ class CppSourceGenerator(val config: CppGeneratorConfiguration) extends LazyLogg
 
   private def primitiveTypeToCTypeApplication(t: NativeType): CppTypeApplication = {
     import TypeKind._
-    val p = PrimitiveTypeInfo.typeInfoByFqn(t.fqn.getOrElse(sys.error("wtf, fix this method, please")))
+    val p = PrimitiveTypeInfo.typeInfoByFqn(Option(t.fqn.orElse(null)).getOrElse(sys.error("wtf, fix this method, please")))
     (p.kind, p.bitLength) match {
       case (Bool, 8) => CppTypeApplication("b8")
       case (Bool, 16) => CppTypeApplication("b16")
@@ -232,15 +234,15 @@ class CppSourceGenerator(val config: CppGeneratorConfiguration) extends LazyLogg
     innerNs += (t match {
       case t: DecodeType if t.isArray => cTypeDefForName(t, CppVoidType.ptr())
       case t: NativeType =>
-        val p = PrimitiveTypeInfo.typeInfoByFqn.get(t.fqn.getOrElse(sys.error("wtf, fix this")))
+        val p = PrimitiveTypeInfo.typeInfoByFqn.get(Option(t.fqn.orElse(null)).getOrElse(sys.error("wtf, fix this")))
         p.map(_ => cTypeDefForName(t, cTypeAppForTypeName(t))).getOrElse(cTypeDefForName(t, CppVoidType.ptr()))
       case t: SubType => cTypeDefForName(t, cTypeAppForTypeName(t.baseType))
       case t: EnumType => cTypeDefForName(t,
-        CppEnumTypeDef(t.constants.map(c => CEnumTypeDefConst(c.name.asMangledString, c.value.toLongOrFail))))
+        CppEnumTypeDef(t.constants.map(c => CEnumTypeDefConst(c.name.mangledNameString(), c.value.toLongOrFail))))
       case t: StructType =>
         cTypeDefForName(t, CppStructTypeDef(t.fields.map(f =>
-          CStructTypeDefField(f.name.asMangledString, cTypeAppForTypeName(f.typeMeasure.t)))))
-      case t: Alias.Type =>
+          CStructTypeDefField(f.name.mangledNameString(), cTypeAppForTypeName(f.typeMeasure.t)))))
+      case t: TypeAlias[_, _] =>
         val newName: String = cppTypeNameFor(t)
         val oldName: String = cppTypeNameFor(t.obj)
         if (newName equals oldName) Comment("omitted due name clash") else CppDefine(newName, oldName)
@@ -249,7 +251,7 @@ class CppSourceGenerator(val config: CppGeneratorConfiguration) extends LazyLogg
     writeFileIfNotEmptyWithComment(tFile, File(outerNs), "Type header")
   }
 
-  private def collectNsForType(t: MaybeProxy.TypeProxy, set: mutable.Set[Namespace]) {
+  private def collectNsForType(t: MaybeTypeProxy, set: mutable.Set[Namespace]) {
     require(t.isResolved, s"Proxy not resolved error for ${t.proxy.toString}")
     collectNsForType(t.obj, set)
   }
@@ -275,17 +277,17 @@ class CppSourceGenerator(val config: CppGeneratorConfiguration) extends LazyLogg
   }
 
   def collectNsForComponent(comp: Component, nsSet: mutable.HashSet[Namespace]) {
-    comp.subComponents.foreach(cr => collectNsForComponent(cr.obj, nsSet))
+    comp.subComponents.foreach(cr => collectNsForComponent(cr.obj.obj, nsSet))
     collectNsForTypes(comp, nsSet)
   }
 
   def collectComponentsForComponent(comp: Component, compSet: mutable.HashSet[Component]): Unit = {
     compSet += comp
-    comp.subComponents.foreach(cr => collectComponentsForComponent(cr.obj, compSet))
+    comp.subComponents.foreach(cr => collectComponentsForComponent(cr.obj.obj, compSet))
   }
 
   private def generateRootComponent(comp: Component) {
-    logger.debug(s"Generating component ${comp.name.asMangledString}")
+    logger.debug(s"Generating component ${comp.name.mangledNameString()}")
     val nsSet = mutable.HashSet.empty[Namespace]
     collectNsForComponent(comp, nsSet)
     nsSet.foreach(generateNs)
@@ -295,9 +297,9 @@ class CppSourceGenerator(val config: CppGeneratorConfiguration) extends LazyLogg
   }
 
   def cppTypeForDecodeType(t: DecodeType): CppType =
-    CppTypeApplication(t.nameOption.getOrElse(sys.error("not implemented")).asMangledString)
+    CppTypeApplication(Option(t.nameOption.orElse(null)).getOrElse(sys.error("not implemented")).mangledNameString)
 
-  private def classNameForComponent(comp: Component): String = comp.name.asMangledString + "Component"
+  private def classNameForComponent(comp: Component): String = comp.name.mangledNameString() + "Component"
 
   private def includePathForComponent(comp: Component): String = {
     val dir = dirPathForNs(comp.namespace)
@@ -308,7 +310,7 @@ class CppSourceGenerator(val config: CppGeneratorConfiguration) extends LazyLogg
 
   private def importStatementsForComponent(comp: Component): immutable.Seq[CppAstElement] = {
     val imports: mutable.Buffer[CppAstElement] = comp.subComponents.flatMap { cr =>
-      Seq(CppInclude(includePathForComponent(cr.obj)), Eol)
+      Seq(CppInclude(includePathForComponent(cr.obj.obj)), Eol)
     }.to[mutable.Buffer]
     if (imports.nonEmpty)
       imports += Eol
@@ -328,7 +330,7 @@ class CppSourceGenerator(val config: CppGeneratorConfiguration) extends LazyLogg
   private val keywords = Seq("return")
 
   private def methodNameForDecodeName(name: ElementName): String = {
-    var methodName = name.asMangledString
+    var methodName = name.mangledNameString()
     if (keywords.contains(methodName))
       methodName = "_" + methodName
     methodName
@@ -351,7 +353,7 @@ class CppSourceGenerator(val config: CppGeneratorConfiguration) extends LazyLogg
     val className = classNameForComponent(comp)
     val hFileName = className + ".h"
     val hFile = new io.File(dir, hFileName)
-    val cppFile = new io.File(dir, comp.name.asMangledString + "Component.cpp")
+    val cppFile = new io.File(dir, comp.name.mangledNameString() + "Component.cpp")
     val (outerHNs, innerHNs) = cppNsOuterInnerFor(comp.namespace)
     val nsParts = nsOrAliasCppSourceParts(comp.namespace)
     val cppNs = nsParts.mkString("::")
@@ -359,7 +361,7 @@ class CppSourceGenerator(val config: CppGeneratorConfiguration) extends LazyLogg
     val methods = comp.commands.flatMap{cmd =>
       val methodName = methodNameForDecodeName(cmd.name)
       val returnType = cppTypeForDecodeType(cmd.returnType)
-      val parameters = cmd.parameters.map { p => Parameter(p.name.asMangledString, cppTypeForDecodeType(p.parameterType)) }
+      val parameters = cmd.parameters.map { p => Parameter(p.name.mangledNameString(), cppTypeForDecodeType(p.parameterType)) }
       Seq(
         ClassMethodDef(methodName, returnType, parameters.to[mutable.Buffer], virtual = true, _abstract = true),
         ClassMethodDef(methodName, returnType, mutable.Buffer(readerParameter, writerParameter),
@@ -372,7 +374,7 @@ class CppSourceGenerator(val config: CppGeneratorConfiguration) extends LazyLogg
           } else CppStatements()))
     } ++
       (comp.statusMessages ++ comp.eventMessages).map{msg =>
-        ClassMethodDef("write" + msg.name.asMangledString.capitalize, voidType, mutable.Buffer(writerParameter))
+        ClassMethodDef("write" + msg.name.mangledNameString().capitalize, voidType, mutable.Buffer(writerParameter))
       } ++
       comp.baseType.map(_.fields.map { f =>
           ClassMethodDef(methodNameForDecodeName(f.name), cppTypeForDecodeType(f.typeMeasure.t))
@@ -381,27 +383,27 @@ class CppSourceGenerator(val config: CppGeneratorConfiguration) extends LazyLogg
     val idField = ClassFieldDef("ID", stdSizeTType, static = true)
     val guidField = ClassFieldDef("GUID", stdStringType, static = true)
     val fields = Seq(idField, guidField)
-    val classDef = ClassDef(className, methods, comp.subComponents.map(cr => classNameForComponent(cr.obj)), fields)
+    val classDef = ClassDef(className, methods, comp.subComponents.map(cr => classNameForComponent(cr.obj.obj)), fields)
     val nsClassPrefix = s"$cppNs::$className::"
     val guidFieldInit = ClassFieldInit(s"$nsClassPrefix${guidField.name}", guidField,
-      CppStringLiteral(comp.fqn.asMangledString))
+      CppStringLiteral(comp.fqn.mangledNameString()))
     val idFieldInit = ClassFieldInit(s"$nsClassPrefix${idField.name}", idField,
       CppIntLiteral(componentIdByComponent.get(comp).get))
     val executeCommandImpl = ClassMethodImpl(s"$nsClassPrefix$executeCommandMethodName", commandExecuteResult,
       executeCommandParameters, CppStatements(CppSwitch(CppVar("commandId"), casesForCommands(comp),
         default = Some(CppStatements(Return(CppVar("decode::CommandExecutionResult::InvalidCommandId")))))))
     innerHNs ++= Seq(classDef, Eol)
-    writeFileIfNotEmptyWithComment(hFile, protectDoubleIncludeFile(appendPrologEpilog(File(imports :+ outerHNs: _*))), s"Component ${comp.name.asMangledString} interface")
-    writeFileIfNotEmptyWithComment(cppFile, CppFile(CppInclude(hFileName), Eol, Eol, guidFieldInit, Eol, Eol, idFieldInit, Eol, Eol, executeCommandImpl), s"Component ${comp.name.asMangledString} implementation")
+    writeFileIfNotEmptyWithComment(hFile, protectDoubleIncludeFile(appendPrologEpilog(File(imports :+ outerHNs: _*))), s"Component ${comp.name.mangledNameString()} interface")
+    writeFileIfNotEmptyWithComment(cppFile, CppFile(CppInclude(hFileName), Eol, Eol, guidFieldInit, Eol, Eol, idFieldInit, Eol, Eol, executeCommandImpl), s"Component ${comp.name.mangledNameString()} implementation")
   }
 
   private def casesForCommands(comp: Component): Seq[CppCase] = {
     var commandNextId = 0
     val commandsById = mutable.HashMap.empty[Int, (Component, Command)]
     comp.commands.foreach { cmd =>
-      assert(commandsById.put(cmd.id.getOrElse({commandNextId += 1; commandNextId - 1}), (comp, cmd)).isEmpty)
+      assert(commandsById.put(Option(cmd.id.orElse(null)).map(_.toInt).getOrElse({commandNextId += 1; commandNextId - 1}), (comp, cmd)).isEmpty)
     }
-    subComponentsFor(comp).toSeq.sortBy(_.fqn.asMangledString).filterNot(_ == comp).foreach { comp =>
+    subComponentsFor(comp).toSeq.sortBy(_.fqn.mangledNameString()).filterNot(_ == comp).foreach { comp =>
       comp.commands.foreach { cmd =>
         assert(commandsById.put(commandNextId, (comp, cmd)).isEmpty)
         commandNextId += 1
@@ -416,8 +418,8 @@ class CppSourceGenerator(val config: CppGeneratorConfiguration) extends LazyLogg
 
   private def subComponentsFor(comp: Component, set: mutable.Set[Component] = mutable.HashSet.empty): mutable.Set[Component] = {
     comp.subComponents.foreach { ref =>
-      val c = ref.obj
-      set += c
+      val c = ref.obj.obj
+      set.add(c)
       subComponentsFor(c, set)
     }
     set

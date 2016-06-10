@@ -28,9 +28,8 @@ class CommandImpl implements Command {
     }
 
     @Override
-    @Nullable
-    public Integer id() {
-        return id;
+    public Optional<Integer> id() {
+        return Optional.ofNullable(id);
     }
 
     @Override

@@ -1,9 +1,6 @@
-def circeVersion = "0.4.1"
-
 dependencies {
     compile project(':decode:model')
     compile project(':decode:common')
-    compile "io.circe:circe-core_$scalaBinaryVersion:$circeVersion"
-    compile "io.circe:circe-generic_$scalaBinaryVersion:$circeVersion"
-    compile "io.circe:circe-parser_$scalaBinaryVersion:$circeVersion"
+    compile 'com.fasterxml.jackson.core:jackson-core:2.7.4'
+    compile 'com.fasterxml.jackson.core:jackson-databind:2.7.4'
 }

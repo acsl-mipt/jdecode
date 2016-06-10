@@ -55,7 +55,7 @@ public class GenerateMccStuff {
                         .collect(Collectors.toList());
                 contents.add(new String(pixhawkOutput.toByteArray(), StandardCharsets.UTF_8));
 
-                DecodeJsonGenerator.apply(DecodeJsonGeneratorConfig.newInstance(
+                DecodeJsonGenerator.newInstance(DecodeJsonGeneratorConfig.newInstance(
                         ModelRegistry.registry(contents), this,
                         Lists.newArrayList(OnBoardCSourceGenerator.ROOT_COMPONENT_FQN_STRING,
                                 PixhawkComponentFqn.mangledNameString()),

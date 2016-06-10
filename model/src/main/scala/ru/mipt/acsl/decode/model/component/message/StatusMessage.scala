@@ -29,12 +29,13 @@ trait StatusMessage extends TmMessage {
 
 object StatusMessage {
 
-  private case class StatusMessageImpl(alias: Alias.ComponentStatusMessage, component: Component, @Nullable id: Integer,
+  private case class StatusMessageImpl(alias: Alias.ComponentStatusMessage, component: Component, @Nullable _id: Integer,
                                        var objects: util.List[Referenceable], @Nullable priority: Integer)
     extends StatusMessage {
 
     override def objects(objects: util.List[Referenceable]): Unit = this.objects = objects
 
+    override def id(): Optional[Integer] = Optional.ofNullable(_id)
   }
 
   def apply(alias: Alias.ComponentStatusMessage, component: Component, @Nullable id: Integer,

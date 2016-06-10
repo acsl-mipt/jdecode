@@ -15,7 +15,7 @@ case object OptionTypeMessageParameterPathWalker
     case a: GenericTypeSpecialized if a.genericType.isArray =>
       if (!pathElement.isArrayRange)
         sys.error("invalid token")
-      Some(a.genericTypeArgumentsProxy.head.obj)
+      Some(a.genericTypeArgumentsProxy.get(0).obj)
     case t: StructType =>
       if (pathElement.isArrayRange)
         sys.error(s"invalid token ${pathElement.arrayRange().get()}")

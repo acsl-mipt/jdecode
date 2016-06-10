@@ -6,9 +6,8 @@ import java.util.Optional
 import org.jetbrains.annotations.Nullable
 import ru.mipt.acsl.decode.model._
 import ru.mipt.acsl.decode.model.component.message.{EventMessage, StatusMessage}
-import ru.mipt.acsl.decode.model.naming.Fqn.newInstance
 import ru.mipt.acsl.decode.model.naming.{Fqn, _}
-import ru.mipt.acsl.decode.model.proxy.MaybeProxy
+import ru.mipt.acsl.decode.model.proxy.MaybeProxyCompanion
 import ru.mipt.acsl.decode.model.registry.Language
 import ru.mipt.acsl.decode.model.types.StructType
 import ru.mipt.acsl.decode.model.types.Alias
@@ -20,12 +19,11 @@ import scala.collection.JavaConversions._
   */
 trait Component extends Container with HasName {
 
-  @Nullable
-  def id: Integer
+  def id: Optional[Integer]
 
   def namespace: Namespace
 
-  def baseTypeProxy: Option[MaybeProxy.Struct]
+  def baseTypeProxy: Option[MaybeProxyCompanion.Struct]
 
   def baseType: Option[StructType] = baseTypeProxy.map(_.obj)
 
@@ -59,34 +57,37 @@ trait Component extends Container with HasName {
 
   def fqn: Fqn = Fqn.newInstance(namespace.fqn, name)
 
-  def eventMessage(name: ElementName): Option[EventMessage] = objects.flatMap {
+  def eventMessage(name: ElementName): Optional[EventMessage] = objects.flatMap {
     case a: Alias.ComponentEventMessage if a.name == name => Seq(a.obj)
   } match {
-    case s if s.size == 1 => Some(s.head)
+    case s if s.size == 1 => Optional.of(s.head)
+    case _ => Optional.empty()
   }
 
-  def statusMessage(name: ElementName): Option[StatusMessage] = objects.flatMap {
+  def statusMessage(name: ElementName): Optional[StatusMessage] = objects.flatMap {
     case a: Alias.ComponentStatusMessage if a.name == name => Seq(a.obj)
     case _ => Seq.empty
   } match {
-    case s if s.size == 1 => Some(s.head)
+    case s if s.size == 1 => Optional.of(s.head)
+    case _ => Optional.empty()
   }
 
 }
 
 object Component {
 
-  private class ComponentImpl(val alias: Alias.NsComponent, var namespace: Namespace, @Nullable var id: Integer,
-                              var baseTypeProxy: Option[MaybeProxy.Struct],
+  private class ComponentImpl(val alias: Alias.NsComponent, var namespace: Namespace, @Nullable var _id: Integer,
+                              var baseTypeProxy: Option[MaybeProxyCompanion.Struct],
                               var objects: util.List[Referenceable] = util.Collections.emptyList())
     extends Component {
 
     override def objects(objects: util.List[Referenceable]): Unit = this.objects = objects
 
+    override def id: Optional[Integer] = Optional.ofNullable(_id)
   }
 
   def apply(alias: Alias.NsComponent, namespace: Namespace, @Nullable id: Integer,
-            baseTypeProxy: Option[MaybeProxy.Struct],
+            baseTypeProxy: Option[MaybeProxyCompanion.Struct],
             objects: util.List[Referenceable]): Component =
     new ComponentImpl(alias, namespace, id, baseTypeProxy, objects)
 }

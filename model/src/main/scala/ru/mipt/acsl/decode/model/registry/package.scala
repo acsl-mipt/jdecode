@@ -11,51 +11,6 @@ package object registry {
 
   implicit class RegistryHelper(val r: Registry) {
 
-    def allComponents: Seq[Component] = r.rootNamespace.allComponents
-
-    def allNamespaces: Seq[Namespace] = r.rootNamespace.allNamespaces
-
-    def component(fqn: String): Option[Component] = {
-      val dotPos = fqn.lastIndexOf('.')
-      val namespaceOptional = namespace(fqn.substring(0, dotPos))
-      if (namespaceOptional.isEmpty)
-        return None
-      val componentName = ElementName.newInstanceFromMangledName(fqn.substring(dotPos + 1, fqn.length()))
-      namespaceOptional.get.components.find(_.name == componentName)
-    }
-
-    // FIXME: duplicate with findNamespace
-    def namespace(fqn: String): Option[Namespace] = {
-      var currentNamespaces: Option[Seq[Namespace]] = Some(r.rootNamespace.subNamespaces)
-      var currentNamespace: Option[Namespace] = None
-      "\\.".r.split(fqn).foreach { nsName =>
-        if (currentNamespaces.isEmpty)
-          return None
-        val decodeName = ElementName.newInstanceFromMangledName(nsName)
-        currentNamespace = currentNamespaces.get.find(_.name == decodeName)
-        currentNamespaces = currentNamespace.map(_.subNamespaces)
-      }
-      currentNamespace
-    }
-
-    def eventMessage(fqn: String): Option[EventMessage] = {
-      val dotPos = fqn.lastIndexOf('.')
-      val decodeName = ElementName.newInstanceFromMangledName(fqn.substring(dotPos + 1, fqn.length()))
-      component(fqn.substring(0, dotPos)).flatMap(_.eventMessage(decodeName))
-    }
-
-    def statusMessage(fqn: String): Option[StatusMessage] = {
-      val dotPos = fqn.lastIndexOf('.')
-      val decodeName = ElementName.newInstanceFromMangledName(fqn.substring(dotPos + 1, fqn.length()))
-      component(fqn.substring(0, dotPos)).flatMap(_.statusMessage(decodeName))
-    }
-
-    def statusMessageOrFail(fqn: String): StatusMessage =
-      statusMessage(fqn).getOrElse(sys.error("assertion error"))
-
-    def eventMessageOrFail(fqn: String): EventMessage =
-      eventMessage(fqn).getOrElse(sys.error("assertion error"))
-
     def validate(): ValidatingResult = validate(r.rootNamespace)
 
     def validate(obj: Referenceable): ValidatingResult = obj match {
@@ -198,21 +153,7 @@ package object registry {
       namespace.getOrElse(sys.error("assertion error"))
     }*/
 
-    // TODO: refactoring
-    def findNamespace(namespaceFqn: Fqn): Option[Namespace] = {
-      var namespaces = r.rootNamespace.subNamespaces
-      var namespace: Option[Namespace] = None
-      for (nsName <- namespaceFqn.getParts) {
-        namespace = namespaces.find(_.name == nsName)
-        namespace match {
-          case Some(ns) =>
-            namespaces = ns.subNamespaces
-          case _ =>
-            return namespace
-        }
-      }
-      namespace
-    }
+
   }
 
 }

@@ -12,7 +12,7 @@ import ru.mipt.acsl.decode.model.component.{Command, Component, MessageParameter
 import ru.mipt.acsl.decode.model.expr.{BigDecimalLiteral, BigIntLiteral}
 import ru.mipt.acsl.decode.model.naming.{ElementName, Fqn, Namespace}
 import ru.mipt.acsl.decode.model.proxy.path.{GenericTypeName, ProxyPath, TypeName}
-import ru.mipt.acsl.decode.model.proxy.{MaybeProxy, Proxy}
+import ru.mipt.acsl.decode.model.proxy.{MaybeProxyCompanion, MaybeTypeProxy, MaybeTypeProxyType, Proxy}
 import ru.mipt.acsl.decode.model.registry.{Language, Measure}
 import ru.mipt.acsl.decode.model.types.{Alias, EnumConstant, EnumType, _}
 import ru.mipt.acsl.decode.parser.psi.{DecodeUnit => PsiDecodeUnit, _}
@@ -26,7 +26,7 @@ class DecodeAstTransformer {
 
   import scala.collection.JavaConversions._
 
-  private val imports = mutable.HashMap.empty[String, MaybeProxy.Referenceable]
+  private val imports = mutable.HashMap.empty[String, MaybeProxyCompanion.Referenceable]
   private var ns: Namespace = _
   private var defaultLanguage: Option[Language] = None
 
@@ -53,7 +53,7 @@ class DecodeAstTransformer {
         val els = i.getImportElementList
         val iFqn: Fqn = fqn(i.getElementId)
         if (els.isEmpty) {
-          imports.put(iFqn.last.mangledNameString, MaybeProxy.Referenceable(Left(Proxy(ProxyPath(iFqn.copyDropLast, TypeName(iFqn.last))))))
+          imports.put(iFqn.last.mangledNameString, MaybeProxyCompanion.Referenceable(Left(Proxy(ProxyPath(iFqn.copyDropLast, TypeName(iFqn.last))))))
         } else if (i.getImportElementStar != null) {
           sys.error("not implemented")
         } else {
@@ -66,7 +66,7 @@ class DecodeAstTransformer {
           }.foreach(p =>
             assert(imports.put(
               ElementName.newInstanceFromSourceName(p.alias).mangledNameString(),
-              MaybeProxy.Referenceable(Left(Proxy(ProxyPath(iFqn, TypeName(p.originalName)))))).isEmpty))
+              MaybeProxyCompanion.Referenceable(Left(Proxy(ProxyPath(iFqn, TypeName(p.originalName)))))).isEmpty))
         }
       case m: DecodeMeasureDecl =>
         val alias = new Alias.NsMeasure(elementName(m.getElementNameRule), elementInfo(Option(m.getElementInfo)), ns, null)
@@ -82,7 +82,7 @@ class DecodeAstTransformer {
             Seq(alias, alias.obj)
           })
           ns.objects.add(struct)
-          MaybeProxy.Struct(Right(struct))
+          MaybeProxyCompanion.Struct(Right(struct))
         }
         val alias = new Alias.NsComponent(elementName(c.getElementNameRule), elementInfo(Option(c.getElementInfo)), ns, null)
         val component = Component(alias, ns, id(c.getAnnotationDeclList), params, new util.ArrayList[Referenceable]())
@@ -145,7 +145,7 @@ class DecodeAstTransformer {
   private def newEnumType(e: DecodeEnumTypeDecl, alias: Alias.NsType,
                           typeParameters: Seq[ElementName]): EnumType = {
     val enum = EnumType.newInstance(alias, ns, Option(e.getElementNameRule)
-      .map(n => new MaybeProxyEnumOrTypeMeasure(MaybeProxy.Enum(Left(proxyForFqn(Fqn.newInstance(Seq(elementName(n)))).proxy))))
+      .map(n => new MaybeProxyEnumOrTypeMeasure(MaybeProxyCompanion.Enum(Left(proxyForFqn(Fqn.newInstance(Seq(elementName(n)))).proxy))))
       .getOrElse(new MaybeProxyEnumOrTypeMeasure(typeMeasure(e.getTypeUnitApplication))),
       new util.ArrayList[Referenceable](), e.getFinalEnum != null,
       typeParameters)
@@ -238,9 +238,9 @@ class DecodeAstTransformer {
     val alias = fqn.mangledNameString()
     if (fqn.size == 1 && imports.contains(alias)) {
       val _import = imports.get(alias).get
-      new Alias.ComponentComponent(fqn.last, util.Collections.emptyMap(), component, MaybeProxy.Component(Left(Proxy(_import.proxy.path))))
+      new Alias.ComponentComponent(fqn.last, util.Collections.emptyMap(), component, MaybeProxyCompanion.Component(Left(Proxy(_import.proxy.path))))
     } else {
-      new Alias.ComponentComponent(fqn.last, util.Collections.emptyMap(), component, MaybeProxy.Component(Left(Proxy(ProxyPath(fqn, ns)))))
+      new Alias.ComponentComponent(fqn.last, util.Collections.emptyMap(), component, MaybeProxyCompanion.Component(Left(Proxy(ProxyPath(fqn, ns)))))
     }
   }
 
@@ -278,41 +278,41 @@ class DecodeAstTransformer {
     elementName(en).mangledNameString()
 
   @Nullable
-  private def measure(u: Option[PsiDecodeUnit]): MaybeProxy.Measure =
-    u.map(unit => MaybeProxy.Measure(Left(proxyForFqn(fqn(unit.getElementId)).proxy))).orNull
+  private def measure(u: Option[PsiDecodeUnit]): MaybeProxyCompanion.Measure =
+    u.map(unit => MaybeProxyCompanion.Measure(Left(proxyForFqn(fqn(unit.getElementId)).proxy))).orNull
 
   private def typeMeasure(tu: DecodeTypeUnitApplication): TypeMeasure = {
     val result = TypeMeasure.newInstance(typeApplication(tu.getTypeApplication), measure(Option(tu.getUnit)))
     if (tu.getOptional != null) {
-      TypeMeasure.newInstance(MaybeProxy.Type(Left(Proxy(ProxyPath(GenericTypeName(Fqn.OPTION.last(),
-        Seq(result.typeProxy().proxy.path)))))), null) // fixme: Not None
+      TypeMeasure.newInstance(MaybeTypeProxyType.newInstance(Proxy(ProxyPath(GenericTypeName.newInstance(Fqn.OPTION.last(),
+        Seq(result.typeProxy().proxy.path))))), null) // fixme: Not None
     } else {
       result
     }
   }
 
-  private def proxyForFqn(fqn: Fqn): MaybeProxy.Referenceable =
+  private def proxyForFqn(fqn: Fqn): MaybeProxyCompanion.Referenceable =
     if (fqn.size == 1 && imports.contains(fqn.last.mangledNameString()))
       imports.get(fqn.last.mangledNameString()).get
     else
-      MaybeProxy.Referenceable(Left(Proxy(ProxyPath(fqn, ns))))
+      MaybeProxyCompanion.Referenceable(Left(Proxy(ProxyPath(fqn, ns))))
 
-  private def typeApplication(ta: DecodeTypeApplication): MaybeProxy.TypeProxy = {
+  private def typeApplication(ta: DecodeTypeApplication): MaybeTypeProxy = {
     Option(ta.getElementId).map { elId =>
-      val maybeProxy = MaybeProxy.Type(Left(proxyForFqn(fqn(elId)).proxy))
+      val maybeProxy = MaybeTypeProxyType.newInstance(proxyForFqn(fqn(elId)).proxy)
       Option(ta.getGenericArguments).map { params =>
         maybeProxy.proxy.path match {
           case e: ProxyPath.FqnElement =>
             // todo: remove asInstanceOf
-            MaybeProxy.Type(Left(Proxy(ProxyPath(e.ns,
-              GenericTypeName(e.element.mangledName,
-                params.getTypeUnitApplicationList.map(p => typeMeasure(p).typeProxy.proxy.path))))))
+            MaybeTypeProxyType.newInstance(Proxy(ProxyPath(e.ns,
+              GenericTypeName.newInstance(e.element.mangledName,
+                params.getTypeUnitApplicationList.map(p => typeMeasure(p).typeProxy.proxy.path)))))
           case l: ProxyPath.Literal =>
             sys.error("literal can't be parametrized")
         }
       }.getOrElse(maybeProxy)
     }.getOrElse {
-      MaybeProxy.Type(Left(Proxy(ProxyPath.fromLiteral(ta.getLiteral.getText))))
+      MaybeTypeProxyType.newInstance(Proxy(ProxyPath.fromLiteral(ta.getLiteral.getText)))
     }
   }
 }

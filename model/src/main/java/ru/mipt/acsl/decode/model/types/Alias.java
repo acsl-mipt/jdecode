@@ -12,7 +12,7 @@ import ru.mipt.acsl.decode.model.naming.Container;
 import ru.mipt.acsl.decode.model.naming.ElementName;
 import ru.mipt.acsl.decode.model.naming.HasName;
 import ru.mipt.acsl.decode.model.naming.Namespace;
-import ru.mipt.acsl.decode.model.proxy.MaybeProxy;
+import ru.mipt.acsl.decode.model.proxy.MaybeProxyCompanion;
 import ru.mipt.acsl.decode.model.registry.Language;
 import ru.mipt.acsl.decode.model.registry.Measure;
 
@@ -103,9 +103,9 @@ public interface Alias<P extends Container, O extends Referenceable> extends Ref
 
     }
 
-    class ComponentComponent extends AbstractAlias<Component, MaybeProxy.Component> {
+    class ComponentComponent extends AbstractAlias<Component, MaybeProxyCompanion.Component> {
 
-        public ComponentComponent(ElementName name, Map<Language, String> info, Component parent, MaybeProxy.Component component) {
+        public ComponentComponent(ElementName name, Map<Language, String> info, Component parent, MaybeProxyCompanion.Component component) {
             super(name, info, parent, component);
         }
 

@@ -1,49 +1,71 @@
-package ru.mipt.acsl.decode.generator.json
+package ru.mipt.acsl.decode.generator.json;
 
-import java.io.OutputStreamWriter
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
-import java.util
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import ru.mipt.acsl.decode.model.component.Component;
+import ru.mipt.acsl.decode.model.naming.Fqn;
 
-import io.circe.Printer
-import io.circe.generic.auto._
-import io.circe.syntax._
-import ru.mipt.acsl.common._
-import ru.mipt.acsl.decode.model._
-import ru.mipt.acsl.decode.model.component.message.{EventMessage, StatusMessage}
-import ru.mipt.acsl.decode.model.component.{Command, Component, MessageParameterPathElement, StatusParameter}
-import ru.mipt.acsl.decode.model.expr._
-import ru.mipt.acsl.decode.model.naming.{ElementName, HasName, Namespace}
-import ru.mipt.acsl.decode.model.registry.{Language, Measure}
-import ru.mipt.acsl.decode.model.types._
+import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
+import java.util.stream.Collectors;
 
-import scala.collection.JavaConversions._
-import scala.collection.mutable
+public class DecodeJsonGenerator {
 
-case class DecodeJsonGenerator(config: DecodeJsonGeneratorConfig) {
+    private final DecodeJsonGeneratorConfig config;
 
-  def generate(): Unit = {
-
-    new OutputStreamWriter(config.getOutput) {
-
-      val rootComponents = config.getComponentsFqn.map(f => config.getRegistry.component(f)
-        .orElseFail(s"component not found $f"))
-
-      private val jsonRoot = new StatefulDecodeJsonGenerator()
-        .generateRootComponents(rootComponents)
-
-      if (config.isPrettyPrint) {
-        val printer = Printer.spaces2.copy(dropNullKeys = true)
-        write(jsonRoot.asJson.pretty(printer))
-      } else {
-        val printer = Printer.noSpaces.copy(dropNullKeys = true)
-        write(jsonRoot.asJson.pretty(printer))
-      }
-
-      flush()
+    public static DecodeJsonGenerator newInstance(DecodeJsonGeneratorConfig config) {
+        return new DecodeJsonGenerator(config);
     }
-  }
 
+    private DecodeJsonGenerator(DecodeJsonGeneratorConfig config) {
+        this.config = config;
+    }
+
+
+    public void generate() {
+
+        new OutputStreamWriter(config.getOutput()) {{
+
+            List<Component> rootComponents = config.getComponentsFqn().stream()
+                    .map(f -> config.getRegistry().component(Fqn.newInstance(f))
+                            .orElseThrow(() -> new RuntimeException(String.format("component not found %s", f))))
+                    .collect(Collectors.toList());
+
+
+
+         /* private val jsonRoot = new StatefulDecodeJsonGenerator()
+            .generateRootComponents(rootComponents)
+
+          if (config.isPrettyPrint) {
+            val printer = Printer.spaces2.copy(dropNullKeys = true)
+            write(jsonRoot.asJson.pretty(printer))
+          } else {
+            val printer = Printer.noSpaces.copy(dropNullKeys = true)
+            write(jsonRoot.asJson.pretty(printer))
+          }*/
+
+            try {
+                JsonFactory j = new JsonFactory();
+                JsonGenerator generator = j.createGenerator(this);
+                JsonNodeFactory nodeFactory = new JsonNodeFactory(false);
+                ObjectMapper objectMapper = new ObjectMapper();
+                ObjectNode rootNode = nodeFactory.objectNode();
+                rootNode.put("generated", LocalDateTime.now().format(DateTimeFormatter.ISO_DATE_TIME));
+                objectMapper.writeTree(generator, rootNode);
+                generator.close();
+                close();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }};
+    }
+/*
   private class StatefulDecodeJsonGenerator {
 
     case class MapBuffer[T, JT](map: mutable.Map[T, Int] = mutable.Map[T, Int](), buffer: mutable.Buffer[JT] = mutable.Buffer[JT]())
@@ -52,7 +74,7 @@ case class DecodeJsonGenerator(config: DecodeJsonGeneratorConfig) {
 
     def generateRootComponents(cs: Seq[Component]): Json.Root = {
       cs.foreach(generate)
-      Json.Root(LocalDateTime.now().format(DateTimeFormatter.ISO_DATE_TIME), objects.buffer)
+      Json.Root(, objects.buffer)
     }
 
     private def generate(c: Component): Int =
@@ -143,6 +165,6 @@ case class DecodeJsonGenerator(config: DecodeJsonGeneratorConfig) {
       Json.StatusMessage(generate(s.alias), Option(s.id).map(_.toInt), Option(s.priority).map(_.toInt),
         s.objects.map(generate))
 
-  }
+  }*/
 
 }

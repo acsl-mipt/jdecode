@@ -4,7 +4,7 @@ import java.util
 
 import org.jetbrains.annotations.Nullable
 import ru.mipt.acsl.decode.model.naming.{ElementName, Namespace}
-import ru.mipt.acsl.decode.model.proxy.MaybeProxy
+import ru.mipt.acsl.decode.model.proxy.{MaybeProxyCompanion, MaybeTypeProxy}
 
 /**
   * @author Artem Shein
@@ -13,7 +13,7 @@ trait SubType extends DecodeType {
 
   def typeMeasure: TypeMeasure
 
-  def baseTypeProxy: MaybeProxy.TypeProxy = typeMeasure.typeProxy
+  def baseTypeProxy: MaybeTypeProxy = typeMeasure.typeProxy
 
   def baseType: DecodeType = baseTypeProxy.obj
 

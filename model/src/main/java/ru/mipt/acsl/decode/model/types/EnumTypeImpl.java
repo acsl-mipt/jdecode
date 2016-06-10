@@ -4,7 +4,8 @@ import org.jetbrains.annotations.Nullable;
 import ru.mipt.acsl.decode.model.Referenceable;
 import ru.mipt.acsl.decode.model.naming.ElementName;
 import ru.mipt.acsl.decode.model.naming.Namespace;
-import ru.mipt.acsl.decode.model.proxy.MaybeProxy;
+import ru.mipt.acsl.decode.model.proxy.MaybeProxyCompanion;
+import ru.mipt.acsl.decode.model.proxy.MaybeTypeProxy;
 
 import java.util.List;
 import java.util.Optional;
@@ -34,7 +35,7 @@ public class EnumTypeImpl implements EnumType {
         this.typeParameters = typeParameters;
     }
 
-    public Optional<MaybeProxy.Enum> extendsTypeProxy() {
+    public Optional<MaybeProxyCompanion.Enum> extendsTypeProxy() {
         return extendsOrBaseTypeProxy().maybeProxyEnum();
     }
 
@@ -45,7 +46,7 @@ public class EnumTypeImpl implements EnumType {
 
     @Override
     public Optional<EnumType> extendsTypeOption() {
-        return extendsTypeProxy().map(MaybeProxy.Enum::obj);
+        return extendsTypeProxy().map(MaybeProxyCompanion.Enum::obj);
     }
 
     @Override
@@ -53,8 +54,8 @@ public class EnumTypeImpl implements EnumType {
         return extendsOrBaseTypeProxy;
     }
 
-    public MaybeProxy.TypeProxy baseTypeProxy() {
-        Optional<MaybeProxy.Enum> anEnum = extendsOrBaseTypeProxy.maybeProxyEnum();
+    public MaybeTypeProxy baseTypeProxy() {
+        Optional<MaybeProxyCompanion.Enum> anEnum = extendsOrBaseTypeProxy.maybeProxyEnum();
         return anEnum.isPresent() ? anEnum.get() : extendsOrBaseTypeProxy.typeMeasure().get().typeProxy(); // must not be null
     }
 

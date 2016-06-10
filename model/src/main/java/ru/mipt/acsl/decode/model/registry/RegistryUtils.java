@@ -9,6 +9,7 @@ import ru.mipt.acsl.decode.model.component.message.EventMessage;
 import ru.mipt.acsl.decode.model.expr.ConstExpr;
 import ru.mipt.acsl.decode.model.naming.Container;
 import ru.mipt.acsl.decode.model.proxy.MaybeProxy;
+import ru.mipt.acsl.decode.model.proxy.MaybeProxyCompanion;
 import ru.mipt.acsl.decode.model.proxy.ResolvingMessages;
 import ru.mipt.acsl.decode.model.types.*;
 
@@ -32,7 +33,7 @@ public class RegistryUtils {
             public void visit(EnumType e) {
                 visit((Container) e);
                 MaybeProxyEnumOrTypeMeasure proxy = e.extendsOrBaseTypeProxy();
-                Optional<MaybeProxy.Enum> en = proxy.maybeProxyEnum();
+                Optional<MaybeProxyCompanion.Enum> en = proxy.maybeProxyEnum();
                 if (en.isPresent())
                     result.addAll(en.get().resolve(r));
                 else

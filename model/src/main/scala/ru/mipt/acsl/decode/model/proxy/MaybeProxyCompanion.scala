@@ -8,66 +8,10 @@ import ru.mipt.acsl.decode.model._
 /**
   * @author Artem Shein
   */
-sealed trait MaybeProxy extends Referenceable {
 
-  def resolve(registry: Registry): ResolvingMessages = isResolved match {
-    case true => ResolvingMessages.newInstance()
-    case _ =>
-      val resolvingResult = registry.resolveElement(proxy.path)
-      resolvingResult.result.isPresent match {
-        case true => resolvingResult.messages.addAll(resolveTo(resolvingResult.result().get()))
-        case _ => sys.error(s"can't resolve proxy $proxy")
-      }
-      resolvingResult.messages
-  }
+object MaybeProxyCompanion {
 
-  def resolveTo(obj: Referenceable): ResolvingMessages
-
-  def proxy: Proxy
-
-  def isResolved: Boolean
-
-  def accept(visitor: ReferenceableVisitor) {
-    visitor.visit(this)
-  }
-
-/*
-  def isProxy: Boolean = v.isLeft
-
-  def isResolved: Boolean = v.isRight
-
-  def obj: T = v.right.getOrElse(sys.error(s"assertion error for $proxy"))
-
-  def proxy: Proxy = v.left.getOrElse(sys.error("assertion error"))
-
-  override def toString: String = s"MaybeProxy{${if (isProxy) proxy else obj}}"*/
-}
-
-object MaybeProxy {
-
-  sealed trait TypeProxy extends MaybeProxy {
-
-    def obj: DecodeType
-
-  }
-
-
-  final case class Type(var v: Either[Proxy, DecodeType]) extends TypeProxy {
-
-    override def isResolved: Boolean = v.isRight
-
-    override def obj: DecodeType = v.right.getOrElse(sys.error("proxy is not resolved"))
-
-    override def proxy: Proxy = v.left.get
-
-    override def resolveTo(obj: model.Referenceable): ResolvingMessages = obj match {
-      case obj: DecodeType => v = Right(obj); ResolvingMessages.newInstance()
-      case _ => ResolvingMessages.newInstance(Message.newInstance(Level.ERROR, s"$obj is not a type"))
-    }
-
-  }
-
-  final case class Struct(var v: Either[Proxy, StructType]) extends TypeProxy {
+  final case class Struct(var v: Either[Proxy, StructType]) extends MaybeTypeProxy {
 
     override def isResolved: Boolean = v.isRight
 
@@ -82,7 +26,7 @@ object MaybeProxy {
 
   }
 
-  final case class Enum(var v: Either[Proxy, EnumType]) extends TypeProxy {
+  final case class Enum(var v: Either[Proxy, EnumType]) extends MaybeTypeProxy {
 
     override def isResolved: Boolean = v.isRight
 

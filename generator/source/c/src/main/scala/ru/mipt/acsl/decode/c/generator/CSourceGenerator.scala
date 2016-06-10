@@ -12,7 +12,7 @@ import org.apache.commons.compress.utils.IOUtils
 import ru.mipt.acsl.decode.generator.json.{DecodeJsonGenerator, DecodeJsonGeneratorConfig}
 import ru.mipt.acsl.decode.model.component.message.{EventMessage, StatusMessage, TmMessage}
 import ru.mipt.acsl.decode.model.component.{Command, Component, StatusParameter}
-import ru.mipt.acsl.decode.model.naming.{HasName, Namespace}
+import ru.mipt.acsl.decode.model.naming.{Fqn, HasName, Namespace}
 import ru.mipt.acsl.decode.model.types.{DecodeType, EnumType, GenericTypeSpecialized, NativeType, PrimitiveTypeInfo, StructField, StructType, SubType, TypeAlias, TypeKind}
 import ru.mipt.acsl.decode.model.{MayHaveId, Parameter}
 import ru.mipt.acsl.generator.c.ast.implicits._
@@ -28,7 +28,7 @@ class CSourceGenerator(val config: CGeneratorConfiguration) extends LazyLogging 
   import CSourceGenerator._
 
   def generate(): Unit = {
-    val component = config.getRegistry.component(config.getRootComponentFqn).getOrElse(
+    val component = Option(config.getRegistry.component(Fqn.newInstance(config.getRootComponentFqn)).orElse(null)).getOrElse(
       sys.error(s"component not found ${config.getRootComponentFqn}"))
     generateRoot(component)
   }
@@ -288,13 +288,13 @@ class CSourceGenerator(val config: CGeneratorConfiguration) extends LazyLogging 
 
         private val jsonConfig: DecodeJsonGeneratorConfig = DecodeJsonGeneratorConfig.newInstance(config.getRegistry,
           this, Seq(config.getRootComponentFqn), true)
-        DecodeJsonGenerator(jsonConfig).generate()
+        DecodeJsonGenerator.newInstance(jsonConfig).generate()
 
         modelC.append("/*").append(new String(toByteArray, StandardCharsets.UTF_8)).append("*/\n\n")
 
         reset()
 
-        DecodeJsonGenerator(DecodeJsonGeneratorConfig.newInstance(jsonConfig.getRegistry, jsonConfig.getOutput,
+        DecodeJsonGenerator.newInstance(DecodeJsonGeneratorConfig.newInstance(jsonConfig.getRegistry, jsonConfig.getOutput,
           jsonConfig.getComponentsFqn, false)).generate()
 
         private val rawJsonMinified = toByteArray
@@ -954,12 +954,12 @@ private[generator] object CSourceGenerator {
     var nextId = 0
     val mapById = mutable.HashMap.empty[Int, WithComponent[T]]
     // fixme: remove Option.get
-    seq.filter(_.id != null).foreach(el => assert(mapById.put(el.id, WithComponent[T](component, el)).isEmpty))
-    seq.filter(_.id != null).foreach { el =>
+    seq.filter(_.id.isPresent).foreach(el => assert(mapById.put(el.id.get, WithComponent[T](component, el)).isEmpty))
+    seq.filter(_.id.isPresent).foreach { el =>
       // todo: optimize: too many contain checks
       while (mapById.contains(nextId))
         nextId += 1
-      assert(mapById.put(Option(el.id.toInt).getOrElse {
+      assert(mapById.put(Option(el.id.get().toInt).getOrElse {
         nextId += 1
         nextId - 1
       }, WithComponent[T](component, el)).isEmpty)
@@ -986,7 +986,7 @@ private[generator] object CSourceGenerator {
     var nextId = 0
     val components = component +: allSubComponents(component).toSeq
     val (withId, withoutId) = (components.filter(_.id != null), components.filter(_.id == null))
-    withId.foreach { c => assert(map.put(Option(c.id.toInt).getOrElse(sys.error("wtf")), c).isEmpty) }
+    withId.foreach { c => assert(map.put(Option(c.id.orElse(null)).map(_.toInt).getOrElse(sys.error("wtf")), c).isEmpty) }
     map ++= withoutId.map { c =>
       while (map.contains(nextId))
         nextId += 1
