@@ -1,6 +1,7 @@
 package ru.mipt.acsl.decode.model.types;
 
 import org.jetbrains.annotations.Nullable;
+import ru.mipt.acsl.decode.model.HasNamespace;
 import ru.mipt.acsl.decode.model.Referenceable;
 import ru.mipt.acsl.decode.model.ReferenceableVisitor;
 import ru.mipt.acsl.decode.model.naming.ElementName;
@@ -13,7 +14,7 @@ import java.util.*;
 /**
  * Created by metadeus on 06.06.16.
  */
-public interface DecodeType extends Referenceable {
+public interface DecodeType extends Referenceable, HasNamespace {
 
     Namespace namespace();
 
@@ -80,8 +81,9 @@ public interface DecodeType extends Referenceable {
                 .map(TypeAlias::name);
     }
 
-    default void accept(ReferenceableVisitor visitor) {
-        visitor.visit(this);
+    @Override
+    default <T> T accept(ReferenceableVisitor<T> visitor) {
+        return visitor.visit(this);
     }
 
 }

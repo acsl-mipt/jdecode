@@ -3,16 +3,33 @@ package ru.mipt.acsl.decode.generator.json;
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import ru.mipt.acsl.decode.model.*;
+import ru.mipt.acsl.decode.model.component.Command;
 import ru.mipt.acsl.decode.model.component.Component;
+import ru.mipt.acsl.decode.model.component.HasComponent;
+import ru.mipt.acsl.decode.model.component.message.TmMessage;
+import ru.mipt.acsl.decode.model.expr.ConstExpr;
+import ru.mipt.acsl.decode.model.naming.Container;
 import ru.mipt.acsl.decode.model.naming.Fqn;
+import ru.mipt.acsl.decode.model.naming.Namespace;
+import ru.mipt.acsl.decode.model.proxy.MaybeProxy;
+import ru.mipt.acsl.decode.model.registry.Measure;
+import ru.mipt.acsl.decode.model.registry.Registry;
+import ru.mipt.acsl.decode.model.types.*;
 
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 public class DecodeJsonGenerator {
@@ -32,31 +49,21 @@ public class DecodeJsonGenerator {
 
         new OutputStreamWriter(config.getOutput()) {{
 
-            List<Component> rootComponents = config.getComponentsFqn().stream()
-                    .map(f -> config.getRegistry().component(Fqn.newInstance(f))
-                            .orElseThrow(() -> new RuntimeException(String.format("component not found %s", f))))
-                    .collect(Collectors.toList());
-
-
-
-         /* private val jsonRoot = new StatefulDecodeJsonGenerator()
-            .generateRootComponents(rootComponents)
-
-          if (config.isPrettyPrint) {
-            val printer = Printer.spaces2.copy(dropNullKeys = true)
-            write(jsonRoot.asJson.pretty(printer))
-          } else {
-            val printer = Printer.noSpaces.copy(dropNullKeys = true)
-            write(jsonRoot.asJson.pretty(printer))
-          }*/
-
             try {
+                List<Component> rootComponents = config.getComponentsFqn().stream()
+                        .map(f -> config.getRegistry().component(Fqn.newInstance(f))
+                                .orElseGet(() -> { throw new RuntimeException(String.format("component not found %s", f)); }))
+                        .collect(Collectors.toList());
+
                 JsonFactory j = new JsonFactory();
                 JsonGenerator generator = j.createGenerator(this);
                 JsonNodeFactory nodeFactory = new JsonNodeFactory(false);
                 ObjectMapper objectMapper = new ObjectMapper();
                 ObjectNode rootNode = nodeFactory.objectNode();
                 rootNode.put("generated", LocalDateTime.now().format(DateTimeFormatter.ISO_DATE_TIME));
+
+                rootNode.set("objects", new StatefulDecodeJsonGenerator(nodeFactory, rootComponents).generate());
+
                 objectMapper.writeTree(generator, rootNode);
                 generator.close();
                 close();
@@ -64,6 +71,205 @@ public class DecodeJsonGenerator {
                 throw new RuntimeException(e);
             }
         }};
+    }
+
+    private static class StatefulDecodeJsonGenerator {
+
+        private final List<Component> rootComponents;
+        private final JsonNodeFactory nodeFactory;
+
+        private final Map<Referenceable, Integer> map = new HashMap<>();
+        private final List<ObjectNode> list = new ArrayList<>();
+
+        StatefulDecodeJsonGenerator(JsonNodeFactory nodeFactory, List<Component> rootComponents) {
+            this.nodeFactory = nodeFactory;
+            this.rootComponents = rootComponents;
+        }
+
+        public ArrayNode generate() {
+            for (Component component : rootComponents)
+                generate(component);
+            return nodeFactory.arrayNode().addAll(list);
+        }
+
+        private ObjectNode nodeKind(String kind) {
+            return nodeFactory.objectNode().put("kind", kind);
+        }
+
+        private void objects(ObjectNode node, Container container) {
+            node.putArray("objects").addAll(
+                    container.objects().stream()
+                            .map(r -> nodeFactory.numberNode(generate(r)))
+                            .collect(Collectors.toList()));
+        }
+
+        private <T extends Alias> void alias(ObjectNode node, T alias) {
+            node.put("alias", generate(alias));
+        }
+
+        private void namespace(ObjectNode node, HasNamespace namespaced) {
+            node.put("namespace", generate(namespaced.namespace()));
+        }
+
+        private void component(ObjectNode node, HasComponent componented) {
+            node.put("component", generate(componented.component()));
+        }
+
+        private void id(ObjectNode node, MayHaveId ided) {
+            ided.id().ifPresent(id -> node.put("id", id));
+        }
+
+        private Integer findOrCreate(Referenceable referenceable, Supplier<ObjectNode> supplier) {
+            if (supplier == null)
+                return null;
+            Integer index = map.get(referenceable);
+            if (index == null) {
+                index = list.size();
+                list.add(null);
+                map.put(referenceable, index);
+                list.set(index, supplier.get());
+            }
+            return index;
+        }
+
+        private Integer generate(Referenceable referenceable) {
+            return referenceable.accept(new ReferenceableVisitor<Integer>() {
+                @Override
+                public Integer visit(DecodeType t) {
+                    return null;
+                }
+
+                @Override
+                public Integer visit(Alias a) {
+                    return null;
+                }
+
+                @Override
+                public Integer visit(TmParameter p) {
+                    return null;
+                }
+
+                @Override
+                public Integer visit(Container c) {
+                    return findOrCreate(c, c.accept(new ContainerVisitor<Supplier<ObjectNode>>() {
+                        @Override
+                        public Supplier<ObjectNode> visit(Namespace namespace) {
+                            return () -> {
+                                ObjectNode namespaceNode = nodeKind("namespace");
+                                alias(namespaceNode, namespace.alias());
+                                namespace.parent().ifPresent(parent -> namespaceNode.put("parent", generate(parent)));
+                                objects(namespaceNode, namespace);
+                                return namespaceNode;
+                            };
+                        }
+
+                        @Override
+                        public Supplier<ObjectNode> visit(Command command) {
+                            return () -> {
+                                ObjectNode commandNode = nodeKind("command");
+                                alias(commandNode, command.alias());
+                                commandNode.put("returnType", generate(command.returnType()));
+                                objects(commandNode, command);
+                                return commandNode;
+                            };
+                        }
+
+                        @Override
+                        public Supplier<ObjectNode> visit(EnumType enumType) {
+                            return () -> {
+                                ObjectNode enumNode = nodeKind("enumType");
+                                alias(enumNode, enumType.alias());
+                                namespace(enumNode, enumType);
+                                enumType.baseTypeOption().ifPresent(baseType ->
+                                        enumNode.put("baseType", generate(baseType)));
+                                enumType.extendsTypeOption().ifPresent(extendsType ->
+                                        enumNode.put("extendsType", generate(extendsType)));
+                                enumNode.put("isFinal", enumType.isFinal());
+                                objects(enumNode, enumType);
+                                return enumNode;
+                            };
+                        }
+
+                        @Override
+                        public Supplier<ObjectNode> visit(StructType structType) {
+                            return () -> {
+                                ObjectNode structNode = nodeKind("structType");
+                                alias(structNode, structType.alias());
+                                namespace(structNode, structType);
+                                objects(structNode, structType);
+                                return structNode;
+                            };
+                        }
+
+                        @Override
+                        public Supplier<ObjectNode> visit(TmMessage tmMessage) {
+                            return () -> {
+                                ObjectNode tmMessageNode = nodeKind("tmMessage");
+                                alias(tmMessageNode, tmMessage.alias());
+                                component(tmMessageNode, tmMessage);
+                                id(tmMessageNode, tmMessage);
+                                objects(tmMessageNode, tmMessage);
+                                return tmMessageNode;
+                            };
+                        }
+
+                        @Override
+                        public Supplier<ObjectNode> visit(Component component) {
+                            return () -> {
+                                ObjectNode componentNode = nodeKind("component");
+                                alias(componentNode, component.alias());
+                                namespace(componentNode, component);
+                                component.baseType().ifPresent(t -> componentNode.put("baseType", generate(t)));
+                                id(componentNode, component);
+                                objects(componentNode, component);
+                                return componentNode;
+                            };
+                        }
+                    }));
+                }
+
+                @Override
+                public Integer visit(EnumConstant c) {
+                    return null;
+                }
+
+                @Override
+                public Integer visit(EnumType e) {
+                    return null;
+                }
+
+                @Override
+                public Integer visit(Measure m) {
+                    return null;
+                }
+
+                @Override
+                public Integer visit(MaybeProxy p) {
+                    return null;
+                }
+
+                @Override
+                public Integer visit(Registry r) {
+                    return null;
+                }
+
+                @Override
+                public Integer visit(ConstExpr e) {
+                    return null;
+                }
+
+                @Override
+                public Integer visit(StructField f) {
+                    return null;
+                }
+
+                @Override
+                public Integer visit(StructType s) {
+                    return null;
+                }
+            });
+        }
+
     }
 /*
   private class StatefulDecodeJsonGenerator {

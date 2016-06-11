@@ -13,7 +13,7 @@ trait ConstExpr extends Referenceable {
       sys.error("not a long value")
   }
 
-  def accept(visitor: ReferenceableVisitor) {
+  def accept[T](visitor: ReferenceableVisitor[T]): T = {
     visitor.visit(this)
   }
 

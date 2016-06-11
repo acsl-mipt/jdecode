@@ -21,7 +21,7 @@ trait Measure extends Referenceable with HasNamespace with HasName with HasInfo 
 
   override def info: util.Map[Language, String] = alias.info
 
-  def accept(visitor: ReferenceableVisitor) {
+  def accept[T](visitor: ReferenceableVisitor[T]): T = {
     visitor.visit(this)
   }
 

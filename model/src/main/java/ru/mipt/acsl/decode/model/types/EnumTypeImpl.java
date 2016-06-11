@@ -65,7 +65,7 @@ public class EnumTypeImpl implements EnumType {
     }
 
     @Override
-    public void objects(List<Referenceable> objects) {
+    public void setObjects(List<Referenceable> objects) {
         this.objects = objects;
     }
 

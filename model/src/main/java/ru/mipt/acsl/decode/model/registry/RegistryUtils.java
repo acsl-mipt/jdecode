@@ -27,10 +27,10 @@ public class RegistryUtils {
 
     public static ResolvingMessages resolve(Registry r, Referenceable obj) {
         final ResolvingMessages result = ResolvingMessages.newInstance();
-        obj.accept(new ReferenceableVisitor(){
+        obj.accept(new ReferenceableVisitor<Void>(){
 
             @Override
-            public void visit(EnumType e) {
+            public Void visit(EnumType e) {
                 visit((Container) e);
                 MaybeProxyEnumOrTypeMeasure proxy = e.extendsOrBaseTypeProxy();
                 Optional<MaybeProxyCompanion.Enum> en = proxy.maybeProxyEnum();
@@ -38,28 +38,33 @@ public class RegistryUtils {
                     result.addAll(en.get().resolve(r));
                 else
                     result.addAll(proxy.typeMeasure().get().typeProxy().resolve(r)); // must be not null
+                return null;
             }
 
             @Override
-            public void visit(Measure m) {
+            public Void visit(Measure m) {
+                return null;
             }
 
             @Override
-            public void visit(MaybeProxy p) {
+            public Void visit(MaybeProxy p) {
                 result.addAll(p.resolve(r));
+                return null;
             }
 
             @Override
-            public void visit(Registry r) {
+            public Void visit(Registry r) {
                 visit(r.rootNamespace());
+                return null;
             }
 
             @Override
-            public void visit(ConstExpr e) {
+            public Void visit(ConstExpr e) {
+                return null;
             }
 
             @Override
-            public void visit(Container c) {
+            public Void visit(Container c) {
                 List<Referenceable> objects = c.objects();
                 // do not replace with stream, wee add elements inside, ConcurrentModificationException may occur
                 for (int index = 0; index < objects.size(); index++) {
@@ -69,20 +74,23 @@ public class RegistryUtils {
                     result.addAll(((Command) c).returnTypeProxy().resolve(r));
                 else if (c instanceof EventMessage)
                     result.addAll(((EventMessage) c).baseTypeProxy().resolve(r));
+                return null;
             }
 
             @Override
-            public void visit(EnumConstant c) {
+            public Void visit(EnumConstant c) {
+                return null;
             }
 
             @Override
-            public void visit(Alias a) {
+            public Void visit(Alias a) {
                 if (a instanceof Alias.ComponentComponent)
                     result.addAll(((Alias.ComponentComponent) a).obj().resolve(r));
+                return null;
             }
 
             @Override
-            public void visit(DecodeType t) {
+            public Void visit(DecodeType t) {
                 if (t instanceof SubType && !t.isGeneric())
                     result.addAll(((SubType) t).typeMeasure().typeProxy().resolve(r));
                 else if (t instanceof TypeMeasure) {
@@ -90,26 +98,30 @@ public class RegistryUtils {
                     result.addAll(tm.typeProxy().resolve(r));
                     tm.measureProxy().ifPresent(p -> result.addAll(p.resolve(r)));
                 }
+                return null;
             }
 
             @Override
-            public void visit(TmParameter tmParameter) {
+            public Void visit(TmParameter tmParameter) {
                 if (tmParameter instanceof Parameter) {
                     Parameter parameter = (Parameter) tmParameter;
                     result.addAll(parameter.typeProxy().resolve(r));
                     parameter.measureProxy().ifPresent(p -> result.addAll(p.resolve(r)));
                 }
+                return null;
             }
 
             @Override
-            public void visit(StructField f) {
+            public Void visit(StructField f) {
                 result.addAll(f.typeMeasure().typeProxy().resolve(r));
                 f.typeMeasure().measureProxy().ifPresent(p -> result.addAll(p.resolve(r)));
+                return null;
             }
 
             @Override
-            public void visit(StructType s) {
+            public Void visit(StructType s) {
                 visit((Container) s);
+                return null;
             }
 
         });

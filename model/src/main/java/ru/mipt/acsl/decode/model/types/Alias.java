@@ -8,6 +8,7 @@ import ru.mipt.acsl.decode.model.component.Command;
 import ru.mipt.acsl.decode.model.component.Component;
 import ru.mipt.acsl.decode.model.component.message.EventMessage;
 import ru.mipt.acsl.decode.model.component.message.StatusMessage;
+import ru.mipt.acsl.decode.model.component.message.TmMessage;
 import ru.mipt.acsl.decode.model.naming.Container;
 import ru.mipt.acsl.decode.model.naming.ElementName;
 import ru.mipt.acsl.decode.model.naming.HasName;
@@ -35,8 +36,8 @@ public interface Alias<P extends Container, O extends Referenceable> extends Ref
 
     void obj(O obj);
 
-    default void accept(ReferenceableVisitor visitor) {
-        visitor.visit(this);
+    default <T> T accept(ReferenceableVisitor<T> visitor) {
+        return visitor.visit(this);
     }
 
     class NsType extends AbstractTypeAlias<Namespace, DecodeType> {
@@ -119,7 +120,15 @@ public interface Alias<P extends Container, O extends Referenceable> extends Ref
 
     }
 
-    class ComponentEventMessage extends AbstractAlias<Component, EventMessage> {
+    abstract class ComponentTmMessage<T extends TmMessage> extends AbstractAlias<Component, T> {
+
+        public ComponentTmMessage(ElementName name, Map<Language, String> info, Component parent, T tmMessage) {
+            super(name, info, parent, tmMessage);
+        }
+
+    }
+
+    class ComponentEventMessage extends ComponentTmMessage<EventMessage> {
 
         public ComponentEventMessage(ElementName name, Map<Language, String> info, Component parent, EventMessage eventMessage) {
             super(name, info, parent, eventMessage);
@@ -127,7 +136,7 @@ public interface Alias<P extends Container, O extends Referenceable> extends Ref
 
     }
 
-    class ComponentStatusMessage extends AbstractAlias<Component, StatusMessage> {
+    class ComponentStatusMessage extends ComponentTmMessage<StatusMessage> {
 
         public ComponentStatusMessage(ElementName name, Map<Language, String> info, Component parent, StatusMessage statusMessage) {
             super(name, info, parent, statusMessage);

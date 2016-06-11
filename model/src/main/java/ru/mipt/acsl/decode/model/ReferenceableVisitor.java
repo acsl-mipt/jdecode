@@ -11,18 +11,18 @@ import ru.mipt.acsl.decode.model.types.*;
 /**
  * @author Artem Shein
  */
-public interface ReferenceableVisitor
+public interface ReferenceableVisitor<T>
 {
-    void visit(DecodeType t);
-    void visit(Alias a);
-    void visit(TmParameter p);
-    void visit(Container c);
-    void visit(EnumConstant c);
-    void visit(EnumType e);
-    void visit(Measure m);
-    void visit(MaybeProxy p);
-    void visit(Registry r);
-    void visit(ConstExpr e);
-    void visit(StructField f);
-    void visit(StructType s);
+    T visit(DecodeType t);
+    T visit(Alias a);
+    T visit(TmParameter p);
+    T visit(Container c);
+    T visit(EnumConstant c);
+    T visit(EnumType e);
+    T visit(Measure m);
+    T visit(MaybeProxy p);
+    T visit(Registry r);
+    T visit(ConstExpr e);
+    T visit(StructField f);
+    T visit(StructType s);
 }

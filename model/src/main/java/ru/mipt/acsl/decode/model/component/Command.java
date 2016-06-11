@@ -54,4 +54,8 @@ public interface Command extends Container, HasName, MayHaveId, HasInfo {
         return alias().info();
     }
 
+    @Override
+    default <T> T accept(ContainerVisitor<T> visitor) {
+        return visitor.visit(this);
+    }
 }

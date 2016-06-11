@@ -15,7 +15,7 @@ trait EnumConstant extends Referenceable with HasName {
 
   override def name: ElementName = alias.name
 
-  def accept(visitor: ReferenceableVisitor) {
+  def accept[T](visitor: ReferenceableVisitor[T]): T = {
     visitor.visit(this)
   }
 

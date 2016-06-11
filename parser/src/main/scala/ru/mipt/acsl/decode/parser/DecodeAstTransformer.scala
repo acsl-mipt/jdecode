@@ -85,7 +85,7 @@ class DecodeAstTransformer {
           MaybeProxyCompanion.Struct(Right(struct))
         }
         val alias = new Alias.NsComponent(elementName(c.getElementNameRule), elementInfo(Option(c.getElementInfo)), ns, null)
-        val component = Component(alias, ns, id(c.getAnnotationDeclList), params, new util.ArrayList[Referenceable]())
+        val component = Component.newInstance(alias, ns, id(c.getAnnotationDeclList), params.orNull, new util.ArrayList[Referenceable]())
         alias.obj(component)
         alias.obj.objects.addAll(c.getComponentRefList.map(sc =>
           componentRef(component, Fqn.newInstance(Seq(elementName(sc.getElementNameRule))))) ++
@@ -156,7 +156,7 @@ class DecodeAstTransformer {
 
   private def newStructType(alias: Alias.NsType, args: DecodeCommandArgs, typeParameters: Seq[ElementName]): StructType = {
     val t = StructType(alias, ns, Collections.emptyList(), typeParameters)
-    t.objects(args.getCommandArgList.flatMap { cmdArg =>
+    t.setObjects(args.getCommandArgList.flatMap { cmdArg =>
       val alias = new Alias.StructField(elementName(cmdArg.getElementNameRule),
         elementInfo(Option(cmdArg.getElementInfo)), t, null)
       alias.obj(StructField(alias, typeMeasure(cmdArg.getTypeUnitApplication)))

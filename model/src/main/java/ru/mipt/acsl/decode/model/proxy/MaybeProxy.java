@@ -26,8 +26,8 @@ public interface MaybeProxy extends Referenceable {
 
     boolean isResolved();
 
-    default void accept(ReferenceableVisitor visitor) {
-        visitor.visit(this);
+    default <T> T accept(ReferenceableVisitor<T> visitor) {
+        return visitor.visit(this);
     }
 
 /*

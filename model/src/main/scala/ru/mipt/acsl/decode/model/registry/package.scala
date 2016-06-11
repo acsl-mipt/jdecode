@@ -1,8 +1,7 @@
 package ru.mipt.acsl.decode.model
 
 import ru.mipt.acsl.decode.model.component.Component
-import ru.mipt.acsl.decode.model.component.message.{EventMessage, StatusMessage}
-import ru.mipt.acsl.decode.model.naming.{Container, ElementName, Fqn, Namespace}
+import ru.mipt.acsl.decode.model.naming.Container
 import ru.mipt.acsl.decode.model.types.{DecodeType, EnumType, NativeType}
 
 import scala.collection.JavaConversions._
@@ -54,9 +53,8 @@ package object registry {
     def validate(c: Component): ValidatingResult = {
       val result = ValidatingResult.newInstance()
 
-      c.baseTypeProxy.foreach { t =>
-        result.addAll(validate(t.obj))
-      }
+      if (c.baseTypeProxy.isPresent)
+        result.addAll(validate(c.baseTypeProxy().get().obj))
 
       c.commands.foreach { cmd =>
         result.addAll(validate(cmd.returnType))

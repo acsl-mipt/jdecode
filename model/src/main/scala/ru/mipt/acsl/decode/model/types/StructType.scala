@@ -23,13 +23,14 @@ trait StructType extends DecodeType with Container {
 
   def systemName: String = "@" + hashCode()
 
-  override def accept(visitor: ReferenceableVisitor): Unit = {
+  override def accept[T](visitor: ReferenceableVisitor[T]): T = {
     visitor.visit(this)
   }
 
   override def toString: String =
     s"${this.getClass.getSimpleName}{alias = $alias, namespace = $namespace, objects = ${objects.size()} items}"
 
+  override def accept[T](visitor: ContainerVisitor[T]): T = visitor.visit(this)
 }
 
 object StructType {
@@ -38,7 +39,7 @@ object StructType {
                                var objects: util.List[Referenceable], val typeParameters: util.List[ElementName])
     extends StructType {
 
-    override def objects(objects: util.List[Referenceable]): Unit = this.objects = objects
+    override def setObjects(objects: util.List[Referenceable]): Unit = this.objects = objects
 
     override def namespace(ns: Namespace): Unit = this.namespace = ns
 

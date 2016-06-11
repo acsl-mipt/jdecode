@@ -1,9 +1,7 @@
 package ru.mipt.acsl.decode.model.naming;
 
 import org.jetbrains.annotations.Nullable;
-import ru.mipt.acsl.decode.model.HasInfo;
-import ru.mipt.acsl.decode.model.Referenceable;
-import ru.mipt.acsl.decode.model.ReferenceableVisitor;
+import ru.mipt.acsl.decode.model.*;
 import ru.mipt.acsl.decode.model.component.Component;
 import ru.mipt.acsl.decode.model.registry.Language;
 import ru.mipt.acsl.decode.model.registry.Measure;
@@ -173,6 +171,11 @@ public interface Namespace extends Container, HasName, HasInfo {
         }
         Collections.reverse(parts);
         return Fqn.newInstance(parts);
+    }
+
+    @Override
+    default <T> T accept(ContainerVisitor<T> visitor) {
+        return visitor.visit(this);
     }
 
 }

@@ -1,5 +1,6 @@
 package ru.mipt.acsl.decode.model;
 
+import org.jetbrains.annotations.Nullable;
 import ru.mipt.acsl.decode.model.expr.ConstExpr;
 import ru.mipt.acsl.decode.model.naming.Container;
 import ru.mipt.acsl.decode.model.proxy.MaybeProxy;
@@ -11,54 +12,78 @@ import ru.mipt.acsl.decode.model.types.*;
 /**
  * @author Artem Shein
  */
-public abstract class AbstractReferenceableVisitor implements ReferenceableVisitor {
+public abstract class AbstractReferenceableVisitor<T> implements ReferenceableVisitor<T> {
 
+    @Nullable
     @Override
-    public void visit(DecodeType t) {
+    public T visit(DecodeType t) {
+        return null;
     }
 
+    @Nullable
     @Override
-    public void visit(Alias a) {
+    public T visit(Alias a) {
+        return null;
     }
 
+    @Nullable
     @Override
-    public void visit(TmParameter p) {
+    public T visit(TmParameter p) {
+        return null;
     }
 
+    @Nullable
     @Override
-    public void visit(Container c) {
+    public T visit(Container c) {
+        return null;
     }
 
+    @Nullable
     @Override
-    public void visit(EnumConstant c) {
+    public T visit(EnumConstant c) {
+        return null;
     }
 
+    @Nullable
     @Override
-    public void visit(Measure m) {
+    public T visit(Measure m) {
+        return null;
     }
 
+    @Nullable
     @Override
-    public void visit(MaybeProxy p) {
+    public T visit(MaybeProxy p) {
+        return null;
     }
 
+    @Nullable
     @Override
-    public void visit(Registry r) {
+    public T visit(Registry r) {
+        return null;
     }
 
+    @Nullable
     @Override
-    public void visit(ConstExpr e) {
+    public T visit(ConstExpr e) {
+        return null;
     }
 
+    @Nullable
     @Override
-    public void visit(StructField f) {
+    public T visit(StructField f) {
+        return null;
     }
 
+    @Nullable
     @Override
-    public void visit(EnumType e) {
+    public T visit(EnumType e) {
+        return null;
     }
 
+    @Nullable
     @Override
-    public void visit(StructType s) {
+    public T visit(StructType s) {
+        return null;
     }
 
 }

@@ -35,7 +35,7 @@ public class NamespaceImpl implements Namespace {
     }
 
     @Override
-    public void objects(List<Referenceable> objects) {
+    public void setObjects(List<Referenceable> objects) {
         this.objects = objects;
     }
 

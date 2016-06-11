@@ -5,6 +5,6 @@ package ru.mipt.acsl.decode.model;
  */
 public interface Referenceable {
 
-    void accept(ReferenceableVisitor visitor);
+    <T> T accept(ReferenceableVisitor<T> visitor);
 
 }

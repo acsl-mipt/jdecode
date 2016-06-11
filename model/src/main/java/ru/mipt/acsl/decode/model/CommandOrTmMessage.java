@@ -27,4 +27,8 @@ public interface CommandOrTmMessage extends Container {
 
     Optional<TmMessage> tmMessage();
 
+    @Override
+    default <T> T accept(ContainerVisitor<T> visitor) {
+        return visitor.visit(this);
+    }
 }

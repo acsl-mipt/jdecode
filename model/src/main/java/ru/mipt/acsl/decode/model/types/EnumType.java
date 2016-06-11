@@ -1,6 +1,7 @@
 package ru.mipt.acsl.decode.model.types;
 
 import org.jetbrains.annotations.Nullable;
+import ru.mipt.acsl.decode.model.ContainerVisitor;
 import ru.mipt.acsl.decode.model.Referenceable;
 import ru.mipt.acsl.decode.model.ReferenceableVisitor;
 import ru.mipt.acsl.decode.model.naming.Container;
@@ -41,7 +42,7 @@ public interface EnumType extends DecodeType, Container {
     default DecodeType extendsOrBaseType() {
         return extendsTypeOption()
                 .map(DecodeType.class::cast)
-                .orElseGet(this::baseType);
+                .orElseGet(() -> this.baseTypeOption().get());
     }
 
     default EnumTypeOrTypeMeasure eitherExtendsOrBaseType() {
@@ -49,11 +50,6 @@ public interface EnumType extends DecodeType, Container {
         return enumType.isPresent()
                 ? new EnumTypeOrTypeMeasure(enumType.get())
                 : new EnumTypeOrTypeMeasure(extendsOrBaseTypeProxy().typeMeasure().get()); // must not be null
-    }
-
-    default DecodeType baseType() {
-        Optional<EnumType> enumType = extendsTypeOption();
-        return enumType.isPresent() ? enumType.get() : baseTypeOption().get(); // must not be null
     }
 
     default String systemName() {
@@ -66,8 +62,13 @@ public interface EnumType extends DecodeType, Container {
         return result;
     }
 
-    default void accept(ReferenceableVisitor visitor) {
-        visitor.visit(this);
+    @Override
+    default <T> T accept(ContainerVisitor<T> visitor) {
+        return visitor.visit(this);
+    }
+
+    default <T> T accept(ReferenceableVisitor<T> visitor) {
+        return visitor.visit(this);
     }
 
 }

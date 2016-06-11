@@ -33,7 +33,7 @@ object StatusMessage {
                                        var objects: util.List[Referenceable], @Nullable priority: Integer)
     extends StatusMessage {
 
-    override def objects(objects: util.List[Referenceable]): Unit = this.objects = objects
+    override def setObjects(objects: util.List[Referenceable]): Unit = this.objects = objects
 
     override def id(): Optional[Integer] = Optional.ofNullable(_id)
   }

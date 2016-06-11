@@ -268,7 +268,7 @@ class CppSourceGenerator(val config: CppGeneratorConfiguration) extends LazyLogg
   }
 
   private def collectNsForTypes(comp: Component, set: mutable.Set[Namespace]) {
-    if (comp.baseType.isDefined)
+    if (comp.baseType.isPresent)
       collectNsForType(comp.baseType.get, set)
     comp.commands.foreach(cmd => {
       cmd.parameters.foreach(arg => collectNsForType(arg.parameterType, set))
@@ -323,7 +323,7 @@ class CppSourceGenerator(val config: CppGeneratorConfiguration) extends LazyLogg
 
   private def typesForComponent(comp: Component, typesSet: mutable.Set[DecodeType] = mutable.HashSet.empty) = {
     typesSet ++= comp.commands.flatMap(cmd => cmd.returnType +: cmd.parameters.map(_.parameterType))
-    typesSet ++= comp.baseType.map(_.fields.map(_.typeMeasure.t)).getOrElse(Seq.empty)
+    typesSet ++= Option(comp.baseType.orElse(null)).map(_.fields.map(_.typeMeasure.t)).getOrElse(Seq.empty)
     typesSet
   }
 

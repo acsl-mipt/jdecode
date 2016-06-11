@@ -237,8 +237,8 @@ class CSourceGenerator(val config: CGeneratorConfiguration) extends LazyLogging 
   }
 
   def collectNsForTypes(component: Component, set: mutable.Set[Namespace]) {
-    for (baseType <- component.baseType)
-      collectNsForType(baseType, set)
+    if (component.baseType.isPresent)
+      collectNsForType(component.baseType().get(), set)
     component.commands.foreach { cmd =>
       cmd.parameters.foreach(arg => collectNsForType(arg.parameterType, set))
       collectNsForType(cmd.returnType, set)
@@ -1008,8 +1008,8 @@ private[generator] object CSourceGenerator {
     allSubComponents(component).toSeq.flatMap(sc => sc.commands.map(ComponentCommand(sc, _)))
 
   def allParameters(component: Component): Seq[ComponentParameterField] =
-    component.baseType.map(_.fields.map(ComponentParameterField(component, _))).getOrElse(Seq.empty) ++
-      allSubComponents(component).toSeq.flatMap(sc => sc.baseType.map(_.fields.map(ComponentParameterField(sc, _)))
+    Option(component.baseType.orElse(null)).map(_.fields.map(ComponentParameterField(component, _))).getOrElse(Seq.empty) ++
+      allSubComponents(component).toSeq.flatMap(sc => Option(sc.baseType.orElse(null)).map(_.fields.map(ComponentParameterField(sc, _)))
         .getOrElse(Seq.empty))
 
   def structType(component: Component): CStructTypeDef = {
@@ -1023,7 +1023,7 @@ private[generator] object CSourceGenerator {
         CStructTypeDefField(
           name, CFuncType(cType(f.typeMeasure.t), Seq(componentSelfPtrType), name))
       } ++
-      component.baseType.map(_.fields.map { f =>
+      Option(component.baseType.orElse(null)).map(_.fields.map { f =>
         val name = mangledCName(f)
         CStructTypeDefField(name, CFuncType(cType(f.typeMeasure.t), Seq(componentSelfPtrType), name))
       }).getOrElse(Seq.empty) ++ component.commands.map(structTypeFieldForCommand(component, component, _)),
@@ -1084,7 +1084,7 @@ private[generator] object CSourceGenerator {
     (component.commands.flatMap(cmd => typeWithDependentTypes(cmd.returnType) ++
       cmd.parameters.flatMap(p => typeWithDependentTypes(p.parameterType))) ++
       component.eventMessages.map(_.baseType) ++
-      component.baseType.map(_.fields.flatMap(f => typeWithDependentTypes(f.typeMeasure.t))).getOrElse(Seq.empty)).toSet ++
+      Option(component.baseType.orElse(null)).map(_.fields.flatMap(f => typeWithDependentTypes(f.typeMeasure.t))).getOrElse(Seq.empty)).toSet ++
       allSubComponents(component).flatMap(allTypes)
 
   def isGeneratable(t: DecodeType): Boolean = t match {

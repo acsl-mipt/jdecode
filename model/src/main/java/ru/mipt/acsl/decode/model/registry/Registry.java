@@ -43,8 +43,8 @@ public interface Registry extends Referenceable {
                 Message.newInstance(Level.ERROR, String.format("path %s can not be resolved", path)));
     }
 
-    default void accept(ReferenceableVisitor visitor) {
-        visitor.visit(this);
+    default <T> T accept(ReferenceableVisitor<T> visitor) {
+        return visitor.visit(this);
     }
 
     // TODO: refactoring

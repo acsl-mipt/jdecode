@@ -38,7 +38,7 @@ class MessageParameterRefWalker(var component: Component, @Nullable var _structF
     }
 
   private def findBaseTypeField(elementName: ElementName): Option[Try[Unit]] =
-    component.baseType.flatMap(_.field(elementName).map { f =>
+    Option(component.baseType.orElse(null)).flatMap(_.field(elementName).map { f =>
       _structField = f
       Success(Unit)
     })

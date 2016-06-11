@@ -19,7 +19,7 @@ trait StructField extends Referenceable with HasName {
 
   def info: util.Map[Language, String] = alias.info
 
-  def accept(visitor: ReferenceableVisitor) {
+  def accept[T](visitor: ReferenceableVisitor[T]): T = {
     visitor.visit(this)
   }
 

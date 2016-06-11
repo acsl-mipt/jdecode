@@ -31,7 +31,7 @@ public class CommandOrTmMessageImpl implements CommandOrTmMessage {
     }
 
     @Override
-    public void objects(List<Referenceable> objects) {
+    public void setObjects(List<Referenceable> objects) {
         throw new RuntimeException("not implemented");
     }
 
