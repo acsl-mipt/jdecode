@@ -1,6 +1,8 @@
 package ru.mipt.acsl.decode.model.types
 
 import java.util
+import java.util.Optional
+import scala.collection.JavaConversions._
 
 import scala.collection.JavaConversions._
 import org.jetbrains.annotations.Nullable
@@ -18,7 +20,7 @@ trait GenericTypeSpecialized extends DecodeType {
 
   def genericTypeArgumentsProxy: util.List[MaybeTypeProxy]
 
-  def genericTypeArguments: Seq[DecodeType] = genericTypeArgumentsProxy.map(_.obj)
+  def genericTypeArguments: util.List[DecodeType] = genericTypeArgumentsProxy.map(_.obj)
 
   def systemName: String = "@" + hashCode()
 
@@ -30,13 +32,15 @@ trait GenericTypeSpecialized extends DecodeType {
 
 object GenericTypeSpecialized {
 
-  private class GenericTypeSpecializedImpl(@Nullable val alias: Alias.NsType, var namespace: Namespace,
+  private class GenericTypeSpecializedImpl(@Nullable val _alias: Alias.NsType, var namespace: Namespace,
                                            val genericTypeProxy: MaybeTypeProxy,
                                            val genericTypeArgumentsProxy: util.List[MaybeTypeProxy],
                                            val typeParameters: util.List[ElementName])
     extends GenericTypeSpecialized {
 
     override def namespace(ns: Namespace): Unit = this.namespace = ns
+
+    override def alias(): Optional[Alias] = Optional.ofNullable(_alias)
 
   }
 

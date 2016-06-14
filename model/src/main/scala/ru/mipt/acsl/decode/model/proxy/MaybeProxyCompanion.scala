@@ -3,7 +3,7 @@ package ru.mipt.acsl.decode.model.proxy
 import ru.mipt.acsl.decode.model
 import ru.mipt.acsl.decode.model.registry.Registry
 import ru.mipt.acsl.decode.model.types.{DecodeType, EnumType, StructType}
-import ru.mipt.acsl.decode.model._
+import ru.mipt.acsl.decode.model.{Referenceable, _}
 
 /**
   * @author Artem Shein
@@ -78,6 +78,8 @@ object MaybeProxyCompanion {
     override def proxy: Proxy = v.left.get
 
     override def isResolved: Boolean = v.isRight
+
+    override def obj(): model.Referenceable = v.right.get
   }
 
   /*def apply[T <: Referenceable : ClassTag](proxy: Proxy): MaybeProxy[T] = new MaybeProxy[T](Left(proxy))

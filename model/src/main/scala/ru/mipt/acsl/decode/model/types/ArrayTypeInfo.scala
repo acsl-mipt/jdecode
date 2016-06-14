@@ -13,7 +13,7 @@ object ArrayTypeInfo {
 
   private case class ArrayTypeInfoImpl(t: GenericTypeSpecialized) extends ArrayTypeInfo {
 
-    def baseType: DecodeType = t.genericTypeArguments.head
+    def baseType: DecodeType = t.genericTypeArguments.get(0)
 
   }
 

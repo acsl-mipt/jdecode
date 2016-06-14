@@ -2,16 +2,16 @@ package ru.mipt.acsl.decode.model.types
 
 import java.util
 
-import ru.mipt.acsl.decode.model.{Referenceable, ReferenceableVisitor}
+import ru.mipt.acsl.decode.model.{HasAlias, Referenceable, ReferenceableVisitor}
 import ru.mipt.acsl.decode.model.naming.{ElementName, HasName}
 import ru.mipt.acsl.decode.model.registry.Language
 
 /**
   * Created by metadeus on 11.05.16.
   */
-trait StructField extends Referenceable with HasName {
+trait StructField extends Referenceable with HasName with HasAlias {
 
-  def alias: Alias.StructField
+  override def alias: Alias.StructField
 
   def typeMeasure: TypeMeasure
 

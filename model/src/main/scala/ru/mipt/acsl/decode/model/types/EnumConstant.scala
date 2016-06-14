@@ -7,9 +7,9 @@ import ru.mipt.acsl.decode.model.naming.{ElementName, HasName}
 /**
   * Created by metadeus on 08.03.16.
   */
-trait EnumConstant extends Referenceable with HasName {
+trait EnumConstant extends Referenceable with HasName with HasAlias {
 
-  def alias: Alias.EnumConstant
+  override def alias: Alias.EnumConstant
 
   def value: ConstExpr
 

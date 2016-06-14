@@ -4,14 +4,14 @@ import java.util
 
 import ru.mipt.acsl.decode.model.naming.{ElementName, HasName, Namespace}
 import ru.mipt.acsl.decode.model.types.Alias
-import ru.mipt.acsl.decode.model.{HasInfo, HasNamespace, Referenceable, ReferenceableVisitor}
+import ru.mipt.acsl.decode.model._
 
 /**
   * @author Artem Shein
   */
-trait Measure extends Referenceable with HasNamespace with HasName with HasInfo {
+trait Measure extends Referenceable with HasNamespace with HasName with HasInfo with HasAlias {
 
-  def alias: Alias.NsMeasure
+  override def alias: Alias.NsMeasure
 
   def display: util.Map[Language, String]
 

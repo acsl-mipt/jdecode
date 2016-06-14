@@ -16,12 +16,13 @@ import java.util.Optional;
 /**
  * Created by metadeus on 06.06.16.
  */
-public interface Parameter extends TmParameter, HasName {
+public interface Parameter extends TmParameter, HasName, Referenceable, HasAlias {
 
     static Parameter newInstance(Alias.MessageOrCommandParameter alias, TypeMeasure typeMeasure) {
         return new ParameterImpl(alias, typeMeasure);
     }
 
+    @Override
     Alias.MessageOrCommandParameter alias();
 
     TypeMeasure typeMeasure();

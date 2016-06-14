@@ -4,7 +4,11 @@ package ru.mipt.acsl.decode.model.expr
   * @author Artem Shein
   */
 trait BigDecimalLiteral extends ConstExpr {
+
   def value: BigDecimal
+
+  override def exprStringRepr: String = value.toString
+
 }
 
 object BigDecimalLiteral {

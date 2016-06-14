@@ -7,6 +7,8 @@ trait BigIntLiteral extends ConstExpr {
 
   def value: BigInt
 
+  override def exprStringRepr: String = value.toString()
+
 }
 
 object BigIntLiteral {

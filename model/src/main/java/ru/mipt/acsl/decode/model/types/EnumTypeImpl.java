@@ -45,6 +45,11 @@ public class EnumTypeImpl implements EnumType {
     }
 
     @Override
+    public Optional<Alias> alias() {
+        return Optional.ofNullable(alias);
+    }
+
+    @Override
     public Optional<EnumType> extendsTypeOption() {
         return extendsTypeProxy().map(MaybeProxyCompanion.Enum::obj);
     }
@@ -77,12 +82,6 @@ public class EnumTypeImpl implements EnumType {
     @Override
     public void namespace(Namespace ns) {
         this.namespace = ns;
-    }
-
-    @Override
-    @Nullable
-    public Alias.NsType alias() {
-        return alias;
     }
 
     @Override

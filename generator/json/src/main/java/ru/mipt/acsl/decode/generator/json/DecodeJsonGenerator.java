@@ -2,6 +2,7 @@ package ru.mipt.acsl.decode.generator.json;
 
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
@@ -10,12 +11,15 @@ import ru.mipt.acsl.decode.model.*;
 import ru.mipt.acsl.decode.model.component.Command;
 import ru.mipt.acsl.decode.model.component.Component;
 import ru.mipt.acsl.decode.model.component.HasComponent;
+import ru.mipt.acsl.decode.model.component.StatusParameter;
 import ru.mipt.acsl.decode.model.component.message.TmMessage;
 import ru.mipt.acsl.decode.model.expr.ConstExpr;
 import ru.mipt.acsl.decode.model.naming.Container;
 import ru.mipt.acsl.decode.model.naming.Fqn;
 import ru.mipt.acsl.decode.model.naming.Namespace;
 import ru.mipt.acsl.decode.model.proxy.MaybeProxy;
+import ru.mipt.acsl.decode.model.proxy.path.ProxyPath;
+import ru.mipt.acsl.decode.model.registry.Language;
 import ru.mipt.acsl.decode.model.registry.Measure;
 import ru.mipt.acsl.decode.model.registry.Registry;
 import ru.mipt.acsl.decode.model.types.*;
@@ -24,10 +28,7 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -39,11 +40,6 @@ public class DecodeJsonGenerator {
     public static DecodeJsonGenerator newInstance(DecodeJsonGeneratorConfig config) {
         return new DecodeJsonGenerator(config);
     }
-
-    private DecodeJsonGenerator(DecodeJsonGeneratorConfig config) {
-        this.config = config;
-    }
-
 
     public void generate() {
 
@@ -73,6 +69,32 @@ public class DecodeJsonGenerator {
         }};
     }
 
+    public enum Keys {
+
+        KIND("k"), NAME("n"), ALIAS("a"), OBJ("o"), INFO("i"), DISPLAY("d"), NAMESPACE("ns"), VALUE("v"), OBJECTS("os"),
+        COMPONENT("c"), PARENT("p"), BASE_TYPE("b"), NATIVE_TYPE("n"), SUB_TYPE("sub"), TYPE_MEASURE("tm"),
+        TYPE_PROXY("p"), MEASURE("m"), CONST("const"), GENERIC_TYPE_SPECIALIZED("gts"), GENERIC_TYPE("gt"),
+        TYPE_ARGUMENTS("as"), STATUS_PARAMETER("sp"), ELEMENTS("e"), MIN("min"), MAX("max"), PARAMETER("p"),
+        COMMAND("cmd"), RETURN_TYPE("rt"), TM_MESSAGE("tm"), ENUM_CONSTANT("ec"), ENUM_TYPE("e"), EXTENDS_TYPE("et"),
+        IS_FINAL("f"), MAYBE_PROXY("mp"), ELEMENT_NAME("e"), PROXY("p"), CONST_EXPR("ex"), STRUCT_FIELD("f"),
+        STRUCT_TYPE("st");
+
+        public String getKey() {
+            return key;
+        }
+
+        private final String key;
+
+        private Keys(String key) {
+            this.key = key;
+        }
+
+    }
+
+    private DecodeJsonGenerator(DecodeJsonGeneratorConfig config) {
+        this.config = config;
+    }
+
     private static class StatefulDecodeJsonGenerator {
 
         private final List<Component> rootComponents;
@@ -92,31 +114,61 @@ public class DecodeJsonGenerator {
             return nodeFactory.arrayNode().addAll(list);
         }
 
+        private ObjectNode extendedNodeKind(String kind, Referenceable referenceable) {
+            ObjectNode node = nodeKind(kind);
+            boolean isNotTypeMeasure = !(referenceable instanceof TypeMeasure);
+            if (referenceable instanceof HasAlias)
+                alias(node, (HasAlias) referenceable);
+            else if (referenceable instanceof MayHaveAlias && isNotTypeMeasure) {
+                MayHaveAlias aliased = (MayHaveAlias) referenceable;
+                aliased.alias().ifPresent(a -> alias(node, a));
+            }
+            if (referenceable instanceof HasNamespace && isNotTypeMeasure)
+                namespace(node, (HasNamespace) referenceable);
+            if (referenceable instanceof HasComponent)
+                component(node, (HasComponent) referenceable);
+            if (referenceable instanceof MayHaveId)
+                id(node, (MayHaveId) referenceable);
+            if (referenceable instanceof Container)
+                objects(node, (Container) referenceable);
+            return node;
+        }
+
         private ObjectNode nodeKind(String kind) {
-            return nodeFactory.objectNode().put("kind", kind);
+            return nodeFactory.objectNode().put(Keys.KIND.getKey(), kind);
         }
 
         private void objects(ObjectNode node, Container container) {
-            node.putArray("objects").addAll(
+            node.putArray(Keys.OBJECTS.getKey()).addAll(
                     container.objects().stream()
                             .map(r -> nodeFactory.numberNode(generate(r)))
                             .collect(Collectors.toList()));
         }
 
-        private <T extends Alias> void alias(ObjectNode node, T alias) {
-            node.put("alias", generate(alias));
+        private void alias(ObjectNode node, HasAlias aliased) {
+            alias(node, aliased.alias());
+        }
+
+        private void alias(ObjectNode node, Alias alias) {
+            node.put(Keys.ALIAS.getKey(), generate(alias));
         }
 
         private void namespace(ObjectNode node, HasNamespace namespaced) {
-            node.put("namespace", generate(namespaced.namespace()));
+            node.put(Keys.NAMESPACE.getKey(), generate(namespaced.namespace()));
         }
 
         private void component(ObjectNode node, HasComponent componented) {
-            node.put("component", generate(componented.component()));
+            node.put(Keys.COMPONENT.getKey(), generate(componented.component()));
         }
 
         private void id(ObjectNode node, MayHaveId ided) {
             ided.id().ifPresent(id -> node.put("id", id));
+        }
+
+        private ObjectNode display(Map<Language, String> display) {
+            ObjectNode node = nodeFactory.objectNode();
+            display.forEach((l, s) -> node.put(l.code(), s));
+            return node;
         }
 
         private Integer findOrCreate(Referenceable referenceable, Supplier<ObjectNode> supplier) {
@@ -133,141 +185,181 @@ public class DecodeJsonGenerator {
         }
 
         private Integer generate(Referenceable referenceable) {
-            return referenceable.accept(new ReferenceableVisitor<Integer>() {
+            return findOrCreate(referenceable, referenceable.accept(new ReferenceableVisitor<Supplier<ObjectNode>>() {
                 @Override
-                public Integer visit(DecodeType t) {
-                    return null;
+                public Supplier<ObjectNode> visit(DecodeType t) {
+                    return () -> {
+                        if (t instanceof NativeType)
+                            return extendedNodeKind(Keys.NATIVE_TYPE.getKey(), t);
+                        else if (t instanceof SubType)
+                            return extendedNodeKind(Keys.SUB_TYPE.getKey(), t)
+                                    .put(Keys.TYPE_MEASURE.getKey(), generate(((SubType)t).typeMeasure()));
+                        else if (t instanceof TypeMeasure) {
+                            TypeMeasure typeMeasure = (TypeMeasure) t;
+                            ObjectNode node = extendedNodeKind(Keys.TYPE_MEASURE.getKey(), t);
+                            node.put(Keys.TYPE_PROXY.getKey(), generate(typeMeasure.typeProxy()));
+                            typeMeasure.measure().ifPresent(m -> node.put(Keys.MEASURE.getKey(), generate(m)));
+                            return node;
+                        } else if (t instanceof Const)
+                            return extendedNodeKind(Keys.CONST.getKey(), t).put(Keys.VALUE.getKey(), ((Const)t).value());
+                        else if (t instanceof GenericTypeSpecialized) {
+                            GenericTypeSpecialized genericTypeSpecialized = (GenericTypeSpecialized) t;
+                            ObjectNode node = extendedNodeKind(Keys.GENERIC_TYPE_SPECIALIZED.getKey(), t)
+                                    .put(Keys.GENERIC_TYPE.getKey(), generate(genericTypeSpecialized.genericType()));
+                            ArrayNode typeArguments = node.putArray(Keys.TYPE_ARGUMENTS.getKey());
+                            genericTypeSpecialized.genericTypeArguments().forEach(a -> typeArguments.add(generate(a)));
+                            return node;
+                        } else
+                            throw new AssertionError();
+                    };
                 }
 
                 @Override
-                public Integer visit(Alias a) {
-                    return null;
+                public Supplier<ObjectNode> visit(Alias a) {
+                    return () -> {
+                        ObjectNode node = extendedNodeKind(Keys.ALIAS.getKey(), a)
+                            .put(Keys.NAME.getKey(), a.name().mangledNameString())
+                            .put(Keys.OBJ.getKey(), generate(a.obj()));
+                        if (!a.info().isEmpty())
+                            node.set(Keys.INFO.getKey(), display(a.info()));
+                        return node;
+                    };
                 }
 
                 @Override
-                public Integer visit(TmParameter p) {
-                    return null;
+                public Supplier<ObjectNode> visit(TmParameter p) {
+                    return () -> {
+                        if (p instanceof StatusParameter) {
+                            ObjectNode node = extendedNodeKind(Keys.STATUS_PARAMETER.getKey(), p);
+                            ArrayNode elementsNode = node.putArray(Keys.ELEMENTS.getKey());
+                            ((StatusParameter) p).path().elements().forEach(el -> elementsNode.add(el.arrayRange().<JsonNode>map(a -> {
+                                ObjectNode arrayRangeNode = nodeFactory.objectNode();
+                                arrayRangeNode.put(Keys.MIN.getKey(), a.min().longValue());
+                                a.max().ifPresent(m -> arrayRangeNode.put(Keys.MAX.getKey(), m.longValue()));
+                                return arrayRangeNode;
+                            }).orElseGet(() -> nodeFactory.textNode(el.elementName().get().mangledNameString()))));
+                            return node;
+                        } else {
+                            return extendedNodeKind(Keys.PARAMETER.getKey(), p)
+                                    .put(Keys.TYPE_MEASURE.getKey(), generate(((Parameter) p).typeMeasure()));
+                        }
+                    };
                 }
 
                 @Override
-                public Integer visit(Container c) {
-                    return findOrCreate(c, c.accept(new ContainerVisitor<Supplier<ObjectNode>>() {
+                public Supplier<ObjectNode> visit(Container c) {
+                    return c.accept(new ContainerVisitor<Supplier<ObjectNode>>() {
                         @Override
                         public Supplier<ObjectNode> visit(Namespace namespace) {
                             return () -> {
-                                ObjectNode namespaceNode = nodeKind("namespace");
-                                alias(namespaceNode, namespace.alias());
-                                namespace.parent().ifPresent(parent -> namespaceNode.put("parent", generate(parent)));
-                                objects(namespaceNode, namespace);
+                                ObjectNode namespaceNode = extendedNodeKind(Keys.NAMESPACE.getKey(), namespace);
+                                namespace.parent().ifPresent(parent -> namespaceNode.put(Keys.PARENT.getKey(), generate(parent)));
                                 return namespaceNode;
                             };
                         }
 
                         @Override
                         public Supplier<ObjectNode> visit(Command command) {
-                            return () -> {
-                                ObjectNode commandNode = nodeKind("command");
-                                alias(commandNode, command.alias());
-                                commandNode.put("returnType", generate(command.returnType()));
-                                objects(commandNode, command);
-                                return commandNode;
-                            };
+                            return () ->
+                                extendedNodeKind(Keys.COMMAND.getKey(), command)
+                                        .put(Keys.RETURN_TYPE.getKey(), generate(command.returnType()));
                         }
 
                         @Override
                         public Supplier<ObjectNode> visit(EnumType enumType) {
-                            return () -> {
-                                ObjectNode enumNode = nodeKind("enumType");
-                                alias(enumNode, enumType.alias());
-                                namespace(enumNode, enumType);
-                                enumType.baseTypeOption().ifPresent(baseType ->
-                                        enumNode.put("baseType", generate(baseType)));
-                                enumType.extendsTypeOption().ifPresent(extendsType ->
-                                        enumNode.put("extendsType", generate(extendsType)));
-                                enumNode.put("isFinal", enumType.isFinal());
-                                objects(enumNode, enumType);
-                                return enumNode;
-                            };
+                            throw new AssertionError("must be unreachable");
                         }
 
                         @Override
                         public Supplier<ObjectNode> visit(StructType structType) {
-                            return () -> {
-                                ObjectNode structNode = nodeKind("structType");
-                                alias(structNode, structType.alias());
-                                namespace(structNode, structType);
-                                objects(structNode, structType);
-                                return structNode;
-                            };
+                            throw new AssertionError("must be unreachable");
                         }
 
                         @Override
                         public Supplier<ObjectNode> visit(TmMessage tmMessage) {
-                            return () -> {
-                                ObjectNode tmMessageNode = nodeKind("tmMessage");
-                                alias(tmMessageNode, tmMessage.alias());
-                                component(tmMessageNode, tmMessage);
-                                id(tmMessageNode, tmMessage);
-                                objects(tmMessageNode, tmMessage);
-                                return tmMessageNode;
-                            };
+                            return () -> extendedNodeKind(Keys.TM_MESSAGE.getKey(), tmMessage);
                         }
 
                         @Override
                         public Supplier<ObjectNode> visit(Component component) {
                             return () -> {
-                                ObjectNode componentNode = nodeKind("component");
-                                alias(componentNode, component.alias());
-                                namespace(componentNode, component);
-                                component.baseType().ifPresent(t -> componentNode.put("baseType", generate(t)));
-                                id(componentNode, component);
-                                objects(componentNode, component);
+                                ObjectNode componentNode = extendedNodeKind(Keys.COMPONENT.getKey(), component);
+                                component.baseType().ifPresent(t -> componentNode.put(Keys.BASE_TYPE.getKey(), generate(t)));
                                 return componentNode;
                             };
                         }
-                    }));
+                    });
                 }
 
                 @Override
-                public Integer visit(EnumConstant c) {
-                    return null;
+                public Supplier<ObjectNode> visit(EnumConstant c) {
+                    return () -> extendedNodeKind(Keys.ENUM_CONSTANT.getKey(), c).put(Keys.VALUE.getKey(), generate(c.value()));
                 }
 
                 @Override
-                public Integer visit(EnumType e) {
-                    return null;
+                public Supplier<ObjectNode> visit(EnumType e) {
+                    return () -> {
+                        ObjectNode enumNode = extendedNodeKind(Keys.ENUM_TYPE.getKey(), e);
+                        e.baseTypeOption().ifPresent(baseType ->
+                                enumNode.put(Keys.BASE_TYPE.getKey(), generate(baseType)));
+                        e.extendsTypeOption().ifPresent(extendsType ->
+                                enumNode.put(Keys.EXTENDS_TYPE.getKey(), generate(extendsType)));
+                        enumNode.put(Keys.IS_FINAL.getKey(), e.isFinal());
+                        return enumNode;
+                    };
                 }
 
                 @Override
-                public Integer visit(Measure m) {
-                    return null;
+                public Supplier<ObjectNode> visit(Measure m) {
+                    // ObjectNode#set returns ObjectNode
+                    return () -> (ObjectNode) extendedNodeKind(Keys.MEASURE.getKey(), m)
+                            .set(Keys.DISPLAY.getKey(), display(m.display()));
                 }
 
                 @Override
-                public Integer visit(MaybeProxy p) {
-                    return null;
+                public Supplier<ObjectNode> visit(MaybeProxy p) {
+                    return () -> {
+                        ObjectNode node = nodeKind(Keys.MAYBE_PROXY.getKey());
+                        if (p.isResolved())
+                            node.put(Keys.OBJ.getKey(), generate(p.obj()));
+                        else {
+                            ProxyPath path = p.proxy().path();
+                            ObjectNode proxy = nodeFactory.objectNode();
+                            if (path instanceof ProxyPath.FqnElement) {
+                                ProxyPath.FqnElement el = (ProxyPath.FqnElement) path;
+                                proxy.put(Keys.NAMESPACE.getKey(), el.ns().mangledNameString());
+                                proxy.put(Keys.ELEMENT_NAME.getKey(), el.mangledName().mangledNameString());
+                            } else {
+                                ProxyPath.Literal literal = (ProxyPath.Literal) path;
+                                proxy.put(Keys.VALUE.getKey(), literal.value());
+                            }
+                            node.put(Keys.PROXY.getKey(), proxy);
+                        }
+                        return node;
+                    };
                 }
 
                 @Override
-                public Integer visit(Registry r) {
-                    return null;
+                public Supplier<ObjectNode> visit(Registry r) {
+                    throw new AssertionError("must be unreachable");
                 }
 
                 @Override
-                public Integer visit(ConstExpr e) {
-                    return null;
+                public Supplier<ObjectNode> visit(ConstExpr e) {
+                    return () -> extendedNodeKind(Keys.CONST_EXPR.getKey(), e).put(Keys.VALUE.getKey(), e.exprStringRepr());
                 }
 
                 @Override
-                public Integer visit(StructField f) {
-                    return null;
+                public Supplier<ObjectNode> visit(StructField f) {
+                    return () -> extendedNodeKind(Keys.STRUCT_FIELD.getKey(), f)
+                            .put(Keys.TYPE_MEASURE.getKey(), generate(f.typeMeasure()));
                 }
 
                 @Override
-                public Integer visit(StructType s) {
-                    return null;
+                public Supplier<ObjectNode> visit(StructType s) {
+                    return () -> extendedNodeKind(Keys.STRUCT_TYPE.getKey(), s);
                 }
-            });
+            }));
         }
 
     }

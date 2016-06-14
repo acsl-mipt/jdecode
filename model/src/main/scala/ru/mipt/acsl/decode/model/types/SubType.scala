@@ -1,6 +1,7 @@
 package ru.mipt.acsl.decode.model.types
 
 import java.util
+import java.util.Optional
 
 import org.jetbrains.annotations.Nullable
 import ru.mipt.acsl.decode.model.naming.{ElementName, Namespace}
@@ -26,12 +27,13 @@ trait SubType extends DecodeType {
 
 object SubType {
 
-  private class SubTypeImpl(@Nullable val alias: Alias.NsType, var namespace: Namespace,
+  private class SubTypeImpl(@Nullable val _alias: Alias.NsType, var namespace: Namespace,
                             val typeMeasure: TypeMeasure, val typeParameters: util.List[ElementName])
     extends SubType {
 
     override def namespace(ns: Namespace): Unit = this.namespace = namespace
 
+    override def alias(): Optional[Alias] = Optional.ofNullable(_alias)
   }
 
   def apply(@Nullable alias: Alias.NsType, namespace: Namespace, typeMeasure: TypeMeasure,

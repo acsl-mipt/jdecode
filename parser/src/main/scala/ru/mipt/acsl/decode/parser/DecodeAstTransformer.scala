@@ -1,7 +1,7 @@
 package ru.mipt.acsl.decode.parser
 
 import java.util
-import java.util.Collections
+import java.util.{Collections, Optional}
 
 import com.intellij.lang.ASTNode
 import com.intellij.psi.PsiWhiteSpace
@@ -71,7 +71,7 @@ class DecodeAstTransformer {
       case m: DecodeMeasureDecl =>
         val alias = new Alias.NsMeasure(elementName(m.getElementNameRule), elementInfo(Option(m.getElementInfo)), ns, null)
         alias.obj(Measure(alias, localizedStrings(m.getStringValueList)))
-        ns.objects.addAll(Seq(alias, alias.obj))
+        ns.objects.addAll(Seq(alias, alias.obj()))
       case c: DecodeComponentDecl =>
         val params = Option(c.getComponentParametersDecl).map { params =>
           val struct = StructType(null, ns, new util.ArrayList[Referenceable](), new util.ArrayList[ElementName]())
@@ -79,7 +79,7 @@ class DecodeAstTransformer {
             val alias = new Alias.StructField(elementName(arg.getElementNameRule),
               elementInfo(Option(arg.getElementInfo)), struct, null)
             alias.obj(StructField(alias, typeMeasure(arg.getTypeUnitApplication)))
-            Seq(alias, alias.obj)
+            Seq(alias, alias.obj())
           })
           ns.objects.add(struct)
           MaybeProxyCompanion.Struct(Right(struct))
@@ -87,10 +87,10 @@ class DecodeAstTransformer {
         val alias = new Alias.NsComponent(elementName(c.getElementNameRule), elementInfo(Option(c.getElementInfo)), ns, null)
         val component = Component.newInstance(alias, ns, id(c.getAnnotationDeclList), params.orNull, new util.ArrayList[Referenceable]())
         alias.obj(component)
-        alias.obj.objects.addAll(c.getComponentRefList.map(sc =>
+        alias.obj().objects.addAll(c.getComponentRefList.map(sc =>
           componentRef(component, Fqn.newInstance(Seq(elementName(sc.getElementNameRule))))) ++
           c.getCommandDeclList.flatMap(c => command(c, component)))
-        ns.objects.addAll(Seq(alias, alias.obj))
+        ns.objects.addAll(Seq(alias, alias.obj()))
         component.objects.addAll(c.getMessageDeclList
           .flatMap(m => Option(m.getEventMessage).seq.flatMap(eventMessage(_, component))) ++
           c.getMessageDeclList
@@ -100,7 +100,7 @@ class DecodeAstTransformer {
       case c: DecodeConstDecl =>
         val alias = new Alias.NsConst(elementName(c.getElementNameRule), elementInfo(Option(c.getElementInfo)), ns, null)
         alias.obj(Const.newInstance(alias, ns, c.getLiteral.getText, util.Collections.emptyList()))
-        ns.objects.addAll(Seq(alias, alias.obj))
+        ns.objects.addAll(Seq(alias, alias.obj()))
       case s: DecodeScriptDecl =>
         //sys.error("not implemented")
       case p: PsiWhiteSpace =>
@@ -160,7 +160,7 @@ class DecodeAstTransformer {
       val alias = new Alias.StructField(elementName(cmdArg.getElementNameRule),
         elementInfo(Option(cmdArg.getElementInfo)), t, null)
       alias.obj(StructField(alias, typeMeasure(cmdArg.getTypeUnitApplication)))
-      Seq(alias, alias.obj)
+      Seq(alias, alias.obj())
     })
     t
   }
@@ -199,22 +199,22 @@ class DecodeAstTransformer {
     Option(el.getElementNameRule).map(e => MessageParameterPathElement.newInstance(elementName(e)))
       .getOrElse(MessageParameterPathElement.newInstance(ArrayRange(
         Option(rangeDecl.getRangeFromDecl).map(from => BigInt(from.getText)).getOrElse(0),
-        Option(rangeDecl.getRangeToDecl).map(to => BigInt(to.getText)))))
+        if (rangeDecl.getRangeToDecl == null) null else BigInt(rangeDecl.getRangeToDecl.getText))))
   }
 
   private def eventMessage(em: DecodeEventMessage, c: Component): Seq[Referenceable] = {
     val alias = new Alias.ComponentEventMessage(elementName(em.getElementNameRule),
       elementInfo(Option(em.getElementInfo)), c, null)
     alias.obj(EventMessage(alias, id(em.getAnnotationDeclList), new util.ArrayList[Referenceable](), typeApplication(em.getTypeApplication)))
-    alias.obj.objects.addAll(em.getEventMessageParametersDecl.getEventParameterDeclList.flatMap { p =>
+    alias.obj().objects.addAll(em.getEventMessageParametersDecl.getEventParameterDeclList.flatMap { p =>
       Option(p.getParameterElement)
         .map(mp => Seq(StatusParameter(parameterPath(mp), elementInfo(Option(p.getElementInfo)))))
         .getOrElse {
           val _var = p.getVarParameterElement
           val paramAlias = new Alias.MessageOrCommandParameter(elementName(_var.getElementNameRule),
-            elementInfo(Option(_var.getElementInfo)), CommandOrTmMessage.newInstance(alias.obj), null)
+            elementInfo(Option(_var.getElementInfo)), CommandOrTmMessage.newInstance(alias.obj()), null)
           paramAlias.obj(Parameter.newInstance(paramAlias, typeMeasure(_var.getTypeUnitApplication)))
-          Seq(paramAlias, paramAlias.obj)
+          Seq(paramAlias, paramAlias.obj())
         }
     })
     Seq(alias, alias.obj)
@@ -224,12 +224,12 @@ class DecodeAstTransformer {
     val alias = new Alias.ComponentCommand(elementName(c.getElementNameRule),
       elementInfo(Option(c.getElementInfo)), component, null)
     alias.obj(Command.newInstance(alias, id(c.getAnnotationDeclList), new util.ArrayList[Referenceable](), typeMeasure(c.getTypeUnitApplication)))
-    alias.obj.objects.addAll(Option(c.getCommandArgs).map(_.getCommandArgList.toSeq).getOrElse(Seq.empty)
+    alias.obj().objects.addAll(Option(c.getCommandArgs).map(_.getCommandArgList.toSeq).getOrElse(Seq.empty)
       .flatMap { cmdArg =>
         val paramAlias = new Alias.MessageOrCommandParameter(elementName(cmdArg.getElementNameRule),
-          elementInfo(Option(cmdArg.getElementInfo)), CommandOrTmMessage.newInstance(alias.obj), null)
+          elementInfo(Option(cmdArg.getElementInfo)), CommandOrTmMessage.newInstance(alias.obj()), null)
         paramAlias.obj(Parameter.newInstance(paramAlias, typeMeasure(cmdArg.getTypeUnitApplication)))
-        Seq(paramAlias, paramAlias.obj)
+        Seq(paramAlias, paramAlias.obj())
       })
     Seq(alias, alias.obj)
   }

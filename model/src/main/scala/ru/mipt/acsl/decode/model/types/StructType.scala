@@ -1,6 +1,8 @@
 package ru.mipt.acsl.decode.model.types
 
 import java.util
+import java.util.Optional
+
 import scala.collection.JavaConversions._
 import org.jetbrains.annotations.Nullable
 import ru.mipt.acsl.decode.model._
@@ -16,7 +18,7 @@ trait StructType extends DecodeType with Container {
   }
 
   def field(name: ElementName): Option[StructField] = objects.flatMap {
-    case a: Alias.StructField if a.name == name => Seq(a.obj)
+    case a: Alias.StructField if a.name == name => Seq(a.obj())
   } match {
     case s if s.size == 1 => Some(s.head)
   }
@@ -35,7 +37,7 @@ trait StructType extends DecodeType with Container {
 
 object StructType {
 
-  private class StructTypeImpl(@Nullable val alias: Alias.NsType, var namespace: Namespace,
+  private class StructTypeImpl(@Nullable val _alias: Alias.NsType, var namespace: Namespace,
                                var objects: util.List[Referenceable], val typeParameters: util.List[ElementName])
     extends StructType {
 
@@ -43,6 +45,7 @@ object StructType {
 
     override def namespace(ns: Namespace): Unit = this.namespace = ns
 
+    override def alias(): Optional[Alias] = Optional.ofNullable(_alias)
   }
 
   def apply(@Nullable alias: Alias.NsType, namespace: Namespace, objects: util.List[Referenceable],

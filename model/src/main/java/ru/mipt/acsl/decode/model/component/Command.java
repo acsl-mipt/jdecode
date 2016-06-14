@@ -20,13 +20,14 @@ import java.util.stream.Stream;
 /**
  * Created by metadeus on 06.06.16.
  */
-public interface Command extends Container, HasName, MayHaveId, HasInfo {
+public interface Command extends Container, HasName, MayHaveId, HasInfo, HasAlias {
 
     static Command newInstance(Alias.ComponentCommand alias, @Nullable Integer id, List<Referenceable> objects,
                                TypeMeasure returnTypeUnit) {
         return new CommandImpl(alias, id, objects, returnTypeUnit);
     }
 
+    @Override
     Alias.ComponentCommand alias();
 
     TypeMeasure returnTypeUnit();

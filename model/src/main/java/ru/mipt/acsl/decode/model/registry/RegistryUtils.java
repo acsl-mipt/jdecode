@@ -86,14 +86,18 @@ public class RegistryUtils {
             public Void visit(Alias a) {
                 if (a instanceof Alias.ComponentComponent)
                     result.addAll(((Alias.ComponentComponent) a).obj().resolve(r));
+                else if (a instanceof Alias.NsTypeMeasure)
+                    result.addAll(((Alias.NsTypeMeasure) a).obj().typeProxy().resolve(r));
                 return null;
             }
 
             @Override
             public Void visit(DecodeType t) {
-                if (t instanceof SubType && !t.isGeneric())
-                    result.addAll(((SubType) t).typeMeasure().typeProxy().resolve(r));
-                else if (t instanceof TypeMeasure) {
+                if (t instanceof SubType) {
+                    if (!t.isGeneric()) {
+                        result.addAll(((SubType) t).typeMeasure().typeProxy().resolve(r));
+                    }
+                } else if (t instanceof TypeMeasure) {
                     TypeMeasure tm = (TypeMeasure) t;
                     result.addAll(tm.typeProxy().resolve(r));
                     tm.measureProxy().ifPresent(p -> result.addAll(p.resolve(r)));

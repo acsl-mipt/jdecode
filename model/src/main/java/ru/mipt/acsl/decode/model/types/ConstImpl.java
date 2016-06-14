@@ -5,6 +5,7 @@ import ru.mipt.acsl.decode.model.naming.ElementName;
 import ru.mipt.acsl.decode.model.naming.Namespace;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Created by metadeus on 07.06.16.
@@ -43,9 +44,8 @@ public class ConstImpl implements Const {
     }
 
     @Override
-    @Nullable
-    public Alias.NsConst alias() {
-        return alias;
+    public Optional<Alias> alias() {
+        return Optional.ofNullable(alias);
     }
 
     @Override

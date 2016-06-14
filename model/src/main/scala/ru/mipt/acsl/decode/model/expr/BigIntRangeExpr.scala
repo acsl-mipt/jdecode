@@ -9,6 +9,8 @@ trait BigIntRangeExpr extends ConstExpr {
 
   def to: BigIntLiteral
 
+  override def exprStringRepr: String = s"range[$from,$to]"
+
 }
 
 object BigIntRangeExpr {

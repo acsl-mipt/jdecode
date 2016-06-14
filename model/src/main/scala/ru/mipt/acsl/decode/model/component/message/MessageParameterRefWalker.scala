@@ -32,7 +32,7 @@ class MessageParameterRefWalker(var component: Component, @Nullable var _structF
 
   private def findSubComponent(elementName: ElementName): Option[Try[Unit]] =
     component.subComponents.find(elementName == _.name).map { subComponent =>
-      component = subComponent.obj.obj
+      component = subComponent.obj().obj()
       _structField = null
       Success(Unit)
     }

@@ -1,5 +1,6 @@
 package ru.mipt.acsl.decode.model.types;
 
+import com.google.common.base.Preconditions;
 import ru.mipt.acsl.decode.model.CommandOrTmMessage;
 import ru.mipt.acsl.decode.model.Parameter;
 import ru.mipt.acsl.decode.model.Referenceable;
@@ -13,6 +14,7 @@ import ru.mipt.acsl.decode.model.naming.Container;
 import ru.mipt.acsl.decode.model.naming.ElementName;
 import ru.mipt.acsl.decode.model.naming.HasName;
 import ru.mipt.acsl.decode.model.naming.Namespace;
+import ru.mipt.acsl.decode.model.proxy.MaybeProxy;
 import ru.mipt.acsl.decode.model.proxy.MaybeProxyCompanion;
 import ru.mipt.acsl.decode.model.registry.Language;
 import ru.mipt.acsl.decode.model.registry.Measure;
@@ -22,30 +24,49 @@ import java.util.Map;
 /**
  * Created by metadeus on 06.06.16.
  */
-public interface Alias<P extends Container, O extends Referenceable> extends Referenceable, HasName {
+public interface Alias extends Referenceable, HasName {
 
     ElementName name();
 
     Container parent();
 
-    void parent(P parent);
+    void parent(Container parent);
 
     Map<Language, String> info();
 
-    O obj();
+    Referenceable obj();
 
-    void obj(O obj);
+    void obj(Referenceable obj);
 
     default <T> T accept(ReferenceableVisitor<T> visitor) {
         return visitor.visit(this);
     }
 
-    class NsType extends AbstractTypeAlias<Namespace, DecodeType> {
+    class NsType extends AbstractAlias<Namespace, DecodeType> {
 
         public NsType(ElementName name, Map<Language, String> info, Namespace parent, DecodeType obj) {
             super(name, info, parent, obj);
         }
 
+        @Override
+        public Namespace parent() {
+            return (Namespace) super.parent();
+        }
+
+        @Override
+        public void parent(Container parent) {
+            this.parent = (Namespace) parent;
+        }
+
+        @Override
+        public DecodeType obj() {
+            return (DecodeType) super.obj();
+        }
+
+        @Override
+        public void obj(Referenceable obj) {
+            this.obj = (DecodeType) obj;
+        }
     }
 
     class ComponentCommand extends AbstractAlias<Component, Command> {
@@ -54,6 +75,15 @@ public interface Alias<P extends Container, O extends Referenceable> extends Ref
             super(name, info, parent, obj);
         }
 
+        @Override
+        public void parent(Container parent) {
+            this.parent = (Component) parent;
+        }
+
+        @Override
+        public void obj(Referenceable obj) {
+            this.obj = (Command) obj;
+        }
     }
 
     class NsComponent extends AbstractAlias<Namespace, Component> {
@@ -62,6 +92,15 @@ public interface Alias<P extends Container, O extends Referenceable> extends Ref
             super(name, info, parent, obj);
         }
 
+        @Override
+        public void parent(Container parent) {
+            this.parent = (Namespace) parent;
+        }
+
+        @Override
+        public void obj(Referenceable obj) {
+            this.obj = (Component) obj;
+        }
     }
 
     class NsMeasure extends AbstractAlias<Namespace, Measure> {
@@ -70,14 +109,32 @@ public interface Alias<P extends Container, O extends Referenceable> extends Ref
             super(name, info, parent, obj);
         }
 
+        @Override
+        public void parent(Container parent) {
+            this.parent = (Namespace) parent;
+        }
+
+        @Override
+        public void obj(Referenceable obj) {
+            this.obj = (Measure) obj;
+        }
     }
 
-    class NsConst extends AbstractTypeAlias<Namespace, Const> {
+    class NsConst extends AbstractAlias<Namespace, Const> {
 
         public NsConst(ElementName name, Map<Language, String> info, Namespace parent, Const obj) {
             super(name, info, parent, obj);
         }
 
+        @Override
+        public void parent(Container parent) {
+            this.parent = (Namespace) parent;
+        }
+
+        @Override
+        public void obj(Referenceable obj) {
+            this.obj = (Const) obj;
+        }
     }
 
     class NsNs extends AbstractAlias<Namespace, Namespace> {
@@ -86,6 +143,15 @@ public interface Alias<P extends Container, O extends Referenceable> extends Ref
             super(name, info, parent, obj);
         }
 
+        @Override
+        public void parent(Container parent) {
+            this.parent = (Namespace) parent;
+        }
+
+        @Override
+        public void obj(Referenceable obj) {
+            this.obj = (Namespace) obj;
+        }
     }
 
     class NsReferenceable extends AbstractAlias<Namespace, Referenceable> {
@@ -94,6 +160,15 @@ public interface Alias<P extends Container, O extends Referenceable> extends Ref
             super(name, info, parent, obj);
         }
 
+        @Override
+        public void parent(Container parent) {
+            this.parent = (Namespace) parent;
+        }
+
+        @Override
+        public void obj(Referenceable obj) {
+            this.obj = obj;
+        }
     }
 
     class NsTypeMeasure extends AbstractAlias<Namespace, TypeMeasure> {
@@ -102,6 +177,15 @@ public interface Alias<P extends Container, O extends Referenceable> extends Ref
             super(name, info, parent, obj);
         }
 
+        @Override
+        public void parent(Container parent) {
+            this.parent = (Namespace) parent;
+        }
+
+        @Override
+        public void obj(Referenceable obj) {
+            this.obj = (TypeMeasure) obj;
+        }
     }
 
     class ComponentComponent extends AbstractAlias<Component, MaybeProxyCompanion.Component> {
@@ -110,6 +194,15 @@ public interface Alias<P extends Container, O extends Referenceable> extends Ref
             super(name, info, parent, component);
         }
 
+        @Override
+        public void parent(Container parent) {
+            this.parent = (Component) parent;
+        }
+
+        @Override
+        public void obj(Referenceable obj) {
+            this.obj = (MaybeProxyCompanion.Component) obj;
+        }
     }
 
     class ComponentParameter extends AbstractAlias<Component, Parameter> {
@@ -118,6 +211,15 @@ public interface Alias<P extends Container, O extends Referenceable> extends Ref
             super(name, info, parent, parameter);
         }
 
+        @Override
+        public void parent(Container parent) {
+            this.parent = (Component) parent;
+        }
+
+        @Override
+        public void obj(Referenceable obj) {
+            this.obj = (Parameter) obj;
+        }
     }
 
     abstract class ComponentTmMessage<T extends TmMessage> extends AbstractAlias<Component, T> {
@@ -134,6 +236,15 @@ public interface Alias<P extends Container, O extends Referenceable> extends Ref
             super(name, info, parent, eventMessage);
         }
 
+        @Override
+        public void parent(Container parent) {
+            this.parent = (Component) parent;
+        }
+
+        @Override
+        public void obj(Referenceable obj) {
+            this.obj = (EventMessage) obj;
+        }
     }
 
     class ComponentStatusMessage extends ComponentTmMessage<StatusMessage> {
@@ -142,6 +253,15 @@ public interface Alias<P extends Container, O extends Referenceable> extends Ref
             super(name, info, parent, statusMessage);
         }
 
+        @Override
+        public void parent(Container parent) {
+            this.parent = (Component) parent;
+        }
+
+        @Override
+        public void obj(Referenceable obj) {
+            this.obj = (StatusMessage) obj;
+        }
     }
 
     class EnumConstant extends AbstractAlias<EnumType, ru.mipt.acsl.decode.model.types.EnumConstant> {
@@ -151,6 +271,15 @@ public interface Alias<P extends Container, O extends Referenceable> extends Ref
             super(name, info, parent, enumConstant);
         }
 
+        @Override
+        public void parent(Container parent) {
+            this.parent = (EnumType) parent;
+        }
+
+        @Override
+        public void obj(Referenceable obj) {
+            this.obj = (ru.mipt.acsl.decode.model.types.EnumConstant) obj;
+        }
     }
 
     class StructField extends AbstractAlias<StructType, ru.mipt.acsl.decode.model.types.StructField> {
@@ -160,6 +289,15 @@ public interface Alias<P extends Container, O extends Referenceable> extends Ref
             super(name, info, parent, structField);
         }
 
+        @Override
+        public void parent(Container parent) {
+            this.parent = (StructType) parent;
+        }
+
+        @Override
+        public void obj(Referenceable obj) {
+            this.obj = (ru.mipt.acsl.decode.model.types.StructField) obj;
+        }
     }
 
     class MessageOrCommandParameter extends AbstractAlias<CommandOrTmMessage, Parameter> {
@@ -169,6 +307,15 @@ public interface Alias<P extends Container, O extends Referenceable> extends Ref
             super(name, info, parent, parameter);
         }
 
+        @Override
+        public void parent(Container parent) {
+            this.parent = (CommandOrTmMessage) parent;
+        }
+
+        @Override
+        public void obj(Referenceable obj) {
+            this.obj = (Parameter) obj;
+        }
     }
 
 

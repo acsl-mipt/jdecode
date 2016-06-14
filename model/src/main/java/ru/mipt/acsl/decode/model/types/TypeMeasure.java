@@ -37,7 +37,7 @@ public interface TypeMeasure extends DecodeType {
     }
 
     @Override
-    default TypeAlias alias() {
+    default Optional<Alias> alias() {
         return t().alias();
     }
 

@@ -73,7 +73,7 @@ package object registry {
       }
 
       c.subComponents.foreach { scr =>
-        val sc = scr.obj
+        val sc = scr.obj()
         result.addAll(validate(sc))
       }
       result

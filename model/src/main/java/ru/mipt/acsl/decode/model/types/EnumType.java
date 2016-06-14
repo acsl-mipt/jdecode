@@ -1,9 +1,7 @@
 package ru.mipt.acsl.decode.model.types;
 
 import org.jetbrains.annotations.Nullable;
-import ru.mipt.acsl.decode.model.ContainerVisitor;
-import ru.mipt.acsl.decode.model.Referenceable;
-import ru.mipt.acsl.decode.model.ReferenceableVisitor;
+import ru.mipt.acsl.decode.model.*;
 import ru.mipt.acsl.decode.model.naming.Container;
 import ru.mipt.acsl.decode.model.naming.ElementName;
 import ru.mipt.acsl.decode.model.naming.Namespace;

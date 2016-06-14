@@ -13,7 +13,7 @@ import ru.mipt.acsl.decode.generator.json.{DecodeJsonGenerator, DecodeJsonGenera
 import ru.mipt.acsl.decode.model.component.message.{EventMessage, StatusMessage, TmMessage}
 import ru.mipt.acsl.decode.model.component.{Command, Component, StatusParameter}
 import ru.mipt.acsl.decode.model.naming.{Fqn, HasName, Namespace}
-import ru.mipt.acsl.decode.model.types.{DecodeType, EnumType, GenericTypeSpecialized, NativeType, PrimitiveTypeInfo, StructField, StructType, SubType, TypeAlias, TypeKind}
+import ru.mipt.acsl.decode.model.types.{Alias, DecodeType, EnumType, GenericTypeSpecialized, NativeType, PrimitiveTypeInfo, StructField, StructType, SubType, TypeKind}
 import ru.mipt.acsl.decode.model.{MayHaveId, Parameter}
 import ru.mipt.acsl.generator.c.ast.implicits._
 import ru.mipt.acsl.generator.c.ast.{CDefine, _}
@@ -70,7 +70,7 @@ class CSourceGenerator(val config: CGeneratorConfiguration) extends LazyLogging 
         CAstElements())
   }
 
-  private def isAliasNameAndRawTypeNameAreEquals(t: TypeAlias[_, _ <: DecodeType]): Boolean = cTypeName(t) == cTypeName(t.obj)
+  private def isAliasNameAndRawTypeNameAreEquals(t: Alias): Boolean = cTypeName(t) == cTypeName(t.obj.asInstanceOf[DecodeType])
 
   private def generate(t: DecodeType, nsDir: io.File): (CAstElements, CAstElements) = {
     var (h, c): (CAstElements, CAstElements) = t match {
@@ -114,11 +114,11 @@ class CSourceGenerator(val config: CGeneratorConfiguration) extends LazyLogging 
         CDefine(defineNamePrefix + "_MAX_SIZE", t.size.max.toString), CEol, CEol, typeDef), CAstElements())*/
       case t: StructType => (Seq(cTypeDef(t, CStructTypeDef(t.fields.map(f =>
         CStructTypeDefField(f.name.mangledNameString(), cType(f.typeMeasure.t)))))), Seq.empty)
-      case t: TypeAlias[_, _] =>
+      case t: Alias =>
         if (isAliasNameAndRawTypeNameAreEquals(t))
           (Seq.empty, Seq.empty)
         else
-          (Seq(cTypeDef(t, cType(t.obj))), Seq.empty)
+          (Seq(cTypeDef(t, cType(t.obj.asInstanceOf[DecodeType]))), Seq.empty)
       case _ => sys.error(s"not implemented $t")
     }
 
@@ -232,7 +232,7 @@ class CSourceGenerator(val config: CGeneratorConfiguration) extends LazyLogging 
   }
 
   def collectNamespaces(component: Component, nsSet: mutable.HashSet[Namespace]) {
-    component.subComponents.foreach(c => collectNamespaces(c.obj.obj, nsSet))
+    component.subComponents.foreach(c => collectNamespaces(c.obj().obj(), nsSet))
     collectNsForTypes(component, nsSet)
   }
 
@@ -345,7 +345,7 @@ class CSourceGenerator(val config: CGeneratorConfiguration) extends LazyLogging 
   }
 
   def importStatements(component: Component): CAstElements = {
-    val imports = component.subComponents.flatMap(cr => Seq(CInclude(includePath(cr.obj.obj)), CEol)).to[mutable.Buffer]
+    val imports = component.subComponents.flatMap(cr => Seq(CInclude(includePath(cr.obj().obj())), CEol)).to[mutable.Buffer]
     if (imports.nonEmpty)
       imports += CEol
     val types = allTypes(component).toSeq
@@ -422,7 +422,7 @@ private[generator] object CSourceGenerator {
 
   def cTypeDef(t: DecodeType, cType: CType) = CTypeDefStatement(prefixedCTypeName(t), cType)
 
-  def cTypeName(a: TypeAlias[_, _]): String = a.name.mangledNameString()
+  def cTypeName(a: Alias): String = a.name.mangledNameString()
 
   def cTypeName(t: DecodeType): String = t match {
     case t: GenericTypeSpecialized if t.isArray =>
@@ -511,7 +511,7 @@ private[generator] object CSourceGenerator {
                                            componentsSet: immutable.HashSet[Component] = immutable.HashSet.empty)
   : immutable.HashSet[Component] = {
     componentsSet ++ Seq(component) ++ component.subComponents.flatMap(cr =>
-      allComponentsSetForComponent(cr.obj.obj, componentsSet))
+      allComponentsSetForComponent(cr.obj().obj(), componentsSet))
   }
 
   def componentDataTypeName(component: Component): String = prefixedTypeName(component) + "Data"
@@ -998,7 +998,7 @@ private[generator] object CSourceGenerator {
 
   def allSubComponents(component: Component): Set[Component] =
     component.subComponents.flatMap { alias =>
-      val c = alias.obj.obj
+      val c = alias.obj().obj()
       val set = allSubComponents(c)
       set.add(c)
       set
@@ -1043,7 +1043,7 @@ private[generator] object CSourceGenerator {
 
   def cName(named: HasName): String = named.name.mangledNameString()
 
-  def cName(t: DecodeType): String = Option(t.alias) match {
+  def cName(t: DecodeType): String = Option(t.alias.orElse(null)) match {
     case Some(a) => cName(a)
     case _ => sys.error("not implemented")
   }
@@ -1235,7 +1235,7 @@ private[generator] object CSourceGenerator {
       val extendedEnclosingTypes = enclosingTypes + t
       t match {
         case t: NativeType => Some(cCall("sizeof", cType(t)))
-        case t: TypeAlias[_, _] => abstractMinSizeExpr(t.obj, extendedEnclosingTypes, forceParens)
+        case t: Alias => abstractMinSizeExpr(t.obj().asInstanceOf[DecodeType], extendedEnclosingTypes, forceParens)
         case t: SubType => abstractMinSizeExpr(t.baseType, extendedEnclosingTypes, forceParens)
         case t: StructType =>
           sumExprs(t.fields.map(f => abstractMinSizeExpr(f.typeMeasure.t, extendedEnclosingTypes, forceParens = false)), forceParens)
@@ -1284,7 +1284,7 @@ private[generator] object CSourceGenerator {
     baseType.abstractMinSizeExpr(forceParens = true).map(rExpr =>
       CMul(src.dotOrArrow(size.v, isDot = !isPtr),
         commentBeginEnd(rExpr, baseType.cName)))*/
-    case _: SubType | _: TypeAlias[_, _] | _: GenericTypeSpecialized => None // todo: yes you can
+    case _: SubType | _: Alias | _: GenericTypeSpecialized => None // todo: yes you can
     case t: EnumType => concreteMinSizeExpr(t.extendsOrBaseType, src, isPtr)
     case _ => abstractMinSizeExpr(t, forceParens = false)
   }
@@ -1312,7 +1312,7 @@ private[generator] object CSourceGenerator {
     case array: GenericTypeSpecialized if array.isArray =>
       sys.error("not implemented")
     //writerSizeCheckCode(src) ++ src.serializeCodeForArraySize(array) ++ array.serializeCodeForArrayElements(src)
-    case alias: TypeAlias[_, _] => Seq(CStatementLine(serializeCallCode(alias.obj, src)))
+    case alias: Alias => Seq(CStatementLine(serializeCallCode(alias.obj().asInstanceOf[DecodeType], src)))
     case s: SubType => Seq(CStatementLine(serializeCallCode(s.baseType, src)))
     case enum: EnumType => Seq(CStatementLine(serializeCallCode(enum.extendsOrBaseType, src)))
     case native: NativeType if native.isPrimitive => Seq(CStatementLine(serializeCallCode(native, src)))
@@ -1329,7 +1329,7 @@ private[generator] object CSourceGenerator {
     case array: GenericTypeSpecialized if array.isArray =>
       sys.error("not implemented")
     //dest.deserializeCodeForArraySize(t) ++ readerSizeCheckCode(dest) ++ t.deserializeCodeForArrayElements(dest)
-    case t: TypeAlias[_, _] => deserializeCode(t.obj, dest)
+    case t: Alias => deserializeCode(t.obj.asInstanceOf[DecodeType], dest)
     /*case t: HasBaseType =>
       val baseType = t.baseType
       Seq(baseType.deserializeCallCode(dest.cast(baseType.cType.ptr)).line)*/

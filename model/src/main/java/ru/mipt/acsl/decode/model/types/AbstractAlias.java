@@ -10,12 +10,12 @@ import java.util.Map;
 /**
  * Created by metadeus on 06.06.16.
  */
-abstract class AbstractAlias<P extends Container, O extends Referenceable> implements Alias<P, O> {
+abstract class AbstractAlias<P extends Container, O extends Referenceable> implements Alias {
 
-    private final ElementName name;
-    private final Map<Language, String> info;
-    private P parent;
-    private O obj;
+    protected final ElementName name;
+    protected final Map<Language, String> info;
+    protected P parent;
+    protected O obj;
 
     AbstractAlias(ElementName name, Map<Language, String> info, P parent, O obj) {
         this.name = name;
@@ -35,11 +35,6 @@ abstract class AbstractAlias<P extends Container, O extends Referenceable> imple
     }
 
     @Override
-    public void parent(P parent) {
-        this.parent = parent;
-    }
-
-    @Override
     public Map<Language, String> info() {
         return info;
     }
@@ -47,11 +42,6 @@ abstract class AbstractAlias<P extends Container, O extends Referenceable> imple
     @Override
     public O obj() {
         return obj;
-    }
-
-    @Override
-    public void obj(O obj) {
-        this.obj = obj;
     }
 
     @Override

@@ -2,6 +2,7 @@ package ru.mipt.acsl.decode.model.types;
 
 import org.jetbrains.annotations.Nullable;
 import ru.mipt.acsl.decode.model.HasNamespace;
+import ru.mipt.acsl.decode.model.MayHaveAlias;
 import ru.mipt.acsl.decode.model.Referenceable;
 import ru.mipt.acsl.decode.model.ReferenceableVisitor;
 import ru.mipt.acsl.decode.model.naming.ElementName;
@@ -14,20 +15,20 @@ import java.util.*;
 /**
  * Created by metadeus on 06.06.16.
  */
-public interface DecodeType extends Referenceable, HasNamespace {
+public interface DecodeType extends Referenceable, HasNamespace, MayHaveAlias {
 
     Namespace namespace();
 
     void namespace(Namespace ns);
 
     default Map<Language, String> info() {
-        return Optional.ofNullable(alias())
-                .map(TypeAlias::info)
-                .orElse(Collections.emptyMap());
+        return alias()
+                .map(Alias::info)
+                .orElseGet(HashMap::new);
     }
 
-    @Nullable
-    TypeAlias alias();
+    @Override
+    Optional<Alias> alias();
 
     String systemName();
 
@@ -38,13 +39,13 @@ public interface DecodeType extends Referenceable, HasNamespace {
     }
 
     default String nameOrSystemName() {
-        return Optional.ofNullable(alias())
+        return alias()
                 .map(a -> a.name().mangledNameString())
                 .orElse(systemName());
     }
 
     default Optional<Fqn> fqn() {
-        return Optional.ofNullable(alias())
+        return alias()
                 .map(a -> {
                     List<ElementName> parts = new ArrayList<>(namespace().fqn().getParts());
                     parts.add(a.name());
@@ -77,8 +78,7 @@ public interface DecodeType extends Referenceable, HasNamespace {
     }
 
     default Optional<ElementName> nameOption() {
-        return Optional.ofNullable(alias())
-                .map(TypeAlias::name);
+        return alias().map(Alias::name);
     }
 
     @Override

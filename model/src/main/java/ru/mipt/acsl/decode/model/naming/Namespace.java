@@ -16,7 +16,7 @@ import java.util.stream.Stream;
 /**
  * Created by metadeus on 06.06.16.
  */
-public interface Namespace extends Container, HasName, HasInfo {
+public interface Namespace extends Container, HasName, HasInfo, HasAlias {
 
     ElementName ROOT_NAME = ElementName.newInstanceFromMangledName("%root");
 
@@ -47,6 +47,7 @@ public interface Namespace extends Container, HasName, HasInfo {
         return currentNamespace;
     }
 
+    @Override
     Alias.NsNs alias();
 
     /**
