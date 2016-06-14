@@ -1,10 +1,7 @@
 package ru.mipt.acsl.decode.model.component;
 
 import org.jetbrains.annotations.Nullable;
-import ru.mipt.acsl.decode.model.ContainerVisitor;
-import ru.mipt.acsl.decode.model.HasNamespace;
-import ru.mipt.acsl.decode.model.MayHaveId;
-import ru.mipt.acsl.decode.model.Referenceable;
+import ru.mipt.acsl.decode.model.*;
 import ru.mipt.acsl.decode.model.component.message.EventMessage;
 import ru.mipt.acsl.decode.model.component.message.StatusMessage;
 import ru.mipt.acsl.decode.model.naming.*;
@@ -20,7 +17,7 @@ import java.util.Optional;
 /**
  * Created by metadeus on 11.06.16.
  */
-public interface Component extends Container, HasName, HasNamespace, MayHaveId {
+public interface Component extends Container, HasName, HasNamespace, MayHaveId, HasAlias {
 
     static Component newInstance(Alias.NsComponent alias, Namespace namespace, @Nullable Integer id,
                                  @Nullable  MaybeProxyCompanion.Struct baseTypeProxy,
@@ -36,6 +33,7 @@ public interface Component extends Container, HasName, HasNamespace, MayHaveId {
 
     void setNamespace(Namespace ns);
 
+    @Override
     Alias.NsComponent alias();
 
     @Override

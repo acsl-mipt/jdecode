@@ -363,7 +363,7 @@ class CppSourceGenerator(val config: CppGeneratorConfiguration) extends LazyLogg
       val returnType = cppTypeForDecodeType(cmd.returnType)
       val parameters = cmd.parameters.map { p => Parameter(p.name.mangledNameString(), cppTypeForDecodeType(p.parameterType)) }
       Seq(
-        ClassMethodDef(methodName, returnType, parameters.to[mutable.Buffer], virtual = true, _abstract = true),
+        ClassMethodDef(methodName, returnType, parameters, virtual = true, _abstract = true),
         ClassMethodDef(methodName, returnType, mutable.Buffer(readerParameter, writerParameter),
           implementation = if (parameters.isEmpty) {
             val methodCall = MethodCall(methodName)
@@ -376,7 +376,7 @@ class CppSourceGenerator(val config: CppGeneratorConfiguration) extends LazyLogg
       (comp.statusMessages ++ comp.eventMessages).map{msg =>
         ClassMethodDef("write" + msg.name.mangledNameString().capitalize, voidType, mutable.Buffer(writerParameter))
       } ++
-      comp.baseType.map(_.fields.map { f =>
+      Option(comp.baseType.orElse(null)).map(_.fields.map { f =>
           ClassMethodDef(methodNameForDecodeName(f.name), cppTypeForDecodeType(f.typeMeasure.t))
         }).getOrElse(Seq.empty) ++
       readingAndExecutingCommandsMethods()
