@@ -16,10 +16,9 @@ trait StatusMessage extends TmMessage {
 
   def alias: Alias.ComponentStatusMessage
 
-  @Nullable
-  def priority: Integer
+  def priority: Optional[Integer]
 
-  def parameters: Seq[StatusParameter] = objects.flatMap { case m: StatusParameter => Seq(m) }
+  def parameters: util.List[StatusParameter] = objects.asInstanceOf[util.List[StatusParameter]]
 
   override def name: ElementName = alias.name
 
@@ -30,12 +29,14 @@ trait StatusMessage extends TmMessage {
 object StatusMessage {
 
   private case class StatusMessageImpl(alias: Alias.ComponentStatusMessage, component: Component, @Nullable _id: Integer,
-                                       var objects: util.List[Referenceable], @Nullable priority: Integer)
+                                       var objects: util.List[Referenceable], @Nullable _priority: Integer)
     extends StatusMessage {
 
     override def setObjects(objects: util.List[Referenceable]): Unit = this.objects = objects
 
     override def id(): Optional[Integer] = Optional.ofNullable(_id)
+
+    override def priority: Optional[Integer] = Optional.ofNullable(_priority)
   }
 
   def apply(alias: Alias.ComponentStatusMessage, component: Component, @Nullable id: Integer,
