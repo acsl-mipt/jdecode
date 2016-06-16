@@ -32,14 +32,6 @@ public interface MaybeProxy extends Referenceable {
         return visitor.visit(this);
     }
 
-/*
-  def isProxy: Boolean = v.isLeft
+    <T> T accept(MaybeProxyVisitor<T> visitor);
 
-  def isResolved: Boolean = v.isRight
-
-  def obj: T = v.right.getOrElse(sys.error(s"assertion error for $proxy"))
-
-  def proxy: Proxy = v.left.getOrElse(sys.error("assertion error"))
-
-  override def toString: String = s"MaybeProxy{${if (isProxy) proxy else obj}}"*/
 }

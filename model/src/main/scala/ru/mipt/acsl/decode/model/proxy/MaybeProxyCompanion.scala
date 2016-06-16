@@ -24,6 +24,7 @@ object MaybeProxyCompanion {
       case _ => ResolvingMessages.newInstance(Message.newInstance(Level.ERROR, s"$obj is not a StructType"))
     }
 
+    override def accept[T](visitor: MaybeProxyVisitor[T]): T = visitor.visit(this)
   }
 
   final case class Enum(var v: Either[Proxy, EnumType]) extends MaybeTypeProxy {
@@ -39,6 +40,7 @@ object MaybeProxyCompanion {
       case _ => ResolvingMessages.newInstance(Message.newInstance(Level.ERROR, s"$obj is not an EnumType"))
     }
 
+    override def accept[T](visitor: MaybeProxyVisitor[T]): T = visitor.visit(this)
   }
 
   final case class Measure(var v: Either[Proxy, registry.Measure]) extends MaybeProxy {
@@ -54,6 +56,7 @@ object MaybeProxyCompanion {
       case _ => ResolvingMessages.newInstance(Message.newInstance(Level.ERROR, s"$obj is not a Measure"))
     }
 
+    override def accept[T](visitor: MaybeProxyVisitor[T]): T = visitor.visit(this)
   }
 
   final case class Component(var v: Either[Proxy, component.Component]) extends MaybeProxy {
@@ -69,6 +72,7 @@ object MaybeProxyCompanion {
       case _ => ResolvingMessages.newInstance(Message.newInstance(Level.ERROR, s"$obj is not a Component"))
     }
 
+    override def accept[T](visitor: MaybeProxyVisitor[T]): T = visitor.visit(this)
   }
 
   final case class Referenceable(var v: Either[Proxy, model.Referenceable]) extends MaybeProxy {
@@ -80,6 +84,8 @@ object MaybeProxyCompanion {
     override def isResolved: Boolean = v.isRight
 
     override def obj(): model.Referenceable = v.right.get
+
+    override def accept[T](visitor: MaybeProxyVisitor[T]): T = visitor.visit(this)
   }
 
   /*def apply[T <: Referenceable : ClassTag](proxy: Proxy): MaybeProxy[T] = new MaybeProxy[T](Left(proxy))

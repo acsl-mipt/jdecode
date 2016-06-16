@@ -34,6 +34,11 @@ public class MaybeTypeProxyType implements MaybeTypeProxy {
     }
 
     @Override
+    public <T> T accept(MaybeProxyVisitor<T> visitor) {
+        return visitor.visit(this);
+    }
+
+    @Override
     public Proxy proxy() {
         if (proxy == null)
             throw new AssertionError("proxy resolved");

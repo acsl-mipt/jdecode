@@ -151,7 +151,7 @@ class HtmlModelDocGenerator(val config: HtmlModelDocGeneratorConfiguration) {
 
   def typeKind(t: DecodeType): Tag = t match {
     case array if array.isArray => td("Массив " + typeName(ArrayTypeInfo(array).baseType) + " элементов")
-    case a: TypeAlias[_, _] => td("Псевдоним для ", typeNameWithLink(a.obj))
+    case a: Alias.Type => td("Псевдоним для ", typeNameWithLink(a.obj))
     case s: SubType => td("Расширение типа ", typeNameWithLink(s.baseType))
     case s: StructType => td("Структура", br, "Поля:",
       table(cls := "table", style := "width: auto")(
@@ -193,10 +193,10 @@ class HtmlModelDocGenerator(val config: HtmlModelDocGeneratorConfiguration) {
         Seq.empty
       else
         Seq(p("Включает компоненты: ", raw(component.subComponents.map(cr =>
-          a(href := "#" + htmlId(cr.obj.obj))(cr.obj.obj.name.mangledNameString()) +
-            (if (cr.name == cr.obj.obj.name) " под именем " + cr.name.mangledNameString() else "")).mkString(", ")), "."))) ++
+          a(href := "#" + htmlId(cr.obj().obj))(cr.obj().obj.name.mangledNameString()) +
+            (if (cr.name == cr.obj().obj.name) " под именем " + cr.name.mangledNameString() else "")).mkString(", ")), "."))) ++
       Option(component.info.get(lang)).map(div(_)).toSeq ++
-      component.baseType.map(bt => Seq(h4("Параметры"),
+      Option(component.baseType.orElse(null)).map(bt => Seq(h4("Параметры"),
         table(cls := "table table-bordered", style := "width: auto")(
           thead(tr(th("Имя параметра"), th("Тип параметра"), th("Единицы измерения"), th("Описание параметра"))),
           tbody(bt.fields.map(f =>

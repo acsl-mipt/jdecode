@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import org.apache.commons.lang3.ObjectUtils;
 import ru.mipt.acsl.decode.model.*;
 import ru.mipt.acsl.decode.model.component.Command;
 import ru.mipt.acsl.decode.model.component.Component;
@@ -20,6 +21,9 @@ import ru.mipt.acsl.decode.model.naming.Container;
 import ru.mipt.acsl.decode.model.naming.Fqn;
 import ru.mipt.acsl.decode.model.naming.Namespace;
 import ru.mipt.acsl.decode.model.proxy.MaybeProxy;
+import ru.mipt.acsl.decode.model.proxy.MaybeProxyCompanion;
+import ru.mipt.acsl.decode.model.proxy.MaybeProxyVisitor;
+import ru.mipt.acsl.decode.model.proxy.MaybeTypeProxyType;
 import ru.mipt.acsl.decode.model.proxy.path.GenericTypeName;
 import ru.mipt.acsl.decode.model.proxy.path.ProxyElementName;
 import ru.mipt.acsl.decode.model.proxy.path.ProxyPath;
@@ -83,7 +87,9 @@ public class DecodeJsonGenerator {
         COMMAND("cmd"), RETURN_TYPE("rt"), STATUS_MESSAGE("sm"), EVENT_MESSAGE("em"), ENUM_CONSTANT("ec"),
         ENUM_TYPE("e"), EXTENDS_TYPE("et"), IS_FINAL("f"), MAYBE_PROXY("mp"), PROXY("p"),
         CONST_EXPR("ex"), STRUCT_FIELD("f"), STRUCT_TYPE("st"), GENERATED("gen"), PRIORITY("pr"), BASE_TYPE_PROXY("bp"),
-        TYPE_PARAMETERS("tp"), GENERIC_TYPE_PROXY("gtp"), TYPE_NAME("tn"), GENERIC_ARGUMENT_PATHS("gap");
+        TYPE_PARAMETERS("tp"), GENERIC_TYPE_PROXY("gtp"), TYPE_NAME("tn"), GENERIC_ARGUMENT_PATHS("gap"),
+        MAYBE_TYPE_PROXY_TYPE("t"), MAYBE_PROXY_ENUM("e"), MAYBE_PROXY_STRUCT("s"), MAYBE_PROXY_COMPONENT("c"),
+        MAYBE_PROXY_MEASURE("m"), MAYBE_PROXY_REFERENCEABLE("r"), TYPE("t");
 
         public String getKey() {
             return key;
@@ -368,6 +374,37 @@ public class DecodeJsonGenerator {
                 public Supplier<ObjectNode> visit(MaybeProxy p) {
                     return () -> {
                         ObjectNode node = nodeKind(Keys.MAYBE_PROXY.getKey());
+                        node.put(Keys.TYPE.getKey(), p.accept(new MaybeProxyVisitor<Keys>() {
+                            @Override
+                            public Keys visit(MaybeTypeProxyType tt) {
+                                return Keys.MAYBE_TYPE_PROXY_TYPE;
+                            }
+
+                            @Override
+                            public Keys visit(MaybeProxyCompanion.Enum e) {
+                                return Keys.MAYBE_PROXY_ENUM;
+                            }
+
+                            @Override
+                            public Keys visit(MaybeProxyCompanion.Struct s) {
+                                return Keys.MAYBE_PROXY_STRUCT;
+                            }
+
+                            @Override
+                            public Keys visit(MaybeProxyCompanion.Component c) {
+                                return Keys.MAYBE_PROXY_COMPONENT;
+                            }
+
+                            @Override
+                            public Keys visit(MaybeProxyCompanion.Measure m) {
+                                return Keys.MAYBE_PROXY_MEASURE;
+                            }
+
+                            @Override
+                            public Keys visit(MaybeProxyCompanion.Referenceable r) {
+                                return Keys.MAYBE_PROXY_REFERENCEABLE;
+                            }
+                        }).getKey());
                         if (p.isResolved())
                             node.put(Keys.OBJ.getKey(), generate(p.obj()));
                         else {

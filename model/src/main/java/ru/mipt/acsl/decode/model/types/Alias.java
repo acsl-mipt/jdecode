@@ -1,6 +1,5 @@
 package ru.mipt.acsl.decode.model.types;
 
-import com.google.common.base.Preconditions;
 import ru.mipt.acsl.decode.model.CommandOrTmMessage;
 import ru.mipt.acsl.decode.model.Parameter;
 import ru.mipt.acsl.decode.model.Referenceable;
@@ -14,7 +13,6 @@ import ru.mipt.acsl.decode.model.naming.Container;
 import ru.mipt.acsl.decode.model.naming.ElementName;
 import ru.mipt.acsl.decode.model.naming.HasName;
 import ru.mipt.acsl.decode.model.naming.Namespace;
-import ru.mipt.acsl.decode.model.proxy.MaybeProxy;
 import ru.mipt.acsl.decode.model.proxy.MaybeProxyCompanion;
 import ru.mipt.acsl.decode.model.registry.Language;
 import ru.mipt.acsl.decode.model.registry.Measure;
@@ -42,7 +40,14 @@ public interface Alias extends Referenceable, HasName {
         return visitor.visit(this);
     }
 
-    class NsType extends AbstractAlias<Namespace, DecodeType> {
+    interface Type extends Alias {
+
+        @Override
+        DecodeType obj();
+
+    }
+
+    class NsType extends AbstractAlias<Namespace, DecodeType> implements Type {
 
         public NsType(ElementName name, Map<Language, String> info, Namespace parent, DecodeType obj) {
             super(name, info, parent, obj);
@@ -120,7 +125,7 @@ public interface Alias extends Referenceable, HasName {
         }
     }
 
-    class NsConst extends AbstractAlias<Namespace, Const> {
+    class NsConst extends AbstractAlias<Namespace, Const> implements Type {
 
         public NsConst(ElementName name, Map<Language, String> info, Namespace parent, Const obj) {
             super(name, info, parent, obj);
@@ -171,7 +176,7 @@ public interface Alias extends Referenceable, HasName {
         }
     }
 
-    class NsTypeMeasure extends AbstractAlias<Namespace, TypeMeasure> {
+    class NsTypeMeasure extends AbstractAlias<Namespace, TypeMeasure> implements Type {
 
         public NsTypeMeasure(ElementName name, Map<Language, String> info, Namespace parent, TypeMeasure obj) {
             super(name, info, parent, obj);

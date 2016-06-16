@@ -35,6 +35,8 @@ public interface EnumType extends DecodeType, Container {
         return extendsOrBaseTypeProxy().typeMeasure().map(TypeMeasure::t);
     }
 
+    default DecodeType baseType() { return baseTypeOption().orElseGet(() -> extendsTypeOption().get().baseType()); }
+
     MaybeProxyEnumOrTypeMeasure extendsOrBaseTypeProxy();
 
     default DecodeType extendsOrBaseType() {
