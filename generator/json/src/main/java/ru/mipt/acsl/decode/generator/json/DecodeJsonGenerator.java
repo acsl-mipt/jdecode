@@ -7,7 +7,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import org.apache.commons.lang3.ObjectUtils;
 import ru.mipt.acsl.decode.model.*;
 import ru.mipt.acsl.decode.model.component.Command;
 import ru.mipt.acsl.decode.model.component.Component;
@@ -38,7 +37,6 @@ import java.io.OutputStreamWriter;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
-import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -84,12 +82,12 @@ public class DecodeJsonGenerator {
         COMPONENT("c"), PARENT("p"), BASE_TYPE("b"), NATIVE_TYPE("n"), SUB_TYPE("sub"), TYPE_MEASURE("tm"),
         TYPE_PROXY("p"), MEASURE("m"), CONST("const"), GENERIC_TYPE_SPECIALIZED("gts"),
         TYPE_ARGUMENTS("as"), STATUS_PARAMETER("sp"), ELEMENTS("e"), MIN("min"), MAX("max"), PARAMETER("p"),
-        COMMAND("cmd"), RETURN_TYPE("rt"), STATUS_MESSAGE("sm"), EVENT_MESSAGE("em"), ENUM_CONSTANT("ec"),
+        COMMAND("cmd"), STATUS_MESSAGE("sm"), EVENT_MESSAGE("em"), ENUM_CONSTANT("ec"),
         ENUM_TYPE("e"), EXTENDS_TYPE("et"), IS_FINAL("f"), MAYBE_PROXY("mp"), PROXY("p"),
         CONST_EXPR("ex"), STRUCT_FIELD("f"), STRUCT_TYPE("st"), GENERATED("gen"), PRIORITY("pr"), BASE_TYPE_PROXY("bp"),
         TYPE_PARAMETERS("tp"), GENERIC_TYPE_PROXY("gtp"), TYPE_NAME("tn"), GENERIC_ARGUMENT_PATHS("gap"),
         MAYBE_TYPE_PROXY_TYPE("t"), MAYBE_PROXY_ENUM("e"), MAYBE_PROXY_STRUCT("s"), MAYBE_PROXY_COMPONENT("c"),
-        MAYBE_PROXY_MEASURE("m"), MAYBE_PROXY_REFERENCEABLE("r"), TYPE("t");
+        MAYBE_PROXY_MEASURE("m"), MAYBE_PROXY_REFERENCEABLE("r"), TYPE("t"), ID("id"), RETURN_TYPE_MEASURE("rtm");
 
         public String getKey() {
             return key;
@@ -166,7 +164,7 @@ public class DecodeJsonGenerator {
         }
 
         private void namespace(ObjectNode node, HasNamespace namespaced) {
-            node.put(Keys.NAMESPACE.getKey(), generate(namespaced.namespace()));
+            node.put(Keys.PARENT.getKey(), generate(namespaced.namespace()));
         }
 
         private void component(ObjectNode node, HasComponent componented) {
@@ -174,7 +172,7 @@ public class DecodeJsonGenerator {
         }
 
         private void id(ObjectNode node, MayHaveId ided) {
-            ided.id().ifPresent(id -> node.put("id", id));
+            ided.id().ifPresent(id -> node.put(Keys.ID.getKey(), id));
         }
 
         private ObjectNode display(Map<Language, String> display) {
@@ -306,7 +304,8 @@ public class DecodeJsonGenerator {
                         public Supplier<ObjectNode> visit(Command command) {
                             return () ->
                                 extendedNodeKind(Keys.COMMAND.getKey(), command)
-                                        .put(Keys.RETURN_TYPE.getKey(), generate(command.returnType()));
+                                        .put(Keys.PARENT.getKey(), generate(command.component()))
+                                        .put(Keys.RETURN_TYPE_MEASURE.getKey(), generate(command.returnTypeMeasure()));
                         }
 
                         @Override
@@ -367,6 +366,7 @@ public class DecodeJsonGenerator {
                 public Supplier<ObjectNode> visit(Measure m) {
                     // ObjectNode#set returns ObjectNode
                     return () -> (ObjectNode) extendedNodeKind(Keys.MEASURE.getKey(), m)
+                            .put(Keys.PARENT.getKey(), generate(m.namespace()))
                             .set(Keys.DISPLAY.getKey(), display(m.display()));
                 }
 
@@ -409,7 +409,8 @@ public class DecodeJsonGenerator {
                             node.put(Keys.OBJ.getKey(), generate(p.obj()));
                         else {
                             ProxyPath path = p.proxy().path();
-                            pathElement((ObjectNode) node.set(Keys.PROXY.getKey(), nodeFactory.objectNode()), path);
+                            ObjectNode proxy = node.putObject(Keys.PROXY.getKey());
+                            pathElement(proxy, path);
                         }
                         return node;
                     };

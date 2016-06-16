@@ -9,18 +9,18 @@ import java.util.Optional;
 /**
  * Created by metadeus on 06.06.16.
  */
-public class CommandOrTmMessageImpl implements CommandOrTmMessage {
+public class MessageOrCommandImpl implements MessageOrCommand {
 
     private final Command command;
 
     private final TmMessage tmMessage;
 
-    CommandOrTmMessageImpl(Command command) {
+    MessageOrCommandImpl(Command command) {
         this.command = command;
         this.tmMessage = null;
     }
 
-    CommandOrTmMessageImpl(TmMessage tmMessage) {
+    MessageOrCommandImpl(TmMessage tmMessage) {
         this.tmMessage = tmMessage;
         this.command = null;
     }
@@ -41,7 +41,7 @@ public class CommandOrTmMessageImpl implements CommandOrTmMessage {
     }
 
     @Override
-    public boolean isTmMessage() {
+    public boolean isMessage() {
         return tmMessage != null;
     }
 
@@ -51,7 +51,7 @@ public class CommandOrTmMessageImpl implements CommandOrTmMessage {
     }
 
     @Override
-    public Optional<TmMessage> tmMessage() {
+    public Optional<TmMessage> message() {
         return Optional.ofNullable(tmMessage);
     }
 }

@@ -12,7 +12,7 @@ import java.util.*;
 /**
  * Created by metadeus on 07.06.16.
  */
-public interface EnumType extends DecodeType, Container {
+public interface EnumType extends DecodeType, Container, HasNamespace {
 
     static EnumType newInstance(@Nullable Alias.NsType alias, Namespace namespace,
                                 MaybeProxyEnumOrTypeMeasure extendsOrBaseTypeProxy,

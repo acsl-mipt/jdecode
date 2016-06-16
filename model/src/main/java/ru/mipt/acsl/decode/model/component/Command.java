@@ -5,7 +5,6 @@ import ru.mipt.acsl.decode.model.*;
 import ru.mipt.acsl.decode.model.naming.Container;
 import ru.mipt.acsl.decode.model.naming.ElementName;
 import ru.mipt.acsl.decode.model.naming.HasName;
-import ru.mipt.acsl.decode.model.proxy.MaybeProxyCompanion;
 import ru.mipt.acsl.decode.model.proxy.MaybeTypeProxy;
 import ru.mipt.acsl.decode.model.registry.Language;
 import ru.mipt.acsl.decode.model.types.Alias;
@@ -22,18 +21,20 @@ import java.util.stream.Stream;
  */
 public interface Command extends Container, HasName, MayHaveId, HasInfo, HasAlias {
 
-    static Command newInstance(Alias.ComponentCommand alias, @Nullable Integer id, List<Referenceable> objects,
-                               TypeMeasure returnTypeUnit) {
-        return new CommandImpl(alias, id, objects, returnTypeUnit);
+    static Command newInstance(Alias.ComponentCommand alias, Component component, @Nullable Integer id, List<Referenceable> objects,
+                               TypeMeasure returnTypeMeasure) {
+        return new CommandImpl(alias, component, id, objects, returnTypeMeasure);
     }
+
+    Component component();
 
     @Override
     Alias.ComponentCommand alias();
 
-    TypeMeasure returnTypeUnit();
+    TypeMeasure returnTypeMeasure();
 
     default MaybeTypeProxy returnTypeProxy() {
-        return returnTypeUnit().typeProxy();
+        return returnTypeMeasure().typeProxy();
     }
 
     default DecodeType returnType() {

@@ -1,6 +1,6 @@
 package ru.mipt.acsl.decode.model.types;
 
-import ru.mipt.acsl.decode.model.CommandOrTmMessage;
+import ru.mipt.acsl.decode.model.MessageOrCommand;
 import ru.mipt.acsl.decode.model.Parameter;
 import ru.mipt.acsl.decode.model.Referenceable;
 import ru.mipt.acsl.decode.model.ReferenceableVisitor;
@@ -305,16 +305,16 @@ public interface Alias extends Referenceable, HasName {
         }
     }
 
-    class MessageOrCommandParameter extends AbstractAlias<CommandOrTmMessage, Parameter> {
+    class MessageOrCommandParameter extends AbstractAlias<MessageOrCommand, Parameter> {
 
-        public MessageOrCommandParameter(ElementName name, Map<Language, String> info, CommandOrTmMessage parent,
+        public MessageOrCommandParameter(ElementName name, Map<Language, String> info, MessageOrCommand parent,
                                          Parameter parameter) {
             super(name, info, parent, parameter);
         }
 
         @Override
         public void parent(Container parent) {
-            this.parent = (CommandOrTmMessage) parent;
+            this.parent = (MessageOrCommand) parent;
         }
 
         @Override

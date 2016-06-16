@@ -16,10 +16,10 @@ public interface ContainerVisitor<T> {
 
     T visit(Command command);
 
-    default T visit(CommandOrTmMessage commandOrTmMessage) {
-        return commandOrTmMessage.isCommand()
-                ? visit(commandOrTmMessage.command().get())
-                : visit(commandOrTmMessage.tmMessage().get());
+    default T visit(MessageOrCommand messageOrCommand) {
+        return messageOrCommand.isCommand()
+                ? visit(messageOrCommand.command().get())
+                : visit(messageOrCommand.message().get());
     }
 
     T visit(EnumType enumType);

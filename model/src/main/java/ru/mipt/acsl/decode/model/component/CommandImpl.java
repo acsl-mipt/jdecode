@@ -16,12 +16,14 @@ class CommandImpl implements Command {
     @Nullable
     private final Integer id;
     private final Alias.ComponentCommand alias;
+    private final Component component;
     private final TypeMeasure returnTypeUnit;
     private List<Referenceable> objects;
 
-    CommandImpl(Alias.ComponentCommand alias, @Nullable Integer id, List<Referenceable> objects,
+    CommandImpl(Alias.ComponentCommand alias, Component component, @Nullable Integer id, List<Referenceable> objects,
                 TypeMeasure returnTypeUnit) {
         this.alias = alias;
+        this.component = component;
         this.id = id;
         this.objects = objects;
         this.returnTypeUnit = returnTypeUnit;
@@ -43,12 +45,17 @@ class CommandImpl implements Command {
     }
 
     @Override
+    public Component component() {
+        return component;
+    }
+
+    @Override
     public Alias.ComponentCommand alias() {
         return alias;
     }
 
     @Override
-    public TypeMeasure returnTypeUnit() {
+    public TypeMeasure returnTypeMeasure() {
         return returnTypeUnit;
     }
 }

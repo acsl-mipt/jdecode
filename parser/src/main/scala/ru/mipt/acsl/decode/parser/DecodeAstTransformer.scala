@@ -212,7 +212,7 @@ class DecodeAstTransformer {
         .getOrElse {
           val _var = p.getVarParameterElement
           val paramAlias = new Alias.MessageOrCommandParameter(elementName(_var.getElementNameRule),
-            elementInfo(Option(_var.getElementInfo)), CommandOrTmMessage.newInstance(alias.obj()), null)
+            elementInfo(Option(_var.getElementInfo)), MessageOrCommand.newInstance(alias.obj()), null)
           paramAlias.obj(Parameter.newInstance(paramAlias, typeMeasure(_var.getTypeUnitApplication)))
           Seq(paramAlias, paramAlias.obj())
         }
@@ -223,11 +223,12 @@ class DecodeAstTransformer {
   private def command(c: DecodeCommandDecl, component: Component): Seq[Referenceable] = {
     val alias = new Alias.ComponentCommand(elementName(c.getElementNameRule),
       elementInfo(Option(c.getElementInfo)), component, null)
-    alias.obj(Command.newInstance(alias, id(c.getAnnotationDeclList), new util.ArrayList[Referenceable](), typeMeasure(c.getTypeUnitApplication)))
+    alias.obj(Command.newInstance(alias, component, id(c.getAnnotationDeclList), new util.ArrayList[Referenceable](),
+      typeMeasure(c.getTypeUnitApplication)))
     alias.obj().objects.addAll(Option(c.getCommandArgs).map(_.getCommandArgList.toSeq).getOrElse(Seq.empty)
       .flatMap { cmdArg =>
         val paramAlias = new Alias.MessageOrCommandParameter(elementName(cmdArg.getElementNameRule),
-          elementInfo(Option(cmdArg.getElementInfo)), CommandOrTmMessage.newInstance(alias.obj()), null)
+          elementInfo(Option(cmdArg.getElementInfo)), MessageOrCommand.newInstance(alias.obj()), null)
         paramAlias.obj(Parameter.newInstance(paramAlias, typeMeasure(cmdArg.getTypeUnitApplication)))
         Seq(paramAlias, paramAlias.obj())
       })

@@ -9,23 +9,23 @@ import java.util.Optional;
 /**
  * Created by metadeus on 06.06.16.
  */
-public interface CommandOrTmMessage extends Container {
+public interface MessageOrCommand extends Container {
 
-    static CommandOrTmMessage newInstance(Command command) {
-        return new CommandOrTmMessageImpl(command);
+    static MessageOrCommand newInstance(Command command) {
+        return new MessageOrCommandImpl(command);
     }
 
-    static CommandOrTmMessage newInstance(TmMessage tmMessage) {
-        return new CommandOrTmMessageImpl(tmMessage);
+    static MessageOrCommand newInstance(TmMessage message) {
+        return new MessageOrCommandImpl(message);
     }
 
     boolean isCommand();
 
-    boolean isTmMessage();
+    boolean isMessage();
 
     Optional<Command> command();
 
-    Optional<TmMessage> tmMessage();
+    Optional<TmMessage> message();
 
     @Override
     default <T> T accept(ContainerVisitor<T> visitor) {
