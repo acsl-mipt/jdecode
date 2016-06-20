@@ -87,7 +87,8 @@ public class DecodeJsonGenerator {
         CONST_EXPR("ex"), STRUCT_FIELD("f"), STRUCT_TYPE("st"), GENERATED("gen"), PRIORITY("pr"), BASE_TYPE_PROXY("bp"),
         TYPE_PARAMETERS("tp"), GENERIC_TYPE_PROXY("gtp"), TYPE_NAME("tn"), GENERIC_ARGUMENT_PATHS("gap"),
         MAYBE_TYPE_PROXY_TYPE("t"), MAYBE_PROXY_ENUM("e"), MAYBE_PROXY_STRUCT("s"), MAYBE_PROXY_COMPONENT("c"),
-        MAYBE_PROXY_MEASURE("m"), MAYBE_PROXY_REFERENCEABLE("r"), TYPE("t"), ID("id"), RETURN_TYPE_MEASURE("rtm");
+        MAYBE_PROXY_MEASURE("m"), MAYBE_PROXY_REFERENCEABLE("r"), TYPE("t"), ID("id"), RETURN_TYPE_MEASURE("rtm"),
+        MEASURE_PROXY("mep");
 
         public String getKey() {
             return key;
@@ -230,7 +231,7 @@ public class DecodeJsonGenerator {
                             TypeMeasure typeMeasure = (TypeMeasure) t;
                             ObjectNode node = extendedNodeKind(Keys.TYPE_MEASURE.getKey(), t);
                             node.put(Keys.TYPE_PROXY.getKey(), generate(typeMeasure.typeProxy()));
-                            typeMeasure.measure().ifPresent(m -> node.put(Keys.MEASURE.getKey(), generate(m)));
+                            typeMeasure.measureProxy().ifPresent(m -> node.put(Keys.MEASURE_PROXY.getKey(), generate(m)));
                             return node;
                         } else if (t instanceof Const) {
                             Const aConst = (Const) t;
@@ -322,12 +323,14 @@ public class DecodeJsonGenerator {
                         public Supplier<ObjectNode> visit(TmMessage tmMessage) {
                             return () -> {
                                 if (tmMessage instanceof StatusMessage) {
-                                    ObjectNode node = extendedNodeKind(Keys.STATUS_MESSAGE.getKey(), tmMessage);
+                                    ObjectNode node = extendedNodeKind(Keys.STATUS_MESSAGE.getKey(), tmMessage)
+                                            .put(Keys.PARENT.getKey(), generate(tmMessage.component()));
                                     ((StatusMessage) tmMessage).priority().ifPresent(p -> node.put(Keys.PRIORITY.getKey(), p));
                                     return node;
                                 } else {
-                                    ObjectNode node = extendedNodeKind(Keys.EVENT_MESSAGE.getKey(), tmMessage);
-                                    node.put(Keys.BASE_TYPE_PROXY.getKey(), generate(((EventMessage) tmMessage).baseTypeProxy()));
+                                    ObjectNode node = extendedNodeKind(Keys.EVENT_MESSAGE.getKey(), tmMessage)
+                                            .put(Keys.PARENT.getKey(), generate(tmMessage.component()))
+                                            .put(Keys.BASE_TYPE_PROXY.getKey(), generate(((EventMessage) tmMessage).baseTypeProxy()));
                                     return node;
                                 }
                             };

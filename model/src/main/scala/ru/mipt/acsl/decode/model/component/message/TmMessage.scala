@@ -8,7 +8,7 @@ import ru.mipt.acsl.decode.model.types.Alias
 /**
   * @author Artem Shein
   */
-trait TmMessage extends MayHaveId with HasName with HasInfo with Container with HasComponent {
+trait TmMessage extends MayHaveId with HasName with HasInfo with Container with HasComponent with HasAlias {
 
   def alias: Alias.ComponentTmMessage[_ <: TmMessage]
 

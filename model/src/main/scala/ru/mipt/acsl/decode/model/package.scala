@@ -1,10 +1,12 @@
 package ru.mipt.acsl.decode
 
 import java.util
+
 import scala.collection.JavaConversions._
 import ru.mipt.acsl.decode.model.component.{Component, MessageParameterPath, StatusParameter}
 import ru.mipt.acsl.decode.model.component.message._
 import ru.mipt.acsl.decode.model.registry.Language
+import ru.mipt.acsl.decode.model.types.Alias
 
 package object model {
 
