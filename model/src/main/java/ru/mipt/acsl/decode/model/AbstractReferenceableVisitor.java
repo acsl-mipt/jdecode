@@ -4,7 +4,6 @@ import org.jetbrains.annotations.Nullable;
 import ru.mipt.acsl.decode.model.expr.ConstExpr;
 import ru.mipt.acsl.decode.model.naming.Container;
 import ru.mipt.acsl.decode.model.proxy.MaybeProxy;
-import ru.mipt.acsl.decode.model.proxy.MaybeProxyCompanion;
 import ru.mipt.acsl.decode.model.registry.Measure;
 import ru.mipt.acsl.decode.model.registry.Registry;
 import ru.mipt.acsl.decode.model.types.*;

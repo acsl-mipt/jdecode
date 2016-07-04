@@ -6,7 +6,7 @@ import java.util.Optional
 import org.jetbrains.annotations.Nullable
 import ru.mipt.acsl.decode.model.component.Component
 import ru.mipt.acsl.decode.model.naming.ElementName
-import ru.mipt.acsl.decode.model.proxy.{MaybeProxyCompanion, MaybeTypeProxy}
+import ru.mipt.acsl.decode.model.proxy.MaybeTypeProxy
 import ru.mipt.acsl.decode.model.registry.Language
 import ru.mipt.acsl.decode.model.types.{Alias, DecodeType}
 import ru.mipt.acsl.decode.model.{Referenceable, TmParameter}

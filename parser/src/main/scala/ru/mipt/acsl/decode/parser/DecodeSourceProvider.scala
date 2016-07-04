@@ -1,6 +1,7 @@
 package ru.mipt.acsl.decode.parser
 
 import java.util
+
 import scala.collection.JavaConversions._
 import com.intellij.lang.impl.PsiBuilderFactoryImpl
 import com.intellij.lang.{DefaultASTFactory, DefaultASTFactoryImpl, LanguageParserDefinitions, PsiBuilderFactory}
@@ -17,6 +18,7 @@ import com.intellij.psi.impl.source.resolve.reference.{ReferenceProvidersRegistr
 import com.typesafe.scalalogging.LazyLogging
 import org.picocontainer.PicoContainer
 import org.picocontainer.defaults.AbstractComponentAdapter
+import ru.mipt.acsl.decode.model.HasNamespace
 import ru.mipt.acsl.decode.model.naming.Namespace
 import ru.mipt.acsl.decode.model.registry.Registry
 import ru.mipt.acsl.decode.model.types.Alias
@@ -90,6 +92,8 @@ class DecodeSourceProvider extends LazyLogging {
   }
 
   def mergeNamespaces(l: Namespace, r: Namespace): Namespace = {
+    r.setParent(l.parent().orElse(null))
+    r.alias().obj(l.alias().obj())
     r.objects.foreach {
       case ns: Namespace =>
         l.objects.find {
@@ -103,10 +107,17 @@ class DecodeSourceProvider extends LazyLogging {
               sys.error("must be a namespace")
           }
           case _ =>
-            l.objects ++= Seq(ns, ns.alias)
+            ns.alias().setParent(l)
+            l.objects ++= Seq(ns, ns.alias())
         }
-      case a: Alias.NsNs =>
-      case o => sys.error(s"not implemented for $o")
+      case _: Alias.NsNs =>
+      case a: Alias.FromNamespace =>
+        a.setParent(l)
+        l.objects += a
+      case nsAware: HasNamespace =>
+        nsAware.setNamespace(l)
+        l.objects += nsAware
+      case o => l.objects += o
     }
     l
   }

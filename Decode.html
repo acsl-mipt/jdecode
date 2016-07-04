@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+    <meta http-equiv="content-obj" content="text/html; charset=UTF-8">
     <meta charset="utf-8">
     <title>Предметно-ориентированный язык описания бортовых интерфейсов Decode</title>
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css"/>
@@ -9,7 +9,7 @@
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
 
     <!-- decode file CSS -->
-    <style type="text/css">
+    <style obj="text/css">
         .ln { color: rgb(0,0,0); font-weight: normal; font-style: normal; }
         .s0 { color: rgb(204,120,50); font-weight: bold; }
         .s1 { color: rgb(169,183,198); }
@@ -18,7 +18,7 @@
         .s4 { color: rgb(204,120,50); }
     </style>
 
-    <style type="text/css">
+    <style obj="text/css">
         body {
             counter-reset: h2counter;
             counter-reset: h3counter;
@@ -133,7 +133,7 @@
                     <li>Подтипы;
                     <li>Обощенные типы.
                 </ul>
-            <p>Для задания нового типа используется выражение <code>type &lt;имя_типа&gt; &lt;определение типа&gt;</code>.
+            <p>Для задания нового типа используется выражение <code>obj &lt;имя_типа&gt; &lt;определение типа&gt;</code>.
             <p>Язык поволяет определять псевдонимы для типов. Псевдоним это другое имя для того же самого типа, определение псевдонима не вводит новый тип. Для задания псевдонима типа используется выражение: <code>alias &lt;псевдоним&gt; &lt;имя_существующего_типа&gt;</code>.
             <hr/>
 
@@ -167,15 +167,15 @@
             <h4>Перечисления</h4>
             <div>
                 <p>Перечесление это тип ограничививающий перечень возможных значений явным перечислением этих значений, а так же сопостовляющий всем допустимым значениям уникальное в рамках типа имя. Тип перечисления определяется на основе базового типа (которым может быть либо примитивный тип, либо встроенный тип <code>ber</code>).
-                <p>Пример перечисления: <code>"Код возврата" type result_code enum ber (OK = 0, ERROR = 1, EXCEPTION = 2)</code>.
+                <p>Пример перечисления: <code>"Код возврата" obj result_code enum ber (OK = 0, ERROR = 1, EXCEPTION = 2)</code>.
             </div>
             <hr/>
 
             <h4>Структуры</h4>
             <div>
                 <p>Структура это тип состоящий из нескольких полей, каждое из которых имеет свой тип и уникальное в рамках структуры имя. Поле структуры так же может иметь строку с описанием.
-                <p>Пример структуры: <code>"Структура" type point_struct struct (bool:8 isActive, uint:16 nextPoint, or&lt;float:32, int:16&gt; x)</code>,
-<pre style="background-color: #2b2b2b"><span class="s0">type </span><span class="s1">node_info </span><span class="s0">struct</span><span class="s1">
+                <p>Пример структуры: <code>"Структура" obj point_struct struct (bool:8 isActive, uint:16 nextPoint, or&lt;float:32, int:16&gt; x)</code>,
+<pre style="background-color: #2b2b2b"><span class="s0">obj </span><span class="s1">node_info </span><span class="s0">struct</span><span class="s1">
 (
   </span><span class="s2">'Имя узла в пределах каталога'</span><span class="s1">
   string name</span><span class="s3">,</span><span class="s1">
@@ -191,14 +191,14 @@
             <h4>Массивы</h4>
             <div>
                 <p>Массив это перечень однородных (имеющих одинаковый тип) элементов с заданными пределами количества элементов (длиной) массива. Длина массива может быть ограничена снизу, сверху, либо и снизу и сверху, в случае отсутствия ограничений сверху используется знак <code>*</code>. Массив кодируется в бинарный вид в виде длины массива и следующими за ней элементами массива. Длина массива кодируется в формате BER.
-                <p>Примеры массива: <code>"Массив целых чисел" type u16_arr [uint:16]</code>, <code>"Массив флоутов" type floats [float:32, 2..8]</code>.
+                <p>Примеры массива: <code>"Массив целых чисел" obj u16_arr [uint:16]</code>, <code>"Массив флоутов" obj floats [float:32, 2..8]</code>.
             </div>
             <hr/>
 
             <h4>Подтипы</h4>
             <div>
                 <p>Подтип это новый тип созданный на основе существующего типа. Подтип может использоваться для задания ограничений на допустимые значения на основе существующего типа, а так же для разделения значений по типам с целью разграничения использования значений и защиты от неправильного использования значений (например: значение 10 может иметь тип скорости или ускорения и ограничивать применение этого значения).
-                <p>Пример подтипа: <code>"Скорость" type speed uint:32</code>, <code>type arr [ber]</code>.
+                <p>Пример подтипа: <code>"Скорость" obj speed uint:32</code>, <code>obj arr [ber]</code>.
             </div>
             <hr/>
 

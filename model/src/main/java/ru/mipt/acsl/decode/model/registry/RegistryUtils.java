@@ -9,7 +9,7 @@ import ru.mipt.acsl.decode.model.component.message.EventMessage;
 import ru.mipt.acsl.decode.model.expr.ConstExpr;
 import ru.mipt.acsl.decode.model.naming.Container;
 import ru.mipt.acsl.decode.model.proxy.MaybeProxy;
-import ru.mipt.acsl.decode.model.proxy.MaybeProxyCompanion;
+import ru.mipt.acsl.decode.model.proxy.MaybeProxyEnumType;
 import ru.mipt.acsl.decode.model.proxy.ResolvingMessages;
 import ru.mipt.acsl.decode.model.types.*;
 
@@ -25,7 +25,8 @@ public class RegistryUtils {
         return RegistryUtils.resolve(r, r.rootNamespace());
     }
 
-    public static ResolvingMessages resolve(Registry r, Referenceable obj) {
+    public static ResolvingMessages resolve(Registry r, Referenceable obj)
+    {
         final ResolvingMessages result = ResolvingMessages.newInstance();
         obj.accept(new ReferenceableVisitor<Void>(){
 
@@ -33,7 +34,7 @@ public class RegistryUtils {
             public Void visit(EnumType e) {
                 visit((Container) e);
                 MaybeProxyEnumOrTypeMeasure proxy = e.extendsOrBaseTypeProxy();
-                Optional<MaybeProxyCompanion.Enum> en = proxy.maybeProxyEnum();
+                Optional<MaybeProxyEnumType> en = proxy.maybeProxyEnum();
                 if (en.isPresent())
                     result.addAll(en.get().resolve(r));
                 else
@@ -66,10 +67,9 @@ public class RegistryUtils {
             @Override
             public Void visit(Container c) {
                 List<Referenceable> objects = c.objects();
-                // do not replace with stream, wee add elements inside, ConcurrentModificationException may occur
-                for (int index = 0; index < objects.size(); index++) {
+                // DO NOT replace with stream, wee add elements inside, ConcurrentModificationException may occur
+                for (int index = 0; index < objects.size(); ++index)
                     result.addAll(resolve(r, objects.get(index)));
-                }
                 if (c instanceof Command)
                     result.addAll(((Command) c).returnTypeProxy().resolve(r));
                 else if (c instanceof EventMessage)
@@ -88,6 +88,8 @@ public class RegistryUtils {
                     result.addAll(((Alias.ComponentComponent) a).obj().resolve(r));
                 else if (a instanceof Alias.NsTypeMeasure)
                     result.addAll(((Alias.NsTypeMeasure) a).obj().typeProxy().resolve(r));
+                else if (a instanceof Alias.NsType)
+                    result.addAll(((Alias.NsType) a).obj().resolve(r));
                 return null;
             }
 
@@ -125,6 +127,13 @@ public class RegistryUtils {
             @Override
             public Void visit(StructType s) {
                 visit((Container) s);
+                return null;
+            }
+
+            @Override
+            public Void visit(TypeMeasure tm) {
+                result.addAll(tm.typeProxy().resolve(r));
+                tm.measureProxy().ifPresent(p -> result.addAll(p.resolve(r)));
                 return null;
             }
 

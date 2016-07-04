@@ -43,9 +43,9 @@ object StructType {
 
     override def setObjects(objects: util.List[Referenceable]): Unit = this.objects = objects
 
-    override def namespace(ns: Namespace): Unit = this.namespace = ns
-
     override def alias(): Optional[Alias] = Optional.ofNullable(_alias)
+
+    override def setNamespace(namespace: Namespace): Unit = this.namespace = namespace
   }
 
   def apply(@Nullable alias: Alias.NsType, namespace: Namespace, objects: util.List[Referenceable],

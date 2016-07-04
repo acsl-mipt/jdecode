@@ -5,16 +5,20 @@ package ru.mipt.acsl.decode.model.proxy;
  */
 public interface MaybeProxyVisitor<T> {
 
-    T visit(MaybeTypeProxyType tt);
+    T visit(MaybeProxyNamespace n);
 
-    T visit(MaybeProxyCompanion.Enum e);
+    T visit(MaybeProxyType tt);
 
-    T visit(MaybeProxyCompanion.Struct s);
+    T visit(MaybeProxyConst c);
 
-    T visit(MaybeProxyCompanion.Component c);
+    T visit(MaybeProxyEnumType e);
 
-    T visit(MaybeProxyCompanion.Measure m);
+    T visit(MaybeProxyStructType s);
 
-    T visit(MaybeProxyCompanion.Referenceable r);
+    T visit(MaybeProxyComponent c);
+
+    T visit(MaybeProxyMeasure m);
+
+    T visit(MaybeProxyReferenceable r);
 
 }

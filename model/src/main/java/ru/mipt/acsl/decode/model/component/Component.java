@@ -5,7 +5,7 @@ import ru.mipt.acsl.decode.model.*;
 import ru.mipt.acsl.decode.model.component.message.EventMessage;
 import ru.mipt.acsl.decode.model.component.message.StatusMessage;
 import ru.mipt.acsl.decode.model.naming.*;
-import ru.mipt.acsl.decode.model.proxy.MaybeProxyCompanion;
+import ru.mipt.acsl.decode.model.proxy.MaybeProxyStructType;
 import ru.mipt.acsl.decode.model.registry.Language;
 import ru.mipt.acsl.decode.model.types.Alias;
 import ru.mipt.acsl.decode.model.types.StructType;
@@ -20,15 +20,15 @@ import java.util.Optional;
 public interface Component extends Container, HasName, HasNamespace, MayHaveId, HasAlias {
 
     static Component newInstance(Alias.NsComponent alias, Namespace namespace, @Nullable Integer id,
-                                 @Nullable  MaybeProxyCompanion.Struct baseTypeProxy,
+                                 @Nullable MaybeProxyStructType baseTypeProxy,
                                  List<Referenceable> objects) {
         return new ComponentImpl(alias, namespace, id, baseTypeProxy, objects);
     }
 
-    Optional<MaybeProxyCompanion.Struct> baseTypeProxy();
+    Optional<MaybeProxyStructType> baseTypeProxy();
 
     default Optional<StructType> baseType() {
-        return baseTypeProxy().map(MaybeProxyCompanion.Struct::obj);
+        return baseTypeProxy().map(MaybeProxyStructType::obj);
     }
 
     void setNamespace(Namespace ns);

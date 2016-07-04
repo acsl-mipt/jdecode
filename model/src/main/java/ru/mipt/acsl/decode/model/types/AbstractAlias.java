@@ -1,6 +1,5 @@
 package ru.mipt.acsl.decode.model.types;
 
-import ru.mipt.acsl.decode.model.Referenceable;
 import ru.mipt.acsl.decode.model.naming.Container;
 import ru.mipt.acsl.decode.model.naming.ElementName;
 import ru.mipt.acsl.decode.model.registry.Language;
@@ -10,7 +9,7 @@ import java.util.Map;
 /**
  * Created by metadeus on 06.06.16.
  */
-abstract class AbstractAlias<P extends Container, O extends Referenceable> implements Alias {
+abstract class AbstractAlias<P extends Container, O> implements Alias {
 
     protected final ElementName name;
     protected final Map<Language, String> info;

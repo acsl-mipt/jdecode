@@ -15,15 +15,15 @@ ru"Тестовое описание на русском языке"
 "Test info in English"
 alias uint8 u8
 
-type uint8_10 0..10
+obj uint8_10 0..10
 
 # Native types
 native native_type
 native native_generic[T,R,]
 
-type f32_arr array[f32, 4]
-type u8_dyn_arr array[u8, 3..8]
-type u8_dyn_arr2 array[u8, 10..*]
+obj f32_arr array[f32, 4]
+obj u8_dyn_arr array[u8, 3..8]
+obj u8_dyn_arr2 array[u8, 10..*]
 
 enum u8_enum u8 (ZERO = 0, ONE = 1, TEN = 10)
 

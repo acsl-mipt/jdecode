@@ -2,7 +2,7 @@ package ru.mipt.acsl.decode.model;
 
 import ru.mipt.acsl.decode.model.naming.ElementName;
 import ru.mipt.acsl.decode.model.naming.HasName;
-import ru.mipt.acsl.decode.model.proxy.MaybeProxyCompanion;
+import ru.mipt.acsl.decode.model.proxy.MaybeProxyMeasure;
 import ru.mipt.acsl.decode.model.proxy.MaybeTypeProxy;
 import ru.mipt.acsl.decode.model.registry.Language;
 import ru.mipt.acsl.decode.model.registry.Measure;
@@ -35,12 +35,12 @@ public interface Parameter extends TmParameter, HasName, Referenceable, HasAlias
         return typeProxy().obj();
     }
 
-    default Optional<MaybeProxyCompanion.Measure> measureProxy() {
+    default Optional<MaybeProxyMeasure> measureProxy() {
         return typeMeasure().measureProxy();
     }
 
     default Optional<Measure> measure() {
-        return measureProxy().map(MaybeProxyCompanion.Measure::obj);
+        return measureProxy().map(MaybeProxyMeasure::obj);
     }
 
     @Override

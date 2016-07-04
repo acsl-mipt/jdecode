@@ -15,7 +15,7 @@ import static ru.mipt.acsl.decode.parser.psi.DecodeTypes.*;
 %class _DecodeLexer
 %implements FlexLexer
 %function advance
-%type IElementType
+%obj IElementType
 %unicode
 
 EOL="\r"|"\n"|"\r\n"
@@ -53,7 +53,7 @@ NON_NEGATIVE_INTEGER=[0-9]+
   "subcomponent"              { return SUBCOMPONENT; }
   "parameters"                { return PARAMETERS; }
   "measure"                   { return MEASURE_TOKEN; }
-  "type"                      { return TYPE_KEYWORD; }
+  "obj"                      { return TYPE_KEYWORD; }
   "alias"                     { return ALIAS; }
   ".."                        { return DOTS; }
   "."                         { return DOT; }

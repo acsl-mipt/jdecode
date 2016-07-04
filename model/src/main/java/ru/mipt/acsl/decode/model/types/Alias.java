@@ -13,9 +13,8 @@ import ru.mipt.acsl.decode.model.naming.Container;
 import ru.mipt.acsl.decode.model.naming.ElementName;
 import ru.mipt.acsl.decode.model.naming.HasName;
 import ru.mipt.acsl.decode.model.naming.Namespace;
-import ru.mipt.acsl.decode.model.proxy.MaybeProxyCompanion;
+import ru.mipt.acsl.decode.model.proxy.*;
 import ru.mipt.acsl.decode.model.registry.Language;
-import ru.mipt.acsl.decode.model.registry.Measure;
 
 import java.util.Map;
 
@@ -32,9 +31,11 @@ public interface Alias extends Referenceable, HasName {
 
     Map<Language, String> info();
 
-    Referenceable obj();
+    Object obj();
 
-    void obj(Referenceable obj);
+    void obj(Object obj);
+
+    Referenceable referenceable();
 
     default <T> T accept(ReferenceableVisitor<T> visitor) {
         return visitor.visit(this);
@@ -43,19 +44,35 @@ public interface Alias extends Referenceable, HasName {
     interface Type extends Alias {
 
         @Override
-        DecodeType obj();
+        MaybeTypeProxy obj();
 
     }
 
-    class NsType extends AbstractAlias<Namespace, DecodeType> implements Type {
+    interface FromNamespace extends Alias
+    {
+        @Override
+        Namespace parent();
 
-        public NsType(ElementName name, Map<Language, String> info, Namespace parent, DecodeType obj) {
+        void setParent(Namespace namespace);
+    }
+
+    class NsType extends AbstractAlias<Namespace, MaybeProxyType> implements FromNamespace
+    {
+
+        public NsType(ElementName name, Map<Language, String> info, Namespace parent, MaybeProxyType obj)
+        {
             super(name, info, parent, obj);
         }
 
         @Override
         public Namespace parent() {
-            return (Namespace) super.parent();
+            return super.parent();
+        }
+
+        @Override
+        public void setParent(Namespace namespace)
+        {
+            this.parent = namespace;
         }
 
         @Override
@@ -64,17 +81,24 @@ public interface Alias extends Referenceable, HasName {
         }
 
         @Override
-        public DecodeType obj() {
-            return (DecodeType) super.obj();
+        public MaybeProxyType obj() {
+            return super.obj();
         }
 
         @Override
-        public void obj(Referenceable obj) {
-            this.obj = (DecodeType) obj;
+        public void obj(Object obj) {
+            this.obj = (MaybeProxyType) obj;
         }
+
+        @Override
+        public Referenceable referenceable() {
+            return obj.obj();
+        }
+
     }
 
-    class ComponentCommand extends AbstractAlias<Component, Command> {
+    class ComponentCommand extends AbstractAlias<Component, Command>
+    {
 
         public ComponentCommand(ElementName name, Map<Language, String> info, Component parent, Command obj) {
             super(name, info, parent, obj);
@@ -86,14 +110,20 @@ public interface Alias extends Referenceable, HasName {
         }
 
         @Override
-        public void obj(Referenceable obj) {
+        public void obj(Object obj) {
             this.obj = (Command) obj;
         }
+
+        @Override
+        public Referenceable referenceable() {
+            return obj;
+        }
     }
 
-    class NsComponent extends AbstractAlias<Namespace, Component> {
+    class NsComponent extends AbstractAlias<Namespace, MaybeProxyComponent> implements FromNamespace
+    {
 
-        public NsComponent(ElementName name, Map<Language, String> info, Namespace parent, Component obj) {
+        public NsComponent(ElementName name, Map<Language, String> info, Namespace parent, MaybeProxyComponent obj) {
             super(name, info, parent, obj);
         }
 
@@ -103,14 +133,26 @@ public interface Alias extends Referenceable, HasName {
         }
 
         @Override
-        public void obj(Referenceable obj) {
-            this.obj = (Component) obj;
+        public void obj(Object obj) {
+            this.obj = (MaybeProxyComponent) obj;
+        }
+
+        @Override
+        public Referenceable referenceable() {
+            return obj.obj();
+        }
+
+        @Override
+        public void setParent(Namespace namespace)
+        {
+            this.parent = namespace;
         }
     }
 
-    class NsMeasure extends AbstractAlias<Namespace, Measure> {
+    class NsMeasure extends AbstractAlias<Namespace, MaybeProxyMeasure> implements FromNamespace
+    {
 
-        public NsMeasure(ElementName name, Map<Language, String> info, Namespace parent, Measure obj) {
+        public NsMeasure(ElementName name, Map<Language, String> info, Namespace parent, MaybeProxyMeasure obj) {
             super(name, info, parent, obj);
         }
 
@@ -120,14 +162,27 @@ public interface Alias extends Referenceable, HasName {
         }
 
         @Override
-        public void obj(Referenceable obj) {
-            this.obj = (Measure) obj;
+        public void obj(Object obj) {
+            this.obj = (MaybeProxyMeasure) obj;
+        }
+
+        @Override
+        public Referenceable referenceable()
+        {
+            return obj.obj();
+        }
+
+        @Override
+        public void setParent(Namespace namespace)
+        {
+            this.parent = namespace;
         }
     }
 
-    class NsConst extends AbstractAlias<Namespace, Const> implements Type {
+    class NsConst extends AbstractAlias<Namespace, MaybeProxyConst> implements Type, FromNamespace
+    {
 
-        public NsConst(ElementName name, Map<Language, String> info, Namespace parent, Const obj) {
+        public NsConst(ElementName name, Map<Language, String> info, Namespace parent, MaybeProxyConst obj) {
             super(name, info, parent, obj);
         }
 
@@ -137,14 +192,27 @@ public interface Alias extends Referenceable, HasName {
         }
 
         @Override
-        public void obj(Referenceable obj) {
-            this.obj = (Const) obj;
+        public void obj(Object obj) {
+            this.obj = (MaybeProxyConst) obj;
+        }
+
+        @Override
+        public Referenceable referenceable()
+        {
+            return obj.obj();
+        }
+
+        @Override
+        public void setParent(Namespace namespace)
+        {
+            this.parent = namespace;
         }
     }
 
-    class NsNs extends AbstractAlias<Namespace, Namespace> {
+    class NsNs extends AbstractAlias<Namespace, MaybeProxyNamespace> implements FromNamespace
+    {
 
-        public NsNs(ElementName name, Map<Language, String> info, Namespace parent, Namespace obj) {
+        public NsNs(ElementName name, Map<Language, String> info, Namespace parent, MaybeProxyNamespace obj) {
             super(name, info, parent, obj);
         }
 
@@ -154,14 +222,27 @@ public interface Alias extends Referenceable, HasName {
         }
 
         @Override
-        public void obj(Referenceable obj) {
-            this.obj = (Namespace) obj;
+        public void obj(Object obj) {
+            this.obj = (MaybeProxyNamespace) obj;
+        }
+
+        @Override
+        public Referenceable referenceable()
+        {
+            return obj.obj();
+        }
+
+        @Override
+        public void setParent(Namespace namespace)
+        {
+            this.parent = namespace;
         }
     }
 
-    class NsReferenceable extends AbstractAlias<Namespace, Referenceable> {
+    class NsReferenceable extends AbstractAlias<Namespace, MaybeProxyReferenceable> implements FromNamespace
+    {
 
-        public NsReferenceable(ElementName name, Map<Language, String> info, Namespace parent, Referenceable obj) {
+        public NsReferenceable(ElementName name, Map<Language, String> info, Namespace parent, MaybeProxyReferenceable obj) {
             super(name, info, parent, obj);
         }
 
@@ -171,12 +252,25 @@ public interface Alias extends Referenceable, HasName {
         }
 
         @Override
-        public void obj(Referenceable obj) {
-            this.obj = obj;
+        public void obj(Object obj) {
+            this.obj = (MaybeProxyReferenceable) obj;
+        }
+
+        @Override
+        public Referenceable referenceable()
+        {
+            return obj.obj();
+        }
+
+        @Override
+        public void setParent(Namespace namespace)
+        {
+            this.parent = namespace;
         }
     }
 
-    class NsTypeMeasure extends AbstractAlias<Namespace, TypeMeasure> implements Type {
+    class NsTypeMeasure extends AbstractAlias<Namespace, TypeMeasure> implements FromNamespace
+    {
 
         public NsTypeMeasure(ElementName name, Map<Language, String> info, Namespace parent, TypeMeasure obj) {
             super(name, info, parent, obj);
@@ -188,14 +282,26 @@ public interface Alias extends Referenceable, HasName {
         }
 
         @Override
-        public void obj(Referenceable obj) {
+        public void obj(Object obj) {
             this.obj = (TypeMeasure) obj;
+        }
+
+        @Override
+        public Referenceable referenceable()
+        {
+            return obj;
+        }
+
+        @Override
+        public void setParent(Namespace namespace)
+        {
+            this.parent = namespace;
         }
     }
 
-    class ComponentComponent extends AbstractAlias<Component, MaybeProxyCompanion.Component> {
+    class ComponentComponent extends AbstractAlias<Component, MaybeProxyComponent> {
 
-        public ComponentComponent(ElementName name, Map<Language, String> info, Component parent, MaybeProxyCompanion.Component component) {
+        public ComponentComponent(ElementName name, Map<Language, String> info, Component parent, MaybeProxyComponent component) {
             super(name, info, parent, component);
         }
 
@@ -205,8 +311,14 @@ public interface Alias extends Referenceable, HasName {
         }
 
         @Override
-        public void obj(Referenceable obj) {
-            this.obj = (MaybeProxyCompanion.Component) obj;
+        public void obj(Object obj) {
+            this.obj = (MaybeProxyComponent) obj;
+        }
+
+        @Override
+        public Referenceable referenceable()
+        {
+            return obj.obj();
         }
     }
 
@@ -222,8 +334,14 @@ public interface Alias extends Referenceable, HasName {
         }
 
         @Override
-        public void obj(Referenceable obj) {
+        public void obj(Object obj) {
             this.obj = (Parameter) obj;
+        }
+
+        @Override
+        public Referenceable referenceable()
+        {
+            return obj;
         }
     }
 
@@ -247,8 +365,14 @@ public interface Alias extends Referenceable, HasName {
         }
 
         @Override
-        public void obj(Referenceable obj) {
+        public void obj(Object obj) {
             this.obj = (EventMessage) obj;
+        }
+
+        @Override
+        public Referenceable referenceable()
+        {
+            return obj;
         }
     }
 
@@ -264,8 +388,14 @@ public interface Alias extends Referenceable, HasName {
         }
 
         @Override
-        public void obj(Referenceable obj) {
+        public void obj(Object obj) {
             this.obj = (StatusMessage) obj;
+        }
+
+        @Override
+        public Referenceable referenceable()
+        {
+            return obj;
         }
     }
 
@@ -282,8 +412,14 @@ public interface Alias extends Referenceable, HasName {
         }
 
         @Override
-        public void obj(Referenceable obj) {
+        public void obj(Object obj) {
             this.obj = (ru.mipt.acsl.decode.model.types.EnumConstant) obj;
+        }
+
+        @Override
+        public Referenceable referenceable()
+        {
+            return obj;
         }
     }
 
@@ -300,8 +436,14 @@ public interface Alias extends Referenceable, HasName {
         }
 
         @Override
-        public void obj(Referenceable obj) {
+        public void obj(Object obj) {
             this.obj = (ru.mipt.acsl.decode.model.types.StructField) obj;
+        }
+
+        @Override
+        public Referenceable referenceable()
+        {
+            return obj;
         }
     }
 
@@ -318,8 +460,14 @@ public interface Alias extends Referenceable, HasName {
         }
 
         @Override
-        public void obj(Referenceable obj) {
+        public void obj(Object obj) {
             this.obj = (Parameter) obj;
+        }
+
+        @Override
+        public Referenceable referenceable()
+        {
+            return obj;
         }
     }
 

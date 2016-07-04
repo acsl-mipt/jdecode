@@ -151,7 +151,7 @@ class HtmlModelDocGenerator(val config: HtmlModelDocGeneratorConfiguration) {
 
   def typeKind(t: DecodeType): Tag = t match {
     case array if array.isArray => td("Массив " + typeName(ArrayTypeInfo(array).baseType) + " элементов")
-    case a: Alias.Type => td("Псевдоним для ", typeNameWithLink(a.obj))
+    case a: Alias.Type => td("Псевдоним для ", typeNameWithLink(a.obj.obj()))
     case s: SubType => td("Расширение типа ", typeNameWithLink(s.baseType))
     case s: StructType => td("Структура", br, "Поля:",
       table(cls := "table", style := "width: auto")(

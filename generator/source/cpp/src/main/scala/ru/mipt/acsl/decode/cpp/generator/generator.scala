@@ -245,7 +245,7 @@ class CppSourceGenerator(val config: CppGeneratorConfiguration) extends LazyLogg
           CStructTypeDefField(f.name.mangledNameString(), cTypeAppForTypeName(f.typeMeasure.t)))))
       case t: Alias.Type =>
         val newName: String = cppTypeNameFor(t)
-        val oldName: String = cppTypeNameFor(t.obj())
+        val oldName: String = cppTypeNameFor(t.obj().obj())
         if (newName equals oldName) Comment("omitted due name clash") else CppDefine(newName, oldName)
       case _ => sys.error("not implemented")
     })

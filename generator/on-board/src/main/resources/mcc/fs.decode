@@ -1,10 +1,10 @@
 ru"Модуль доступа к бортовой файловой системе"
-namespace ru.mipt.acsl.fs
+namespace mcc.fs
 
 import decode.(array, varuint, or, u8, bool)
 
-import ru.mipt.acsl.foundation.string
-import ru.mipt.acsl.foundation.error_code
+import mcc.foundation.string
+import mcc.foundation.error_code
 
 language ru
 

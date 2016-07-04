@@ -17,7 +17,7 @@ import java.util.stream.Collectors;
 public class ModelRegistry {
 
     public static final DecodeSourceProvider Provider = new DecodeSourceProvider();
-    public static final DecodeSourceProviderConfiguration Config = new DecodeSourceProviderConfiguration("ru/mipt/acsl/decode");
+    public static final DecodeSourceProviderConfiguration Config = new DecodeSourceProviderConfiguration("mcc/decode");
 
     public static class Sources {
 
@@ -35,7 +35,7 @@ public class ModelRegistry {
     }
 
     public static String sourceResourcePath(SourceFileName nameWithoutExt) {
-        return "ru/mipt/acsl/decode/" + sourceName(nameWithoutExt);
+        return "mcc/" + sourceName(nameWithoutExt);
     }
 
     public static String sourceContents(SourceFileName nameWithoutExt) {

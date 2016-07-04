@@ -30,7 +30,8 @@ const U64_MAX 18446744073709551615
 native range[F, T]
 
 'Беззнаковое целое переменной длины'
-type varuint range[U64_MIN, U64_MAX]
+#type varuint range[U64_MIN, U64_MAX]
+native varuint
 
 native array[T, F <: varuint = U64_MIN, T <: varuint = U64_MAX]
 
@@ -38,7 +39,8 @@ native array[T, F <: varuint = U64_MIN, T <: varuint = U64_MAX]
 native unit
 
 'Знаковое целое переменной длины'
-type varint range[I64_MIN, I64_MAX]
+#type varint range[I64_MIN, I64_MAX]
+native varint
 
 'Обощенный тип перечисления с тегом'
 native or[L, R]
@@ -56,35 +58,43 @@ native f64
 
 '8-битное беззнаковое целое число'
 en'8-bit unsigned integer'
-type u8 range[U8_MIN, U8_MAX]
+#type u8 range[U8_MIN, U8_MAX]
+native u8
 
 '8-битное знаковое целое число'
 en'8-bit signed integer'
-type i8 range[I8_MIN, I8_MAX]
+#type i8 range[I8_MIN, I8_MAX]
+native i8
 
 '16-битное беззнаковое целое число'
 en'16-bit unsigned integer'
-type u16 range[U16_MIN, U16_MAX]
+#type u16 range[U16_MIN, U16_MAX]
+native u16
 
 '16-битное знаковое целое число'
 en'16-bit signed integer'
-type i16 range[I16_MIN, I16_MAX]
+#type i16 range[I16_MIN, I16_MAX]
+native i16
 
 '32-битное беззнаковое целое число'
 en'32-bit unsigned integer'
-type u32 range[U32_MIN, U32_MAX]
+#type u32 range[U32_MIN, U32_MAX]
+native u32
 
 '32-битное знаковое целое число'
 en'32-bit signed integer'
-type i32 range[I32_MIN, I32_MAX]
+#type i32 range[I32_MIN, I32_MAX]
+native i32
 
 '64-битное беззнаковое целое число'
 en'64-bit unsigned integer'
-type u64 range[U64_MIN, U64_MAX]
+#type u64 range[U64_MIN, U64_MAX]
+native u64
 
 '64-битное знаковое целое число'
 en'64-bit signed integer'
-type i64 range[I64_MIN, I64_MAX]
+#type i64 range[I64_MIN, I64_MAX]
+native i64
 
 'Булево значение'
 en'Boolean'

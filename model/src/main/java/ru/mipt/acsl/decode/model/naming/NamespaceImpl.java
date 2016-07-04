@@ -15,12 +15,10 @@ import java.util.Optional;
 public class NamespaceImpl implements Namespace {
 
     private Alias.NsNs alias;
-    private Namespace parent;
     private List<Referenceable> objects;
 
-    NamespaceImpl(Alias.NsNs alias, @Nullable Namespace parent, List<Referenceable> objects) {
+    NamespaceImpl(Alias.NsNs alias, List<Referenceable> objects) {
         this.alias = alias;
-        this.parent = parent;
         this.objects = objects;
     }
 
@@ -46,11 +44,12 @@ public class NamespaceImpl implements Namespace {
 
     @Override
     public Optional<Namespace> parent() {
-        return Optional.ofNullable(parent);
+        Namespace parent = alias.parent();
+        return parent == this ? Optional.empty() : Optional.of(parent);
     }
 
     @Override
-    public void parent(@Nullable Namespace ns) {
-        this.parent = ns;
+    public void setParent(@Nullable Namespace ns) {
+        alias.setParent(ns == null ? this : ns);
     }
 }

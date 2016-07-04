@@ -1,8 +1,10 @@
 package ru.mipt.acsl.decode.model.naming;
 
+import com.google.common.collect.Lists;
 import org.jetbrains.annotations.Nullable;
 import ru.mipt.acsl.decode.model.*;
 import ru.mipt.acsl.decode.model.component.Component;
+import ru.mipt.acsl.decode.model.proxy.MaybeProxyNamespace;
 import ru.mipt.acsl.decode.model.registry.Language;
 import ru.mipt.acsl.decode.model.registry.Measure;
 import ru.mipt.acsl.decode.model.types.Alias;
@@ -20,15 +22,15 @@ public interface Namespace extends Container, HasName, HasInfo, HasAlias {
 
     ElementName ROOT_NAME = ElementName.newInstanceFromMangledName("%root");
 
-    static Namespace newInstance(Alias.NsNs alias, @Nullable Namespace parent, List<Referenceable> objects) {
-        return new NamespaceImpl(alias, parent, objects);
+    static Namespace newInstance(Alias.NsNs alias, List<Referenceable> objects) {
+        return new NamespaceImpl(alias, objects);
     }
 
     static Namespace newInstanceRoot() {
         Alias.NsNs alias = new Alias.NsNs(ROOT_NAME, Collections.emptyMap(), null, null);
-        alias.obj(Namespace.newInstance(alias, null, new ArrayList<>()));
-        alias.parent(alias.obj());
-        return alias.obj();
+        alias.obj(MaybeProxyNamespace.newInstance(Namespace.newInstance(alias, Lists.newArrayList(alias))));
+        alias.parent(alias.obj().obj());
+        return alias.obj().obj();
     }
 
     static Namespace newInstance(Fqn fqn, Namespace rootNamespace, Map<Language, String> info) {
@@ -37,8 +39,8 @@ public interface Namespace extends Container, HasName, HasInfo, HasAlias {
         int index = 0;
         for (ElementName part : fqn.getParts()) {
             Alias.NsNs alias = new Alias.NsNs(part, index == size - 1 ? info : Collections.emptyMap(), currentNamespace, null);
-            Namespace ns = Namespace.newInstance(alias, currentNamespace, new ArrayList<>());
-            alias.obj(ns);
+            Namespace ns = Namespace.newInstance(alias, new ArrayList<>());
+            alias.obj(MaybeProxyNamespace.newInstance(ns));
             List<Referenceable> objects = currentNamespace.objects();
             objects.add(ns);
             objects.add(alias);
@@ -84,7 +86,7 @@ public interface Namespace extends Container, HasName, HasInfo, HasAlias {
      */
     Optional<Namespace> parent();
 
-    void parent(@Nullable Namespace ns);
+    void setParent(@Nullable Namespace ns);
 
     default boolean isRoot() {
         return name().equals(ROOT_NAME);

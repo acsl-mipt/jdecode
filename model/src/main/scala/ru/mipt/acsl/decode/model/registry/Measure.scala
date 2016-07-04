@@ -9,17 +9,17 @@ import ru.mipt.acsl.decode.model._
 /**
   * @author Artem Shein
   */
-trait Measure extends Referenceable with HasNamespace with HasName with HasInfo with HasAlias {
+trait Measure extends Referenceable with HasAlias {
 
   override def alias: Alias.NsMeasure
 
   def display: util.Map[Language, String]
 
-  override def name: ElementName = alias.name
+  def name: ElementName = alias.name
 
-  override def namespace: Namespace = alias.parent
+  def namespace: Namespace = alias.parent
 
-  override def info: util.Map[Language, String] = alias.info
+  def info: util.Map[Language, String] = alias.info
 
   def accept[T](visitor: ReferenceableVisitor[T]): T = {
     visitor.visit(this)

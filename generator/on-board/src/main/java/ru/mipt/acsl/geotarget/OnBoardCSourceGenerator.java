@@ -19,7 +19,7 @@ import java.util.stream.Collectors;
  */
 public class OnBoardCSourceGenerator {
 
-    public static final String ROOT_COMPONENT_FQN_STRING = "ru.mipt.acsl.photon.Main";
+    public static final String ROOT_COMPONENT_FQN_STRING = "mcc.photon.Main";
     public static final String PROLOGUE_PATH = "photon/prologue.h";
 
     public static Fqn fqn(String str) {
@@ -33,15 +33,15 @@ public class OnBoardCSourceGenerator {
                     ROOT_COMPONENT_FQN_STRING,
                     new HashMap<Fqn, Fqn>() {{
                         put(fqn("decode"), fqn("photon.decode"));
-                        put(fqn("ru.mipt.acsl.photon"), fqn("photon"));
-                        put(fqn("ru.mipt.acsl.foundation"), fqn("photon.foundation"));
-                        put(fqn("ru.mipt.acsl.fs"), fqn("photon.fs"));
-                        put(fqn("ru.mipt.acsl.identification"), fqn("photon.identification"));
-                        put(fqn("ru.mipt.acsl.mcc"), fqn("photon"));
-                        put(fqn("ru.mipt.acsl.routing"), fqn("photon.routing"));
-                        put(fqn("ru.mipt.acsl.scripting"), fqn("photon.scripting"));
-                        put(fqn("ru.mipt.acsl.segmentation"), fqn("photon.segmentation"));
-                        put(fqn("ru.mipt.acsl.tm"), fqn("photon.tm"));
+                        put(fqn("mcc.photon"), fqn("photon"));
+                        put(fqn("mcc.foundation"), fqn("photon.foundation"));
+                        put(fqn("mcc.fs"), fqn("photon.fs"));
+                        put(fqn("mcc.identification"), fqn("photon.identification"));
+                        put(fqn("mcc.mcc"), fqn("photon"));
+                        put(fqn("mcc.routing"), fqn("photon.routing"));
+                        put(fqn("mcc.scripting"), fqn("photon.scripting"));
+                        put(fqn("mcc.segmentation"), fqn("photon.segmentation"));
+                        put(fqn("mcc.tm"), fqn("photon.tm"));
                     }},
                     OnBoardModelRegistry.Sources.ALL.stream()
                             .map(source -> GeneratorSource.newInstance(ModelRegistry.sourceName(source),

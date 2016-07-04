@@ -7,7 +7,7 @@ import scala.collection.JavaConversions._
 import scala.collection.JavaConversions._
 import org.jetbrains.annotations.Nullable
 import ru.mipt.acsl.decode.model.naming.{ElementName, Namespace}
-import ru.mipt.acsl.decode.model.proxy.{MaybeProxyCompanion, MaybeTypeProxy}
+import ru.mipt.acsl.decode.model.proxy.MaybeTypeProxy
 
 /**
   * @author Artem Shein
@@ -38,10 +38,9 @@ object GenericTypeSpecialized {
                                            val typeParameters: util.List[ElementName])
     extends GenericTypeSpecialized {
 
-    override def namespace(ns: Namespace): Unit = this.namespace = ns
-
     override def alias(): Optional[Alias] = Optional.ofNullable(_alias)
 
+    override def setNamespace(namespace: Namespace): Unit = this.namespace = namespace
   }
 
   def apply(@Nullable alias: Alias.NsType, namespace: Namespace,

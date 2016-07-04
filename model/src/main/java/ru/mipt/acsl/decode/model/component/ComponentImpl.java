@@ -2,9 +2,8 @@ package ru.mipt.acsl.decode.model.component;
 
 import org.jetbrains.annotations.Nullable;
 import ru.mipt.acsl.decode.model.Referenceable;
-import ru.mipt.acsl.decode.model.component.Component;
 import ru.mipt.acsl.decode.model.naming.Namespace;
-import ru.mipt.acsl.decode.model.proxy.MaybeProxyCompanion;
+import ru.mipt.acsl.decode.model.proxy.MaybeProxyStructType;
 import ru.mipt.acsl.decode.model.types.Alias;
 
 import java.util.List;
@@ -20,11 +19,11 @@ class ComponentImpl implements Component {
     @Nullable
     private final Integer id;
     @Nullable
-    private final MaybeProxyCompanion.Struct baseTypeProxy;
+    private final MaybeProxyStructType baseTypeProxy;
     private List<Referenceable> objects;
 
     ComponentImpl(Alias.NsComponent alias, Namespace namespace, @Nullable Integer id,
-                  @Nullable  MaybeProxyCompanion.Struct baseTypeProxy,
+                  @Nullable MaybeProxyStructType baseTypeProxy,
                   List<Referenceable> objects) {
         this.alias = alias;
         this.namspace = namespace;
@@ -54,7 +53,7 @@ class ComponentImpl implements Component {
     }
 
     @Override
-    public Optional<MaybeProxyCompanion.Struct> baseTypeProxy() {
+    public Optional<MaybeProxyStructType> baseTypeProxy() {
         return Optional.ofNullable(baseTypeProxy);
     }
 

@@ -4,7 +4,7 @@ import org.jetbrains.annotations.Nullable;
 import ru.mipt.acsl.decode.model.Referenceable;
 import ru.mipt.acsl.decode.model.naming.ElementName;
 import ru.mipt.acsl.decode.model.naming.Namespace;
-import ru.mipt.acsl.decode.model.proxy.MaybeProxyCompanion;
+import ru.mipt.acsl.decode.model.proxy.MaybeProxyEnumType;
 import ru.mipt.acsl.decode.model.proxy.MaybeTypeProxy;
 
 import java.util.List;
@@ -35,7 +35,7 @@ public class EnumTypeImpl implements EnumType {
         this.typeParameters = typeParameters;
     }
 
-    public Optional<MaybeProxyCompanion.Enum> extendsTypeProxy() {
+    public Optional<MaybeProxyEnumType> extendsTypeProxy() {
         return extendsOrBaseTypeProxy().maybeProxyEnum();
     }
 
@@ -51,7 +51,7 @@ public class EnumTypeImpl implements EnumType {
 
     @Override
     public Optional<EnumType> extendsTypeOption() {
-        return extendsTypeProxy().map(MaybeProxyCompanion.Enum::obj);
+        return extendsTypeProxy().map(MaybeProxyEnumType::obj);
     }
 
     @Override
@@ -60,7 +60,7 @@ public class EnumTypeImpl implements EnumType {
     }
 
     public MaybeTypeProxy baseTypeProxy() {
-        Optional<MaybeProxyCompanion.Enum> anEnum = extendsOrBaseTypeProxy.maybeProxyEnum();
+        Optional<MaybeProxyEnumType> anEnum = extendsOrBaseTypeProxy.maybeProxyEnum();
         return anEnum.isPresent() ? anEnum.get() : extendsOrBaseTypeProxy.typeMeasure().get().typeProxy(); // must not be null
     }
 
@@ -80,7 +80,7 @@ public class EnumTypeImpl implements EnumType {
     }
 
     @Override
-    public void namespace(Namespace ns) {
+    public void setNamespace(Namespace ns) {
         this.namespace = ns;
     }
 

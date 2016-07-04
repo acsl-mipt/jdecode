@@ -40,10 +40,10 @@ public class NativeLiteralGenericTypesProxyResolver implements DecodeProxyResolv
         Namespace ns = registry.findNamespace(Fqn.DECODE_NAMESPACE)
                 .orElseThrow(() -> new RuntimeException("decode namespace not found"));
         Alias.NsConst alias = new Alias.NsConst(literal.mangledName(), new HashMap<>(), ns, null);
-        alias.obj(Const.newInstance(alias, ns, literal.value(), new ArrayList<>()));
+        alias.obj(MaybeProxyConst.newInstance(Const.newInstance(alias, ns, literal.value(), new ArrayList<>())));
         ns.objects().add(alias);
-        ns.objects().add(alias.obj());
-        return ResolvingResult.newInstance(alias.obj());
+        ns.objects().add(alias.obj().obj());
+        return ResolvingResult.newInstance(alias.obj().obj());
     }
 
     private ResolvingResult<Referenceable> resolveFqnElement(Registry registry, ProxyPath.FqnElement fqnElement) {
@@ -61,7 +61,7 @@ public class NativeLiteralGenericTypesProxyResolver implements DecodeProxyResolv
         if (!(element instanceof GenericTypeName))
             return ResolvingResult.newInstance();
         GenericTypeName e = (GenericTypeName) element;
-        MaybeTypeProxyType maybeProxy = MaybeTypeProxyType.newInstance(Proxy$.MODULE$.apply(
+        MaybeProxyType maybeProxy = MaybeProxyType.newInstance(Proxy$.MODULE$.apply(
                 ProxyPath$.MODULE$.apply(nsFqn, e.typeName())));
         ResolvingMessages result = maybeProxy.resolve(registry);
         if (result.hasError())
@@ -73,12 +73,12 @@ public class NativeLiteralGenericTypesProxyResolver implements DecodeProxyResolv
             Alias.NsType alias = new Alias.NsType(name, new HashMap<>(), genericType.namespace(), null);
             GenericTypeSpecialized newSpecializedType =
                     GenericTypeSpecialized$.MODULE$.apply(alias, genericType.namespace(),
-                            MaybeTypeProxyType.newInstance(genericType),
+                            MaybeProxyType.newInstance(genericType),
                             e.genericArgumentPaths().stream()
-                                    .map(arg -> MaybeTypeProxyType.newInstance(Proxy$.MODULE$.apply(arg)))
+                                    .map(arg -> MaybeProxyType.newInstance(Proxy$.MODULE$.apply(arg)))
                                     .collect(Collectors.toList()),
                             new ArrayList<>());
-            alias.obj(newSpecializedType);
+            alias.obj(MaybeProxyType.newInstance(newSpecializedType));
             List<Referenceable> objects = systemNamespace.objects();
             objects.add(alias);
             objects.add(newSpecializedType);

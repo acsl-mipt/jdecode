@@ -3,12 +3,13 @@ package ru.mipt.acsl.decode.model.types
 import java.util
 import java.util.Optional
 
+import ru.mipt.acsl.decode.model.HasNamespace
 import ru.mipt.acsl.decode.model.naming.{ElementName, Namespace}
 
 /**
   * @author Artem Shein
   */
-trait NativeType extends DecodeType {
+trait NativeType extends DecodeType with HasNamespace {
 
   def systemName: String = "@" + hashCode()
 
@@ -23,9 +24,9 @@ object NativeType {
                                val typeParameters: util.List[ElementName])
     extends NativeType {
 
-    override def namespace(ns: Namespace): Unit = this.namespace = ns
-
     override def alias(): Optional[Alias] = Optional.ofNullable(_alias)
+
+    override def setNamespace(namespace: Namespace): Unit = this.namespace = namespace
   }
 
   def apply(alias: Alias.NsType, ns: Namespace, typeParameters: util.List[ElementName]): NativeType =

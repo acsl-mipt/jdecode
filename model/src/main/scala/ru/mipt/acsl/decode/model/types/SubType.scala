@@ -5,7 +5,7 @@ import java.util.Optional
 
 import org.jetbrains.annotations.Nullable
 import ru.mipt.acsl.decode.model.naming.{ElementName, Namespace}
-import ru.mipt.acsl.decode.model.proxy.{MaybeProxyCompanion, MaybeTypeProxy}
+import ru.mipt.acsl.decode.model.proxy.MaybeTypeProxy
 
 /**
   * @author Artem Shein
@@ -31,9 +31,9 @@ object SubType {
                             val typeMeasure: TypeMeasure, val typeParameters: util.List[ElementName])
     extends SubType {
 
-    override def namespace(ns: Namespace): Unit = this.namespace = namespace
-
     override def alias(): Optional[Alias] = Optional.ofNullable(_alias)
+
+    override def setNamespace(namespace: Namespace): Unit = this.namespace = namespace
   }
 
   def apply(@Nullable alias: Alias.NsType, namespace: Namespace, typeMeasure: TypeMeasure,

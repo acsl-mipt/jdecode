@@ -1,8 +1,8 @@
 ru"Модуль управления бортовыми скриптами (циклограммами)"
-namespace ru.mipt.acsl.scripting
+namespace mcc.scripting
 
 import decode.(varuint, bool, u8, array)
-import ru.mipt.acsl.foundation.(s, guid, error_code)
+import mcc.foundation.(s, guid, error_code)
 
 language ru
 

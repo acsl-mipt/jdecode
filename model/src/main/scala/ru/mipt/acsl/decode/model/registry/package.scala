@@ -2,6 +2,7 @@ package ru.mipt.acsl.decode.model
 
 import ru.mipt.acsl.decode.model.component.Component
 import ru.mipt.acsl.decode.model.naming.Container
+import ru.mipt.acsl.decode.model.proxy.MaybeProxy
 import ru.mipt.acsl.decode.model.types.{DecodeType, EnumType, NativeType}
 
 import scala.collection.JavaConversions._
@@ -11,6 +12,8 @@ package object registry {
   implicit class RegistryHelper(val r: Registry) {
 
     def validate(): ValidatingResult = validate(r.rootNamespace)
+
+    def validate(maybeProxy: MaybeProxy): ValidatingResult = ValidatingResult.newInstance()
 
     def validate(obj: Referenceable): ValidatingResult = obj match {
       case container: Container =>

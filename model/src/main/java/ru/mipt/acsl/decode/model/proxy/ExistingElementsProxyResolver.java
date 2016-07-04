@@ -40,10 +40,14 @@ public class ExistingElementsProxyResolver implements DecodeProxyResolver {
                 .orElseThrow(() -> new RuntimeException("system namespace must exist"));
         List<Alias> elements = ns.aliases().stream().filter(a -> a.name().equals(literal.mangledName())).collect(
                 Collectors.toList());
-        if (elements.size() == 1) {
-            Referenceable obj = elements.get(0).obj();
+        if (elements.size() == 1)
+        {
+            Alias alias = elements.get(0);
+            RegistryUtils.resolve(registry, alias);
+            Referenceable obj = alias.referenceable();
             return ResolvingResult.newInstance(obj, RegistryUtils.resolve(registry, obj));
-        } else if (elements.size() > 1)
+        }
+        else if (elements.size() > 1)
             return ResolvingResult.newInstance(
                     Message.newError(String.format("must be exactly one element for %s, found: %d", literal, elements.size())));
         else
@@ -57,19 +61,24 @@ public class ExistingElementsProxyResolver implements DecodeProxyResolver {
                     Message.newError(String.format("namespace not found %s", fqnElement.ns().mangledNameString())));
         Namespace ns = nsOption.get();
         ProxyElementName element = fqnElement.element();
-        if (element instanceof TypeName) {
+        if (element instanceof TypeName)
+        {
             ElementName name = ((TypeName) element).typeName();
             List<Alias> elements =
                     ns.aliases().stream().filter(a -> a.name().equals(name)).collect(Collectors.toList());
-            if (elements.size() == 1) {
-                Referenceable obj = elements.get(0).obj();
+            if (elements.size() == 1)
+            {
+                Alias alias = elements.get(0);
+                RegistryUtils.resolve(registry, alias);
+                Referenceable obj = alias.referenceable();
                 return ResolvingResult.newInstance(obj, RegistryUtils.resolve(registry, obj));
             }
             else
                 return ResolvingResult.newInstance(
                         Message.newError(String.format("must be exactly one element for %s, found: %d", fqnElement,
                                 elements.size())));
-        } else
+        }
+        else
             return ResolvingResult.newInstance();
     }
 

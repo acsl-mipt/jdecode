@@ -407,15 +407,15 @@
 <h3 id="streams-delimiter-parsing">Алгоритм разбора потока с разделителем</h3>
 <div>
     <p>Последовательность разбора потока с разделителем следующая:
-    <ol type="A">
+    <ol obj="A">
         <li>найти в потоке разделитель;
         <li>попытаться прочесть пакет следующий сразу за разделителем:
-            <ol type="1">
+            <ol obj="1">
                 <li>если пакет считан успешно, то попытаться прочесть разделитель следующий сразу за пакетом:
-                    <ol type="a">
+                    <ol obj="a">
                         <li>если разделитель считан успешно, то продолжать разбор с пункта B;
                         <li>если разделитель не был считан успешно, то попытаться считать пакет данных со смещением в длину разделителя от конца предыдущего пакета (разделитель может быть испорчен при передаче):
-                            <ol type="i">
+                            <ol obj="i">
                                 <li>если пакет считан успешно, то продолжить с пункта 1;
                                 <li>если пакет не был считан, то начать с самого начала (пункт A) в поисках нового разделителя.
                             </ol>
@@ -646,10 +646,10 @@
     <pre style="background-color: #2b2b2b"><span class="s0">namespace </span><span class="s1">ru.mipt.acsl
 
 </span><span class="s2">&quot;Строка&quot;</span><span class="s1">
-</span><span class="s0">type </span><span class="s1">string [u8]
+</span><span class="s0">obj </span><span class="s1">string [u8]
 
 </span><span class="s2">&quot;Пара номер компонента и его уникальный идентификатор&quot;</span><span class="s1">
-</span><span class="s0">type </span><span class="s1">component_number_guid_pair
+</span><span class="s0">obj </span><span class="s1">component_number_guid_pair
 </span><span class="s0">struct</span><span class="s1">
 (
   </span><span class="s2">'Номер компонента в пределах устройства'</span><span class="s1">
@@ -659,7 +659,7 @@
 )
 
 </span><span class="s2">&quot;Идентификатор устройства и его корневого компонента&quot;</span><span class="s1">
-</span><span class="s0">type </span><span class="s1">short_id
+</span><span class="s0">obj </span><span class="s1">short_id
 </span><span class="s0">struct</span><span class="s1">
 (
   </span><span class="s2">'Уникальный идентификатор устройства'</span><span class="s1">
@@ -669,7 +669,7 @@
 )
 
 </span><span class="s2">&quot;Идентификатор устройства и всех его компонентов&quot;</span><span class="s1">
-</span><span class="s0">type </span><span class="s1">full_id </span><span class="s0">struct</span><span class="s1">
+</span><span class="s0">obj </span><span class="s1">full_id </span><span class="s0">struct</span><span class="s1">
 (
     short_id shortId</span><span class="s3">,</span><span class="s1">
     </span><span class="s2">'Идентификаторы всех компонентов устройства'</span><span class="s1">
@@ -695,13 +695,13 @@
 }
 
 </span><span class="s2">&quot;Ошибка начала режима сегментированной выдачи&quot;</span><span class="s1">
-</span><span class="s0">type </span><span class="s1">segment_start_ack_error </span><span class="s0">enum ber </span><span class="s1">(ALREADY_STARTED = </span><span class="s4">1</span><span class="s3">, </span><span class="s1">INVALID_STATE = </span><span class="s4">2</span><span class="s1">)
+</span><span class="s0">obj </span><span class="s1">segment_start_ack_error </span><span class="s0">enum ber </span><span class="s1">(ALREADY_STARTED = </span><span class="s4">1</span><span class="s3">, </span><span class="s1">INVALID_STATE = </span><span class="s4">2</span><span class="s1">)
 
 </span><span class="s2">&quot;Ошибка останова режима сегментированной выдачи&quot;</span><span class="s1">
-</span><span class="s0">type </span><span class="s1">segment_stop_ack_error </span><span class="s0">enum ber </span><span class="s1">(NOT_STARTED = </span><span class="s4">1</span><span class="s3">, </span><span class="s1">INVALID_STATE = </span><span class="s4">2</span><span class="s1">)
+</span><span class="s0">obj </span><span class="s1">segment_stop_ack_error </span><span class="s0">enum ber </span><span class="s1">(NOT_STARTED = </span><span class="s4">1</span><span class="s3">, </span><span class="s1">INVALID_STATE = </span><span class="s4">2</span><span class="s1">)
 
 </span><span class="s2">&quot;Ошибка обработки получения сегмента&quot;</span><span class="s1">
-</span><span class="s0">type </span><span class="s1">segment_process_ack_error </span><span class="s0">enum ber </span><span class="s1">(INVALID_STATE = </span><span class="s4">1</span><span class="s1">)
+</span><span class="s0">obj </span><span class="s1">segment_process_ack_error </span><span class="s0">enum ber </span><span class="s1">(INVALID_STATE = </span><span class="s4">1</span><span class="s1">)
 
 </span><span class="s2">&quot;Компонент режима сегментированной передачи ТМ-сообщения&quot;</span><span class="s1">
 </span><span class="s0">component </span><span class="s1">Segment
@@ -764,7 +764,7 @@
 </span><span class="s5">/* Tm */</span><span class="s1">
 
 </span><span class="s2">'Циклический массив'</span><span class="s1">
-</span><span class="s0">type </span><span class="s1">ring_buf </span><span class="s0">struct</span><span class="s1">
+</span><span class="s0">obj </span><span class="s1">ring_buf </span><span class="s0">struct</span><span class="s1">
 (
   </span><span class="s2">'Данные циклического массива'</span><span class="s1">
   [u8] data</span><span class="s3">,</span><span class="s1">
@@ -775,7 +775,7 @@
 )
 
 </span><span class="s2">'Номер компонента и номер сообщения'</span><span class="s1">
-</span><span class="s0">type </span><span class="s1">comp_msg </span><span class="s0">struct</span><span class="s1">
+</span><span class="s0">obj </span><span class="s1">comp_msg </span><span class="s0">struct</span><span class="s1">
 (
   </span><span class="s2">'Номер компонента'</span><span class="s1">
   </span><span class="s0">ber </span><span class="s1">componentNum</span><span class="s3">,</span><span class="s1">
@@ -784,14 +784,14 @@
 )
 
 </span><span class="s2">'Информация о событии'</span><span class="s1">
-</span><span class="s0">type </span><span class="s1">event_info </span><span class="s0">struct</span><span class="s1">
+</span><span class="s0">obj </span><span class="s1">event_info </span><span class="s0">struct</span><span class="s1">
 (
   comp_msg componentMessage</span><span class="s3">,</span><span class="s1">
   </span><span class="s2">'Номер события'</span><span class="s1">
   </span><span class="s0">ber      </span><span class="s1">eventNum</span><span class="s3">,</span><span class="s1">
 )
 
-</span><span class="s0">type </span><span class="s1">tm_cmd_error </span><span class="s0">enum ber </span><span class="s1">(INVALID_ARGUMENT = </span><span class="s4">1</span><span class="s3">, </span><span class="s1">INVALID_STATE = </span><span class="s4">2</span><span class="s1">)
+</span><span class="s0">obj </span><span class="s1">tm_cmd_error </span><span class="s0">enum ber </span><span class="s1">(INVALID_ARGUMENT = </span><span class="s4">1</span><span class="s3">, </span><span class="s1">INVALID_STATE = </span><span class="s4">2</span><span class="s1">)
 
 </span><span class="s2">'Управление формированием и выдачей ТМ-информации'</span><span class="s1">
 </span><span class="s0">component </span><span class="s1">Tm
@@ -838,10 +838,10 @@
 </span><span class="s5">/* Scripts */</span><span class="s1">
 
 </span><span class="s2">'Идентификатор скрипта'</span><span class="s1">
-</span><span class="s0">type </span><span class="s1">script_id guid
+</span><span class="s0">obj </span><span class="s1">script_id guid
 
 </span><span class="s2">'Информация о скрипте'</span><span class="s1">
-</span><span class="s0">type </span><span class="s1">script_info </span><span class="s0">struct</span><span class="s1">
+</span><span class="s0">obj </span><span class="s1">script_info </span><span class="s0">struct</span><span class="s1">
 (
   script_id scriptId</span><span class="s3">,</span><span class="s1">
   </span><span class="s2">'Данные скрипта'</span><span class="s1">
@@ -851,12 +851,12 @@
 )
 
 </span><span class="s2">'Дата и время'</span><span class="s1">
-</span><span class="s0">type </span><span class="s1">date_time </span><span class="s0">ber</span><span class="s1">
+</span><span class="s0">obj </span><span class="s1">date_time </span><span class="s0">ber</span><span class="s1">
 </span><span class="s2">'Период времени'</span><span class="s1">
-</span><span class="s0">type </span><span class="s1">period    </span><span class="s0">ber</span><span class="s1">
+</span><span class="s0">obj </span><span class="s1">period    </span><span class="s0">ber</span><span class="s1">
 
 </span><span class="s2">'Запланированный запуск скрипта'</span><span class="s1">
-</span><span class="s0">type </span><span class="s1">script_run_timing </span><span class="s0">struct</span><span class="s1">
+</span><span class="s0">obj </span><span class="s1">script_run_timing </span><span class="s0">struct</span><span class="s1">
 (
   </span><span class="s2">'Идентификатор запланированного запуска'</span><span class="s1">
   guid        id</span><span class="s3">,</span><span class="s1">
@@ -875,7 +875,7 @@
   date_time   repeatUntil</span><span class="s3">,</span><span class="s1">
 )
 
-</span><span class="s0">type </span><span class="s1">scripting_error </span><span class="s0">enum ber </span><span class="s1">(INVALID_ARGUMENT = </span><span class="s4">1</span><span class="s3">, </span><span class="s1">INVALID_STATE = </span><span class="s4">2</span><span class="s1">)
+</span><span class="s0">obj </span><span class="s1">scripting_error </span><span class="s0">enum ber </span><span class="s1">(INVALID_ARGUMENT = </span><span class="s4">1</span><span class="s3">, </span><span class="s1">INVALID_STATE = </span><span class="s4">2</span><span class="s1">)
 
 </span><span class="s2">'Управление бортовыми скриптами (циклограммами)'</span><span class="s1">
 </span><span class="s0">component </span><span class="s1">Scripting
@@ -928,7 +928,7 @@
 
 </span><span class="s5">/* Files */</span><span class="s1">
 </span><span class="s2">'Информация о файле'</span><span class="s1">
-</span><span class="s0">type </span><span class="s1">full_file_info </span><span class="s0">struct</span><span class="s1">
+</span><span class="s0">obj </span><span class="s1">full_file_info </span><span class="s0">struct</span><span class="s1">
 (
   </span><span class="s2">'Путь до файла'</span><span class="s1">
   string filePath</span><span class="s3">,</span><span class="s1">
@@ -938,7 +938,7 @@
   [u8]   fileContents</span><span class="s3">,</span><span class="s1">
 )
 
-</span><span class="s0">type </span><span class="s1">node_info </span><span class="s0">struct</span><span class="s1">
+</span><span class="s0">obj </span><span class="s1">node_info </span><span class="s0">struct</span><span class="s1">
 (
   </span><span class="s2">'Имя узла в пределах каталога'</span><span class="s1">
   string name</span><span class="s3">,</span><span class="s1">
@@ -948,11 +948,11 @@
   </span><span class="s0">ber    </span><span class="s1">attrs</span><span class="s3">,</span><span class="s1">
 )
 
-</span><span class="s0">type </span><span class="s1">file_upload_error </span><span class="s0">enum ber </span><span class="s1">(ALREADY_EXISTS = </span><span class="s4">1</span><span class="s3">, </span><span class="s1">CANT_WRITE = </span><span class="s4">2</span><span class="s1">)
-</span><span class="s0">type </span><span class="s1">file_delete_error </span><span class="s0">enum ber </span><span class="s1">(NOT_FOUND = </span><span class="s4">1</span><span class="s3">, </span><span class="s1">CANT_DELETE = </span><span class="s4">2</span><span class="s1">)
-</span><span class="s0">type </span><span class="s1">file_download_error </span><span class="s0">enum ber </span><span class="s1">(NOT_FOUND = </span><span class="s4">1</span><span class="s3">, </span><span class="s1">CANT_READ = </span><span class="s4">2</span><span class="s3">, </span><span class="s1">NOT_FILE = </span><span class="s4">3</span><span class="s1">)
-</span><span class="s0">type </span><span class="s1">file_list_error </span><span class="s0">enum ber </span><span class="s1">(NOT_FOUND = </span><span class="s4">1</span><span class="s3">, </span><span class="s1">CANT_READ = </span><span class="s4">2</span><span class="s3">, </span><span class="s1">NOT_DIR = </span><span class="s4">3</span><span class="s1">)
-</span><span class="s0">type </span><span class="s1">file_create_dir_error </span><span class="s0">enum ber </span><span class="s1">(NOT_FOUND = </span><span class="s4">1</span><span class="s3">, </span><span class="s1">CANT_WRITE = </span><span class="s4">2</span><span class="s1">)
+</span><span class="s0">obj </span><span class="s1">file_upload_error </span><span class="s0">enum ber </span><span class="s1">(ALREADY_EXISTS = </span><span class="s4">1</span><span class="s3">, </span><span class="s1">CANT_WRITE = </span><span class="s4">2</span><span class="s1">)
+</span><span class="s0">obj </span><span class="s1">file_delete_error </span><span class="s0">enum ber </span><span class="s1">(NOT_FOUND = </span><span class="s4">1</span><span class="s3">, </span><span class="s1">CANT_DELETE = </span><span class="s4">2</span><span class="s1">)
+</span><span class="s0">obj </span><span class="s1">file_download_error </span><span class="s0">enum ber </span><span class="s1">(NOT_FOUND = </span><span class="s4">1</span><span class="s3">, </span><span class="s1">CANT_READ = </span><span class="s4">2</span><span class="s3">, </span><span class="s1">NOT_FILE = </span><span class="s4">3</span><span class="s1">)
+</span><span class="s0">obj </span><span class="s1">file_list_error </span><span class="s0">enum ber </span><span class="s1">(NOT_FOUND = </span><span class="s4">1</span><span class="s3">, </span><span class="s1">CANT_READ = </span><span class="s4">2</span><span class="s3">, </span><span class="s1">NOT_DIR = </span><span class="s4">3</span><span class="s1">)
+</span><span class="s0">obj </span><span class="s1">file_create_dir_error </span><span class="s0">enum ber </span><span class="s1">(NOT_FOUND = </span><span class="s4">1</span><span class="s3">, </span><span class="s1">CANT_WRITE = </span><span class="s4">2</span><span class="s1">)
 
 </span><span class="s2">&quot;Компонент поддерживающий управление файловой системой&quot;</span><span class="s1">
 </span><span class="s0">component </span><span class="s1">Files
@@ -974,10 +974,10 @@
 }
 
 </span><span class="s2">&quot;Адрес абонента&quot;</span><span class="s1">
-</span><span class="s0">type </span><span class="s1">address </span><span class="s0">ber</span><span class="s1">
+</span><span class="s0">obj </span><span class="s1">address </span><span class="s0">ber</span><span class="s1">
 
 </span><span class="s2">&quot;Запись таблицы маршрутизации&quot;</span><span class="s1">
-</span><span class="s0">type </span><span class="s1">route </span><span class="s0">struct</span><span class="s1">
+</span><span class="s0">obj </span><span class="s1">route </span><span class="s0">struct</span><span class="s1">
 (
   </span><span class="s2">&quot;Адрес назначения&quot;</span><span class="s1">
   address destination_address</span><span class="s3">,</span><span class="s1">

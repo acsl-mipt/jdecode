@@ -1,13 +1,11 @@
 package ru.mipt.acsl.decode.model.types;
 
-import org.jetbrains.annotations.Nullable;
 import ru.mipt.acsl.decode.model.HasNamespace;
 import ru.mipt.acsl.decode.model.MayHaveAlias;
 import ru.mipt.acsl.decode.model.Referenceable;
 import ru.mipt.acsl.decode.model.ReferenceableVisitor;
 import ru.mipt.acsl.decode.model.naming.ElementName;
 import ru.mipt.acsl.decode.model.naming.Fqn;
-import ru.mipt.acsl.decode.model.naming.Namespace;
 import ru.mipt.acsl.decode.model.registry.Language;
 
 import java.util.*;
@@ -16,10 +14,6 @@ import java.util.*;
  * Created by metadeus on 06.06.16.
  */
 public interface DecodeType extends Referenceable, HasNamespace, MayHaveAlias {
-
-    Namespace namespace();
-
-    void namespace(Namespace ns);
 
     default Map<Language, String> info() {
         return alias()

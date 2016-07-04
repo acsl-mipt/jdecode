@@ -1,6 +1,6 @@
 
 ru"Модуль управления выдачей ТМ-информации"
-namespace ru.mipt.acsl.tm
+namespace mcc.tm
 
 import decode.(array, varuint, u8)
 

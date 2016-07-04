@@ -1,7 +1,7 @@
 ru"Модуль сегментированной передачи ТМ-сообщений"
-namespace ru.mipt.acsl.segmentation
+namespace mcc.segmentation
 
-import ru.mipt.acsl.foundation.error_code
+import mcc.foundation.error_code
 import decode.(varuint, bool, array)
 
 language ru

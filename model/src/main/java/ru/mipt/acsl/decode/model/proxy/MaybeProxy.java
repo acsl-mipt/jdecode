@@ -7,7 +7,7 @@ import ru.mipt.acsl.decode.model.registry.Registry;
 /**
  * @author Artem Shein
  */
-public interface MaybeProxy extends Referenceable {
+public interface MaybeProxy {
 
     default ResolvingMessages resolve(Registry registry) {
         if (isResolved())

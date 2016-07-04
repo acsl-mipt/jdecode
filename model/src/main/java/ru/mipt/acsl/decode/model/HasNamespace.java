@@ -9,4 +9,6 @@ public interface HasNamespace {
 
     Namespace namespace();
 
+    void setNamespace(Namespace namespace);
+
 }

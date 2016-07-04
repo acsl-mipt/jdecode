@@ -2,7 +2,7 @@ package ru.mipt.acsl.decode.model.types;
 
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import ru.mipt.acsl.decode.model.proxy.MaybeProxyCompanion;
+import ru.mipt.acsl.decode.model.proxy.MaybeProxyEnumType;
 
 import java.util.Optional;
 
@@ -12,11 +12,11 @@ import java.util.Optional;
 public class MaybeProxyEnumOrTypeMeasure {
 
     @Nullable
-    private final MaybeProxyCompanion.Enum maybeProxyEnum;
+    private final MaybeProxyEnumType maybeProxyEnum;
     @Nullable
     private final TypeMeasure typeMeasure;
 
-    public MaybeProxyEnumOrTypeMeasure(@NotNull MaybeProxyCompanion.Enum maybeProxyEnum) {
+    public MaybeProxyEnumOrTypeMeasure(@NotNull MaybeProxyEnumType maybeProxyEnum) {
         this.maybeProxyEnum = maybeProxyEnum;
         this.typeMeasure = null;
     }
@@ -26,7 +26,7 @@ public class MaybeProxyEnumOrTypeMeasure {
         this.maybeProxyEnum = null;
     }
 
-    public Optional<MaybeProxyCompanion.Enum> maybeProxyEnum() {
+    public Optional<MaybeProxyEnumType> maybeProxyEnum() {
         return Optional.ofNullable(maybeProxyEnum);
     }
 

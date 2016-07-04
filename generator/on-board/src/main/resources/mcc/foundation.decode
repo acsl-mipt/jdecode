@@ -1,5 +1,5 @@
 ru"Модуль базовых типов и компонентов"
-namespace ru.mipt.acsl.foundation
+namespace mcc.foundation
 
 import decode.(varuint, u8, array)
 

@@ -5,7 +5,7 @@ import ru.mipt.acsl.decode.model.*;
 import ru.mipt.acsl.decode.model.naming.Container;
 import ru.mipt.acsl.decode.model.naming.ElementName;
 import ru.mipt.acsl.decode.model.naming.Namespace;
-import ru.mipt.acsl.decode.model.proxy.MaybeProxyCompanion;
+import ru.mipt.acsl.decode.model.proxy.MaybeProxyEnumType;
 
 import java.util.*;
 
@@ -28,7 +28,12 @@ public interface EnumType extends DecodeType, Container, HasNamespace {
     }
 
     default Optional<EnumType> extendsTypeOption() {
-        return extendsOrBaseTypeProxy().maybeProxyEnum().map(MaybeProxyCompanion.Enum::obj);
+        return extendsOrBaseTypeProxy().maybeProxyEnum().map(MaybeProxyEnumType::obj);
+    }
+
+    default Optional<TypeMeasure> baseTypeMeasureOptional()
+    {
+        return extendsOrBaseTypeProxy().typeMeasure();
     }
 
     default Optional<DecodeType> baseTypeOption() {

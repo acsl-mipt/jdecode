@@ -39,7 +39,7 @@ public class ConstImpl implements Const {
     }
 
     @Override
-    public void namespace(Namespace ns) {
+    public void setNamespace(Namespace ns) {
         namespace = ns;
     }
 

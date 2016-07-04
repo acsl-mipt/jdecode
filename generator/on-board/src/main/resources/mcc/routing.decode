@@ -1,5 +1,5 @@
 ru"Модуль поддержки динамической маршрутизации пакетов"
-namespace ru.mipt.acsl.routing
+namespace mcc.routing
 
 import decode.(varuint, array)
 

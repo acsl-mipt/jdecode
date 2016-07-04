@@ -1,7 +1,7 @@
-namespace ru.mipt.acsl.mcc
+namespace mcc
 
 import decode.(unit, varuint, bool, u8, u16, u32, f32, f64, array)
-import ru.mipt.acsl.foundation.(per, grad, m, mps)
+import mcc.foundation.(per, grad, m, mps)
 
 language ru
 

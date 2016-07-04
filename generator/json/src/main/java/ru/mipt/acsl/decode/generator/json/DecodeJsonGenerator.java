@@ -19,10 +19,7 @@ import ru.mipt.acsl.decode.model.expr.ConstExpr;
 import ru.mipt.acsl.decode.model.naming.Container;
 import ru.mipt.acsl.decode.model.naming.Fqn;
 import ru.mipt.acsl.decode.model.naming.Namespace;
-import ru.mipt.acsl.decode.model.proxy.MaybeProxy;
-import ru.mipt.acsl.decode.model.proxy.MaybeProxyCompanion;
-import ru.mipt.acsl.decode.model.proxy.MaybeProxyVisitor;
-import ru.mipt.acsl.decode.model.proxy.MaybeTypeProxyType;
+import ru.mipt.acsl.decode.model.proxy.*;
 import ru.mipt.acsl.decode.model.proxy.path.GenericTypeName;
 import ru.mipt.acsl.decode.model.proxy.path.ProxyElementName;
 import ru.mipt.acsl.decode.model.proxy.path.ProxyPath;
@@ -86,9 +83,10 @@ public class DecodeJsonGenerator {
         ENUM_TYPE("e"), EXTENDS_TYPE("et"), IS_FINAL("f"), MAYBE_PROXY("mp"), PROXY("p"),
         CONST_EXPR("ex"), STRUCT_FIELD("f"), STRUCT_TYPE("st"), GENERATED("gen"), PRIORITY("pr"), BASE_TYPE_PROXY("bp"),
         TYPE_PARAMETERS("tp"), GENERIC_TYPE_PROXY("gtp"), TYPE_NAME("tn"), GENERIC_ARGUMENT_PATHS("gap"),
-        MAYBE_TYPE_PROXY_TYPE("t"), MAYBE_PROXY_ENUM("e"), MAYBE_PROXY_STRUCT("s"), MAYBE_PROXY_COMPONENT("c"),
+        MAYBE_TYPE_PROXY_TYPE("t"), MAYBE_PROXY_ENUM("e"), MAYBE_PROXY_CONST("ct"), MAYBE_PROXY_STRUCT("s"),
+        MAYBE_PROXY_COMPONENT("c"), MAYBE_PROXY_NAMESPACE("ns"), TYPE_PROXY_PATH("tpp"),
         MAYBE_PROXY_MEASURE("m"), MAYBE_PROXY_REFERENCEABLE("r"), TYPE("t"), ID("id"), RETURN_TYPE_MEASURE("rtm"),
-        MEASURE_PROXY("mep");
+        MEASURE_PROXY("mep"), BASE_TYPE_MEASURE("btm");
 
         public String getKey() {
             return key;
@@ -220,18 +218,12 @@ public class DecodeJsonGenerator {
                 public Supplier<ObjectNode> visit(DecodeType t) {
                     return () -> {
                         if (t instanceof NativeType)
-                            return extendedNodeKind(Keys.NATIVE_TYPE.getKey(), t)
-                                    .put(Keys.PARENT.getKey(), generate(((NativeType) t).namespace()));
+                            return extendedNodeKind(Keys.NATIVE_TYPE.getKey(), t);
                         else if (t instanceof SubType) {
                             SubType subType = (SubType) t;
-                            return extendedNodeKind(Keys.SUB_TYPE.getKey(), t)
-                                    .put(Keys.TYPE_MEASURE.getKey(), generate(subType.typeMeasure()))
+                            ObjectNode node = extendedNodeKind(Keys.SUB_TYPE.getKey(), t)
                                     .put(Keys.PARENT.getKey(), generate(subType.namespace()));
-                        } else if (t instanceof TypeMeasure) {
-                            TypeMeasure typeMeasure = (TypeMeasure) t;
-                            ObjectNode node = extendedNodeKind(Keys.TYPE_MEASURE.getKey(), t);
-                            node.put(Keys.TYPE_PROXY.getKey(), generate(typeMeasure.typeProxy()));
-                            typeMeasure.measureProxy().ifPresent(m -> node.put(Keys.MEASURE_PROXY.getKey(), generate(m)));
+                            typeMeasure(node.putObject(Keys.TYPE_MEASURE.getKey()), subType.typeMeasure());
                             return node;
                         } else if (t instanceof Const) {
                             Const aConst = (Const) t;
@@ -246,10 +238,10 @@ public class DecodeJsonGenerator {
                         } else if (t instanceof GenericTypeSpecialized) {
                             GenericTypeSpecialized genericTypeSpecialized = (GenericTypeSpecialized) t;
                             ObjectNode node = extendedNodeKind(Keys.GENERIC_TYPE_SPECIALIZED.getKey(), t)
-                                    .put(Keys.GENERIC_TYPE_PROXY.getKey(), generate(genericTypeSpecialized.genericTypeProxy()))
                                     .put(Keys.PARENT.getKey(), generate(genericTypeSpecialized.namespace()));
+                            typeProxy(node.putObject(Keys.GENERIC_TYPE_PROXY.getKey()), genericTypeSpecialized.genericTypeProxy());
                             ArrayNode typeArguments = node.putArray(Keys.TYPE_ARGUMENTS.getKey());
-                            genericTypeSpecialized.genericTypeArgumentsProxy().forEach(a -> typeArguments.add(generate(a)));
+                            genericTypeSpecialized.genericTypeArgumentsProxy().forEach(a -> typeArguments.add(generate(a.obj())));
                             return node;
                         } else
                             throw new AssertionError();
@@ -261,8 +253,8 @@ public class DecodeJsonGenerator {
                     return () -> {
                         ObjectNode node = extendedNodeKind(Keys.ALIAS.getKey(), a)
                             .put(Keys.NAME.getKey(), a.name().mangledNameString())
-                            .put(Keys.OBJ.getKey(), generate(a.obj()))
-                            .put(Keys.PARENT.getKey(), generate(a.parent()));
+                            .put(Keys.PARENT.getKey(), generate(a.parent()))
+                            .put(Keys.OBJ.getKey(), generate(a.referenceable()));
                         if (!a.info().isEmpty())
                             node.set(Keys.INFO.getKey(), display(a.info()));
                         return node;
@@ -283,8 +275,9 @@ public class DecodeJsonGenerator {
                             }).orElseGet(() -> nodeFactory.textNode(el.elementName().get().mangledNameString()))));
                             return node;
                         } else {
-                            return extendedNodeKind(Keys.PARAMETER.getKey(), p)
-                                    .put(Keys.TYPE_MEASURE.getKey(), generate(((Parameter) p).typeMeasure()));
+                            ObjectNode node = extendedNodeKind(Keys.PARAMETER.getKey(), p);
+                            typeMeasure(node.putObject(Keys.TYPE_MEASURE.getKey()), ((Parameter) p).typeMeasure());
+                            return node;
                         }
                     };
                 }
@@ -303,10 +296,13 @@ public class DecodeJsonGenerator {
 
                         @Override
                         public Supplier<ObjectNode> visit(Command command) {
-                            return () ->
-                                extendedNodeKind(Keys.COMMAND.getKey(), command)
-                                        .put(Keys.PARENT.getKey(), generate(command.component()))
-                                        .put(Keys.RETURN_TYPE_MEASURE.getKey(), generate(command.returnTypeMeasure()));
+                            return () -> {
+                                ObjectNode node = extendedNodeKind(Keys.COMMAND.getKey(), command)
+                                        .put(Keys.PARENT.getKey(), generate(command.component()));
+
+                                typeMeasure(node.putObject(Keys.RETURN_TYPE_MEASURE.getKey()), command.returnTypeMeasure());
+                                return node;
+                            };
                         }
 
                         @Override
@@ -329,8 +325,9 @@ public class DecodeJsonGenerator {
                                     return node;
                                 } else {
                                     ObjectNode node = extendedNodeKind(Keys.EVENT_MESSAGE.getKey(), tmMessage)
-                                            .put(Keys.PARENT.getKey(), generate(tmMessage.component()))
-                                            .put(Keys.BASE_TYPE_PROXY.getKey(), generate(((EventMessage) tmMessage).baseTypeProxy()));
+                                            .put(Keys.PARENT.getKey(), generate(tmMessage.component()));
+                                    typeProxy(node.putObject(Keys.BASE_TYPE_PROXY.getKey()),
+                                            ((EventMessage) tmMessage).baseTypeProxy());
                                     return node;
                                 }
                             };
@@ -356,8 +353,8 @@ public class DecodeJsonGenerator {
                 public Supplier<ObjectNode> visit(EnumType e) {
                     return () -> {
                         ObjectNode enumNode = extendedNodeKind(Keys.ENUM_TYPE.getKey(), e);
-                        e.baseTypeOption().ifPresent(baseType ->
-                                enumNode.put(Keys.BASE_TYPE.getKey(), generate(baseType)));
+                        e.baseTypeMeasureOptional().ifPresent(typeMeasure ->
+                                typeMeasure(enumNode.putObject(Keys.BASE_TYPE_MEASURE.getKey()), typeMeasure));
                         e.extendsTypeOption().ifPresent(extendsType ->
                                 enumNode.put(Keys.EXTENDS_TYPE.getKey(), generate(extendsType)));
                         enumNode.put(Keys.IS_FINAL.getKey(), e.isFinal());
@@ -375,48 +372,7 @@ public class DecodeJsonGenerator {
 
                 @Override
                 public Supplier<ObjectNode> visit(MaybeProxy p) {
-                    return () -> {
-                        ObjectNode node = nodeKind(Keys.MAYBE_PROXY.getKey());
-                        node.put(Keys.TYPE.getKey(), p.accept(new MaybeProxyVisitor<Keys>() {
-                            @Override
-                            public Keys visit(MaybeTypeProxyType tt) {
-                                return Keys.MAYBE_TYPE_PROXY_TYPE;
-                            }
-
-                            @Override
-                            public Keys visit(MaybeProxyCompanion.Enum e) {
-                                return Keys.MAYBE_PROXY_ENUM;
-                            }
-
-                            @Override
-                            public Keys visit(MaybeProxyCompanion.Struct s) {
-                                return Keys.MAYBE_PROXY_STRUCT;
-                            }
-
-                            @Override
-                            public Keys visit(MaybeProxyCompanion.Component c) {
-                                return Keys.MAYBE_PROXY_COMPONENT;
-                            }
-
-                            @Override
-                            public Keys visit(MaybeProxyCompanion.Measure m) {
-                                return Keys.MAYBE_PROXY_MEASURE;
-                            }
-
-                            @Override
-                            public Keys visit(MaybeProxyCompanion.Referenceable r) {
-                                return Keys.MAYBE_PROXY_REFERENCEABLE;
-                            }
-                        }).getKey());
-                        if (p.isResolved())
-                            node.put(Keys.OBJ.getKey(), generate(p.obj()));
-                        else {
-                            ProxyPath path = p.proxy().path();
-                            ObjectNode proxy = node.putObject(Keys.PROXY.getKey());
-                            pathElement(proxy, path);
-                        }
-                        return node;
-                    };
+                    throw new AssertionError("must be unreachable");
                 }
 
                 @Override
@@ -431,15 +387,88 @@ public class DecodeJsonGenerator {
 
                 @Override
                 public Supplier<ObjectNode> visit(StructField f) {
-                    return () -> extendedNodeKind(Keys.STRUCT_FIELD.getKey(), f)
-                            .put(Keys.TYPE_MEASURE.getKey(), generate(f.typeMeasure()));
+                    return () -> {
+                        ObjectNode node = extendedNodeKind(Keys.STRUCT_FIELD.getKey(), f);
+                        typeMeasure(node.putObject(Keys.TYPE_MEASURE.getKey()), f.typeMeasure());
+                        return node;
+                    };
                 }
 
                 @Override
                 public Supplier<ObjectNode> visit(StructType s) {
                     return () -> extendedNodeKind(Keys.STRUCT_TYPE.getKey(), s);
                 }
+
+                @Override
+                public Supplier<ObjectNode> visit(TypeMeasure tm) {
+                    throw new AssertionError("must be unreachable");
+                }
             }));
+        }
+
+        private void typeMeasure(ObjectNode node, TypeMeasure typeMeasure)
+        {
+            MaybeTypeProxy maybeTypeProxy = typeMeasure.typeProxy();
+            if (maybeTypeProxy.isResolved())
+                node.put(Keys.TYPE.getKey(), generate(maybeTypeProxy.obj()));
+            else
+                pathElement(node.putObject(Keys.TYPE_PROXY_PATH.getKey()), maybeTypeProxy.proxy().path());
+            typeMeasure.measureProxy().ifPresent(mp -> node.put(Keys.MEASURE.getKey(), generate(mp.obj())));
+        }
+
+        private void typeProxy(ObjectNode node, MaybeTypeProxy maybeTypeProxy)
+        {
+            node.put(Keys.TYPE.getKey(), maybeTypeProxy.accept(new MaybeProxyVisitor<Keys>()
+            {
+                @Override
+                public Keys visit(MaybeProxyNamespace n)
+                {
+                    return Keys.MAYBE_PROXY_NAMESPACE;
+                }
+
+                @Override
+                public Keys visit(MaybeProxyType tt) {
+                    return Keys.MAYBE_TYPE_PROXY_TYPE;
+                }
+
+                @Override
+                public Keys visit(MaybeProxyConst c)
+                {
+                    return Keys.MAYBE_PROXY_CONST;
+                }
+
+                @Override
+                public Keys visit(MaybeProxyEnumType e) {
+                    return Keys.MAYBE_PROXY_ENUM;
+                }
+
+                @Override
+                public Keys visit(MaybeProxyStructType s) {
+                    return Keys.MAYBE_PROXY_STRUCT;
+                }
+
+                @Override
+                public Keys visit(MaybeProxyComponent c) {
+                    return Keys.MAYBE_PROXY_COMPONENT;
+                }
+
+                @Override
+                public Keys visit(MaybeProxyMeasure m) {
+                    return Keys.MAYBE_PROXY_MEASURE;
+                }
+
+                @Override
+                public Keys visit(MaybeProxyReferenceable r) {
+                    return Keys.MAYBE_PROXY_REFERENCEABLE;
+                }
+            }).getKey());
+            if (maybeTypeProxy.isResolved())
+                node.put(Keys.OBJ.getKey(), generate(maybeTypeProxy.obj()));
+            else {
+                ProxyPath path = maybeTypeProxy.proxy().path();
+                ObjectNode proxy = node.putObject(Keys.PROXY.getKey());
+                pathElement(proxy, path);
+            }
         }
 
     }

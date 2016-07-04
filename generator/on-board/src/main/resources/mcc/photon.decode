@@ -1,0 +1,15 @@
+namespace mcc.photon
+
+import mcc.routing.Router
+import mcc.scripting.Scripting
+import mcc.segmentation.(SegmentSender, SegmentReceiver)
+import mcc.identification.Identification
+import mcc.tm.Tm
+import mcc.fs.Files
+
+language ru
+
+"Основной компонент устройства"
+component Main with Identification, Router, Scripting, SegmentSender, SegmentReceiver, Tm, Files
+{
+}

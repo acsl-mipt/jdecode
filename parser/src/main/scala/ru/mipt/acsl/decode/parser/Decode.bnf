@@ -40,7 +40,7 @@
         SUBCOMPONENT = "subcomponent"
         PARAMETERS = "parameters"
         MEASURE_TOKEN = "measure"
-        TYPE_KEYWORD = "type"
+        TYPE_KEYWORD = "obj"
         ALIAS = "alias"
         DOTS = ".."
         DOT = "."
