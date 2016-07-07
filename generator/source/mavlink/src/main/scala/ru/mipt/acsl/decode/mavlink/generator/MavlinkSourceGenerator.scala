@@ -332,17 +332,19 @@ object MavlinkSourceGenerator {
     private def reorderFields(): Unit = {
       fields = fields.sortWith { (left, right) =>
         val priorityLists = Seq(
-          Seq("int64_t", "double", "uint64_t"),
-          Seq("int32_t", "float", "uint32_t"),
-          Seq("int16_t", "uint16_t"))
+          Seq("int64_t", "double"),
+          Seq("int32_t", "float"),
+          Seq("int16_t"))
 
         val priority = { (field: StructField) =>
           val t = field.t
-          priorityLists.zipWithIndex.find { case (types, idx) => types.contains(t) }.map(_._2).getOrElse(0)
+          priorityLists.zipWithIndex.find { case (types, idx) => types.exists(ft => t.contains(ft)) }.map(_._2).getOrElse(priorityLists.size)
         }
 
         priority(left) < priority(right)
       }
+
+      fields
 
     }
 
