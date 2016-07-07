@@ -77,16 +77,16 @@ public class DecodeJsonGenerator {
 
         KIND("k"), NAME("n"), ALIAS("a"), OBJ("o"), INFO("i"), DISPLAY("d"), NAMESPACE("ns"), VALUE("v"), OBJECTS("os"),
         COMPONENT("c"), PARENT("p"), BASE_TYPE("b"), NATIVE_TYPE("n"), SUB_TYPE("sub"), TYPE_MEASURE("tm"),
-        TYPE_PROXY("p"), MEASURE("m"), CONST("const"), GENERIC_TYPE_SPECIALIZED("gts"),
+        MEASURE("m"), CONST("const"), GENERIC_TYPE_SPECIALIZED("gts"),
         TYPE_ARGUMENTS("as"), STATUS_PARAMETER("sp"), ELEMENTS("e"), MIN("min"), MAX("max"), PARAMETER("p"),
         COMMAND("cmd"), STATUS_MESSAGE("sm"), EVENT_MESSAGE("em"), ENUM_CONSTANT("ec"),
-        ENUM_TYPE("e"), EXTENDS_TYPE("et"), IS_FINAL("f"), MAYBE_PROXY("mp"), PROXY("p"),
+        ENUM_TYPE("e"), EXTENDS_TYPE("et"), IS_FINAL("f"), PROXY("p"),
         CONST_EXPR("ex"), STRUCT_FIELD("f"), STRUCT_TYPE("st"), GENERATED("gen"), PRIORITY("pr"), BASE_TYPE_PROXY("bp"),
         TYPE_PARAMETERS("tp"), GENERIC_TYPE_PROXY("gtp"), TYPE_NAME("tn"), GENERIC_ARGUMENT_PATHS("gap"),
         MAYBE_TYPE_PROXY_TYPE("t"), MAYBE_PROXY_ENUM("e"), MAYBE_PROXY_CONST("ct"), MAYBE_PROXY_STRUCT("s"),
         MAYBE_PROXY_COMPONENT("c"), MAYBE_PROXY_NAMESPACE("ns"), TYPE_PROXY_PATH("tpp"),
         MAYBE_PROXY_MEASURE("m"), MAYBE_PROXY_REFERENCEABLE("r"), TYPE("t"), ID("id"), RETURN_TYPE_MEASURE("rtm"),
-        MEASURE_PROXY("mep"), BASE_TYPE_MEASURE("btm");
+        BASE_TYPE_MEASURE("btm"), INDEX("i");
 
         public String getKey() {
             return key;
@@ -118,8 +118,7 @@ public class DecodeJsonGenerator {
         }
 
         public ArrayNode generate() {
-            for (Component component : rootComponents)
-                generate(component);
+            rootComponents.forEach(this::generate);
             return nodeFactory.arrayNode().addAll(list);
         }
 
@@ -388,7 +387,8 @@ public class DecodeJsonGenerator {
                 @Override
                 public Supplier<ObjectNode> visit(StructField f) {
                     return () -> {
-                        ObjectNode node = extendedNodeKind(Keys.STRUCT_FIELD.getKey(), f);
+                        ObjectNode node = extendedNodeKind(Keys.STRUCT_FIELD.getKey(), f)
+                                .put(Keys.INDEX.getKey(), f.index());
                         typeMeasure(node.putObject(Keys.TYPE_MEASURE.getKey()), f.typeMeasure());
                         return node;
                     };

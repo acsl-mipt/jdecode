@@ -77,10 +77,10 @@ class DecodeAstTransformer {
       case c: DecodeComponentDecl =>
         val params = Option(c.getComponentParametersDecl).map { params =>
           val struct = StructType(null, ns, new util.ArrayList[Referenceable](), new util.ArrayList[ElementName]())
-          struct.objects.addAll(params.getCommandArgs.getCommandArgList.flatMap { arg =>
+          struct.objects.addAll(params.getCommandArgs.getCommandArgList.zipWithIndex.flatMap { case (arg, idx) =>
             val alias = new Alias.StructField(elementName(arg.getElementNameRule),
               elementInfo(Option(arg.getElementInfo)), struct, null)
-            alias.obj(StructField(alias, typeMeasure(arg.getTypeUnitApplication)))
+            alias.obj(StructField(alias, typeMeasure(arg.getTypeUnitApplication), idx))
             Seq(alias, alias.obj())
           })
           ns.objects.add(struct)
@@ -163,10 +163,10 @@ class DecodeAstTransformer {
 
   private def newStructType(alias: Alias.NsType, args: DecodeCommandArgs, typeParameters: Seq[ElementName]): StructType = {
     val t = StructType(alias, ns, Collections.emptyList(), typeParameters)
-    t.setObjects(args.getCommandArgList.flatMap { cmdArg =>
+    t.setObjects(args.getCommandArgList.zipWithIndex.flatMap { case (cmdArg, idx) =>
       val alias = new Alias.StructField(elementName(cmdArg.getElementNameRule),
         elementInfo(Option(cmdArg.getElementInfo)), t, null)
-      alias.obj(StructField(alias, typeMeasure(cmdArg.getTypeUnitApplication)))
+      alias.obj(StructField(alias, typeMeasure(cmdArg.getTypeUnitApplication), idx))
       Seq(alias, alias.obj())
     })
     t

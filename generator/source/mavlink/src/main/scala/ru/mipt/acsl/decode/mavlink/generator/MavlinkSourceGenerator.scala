@@ -171,7 +171,7 @@ class MavlinkSourceGenerator(val config: MavlinkSourceGeneratorConfig) {
       element.label match {
         case "include" =>
           processFile(config.getIncludeContents(element.text))
-        case "version" =>
+        case "version" | "dialect" =>
         case "enums" =>
           (element \ "enum").map(processEnum).foreach { e =>
             val name = e.name
@@ -332,9 +332,9 @@ object MavlinkSourceGenerator {
     private def reorderFields(): Unit = {
       fields = fields.sortWith { (left, right) =>
         val priorityLists = Seq(
-          Seq("int64_t", "double"),
-          Seq("int32_t", "float"),
-          Seq("int16_t"))
+          Seq("int64_t", "double", "uint64_t"),
+          Seq("int32_t", "float", "uint32_t"),
+          Seq("int16_t", "uint16_t"))
 
         val priority = { (field: StructField) =>
           val t = field.t

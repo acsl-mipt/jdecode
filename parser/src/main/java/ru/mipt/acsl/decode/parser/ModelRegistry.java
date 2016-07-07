@@ -16,8 +16,8 @@ import java.util.stream.Collectors;
  */
 public class ModelRegistry {
 
-    public static final DecodeSourceProvider Provider = new DecodeSourceProvider();
-    public static final DecodeSourceProviderConfiguration Config = new DecodeSourceProviderConfiguration("mcc/decode");
+    public static final DecodeSourceProvider PROVIDER = new DecodeSourceProvider();
+    public static final DecodeSourceProviderConfiguration CONFIG = new DecodeSourceProviderConfiguration("mcc/decode");
 
     public static class Sources {
 
@@ -51,7 +51,7 @@ public class ModelRegistry {
     }
 
     public static Registry registry(List<String> sources) {
-        Registry registry = Provider.provide(Config, sources);
+        Registry registry = PROVIDER.provide(CONFIG, sources);
         ResolvingMessages resolvingResult = RegistryUtils.resolve(registry);
         if (resolvingResult.hasError())
             resolvingResult.messages().forEach(msg -> System.out.println(msg.text()));

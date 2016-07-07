@@ -16,7 +16,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.Collections;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -27,38 +27,47 @@ import java.util.stream.Collectors;
  */
 public class GenerateMccStuff {
 
-    public static final Fqn PixhawkComponentFqn = Fqn.newInstance("mavlink.Pixhawk");
+    public static final Fqn MAVLINK_COMPONENT_FQN = Fqn.newInstance("mavlink.Common");
 
-    public static final String PixhawkSourceResource = "pixhawk/pixhawk.xml";
-    public static final List<String> PixhawkIncludes = Lists.newArrayList("pixhawk/common.xml");
+    public static final String MAVLINK_SOURCE_RESOURCE = "mavlink/common.xml";
+    public static final List<String> MAVLINK_INCLUDES = new ArrayList<>();
 
-    public static final String ModelFilePath = "src/mcc/core/db/db/model.json";
+    public static final String MAVLINK_FILE_PATH = "src/mcc/core/db/db/sources/mavlink.decode";
+    public static final String MODEL_FILE_PATH = "src/mcc/core/db/db/model.json";
 
     public static void main(String[] args) {
 
         try {
-            new FileOutputStream(new File(ModelFilePath)) {{
+            new FileOutputStream(new File(MODEL_FILE_PATH)) {{
 
                 ByteArrayOutputStream pixhawkOutput = new ByteArrayOutputStream();
 
                 Map<String, String> filesContents = new HashMap<>();
-                PixhawkIncludes.forEach(i -> filesContents.put(new File(i).getName(), resourceContents(i)));
+                MAVLINK_INCLUDES.forEach(i -> filesContents.put(new File(i).getName(), resourceContents(i)));
 
                 MavlinkSourceGenerator.apply(MavlinkSourceGeneratorInternalConfig.newInstance(
-                        resourceContents(PixhawkSourceResource),
-                        PixhawkComponentFqn.copyDropLast().mangledNameString(),
-                        PixhawkComponentFqn.last().mangledNameString(),
+                        resourceContents(MAVLINK_SOURCE_RESOURCE),
+                        MAVLINK_COMPONENT_FQN.copyDropLast().mangledNameString(),
+                        MAVLINK_COMPONENT_FQN.last().mangledNameString(),
                         pixhawkOutput, filesContents)).generate();
 
                 List<String> contents = OnBoardModelRegistry.Sources.ALL.stream()
                         .map(ModelRegistry::sourceContents)
                         .collect(Collectors.toList());
-                contents.add(new String(pixhawkOutput.toByteArray(), StandardCharsets.UTF_8));
+                byte[] pixhwakSourceContents = pixhawkOutput.toByteArray();
+                contents.add(new String(pixhwakSourceContents, StandardCharsets.UTF_8));
+
+                File pixhawkSource = new File(MAVLINK_FILE_PATH);
+                pixhawkSource.getParentFile().mkdirs();
+                new FileOutputStream(pixhawkSource) {{
+                    write(pixhwakSourceContents);
+                    close();
+                }};
 
                 DecodeJsonGenerator.newInstance(DecodeJsonGeneratorConfig.newInstance(
                         ModelRegistry.registry(contents), this,
                         Lists.newArrayList(OnBoardCSourceGenerator.ROOT_COMPONENT_FQN_STRING,
-                                PixhawkComponentFqn.mangledNameString()),
+                                MAVLINK_COMPONENT_FQN.mangledNameString()),
                         true))
                         .generate();
 
