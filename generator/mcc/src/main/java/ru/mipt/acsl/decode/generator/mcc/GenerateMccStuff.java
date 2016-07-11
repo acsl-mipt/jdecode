@@ -32,7 +32,8 @@ public class GenerateMccStuff {
     public static final String MAVLINK_SOURCE_RESOURCE = "mavlink/common.xml";
     public static final List<String> MAVLINK_INCLUDES = new ArrayList<>();
 
-    public static final String MAVLINK_FILE_PATH = "src/mcc/core/db/db/sources/mavlink.decode";
+    public static final String MCC_DECODE_SOURCES_PATH = "src/mcc/core/db/db/sources/";
+    public static final String MAVLINK_FILE_PATH = MCC_DECODE_SOURCES_PATH + "mavlink.decode";
     public static final String MODEL_FILE_PATH = "src/mcc/core/db/db/model.json";
 
     public static void main(String[] args) {
@@ -40,30 +41,51 @@ public class GenerateMccStuff {
         try {
             new FileOutputStream(new File(MODEL_FILE_PATH)) {{
 
-                ByteArrayOutputStream pixhawkOutput = new ByteArrayOutputStream();
+                ByteArrayOutputStream mavlinkOutput = new ByteArrayOutputStream();
 
                 Map<String, String> filesContents = new HashMap<>();
                 MAVLINK_INCLUDES.forEach(i -> filesContents.put(new File(i).getName(), resourceContents(i)));
 
+                // Generate Decode sources for Mavlink
                 MavlinkSourceGenerator.apply(MavlinkSourceGeneratorInternalConfig.newInstance(
                         resourceContents(MAVLINK_SOURCE_RESOURCE),
                         MAVLINK_COMPONENT_FQN.copyDropLast().mangledNameString(),
                         MAVLINK_COMPONENT_FQN.last().mangledNameString(),
-                        pixhawkOutput, filesContents)).generate();
+                        mavlinkOutput, filesContents)).generate();
 
+                // Copy Decode sources to MCC
+                OnBoardModelRegistry.Sources.ALL.forEach(sourceFileName -> {
+                    try
+                    {
+                        new FileOutputStream(
+                                new File(MCC_DECODE_SOURCES_PATH + ModelRegistry.sourceName(sourceFileName)))
+                        {{
+                            write(ModelRegistry.sourceContents(sourceFileName).getBytes());
+                            close();
+                        }};
+                    }
+                    catch (IOException e)
+                    {
+                        throw new RuntimeException(e);
+                    }
+                });
+
+                // Read Decode sources
                 List<String> contents = OnBoardModelRegistry.Sources.ALL.stream()
                         .map(ModelRegistry::sourceContents)
                         .collect(Collectors.toList());
-                byte[] pixhwakSourceContents = pixhawkOutput.toByteArray();
-                contents.add(new String(pixhwakSourceContents, StandardCharsets.UTF_8));
+                byte[] mavlinkSourceContents = mavlinkOutput.toByteArray();
+                contents.add(new String(mavlinkSourceContents, StandardCharsets.UTF_8));
 
-                File pixhawkSource = new File(MAVLINK_FILE_PATH);
-                pixhawkSource.getParentFile().mkdirs();
-                new FileOutputStream(pixhawkSource) {{
-                    write(pixhwakSourceContents);
+                // Copy Mavlink sources to MCC
+                File mavlinkSource = new File(MAVLINK_FILE_PATH);
+                mavlinkSource.getParentFile().mkdirs();
+                new FileOutputStream(mavlinkSource) {{
+                    write(mavlinkSourceContents);
                     close();
                 }};
 
+                // Generate JSON
                 DecodeJsonGenerator.newInstance(DecodeJsonGeneratorConfig.newInstance(
                         ModelRegistry.registry(contents), this,
                         Lists.newArrayList(OnBoardCSourceGenerator.ROOT_COMPONENT_FQN_STRING,
