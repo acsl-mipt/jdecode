@@ -3,3 +3,17 @@ dependencies {
     compile project(':decode:generator:on-board')
     compile project(':decode:generator:source:mavlink')
 }
+
+apply plugin: "application"
+
+mainClassName = "ru.mipt.acsl.decode.generator.mcc.GenerateMccStuff"
+
+jar {
+    manifest {
+        attributes "Main-Class": "$mainClassName"
+    }
+
+    from {
+        configurations.compile.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+}
